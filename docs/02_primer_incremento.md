@@ -14,10 +14,10 @@ Construir la base minima que permita empezar a operar el proyecto con orden tecn
 ## Estructura sugerida
 
 - `docs/` para documentacion viva
-- `apps/web/` para frontend
-- `apps/api/` para backend
-- `infra/` para despliegue
-- `packages/` para codigo compartido
+- `app/web/` para frontend
+- `app/api/` para backend
+- `app/infra/` para despliegue
+- `app/packages/` para codigo compartido
 
 ## Primer modulo a construir
 
