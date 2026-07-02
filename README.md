@@ -6,6 +6,7 @@ Repositorio base para documentar y construir la plataforma SaaS para empresarios
 
 - `docs/` contiene la documentacion de soporte y definicion.
 - `app/` contiene toda la construccion ejecutable del proyecto.
+- `Dockerfile` en la raiz es el punto de entrada para despliegues en Easypanel.
 - Los documentos raiz `Proyecto_*.md` quedan como referencia historica.
 
 ## Orden de trabajo

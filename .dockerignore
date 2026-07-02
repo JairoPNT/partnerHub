@@ -1,0 +1,11 @@
+node_modules
+.next
+coverage
+dist
+.git
+.github
+app/web/node_modules
+app/web/.next
+app/web/.gitkeep
+app/web/README.md
+
