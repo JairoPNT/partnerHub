@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 
 import { ModulePage } from "@/components/module-page";
+import { AdminDashboardPrototype } from "@/components/dashboard-view";
 import { getModule, moduleCatalog } from "@/modules/catalog";
 
 type ModuleRouteProps = {
@@ -23,5 +24,10 @@ export default async function ModuleRoute({ params }: ModuleRouteProps) {
     notFound();
   }
 
+  if (moduleSlug === "dashboard") {
+    return <AdminDashboardPrototype />;
+  }
+
   return <ModulePage module={record} />;
 }
+

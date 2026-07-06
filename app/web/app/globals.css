@@ -1,9 +1,13 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
   color-scheme: light;
+  --font-sans: 'Inter', sans-serif;
+  --font-heading: 'Outfit', sans-serif;
 }
 
 html {
@@ -12,16 +16,20 @@ html {
 
 body {
   min-height: 100vh;
+  font-family: var(--font-sans);
   background:
-    radial-gradient(circle at top left, rgba(208, 148, 63, 0.16), transparent 32%),
-    radial-gradient(circle at top right, rgba(120, 53, 15, 0.08), transparent 28%),
-    linear-gradient(180deg, #fbf6ef 0%, #f4ede0 45%, #efe6d4 100%);
-  color: #111111;
+    radial-gradient(circle at top left, rgba(208, 148, 63, 0.12), transparent 35%),
+    radial-gradient(circle at top right, rgba(120, 53, 15, 0.06), transparent 30%),
+    linear-gradient(180deg, #fbf6ef 0%, #f6f0e5 45%, #f1e9da 100%);
+  color: #1c1917;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 @layer components {
   .glass-panel {
-    @apply border border-white/60 bg-white/75 shadow-glow backdrop-blur-xl;
+    @apply border border-white/70 bg-white/80 shadow-premium backdrop-blur-md;
   }
 }
+
 

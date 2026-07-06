@@ -9,6 +9,10 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      fontFamily: {
+        sans: ["var(--font-sans)", "Inter", "sans-serif"],
+        heading: ["var(--font-heading)", "Outfit", "sans-serif"]
+      },
       colors: {
         sand: {
           50: "#fcf8f2",
@@ -24,7 +28,13 @@ const config: Config = {
         }
       },
       boxShadow: {
-        glow: "0 24px 80px rgba(166, 105, 23, 0.14)"
+        glow: "0 24px 80px rgba(166, 105, 23, 0.14)",
+        subtle: "0 4px 20px rgba(0, 0, 0, 0.03)",
+        premium: "0 10px 30px -10px rgba(134, 77, 15, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02)"
+      },
+      borderRadius: {
+        "4xl": "2rem",
+        "5xl": "2.5rem"
       }
     }
   },
@@ -32,4 +42,5 @@ const config: Config = {
 };
 
 export default config;
+
 
