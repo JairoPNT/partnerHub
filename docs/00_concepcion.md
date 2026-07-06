@@ -46,7 +46,7 @@ Pagina enfocada en venta de productos, kits, beneficios y CTA hacia WhatsApp o f
 
 ### VSL de negocio
 
-Pagina enfocada en presentar la oportunidad de negocio con video principal, objeciones y captacion de prospectos.
+Pagina enfocada en presentar la oportunidad de negocio con video principal, objeciones y direccionamiento hacia el canal externo del empresario.
 
 ### Ecosistema completo
 
@@ -74,4 +74,3 @@ Si la plataforma reduce el tiempo de implementacion y facilita actualizaciones c
 ## Objetivo del proyecto
 
 Convertir la operacion digital de multinivel en un servicio recurrente, escalable y administrado.
-
