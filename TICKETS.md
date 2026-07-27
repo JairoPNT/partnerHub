@@ -70,6 +70,12 @@ Status: Done
 
 Goal: generate a validated static product-page package from an entrepreneur configuration. The first increment produces `config.js` and a publish-ready folder only; it does not add database persistence, API endpoints, authentication, dashboard UI, automated SFTP deployment, or n8n workflows.
 
+### PH-005B Internal Product Page Generation Service
+
+Status: In Progress
+
+Goal: expose the static product-page generator through a Cloudflare Access-protected internal route and persist generated packages in the EasyPanel volume mounted at `/data`. This increment does not add dashboard UI, database persistence, automatic hosting deployment, or SFTP credentials.
+
 ## EPIC-100 PHOS Sync Engine
 
 The PHOS queue exists to keep Notion updated from selected brain files without manual copy-paste.

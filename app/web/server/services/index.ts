@@ -4,6 +4,7 @@ export * from "./leadDestinationService";
 export * from "./lifecycle";
 export * from "./masterAssetService";
 export * from "./personalizedChannelService";
+export * from "./productPageGenerationService";
 export * from "./trafficCampaignService";
 export * from "./validatedMessageService";
 export * from "./webAssetPackageService";
