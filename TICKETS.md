@@ -72,9 +72,17 @@ Goal: generate a validated static product-page package from an entrepreneur conf
 
 ### PH-005B Internal Product Page Generation Service
 
-Status: In Progress
+Status: Done
 
 Goal: expose the static product-page generator through a Cloudflare Access-protected internal route and persist generated packages in the EasyPanel volume mounted at `/data`. This increment does not add dashboard UI, database persistence, automatic hosting deployment, or SFTP credentials.
+
+### PH-005C Product Page Generator Interface
+
+Status: In Progress
+
+Primary owner: Antigravity
+
+Goal: provide the internal landing-builder form that submits a validated product-page configuration to `POST /api/internal/product-pages/generate` and presents the generation result. No backend, Docker, auth, database, or external publishing changes are included.
 
 ## EPIC-100 PHOS Sync Engine
 

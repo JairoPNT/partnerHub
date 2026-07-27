@@ -2,7 +2,7 @@
 
 ## Status
 
-In progress.
+Completed on 2026-07-27.
 
 ## Objective
 
@@ -27,3 +27,7 @@ Run the product-page generator inside `app.partnerhub.club` and write the latest
 ## Acceptance Test
 
 Build the Docker image, invoke the internal route with a valid configuration, and verify the generated package appears under the mounted volume path.
+
+## Result
+
+The deployed route generated `jairo-pinto-test` at `/data/generated-sites/jairo-pinto-test`. The response listed the expected static package files, and the generated files were verified inside the running service container.

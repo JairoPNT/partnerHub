@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 
 import { ModulePage } from "@/components/module-page";
 import { AdminDashboardPrototype } from "@/components/dashboard-view";
+import { ProductPageGeneratorView } from "@/components/product-page-generator-view";
 import { getModule, moduleCatalog } from "@/modules/catalog";
 
 type ModuleRouteProps = {
@@ -26,6 +27,10 @@ export default async function ModuleRoute({ params }: ModuleRouteProps) {
 
   if (moduleSlug === "dashboard") {
     return <AdminDashboardPrototype />;
+  }
+
+  if (moduleSlug === "landing-builder") {
+    return <ProductPageGeneratorView record={record} />;
   }
 
   return <ModulePage module={record} />;
