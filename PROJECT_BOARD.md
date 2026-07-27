@@ -76,6 +76,12 @@ Status: In Progress
 
 Description: generate persistent product-page packages from the administration service without automatic external publication.
 
+### PH-005C Product Page Generator Interface
+
+Status: In Progress
+
+Description: provide the internal landing-builder form for creating validated product-page packages through the existing generation route.
+
 ## EPIC-100 PHOS Sync Engine
 
 Purpose: automatically synchronize selected brain files with Notion so executive state stays current without manual copy-paste.
