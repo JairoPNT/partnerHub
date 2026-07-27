@@ -84,6 +84,14 @@ Primary owner: Antigravity
 
 Goal: provide the internal landing-builder form that submits a validated product-page configuration to `POST /api/internal/product-pages/generate` and presents the generation result. No backend, Docker, auth, database, or external publishing changes are included.
 
+### PH-005D Controlled SFTP Product Page Publication
+
+Status: In Progress
+
+Primary owner: Codex
+
+Goal: publish an already generated product-page package to the single Hostinger document root configured only through EasyPanel environment variables. This increment adds a protected backend endpoint; it does not add multi-domain routing, automatic publication after generation, R2 uploads, or frontend publishing controls.
+
 ## EPIC-100 PHOS Sync Engine
 
 The PHOS queue exists to keep Notion updated from selected brain files without manual copy-paste.

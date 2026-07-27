@@ -82,6 +82,12 @@ Status: In Progress
 
 Description: provide the internal landing-builder form for creating validated product-page packages through the existing generation route.
 
+### PH-005D Controlled SFTP Product Page Publication
+
+Status: In Progress
+
+Description: publish a generated product page to the verified Hostinger document root through SFTP credentials stored only in EasyPanel. The first release supports one fixed destination and an explicit protected backend action.
+
 ## EPIC-100 PHOS Sync Engine
 
 Purpose: automatically synchronize selected brain files with Notion so executive state stays current without manual copy-paste.
