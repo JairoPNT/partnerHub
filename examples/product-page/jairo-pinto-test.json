@@ -1,0 +1,21 @@
+{
+  "site": {
+    "id": "jairo-pinto-test",
+    "title": "Jairo Pinto - Bienestar y Vitalidad con Gano Excel",
+    "metaDescription": "Descubre cafe, cacao y suplementos enriquecidos con Ganoderma lucidum para tus rituales diarios."
+  },
+  "distributor": {
+    "brandName": "Jairo Pinto",
+    "firstName": "Jairo",
+    "fullName": "Jairo Pinto",
+    "role": "Distribuidor Autorizado - Gano Excel",
+    "whatsappNumber": "573188430283",
+    "phoneNumber": "3188430283",
+    "displayPhone": "318 843 0283",
+    "defaultMessage": "Hola Jairo, vengo de tu página web y me gustaría recibir más información sobre el Ganoderma de Gano Excel."
+  },
+  "hero": {
+    "desktop": "https://media.partnerhub.club/clientes/jairo-pinto-test/producto/v1/hero-desktop.webp",
+    "mobile": "https://media.partnerhub.club/clientes/jairo-pinto-test/producto/v1/hero-mobile.webp"
+  }
+}
