@@ -109,6 +109,35 @@ async function ensureRemoteDirectory(sftp: SftpClient, remoteDirectory: string) 
   await sftp.mkdir(remoteDirectory, true);
 }
 
+async function replaceRemoteFile(sftp: SftpClient, temporaryRemoteFile: string, remoteFile: string) {
+  const existingFile = await sftp.exists(remoteFile);
+  const backupRemoteFile = `${remoteFile}.partnerhub-backup-${Date.now()}`;
+  let backupCreated = false;
+
+  if (existingFile) {
+    await sftp.rename(remoteFile, backupRemoteFile);
+    backupCreated = true;
+  }
+
+  try {
+    await sftp.rename(temporaryRemoteFile, remoteFile);
+  } catch (error) {
+    if (backupCreated) {
+      try {
+        await sftp.rename(backupRemoteFile, remoteFile);
+      } catch {
+        // Preserve the original publish error; the backup remains available for recovery.
+      }
+    }
+
+    throw error;
+  }
+
+  if (backupCreated) {
+    await sftp.delete(backupRemoteFile);
+  }
+}
+
 export const productPagePublicationService = {
   async publish(input: ProductPagePublicationInput): Promise<ProductPagePublicationResult> {
     const configuration = getSftpConfiguration();
@@ -159,7 +188,7 @@ export const productPagePublicationService = {
         await ensureRemoteDirectory(sftp, remoteDirectory);
         await sftp.put(localFile, temporaryRemoteFile);
         temporaryRemotePaths.push(temporaryRemoteFile);
-        await sftp.rename(temporaryRemoteFile, remoteFile);
+        await replaceRemoteFile(sftp, temporaryRemoteFile, remoteFile);
       }
     } finally {
       await Promise.all(
