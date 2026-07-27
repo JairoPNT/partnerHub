@@ -70,6 +70,12 @@ Status: Completed
 
 Description: generate a validated, static product-page package from entrepreneur JSON configuration without database persistence, UI, hosting credentials, or automated deployment.
 
+### PH-005B Internal Product Page Generation Service
+
+Status: In Progress
+
+Description: generate persistent product-page packages from the administration service without automatic external publication.
+
 ## EPIC-100 PHOS Sync Engine
 
 Purpose: automatically synchronize selected brain files with Notion so executive state stays current without manual copy-paste.
