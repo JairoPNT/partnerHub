@@ -72,7 +72,7 @@ Goal: generate a validated static product-page package from an entrepreneur conf
 
 ### PH-005B Internal Product Page Generation Service
 
-Status: In Progress
+Status: Done
 
 Goal: expose the static product-page generator through a Cloudflare Access-protected internal route and persist generated packages in the EasyPanel volume mounted at `/data`. This increment does not add dashboard UI, database persistence, automatic hosting deployment, or SFTP credentials.
 
