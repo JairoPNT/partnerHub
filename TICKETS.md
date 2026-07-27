@@ -64,6 +64,12 @@ Status: TODO
 
 Goal: design the first product module for partner onboarding and lifecycle management.
 
+### PH-005A Product Page Static Generator
+
+Status: Done
+
+Goal: generate a validated static product-page package from an entrepreneur configuration. The first increment produces `config.js` and a publish-ready folder only; it does not add database persistence, API endpoints, authentication, dashboard UI, automated SFTP deployment, or n8n workflows.
+
 ## EPIC-100 PHOS Sync Engine
 
 The PHOS queue exists to keep Notion updated from selected brain files without manual copy-paste.
