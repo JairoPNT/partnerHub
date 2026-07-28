@@ -5,6 +5,8 @@ import { resolve, sep } from "node:path";
 
 import { z } from "zod";
 
+import { productPageSourceService } from "@/server/services/productPageSourceService";
+
 const siteIdSchema = z
   .string()
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "site.id must be a lowercase slug");
@@ -12,6 +14,12 @@ const siteIdSchema = z
 const httpsUrlSchema = z.string().url().refine((value) => new URL(value).protocol === "https:", {
   message: "URL must use HTTPS"
 });
+
+const measurementIdSchema = z
+  .string()
+  .trim()
+  .regex(/^G-[A-Z0-9]+$/i, "Measurement ID must use the G-XXXXXXXX format")
+  .transform((value) => value.toUpperCase());
 
 export const productPageGenerationInputSchema = z.object({
   site: z.object({
@@ -36,6 +44,11 @@ export const productPageGenerationInputSchema = z.object({
     desktop: httpsUrlSchema,
     mobile: httpsUrlSchema
   }),
+  analytics: z
+    .object({
+      measurementId: measurementIdSchema
+    })
+    .optional(),
   mediaBaseUrl: httpsUrlSchema.optional()
 });
 
@@ -98,6 +111,9 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
         `Hola ${input.distributor.firstName}, vengo de tu página web y me gustaría recibir más información.`
     },
     hero: input.hero,
+    analytics: input.analytics?.measurementId
+      ? { measurementId: input.analytics.measurementId }
+      : undefined,
     mediaBaseUrl: input.mediaBaseUrl ?? "https://media.partnerhub.club/comunes/producto/v1/"
   };
 }
@@ -131,6 +147,8 @@ export const productPageGenerationService = {
       `${JSON.stringify({ siteId: configuration.site.id, generatedAt, files }, null, 2)}\n`,
       "utf8"
     );
+
+    await productPageSourceService.save(configuration.site.id, configuration);
 
     return {
       siteId: configuration.site.id,

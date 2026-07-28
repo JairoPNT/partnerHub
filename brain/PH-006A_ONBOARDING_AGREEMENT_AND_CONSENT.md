@@ -25,6 +25,22 @@ The entrepreneur accepts a versioned agreement covering:
 - export of the entrepreneur's own supplied assets and a generated-page backup when a handoff or service termination applies;
 - no guarantee of leads, sales, or a specific commercial result.
 
+## Confirmed Commercial Timing
+
+- The one-time installation fee is paid in full before work begins.
+- Publication is scheduled within 24 to 48 hours after payment and receipt of the required information and assets.
+- Support is paid monthly in advance.
+- A five-calendar-day grace period applies after the support due date. After that period, the service may be suspended under the final agreement and applicable notices.
+- The support due date is the same calendar day on which the service starts each month.
+- A reminder is sent three days before the due date, another on the due date, and a further notice on the third day of arrears.
+- Suspension may occur after the fifth day of grace. Reactivation requires receipt of the outstanding payment.
+- Support suspension does not automatically release the domain; domain expiry and release are handled separately under the final agreement.
+- The final agreement must still state the exact plan price, due date, notice method, and restoration conditions.
+
+## Onboarding Form Gate
+
+The signing form must collect the selected service, agreed installation fee, recurring support fee, service start date, payment reference, and provider notice channels. Bracketed commercial values in the draft are not defaults: they must be completed and reviewed before a signature or publication can be accepted.
+
 ## Separate Authorizations
 
 The form must keep these acceptances distinct:

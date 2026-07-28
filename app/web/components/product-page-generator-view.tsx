@@ -1,13 +1,11 @@
 "use client";
 
-import { useState, FormEvent } from "react";
+import { useState, FormEvent, useEffect } from "react";
 import {
-  MousePointerClick,
   Sparkles,
   CheckCircle2,
   AlertCircle,
   FileCode,
-  Globe,
   User,
   Phone,
   Search,
@@ -17,19 +15,26 @@ import {
   RotateCcw,
   ArrowRight,
   Folder,
-  UploadCloud
+  UploadCloud,
+  Edit3,
+  PlusCircle,
+  BarChart3,
+  RefreshCw,
+  AlertTriangle
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Label, Input, Textarea } from "@/components/ui/form";
+import { Label, Input, Textarea, Select } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
 import { ModuleRecord } from "@/modules/catalog";
 
 type ProductPageGeneratorViewProps = {
   record?: ModuleRecord;
 };
+
+type ViewMode = "create" | "edit";
 
 interface FormState {
   siteId: string;
@@ -44,6 +49,7 @@ interface FormState {
   heroDesktop: string;
   heroMobile: string;
   defaultMessage: string;
+  measurementId: string;
 }
 
 interface GenerationResult {
@@ -51,6 +57,7 @@ interface GenerationResult {
   generatedAt: string;
   outputDirectory: string;
   files: string[];
+  requiresPublication?: boolean;
 }
 
 interface PublicationResult {
@@ -58,6 +65,11 @@ interface PublicationResult {
   publishedAt: string;
   remoteRoot: string;
   files: string[];
+}
+
+interface SiteListItem {
+  siteId: string;
+  configuration: any;
 }
 
 const SAMPLE_DATA: FormState = {
@@ -72,7 +84,8 @@ const SAMPLE_DATA: FormState = {
   metaDescription: "Descubre cómo transformar tu día a día con café, cacao y suplementos enriquecidos con Ganoderma lucidum.",
   heroDesktop: "https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-desktop.webp",
   heroMobile: "https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-mobile.webp",
-  defaultMessage: "Hola Jenny, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel."
+  defaultMessage: "Hola Jenny, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.",
+  measurementId: "G-7F24PBZPDM"
 };
 
 const INITIAL_FORM: FormState = {
@@ -87,10 +100,12 @@ const INITIAL_FORM: FormState = {
   metaDescription: "",
   heroDesktop: "",
   heroMobile: "",
-  defaultMessage: ""
+  defaultMessage: "",
+  measurementId: ""
 };
 
 export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewProps) {
+  const [mode, setMode] = useState<ViewMode>("create");
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
@@ -98,10 +113,110 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [copied, setCopied] = useState(false);
 
+  // Estados de lista y edición de sitios
+  const [siteList, setSiteList] = useState<SiteListItem[]>([]);
+  const [isLoadingList, setIsLoadingList] = useState(false);
+  const [selectedSiteId, setSelectedSiteId] = useState<string>("");
+  const [isLoadingSiteConfig, setIsLoadingSiteConfig] = useState(false);
+  const [isOldPageWithoutConfig, setIsOldPageWithoutConfig] = useState(false);
+
   // Estados de publicación
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishResult, setPublishResult] = useState<PublicationResult | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
+
+  const fetchSiteList = async () => {
+    setIsLoadingList(true);
+    try {
+      const res = await fetch("/api/internal/product-pages");
+      if (res.ok) {
+        const data = await res.json();
+        setSiteList(data.sites || []);
+      }
+    } catch {
+      // Ignorar fallos de red secundarios al listar
+    } finally {
+      setIsLoadingList(false);
+    }
+  };
+
+  const fetchSiteConfig = async (siteId: string) => {
+    if (!siteId) return;
+    setIsLoadingSiteConfig(true);
+    setErrorMessage(null);
+    setIsOldPageWithoutConfig(false);
+    setResult(null);
+    setPublishResult(null);
+    setPublishError(null);
+
+    try {
+      const res = await fetch(`/api/internal/product-pages/${siteId}`);
+      if (res.status === 404) {
+        setIsOldPageWithoutConfig(true);
+        setForm((prev) => ({ ...INITIAL_FORM, siteId }));
+        return;
+      }
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || "No se pudo cargar la configuración de la página.");
+      }
+
+      const cfg = data.configuration || {};
+      const site = cfg.site || {};
+      const dist = cfg.distributor || {};
+      const hero = cfg.hero || {};
+      const analytics = cfg.analytics || {};
+
+      setForm({
+        siteId: siteId,
+        siteTitle: site.title || "",
+        metaDescription: site.metaDescription || site.ogDescription || "",
+        brandName: dist.brandName || "",
+        firstName: dist.firstName || "",
+        fullName: dist.fullName || "",
+        role: dist.role || "Distribuidor Autorizado · Gano Excel",
+        whatsappNumber: dist.whatsappNumber || "",
+        displayPhone: dist.displayPhone || dist.phoneNumber || "",
+        defaultMessage: dist.defaultMessage || "",
+        heroDesktop: hero.desktop || "",
+        heroMobile: hero.mobile || "",
+        measurementId: typeof analytics === "string" ? analytics : (analytics.measurementId || "")
+      });
+    } catch (err: any) {
+      setErrorMessage(err.message || "Error al cargar los datos de la página seleccionada.");
+    } finally {
+      setIsLoadingSiteConfig(false);
+    }
+  };
+
+  const handleModeChange = (newMode: ViewMode) => {
+    setMode(newMode);
+    setErrorMessage(null);
+    setFieldErrors({});
+    setResult(null);
+    setPublishResult(null);
+    setPublishError(null);
+    setIsOldPageWithoutConfig(false);
+
+    if (newMode === "edit") {
+      fetchSiteList();
+    } else {
+      setSelectedSiteId("");
+      setForm(INITIAL_FORM);
+    }
+  };
+
+  const handleSelectSiteChange = (siteId: string) => {
+    setSelectedSiteId(siteId);
+    if (siteId) {
+      fetchSiteConfig(siteId);
+    } else {
+      setForm(INITIAL_FORM);
+      setIsOldPageWithoutConfig(false);
+    }
+  };
 
   const handleInputChange = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -115,6 +230,9 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   };
 
   const loadPreset = () => {
+    setMode("create");
+    setSelectedSiteId("");
+    setIsOldPageWithoutConfig(false);
     setForm(SAMPLE_DATA);
     setErrorMessage(null);
     setFieldErrors({});
@@ -125,6 +243,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
   const resetForm = () => {
     setForm(INITIAL_FORM);
+    setSelectedSiteId("");
+    setIsOldPageWithoutConfig(false);
     setErrorMessage(null);
     setFieldErrors({});
     setResult(null);
@@ -135,6 +255,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   const validateFormClientSide = (): boolean => {
     const errors: Record<string, string[]> = {};
     const slugRegex = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+    const measurementIdRegex = /^G-[A-Z0-9]+$/i;
 
     if (!form.siteId.trim()) {
       errors.siteId = ["El ID de sitio es requerido."];
@@ -173,6 +294,10 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       errors.heroMobile = ["La URL de Hero Mobile es requerida."];
     } else if (!form.heroMobile.startsWith("https://")) {
       errors.heroMobile = ["La URL de Hero Mobile debe usar HTTPS."];
+    }
+
+    if (form.measurementId.trim() && !measurementIdRegex.test(form.measurementId.trim())) {
+      errors.measurementId = ["El Measurement ID debe tener el formato G-XXXXXXXX (ej. G-7F24PBZPDM)."];
     }
 
     setFieldErrors(errors);
@@ -215,12 +340,21 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       hero: {
         desktop: form.heroDesktop.trim(),
         mobile: form.heroMobile.trim()
-      }
+      },
+      analytics: form.measurementId.trim()
+        ? { measurementId: form.measurementId.trim().toUpperCase() }
+        : undefined
     };
 
     try {
-      const response = await fetch("/api/internal/product-pages/generate", {
-        method: "POST",
+      const endpoint = mode === "edit"
+        ? `/api/internal/product-pages/${encodeURIComponent(form.siteId.trim())}`
+        : "/api/internal/product-pages/generate";
+
+      const method = mode === "edit" ? "PATCH" : "POST";
+
+      const response = await fetch(endpoint, {
+        method,
         headers: {
           "Content-Type": "application/json"
         },
@@ -244,7 +378,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             "distributor.displayPhone": "displayPhone",
             "distributor.defaultMessage": "defaultMessage",
             "hero.desktop": "heroDesktop",
-            "hero.mobile": "heroMobile"
+            "hero.mobile": "heroMobile",
+            "analytics.measurementId": "measurementId"
           };
 
           Object.entries(data.issues.fieldErrors).forEach(([path, msgs]) => {
@@ -254,12 +389,20 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
           setFieldErrors(parsedErrors);
         }
-        throw new Error(data.error || "Error al generar el paquete de la página de producto.");
+        throw new Error(data.error || `Error al ${mode === "edit" ? "actualizar" : "generar"} la página de producto.`);
       }
 
-      setResult(data as GenerationResult);
+      setResult({
+        ...data,
+        requiresPublication: mode === "edit" ? true : data.requiresPublication
+      } as GenerationResult);
+
+      if (mode === "edit") {
+        setIsOldPageWithoutConfig(false);
+        fetchSiteList();
+      }
     } catch (err: any) {
-      setErrorMessage(err.message || "Ocurrió un error inesperado durante la generación.");
+      setErrorMessage(err.message || "Ocurrió un error inesperado durante la operación.");
     } finally {
       setIsSubmitting(false);
     }
@@ -297,7 +440,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
   const copyManifest = () => {
     if (!result) return;
-    const summary = `Sitio Generado: ${result.siteId}\nFecha: ${result.generatedAt}\nDirectorio: ${result.outputDirectory}\nArchivos:\n${result.files.map(f => `- ${f}`).join("\n")}`;
+    const summary = `Sitio: ${result.siteId}\nFecha: ${result.generatedAt}\nDirectorio: ${result.outputDirectory}\nArchivos:\n${result.files.map(f => `- ${f}`).join("\n")}`;
     navigator.clipboard.writeText(summary);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -317,10 +460,41 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={loadPreset} leftIcon={<Sparkles className="h-4 w-4 text-sand-600" />}>
-              Cargar Ejemplo (Jenny Varela)
-            </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Toggles Modo Crear / Modo Editar */}
+            <div className="inline-flex rounded-2xl border border-stone-200 bg-stone-100/70 p-1">
+              <button
+                type="button"
+                onClick={() => handleModeChange("create")}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                  mode === "create"
+                    ? "bg-white text-stone-950 shadow-sm"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                <PlusCircle className="h-3.5 w-3.5" />
+                Nueva Página
+              </button>
+              <button
+                type="button"
+                onClick={() => handleModeChange("edit")}
+                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
+                  mode === "edit"
+                    ? "bg-white text-stone-950 shadow-sm"
+                    : "text-stone-600 hover:text-stone-900"
+                }`}
+              >
+                <Edit3 className="h-3.5 w-3.5" />
+                Editar Existente
+              </button>
+            </div>
+
+            {mode === "create" && (
+              <Button variant="outline" size="sm" onClick={loadPreset} leftIcon={<Sparkles className="h-4 w-4 text-sand-600" />}>
+                Cargar Ejemplo (Jenny Varela)
+              </Button>
+            )}
+
             <Button variant="ghost" size="sm" onClick={resetForm} leftIcon={<RotateCcw className="h-4 w-4" />}>
               Limpiar
             </Button>
@@ -328,21 +502,82 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         </div>
 
         <h1 className="mt-5 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
-          Generador de Página de Producto
+          {mode === "create" ? "Generador de Página de Producto" : "Edición de Página de Producto"}
         </h1>
         <p className="mt-3 max-w-3xl text-base leading-7 text-stone-600">
-          Genera un paquete estático completo preconfigurado (`index.html`, `styles.css`, `app.js`, `config.js`) listo para desplegar y publicar por cliente.
+          {mode === "create"
+            ? "Genera un paquete estático completo preconfigurado (`index.html`, `styles.css`, `app.js`, `config.js`) listo para desplegar y publicar por cliente."
+            : "Consulta la configuración de una página existente, edita sus datos, regenera el paquete estático y publícalo de forma independiente."}
         </p>
       </section>
 
+      {/* Selector de Sitio en Modo Edición */}
+      {mode === "edit" && (
+        <Card className="border-sand-300 bg-sand-50/20">
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Search className="h-5 w-5 text-sand-600" />
+                <CardTitle>Seleccionar Página Existente</CardTitle>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={fetchSiteList}
+                isLoading={isLoadingList}
+                leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+              >
+                Actualizar Lista
+              </Button>
+            </div>
+            <CardDescription>
+              Selecciona el slug del sitio que deseas consultar y editar.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="max-w-md">
+              <Label htmlFor="siteSelector">Página de Producto Registrada</Label>
+              <Select
+                id="siteSelector"
+                value={selectedSiteId}
+                onChange={(e) => handleSelectSiteChange(e.target.value)}
+                disabled={isLoadingList || isLoadingSiteConfig}
+                className="mt-1.5"
+              >
+                <option value="">-- Selecciona una página --</option>
+                {siteList.map((item) => (
+                  <option key={item.siteId} value={item.siteId}>
+                    {item.siteId} {item.configuration?.distributor?.brandName ? `(${item.configuration.distributor.brandName})` : ""}
+                  </option>
+                ))}
+              </Select>
+
+              {isLoadingSiteConfig && (
+                <p className="mt-2 text-xs text-sand-700 flex items-center gap-1.5">
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  Cargando configuración de `{selectedSiteId}`...
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Alerta para páginas antiguas sin configuración guardada */}
+      {isOldPageWithoutConfig && (
+        <Alert variant="warning" title="Configuración de versión anterior" icon={<AlertTriangle className="h-5 w-5 text-amber-600" />}>
+          Esta página fue generada antes de activar la edición. Regénérala una vez para habilitar modificaciones futuras.
+        </Alert>
+      )}
+
       {/* Alerta de Error Principal */}
       {errorMessage && (
-        <Alert variant="error" title="Error de Generación" icon={<AlertCircle className="h-5 w-5 text-rose-600" />}>
+        <Alert variant="error" title="Error en la Operación" icon={<AlertCircle className="h-5 w-5 text-rose-600" />}>
           {errorMessage}
         </Alert>
       )}
 
-      {/* Pantalla de Éxito de Generación */}
+      {/* Pantalla de Éxito / Estado de Revisión de Generación */}
       {result && (
         <Card className="border-emerald-200 bg-emerald-50/30 p-6 sm:p-8 space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -353,7 +588,9 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold tracking-tight text-stone-900">
-                    ¡Página Generada con Éxito!
+                    {result.requiresPublication
+                      ? "¡Paquete Regenerado — Pendiente de Publicación!"
+                      : "¡Página Generada con Éxito!"}
                   </h2>
                   <Badge variant="success">{result.siteId}</Badge>
                 </div>
@@ -373,7 +610,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 {copied ? "¡Copiado!" : "Copiar Resumen"}
               </Button>
 
-              {/* Botón de Publicación: aparece únicamente tras generar correctamente */}
+              {/* Botón de Publicación: ejecuta POST /api/internal/product-pages/publish */}
               <Button
                 variant="primary"
                 size="sm"
@@ -385,6 +622,12 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               </Button>
             </div>
           </div>
+
+          {result.requiresPublication && (
+            <Alert variant="info" title="Estado de Revisión" icon={<RefreshCw className="h-4 w-4 text-blue-600" />}>
+              La página ha sido actualizada y regenerada localmente. Haz clic en <strong>"Publicar página"</strong> para sincronizar los cambios con la infraestructura de Hostinger.
+            </Alert>
+          )}
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-subtle">
@@ -462,13 +705,18 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 id="siteId"
                 placeholder="ej. jenny-varela"
                 value={form.siteId}
+                disabled={mode === "edit"}
                 onChange={(e) => handleInputChange("siteId", e.target.value)}
                 className={fieldErrors.siteId ? "border-rose-400 focus:border-rose-500" : ""}
               />
               {fieldErrors.siteId ? (
                 <p className="mt-1 text-xs text-rose-600">{fieldErrors.siteId[0]}</p>
               ) : (
-                <p className="mt-1 text-[11px] text-stone-400">Slug minúsculo sin espacios (ej. `jenny-varela`).</p>
+                <p className="mt-1 text-[11px] text-stone-400">
+                  {mode === "edit"
+                    ? "El identificador del sitio es fijo durante la edición."
+                    : "Slug minúsculo sin espacios (ej. `jenny-varela`)."}
+                </p>
               )}
             </div>
 
@@ -664,7 +912,40 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
           </CardContent>
         </Card>
 
-        {/* Botón de Envio del Formulario */}
+        {/* Bloque 5: Analítica de Google Analytics */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-sand-600" />
+              <CardTitle>Analítica y Métricas</CardTitle>
+            </div>
+            <CardDescription>
+              Configura el seguimiento de visitas y eventos de conversión en Google Analytics.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-3">
+            <div>
+              <Label htmlFor="measurementId">Measurement ID de Google Analytics (Opcional)</Label>
+              <Input
+                id="measurementId"
+                placeholder="ej. G-7F24PBZPDM"
+                value={form.measurementId}
+                onChange={(e) => handleInputChange("measurementId", e.target.value)}
+                className={fieldErrors.measurementId ? "border-rose-400 focus:border-rose-500 font-mono" : "font-mono"}
+              />
+              {fieldErrors.measurementId ? (
+                <p className="mt-1 text-xs text-rose-600">{fieldErrors.measurementId[0]}</p>
+              ) : (
+                <p className="mt-1 text-[11px] text-stone-400">
+                  Formato esperado: `G-XXXXXXXX`. El Measurement ID es público y se utiliza únicamente para recopilar analítica del sitio; no requiere claves privadas ni contraseñas.
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Botón de Envío del Formulario */}
         <div className="flex items-center justify-end gap-3 pt-2">
           <Button
             type="submit"
@@ -672,7 +953,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             isLoading={isSubmitting}
             rightIcon={<ArrowRight className="h-4 w-4" />}
           >
-            Generar Paquete de Producto
+            {mode === "edit" ? "Guardar y Regenerar Paquete" : "Generar Paquete de Producto"}
           </Button>
         </div>
       </form>
