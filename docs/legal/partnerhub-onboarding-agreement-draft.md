@@ -10,6 +10,10 @@ The one-time installation fee is paid in full before production begins. After pa
 
 The service is an administration and optimization service. Template changes may be made after reviewing performance and proposed improvements. No specific number of leads, sales, conversion rate, or income is guaranteed.
 
+## Optional PartnerHub referral benefit
+
+If the selected offer includes the PartnerHub referral benefit, each two qualified referrals may generate one monthly support credit. A qualified referral requires operator validation, payment of the referred entrepreneur's installation fee, publication of the referred page, and payment of the first support period without refund or cancellation. Credits accumulate without a technical ceiling; twelve months is an indicative milestone and not a cap. Credits apply only to future PartnerHub support periods, are not exchangeable for cash, are not transferable, and do not pay installation fees. The benefit is separate from any compensation plan or commercial relationship of GanoExcel. The final agreement must state the operator's validation process and reversal conditions.
+
 ### Commercial fields to complete before signing
 
 - Selected service: `[PRODUCT_PAGE | VSL_PAGE | COMBINATION]`.
