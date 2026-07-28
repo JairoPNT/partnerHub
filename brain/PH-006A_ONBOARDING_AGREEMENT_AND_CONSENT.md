@@ -37,6 +37,10 @@ The entrepreneur accepts a versioned agreement covering:
 - Support suspension does not automatically release the domain; domain expiry and release are handled separately under the final agreement.
 - The final agreement must still state the exact plan price, due date, notice method, and restoration conditions.
 
+## Onboarding Form Gate
+
+The signing form must collect the selected service, agreed installation fee, recurring support fee, service start date, payment reference, and provider notice channels. Bracketed commercial values in the draft are not defaults: they must be completed and reviewed before a signature or publication can be accepted.
+
 ## Separate Authorizations
 
 The form must keep these acceptances distinct:

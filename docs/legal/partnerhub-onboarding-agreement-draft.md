@@ -10,6 +10,27 @@ The one-time installation fee is paid in full before production begins. After pa
 
 The service is an administration and optimization service. Template changes may be made after reviewing performance and proposed improvements. No specific number of leads, sales, conversion rate, or income is guaranteed.
 
+### Commercial fields to complete before signing
+
+- Selected service: `[PRODUCT_PAGE | VSL_PAGE | COMBINATION]`.
+- One-time installation fee: `[COP_AMOUNT]`.
+- Monthly support fee: `[COP_AMOUNT]`.
+- Service start date: `[DATE]`.
+- Monthly due day: the calendar day matching the service start date, subject to the final agreement's treatment of months without that day.
+- Payment method and proof reference: `[PAYMENT_DETAILS]`.
+
+The signed version must replace every bracketed field with the agreed value. The form must not permit publication while the commercial fields remain incomplete.
+
+### Service provider identity and channels
+
+The draft identifies Jairo Pinto, Colombian identification number 94.536.693, acting at this stage as a natural person and operating under the PartnerHub brand. The final agreement must include the provider's service address and the approved notice channels:
+
+- General contact: `contacto@partnerhub.club`.
+- Operational support: `soporte@partnerhub.club`.
+- Contractual and legal notices: `legal@partnerhub.club`.
+
+Use of the PartnerHub name or email domain does not represent that a separate company has been incorporated. The final contracting party and invoicing details must be reviewed before activation.
+
 ## Control and ownership
 
 The domain, hosting account, VPS, R2 storage, PartnerHub environment, source template, deployment tooling, and shared system remain administered by Jairo Pinto while the service is active.
