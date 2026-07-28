@@ -10,8 +10,8 @@ export function Card({ children, className, interactive = false, ...props }: Car
   return (
     <div
       className={cn(
-        "rounded-3xl border border-stone-200/80 bg-white p-6 shadow-subtle transition-all duration-300",
-        interactive && "hover:-translate-y-1 hover:border-sand-300 hover:shadow-premium cursor-pointer",
+        "rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm transition-all duration-300",
+        interactive && "hover:-translate-y-1 hover:border-cyan-300 hover:shadow-md cursor-pointer",
         className
       )}
       {...props}
@@ -40,7 +40,7 @@ export function CardTitle({
 }: HTMLAttributes<HTMLHeadingElement>) {
   return (
     <h3
-      className={cn("font-heading text-lg font-semibold tracking-tight text-stone-900", className)}
+      className={cn("font-heading text-lg font-semibold tracking-tight text-slate-900", className)}
       {...props}
     >
       {children}
@@ -54,7 +54,7 @@ export function CardDescription({
   ...props
 }: HTMLAttributes<HTMLParagraphElement>) {
   return (
-    <p className={cn("text-xs leading-5 text-stone-500", className)} {...props}>
+    <p className={cn("text-xs leading-5 text-slate-500", className)} {...props}>
       {children}
     </p>
   );
@@ -66,7 +66,7 @@ export function CardContent({
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("text-sm text-stone-600 leading-6", className)} {...props}>
+    <div className={cn("text-sm text-slate-600 leading-6", className)} {...props}>
       {children}
     </div>
   );
@@ -78,7 +78,7 @@ export function CardFooter({
   ...props
 }: HTMLAttributes<HTMLDivElement>) {
   return (
-    <div className={cn("flex items-center pt-4 border-t border-stone-100 mt-4", className)} {...props}>
+    <div className={cn("flex items-center pt-4 border-t border-slate-100 mt-4", className)} {...props}>
       {children}
     </div>
   );

@@ -449,27 +449,27 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   return (
     <div className="space-y-8">
       {/* Header del módulo */}
-      <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
+      <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-sand-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sand-800">
+            <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-900">
               {record?.group || "Operations"}
             </span>
-            <span className="rounded-full border border-stone-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-stone-600">
+            <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
               Generador Interno
             </span>
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
             {/* Toggles Modo Crear / Modo Editar */}
-            <div className="inline-flex rounded-2xl border border-stone-200 bg-stone-100/70 p-1">
+            <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-100/70 p-1">
               <button
                 type="button"
                 onClick={() => handleModeChange("create")}
                 className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
                   mode === "create"
-                    ? "bg-white text-stone-950 shadow-sm"
-                    : "text-stone-600 hover:text-stone-900"
+                    ? "bg-white text-slate-950 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <PlusCircle className="h-3.5 w-3.5" />
@@ -480,8 +480,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 onClick={() => handleModeChange("edit")}
                 className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
                   mode === "edit"
-                    ? "bg-white text-stone-950 shadow-sm"
-                    : "text-stone-600 hover:text-stone-900"
+                    ? "bg-white text-slate-950 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
                 }`}
               >
                 <Edit3 className="h-3.5 w-3.5" />
@@ -490,7 +490,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             </div>
 
             {mode === "create" && (
-              <Button variant="outline" size="sm" onClick={loadPreset} leftIcon={<Sparkles className="h-4 w-4 text-sand-600" />}>
+              <Button variant="outline" size="sm" onClick={loadPreset} leftIcon={<Sparkles className="h-4 w-4 text-cyan-600" />}>
                 Cargar Ejemplo (Jenny Varela)
               </Button>
             )}
@@ -501,10 +501,10 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
           </div>
         </div>
 
-        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
           {mode === "create" ? "Generador de Página de Producto" : "Edición de Página de Producto"}
         </h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-stone-600">
+        <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
           {mode === "create"
             ? "Genera un paquete estático completo preconfigurado (`index.html`, `styles.css`, `app.js`, `config.js`) listo para desplegar y publicar por cliente."
             : "Consulta la configuración de una página existente, edita sus datos, regenera el paquete estático y publícalo de forma independiente."}
@@ -513,11 +513,11 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
       {/* Selector de Sitio en Modo Edición */}
       {mode === "edit" && (
-        <Card className="border-sand-300 bg-sand-50/20">
+        <Card className="border-cyan-200/80 bg-cyan-50/20">
           <CardHeader>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
-                <Search className="h-5 w-5 text-sand-600" />
+                <Search className="h-5 w-5 text-cyan-600" />
                 <CardTitle>Seleccionar Página Existente</CardTitle>
               </div>
               <Button
@@ -553,7 +553,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               </Select>
 
               {isLoadingSiteConfig && (
-                <p className="mt-2 text-xs text-sand-700 flex items-center gap-1.5">
+                <p className="mt-2 text-xs text-cyan-800 flex items-center gap-1.5">
                   <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                   Cargando configuración de `{selectedSiteId}`...
                 </p>
@@ -587,14 +587,14 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <h2 className="text-xl font-bold tracking-tight text-stone-900">
+                  <h2 className="text-xl font-bold tracking-tight text-slate-900">
                     {result.requiresPublication
                       ? "¡Paquete Regenerado — Pendiente de Publicación!"
                       : "¡Página Generada con Éxito!"}
                   </h2>
                   <Badge variant="success">{result.siteId}</Badge>
                 </div>
-                <p className="text-xs text-stone-500 mt-1">
+                <p className="text-xs text-slate-500 mt-1">
                   Generado el: {new Date(result.generatedAt).toLocaleString("es-CO")}
                 </p>
               </div>
@@ -616,7 +616,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 size="sm"
                 onClick={handlePublish}
                 isLoading={isPublishing}
-                leftIcon={<UploadCloud className="h-4 w-4 text-sand-300" />}
+                leftIcon={<UploadCloud className="h-4 w-4 text-cyan-300" />}
               >
                 Publicar página
               </Button>
@@ -630,24 +630,24 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
           )}
 
           <div className="grid gap-6 md:grid-cols-2">
-            <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-subtle">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-500 mb-3">
-                <Folder className="h-4 w-4 text-sand-600" />
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-subtle">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+                <Folder className="h-4 w-4 text-cyan-600" />
                 Directorio de Salida
               </div>
-              <code className="block break-all rounded-xl bg-stone-950 px-4 py-3 font-mono text-xs text-sand-200">
+              <code className="block break-all rounded-xl bg-slate-950 px-4 py-3 font-mono text-xs text-cyan-200">
                 {result.outputDirectory}
               </code>
             </div>
 
-            <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-subtle">
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-500 mb-3">
-                <FileCode className="h-4 w-4 text-sand-600" />
+            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-subtle">
+              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500 mb-3">
+                <FileCode className="h-4 w-4 text-cyan-600" />
                 Archivos Generados ({result.files.length})
               </div>
-              <ul className="grid grid-cols-2 gap-2 text-xs font-mono text-stone-700">
+              <ul className="grid grid-cols-2 gap-2 text-xs font-mono text-slate-700">
                 {result.files.map((file) => (
-                  <li key={file} className="flex items-center gap-1.5 rounded-lg bg-stone-50 px-2.5 py-1.5">
+                  <li key={file} className="flex items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1.5">
                     <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
                     <span className="truncate">{file}</span>
                   </li>
@@ -667,14 +667,14 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
           {publishResult && (
             <Alert variant="success" title="¡Página Publicada Correctamente!" icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}>
               <div className="space-y-1">
-                <p className="font-medium text-stone-800">
+                <p className="font-medium text-slate-800">
                   La página de producto para <strong className="text-emerald-950">{publishResult.siteId}</strong> ha sido publicada exitosamente.
                 </p>
-                <p className="text-xs text-stone-600">
+                <p className="text-xs text-slate-600">
                   <strong>Publicada el:</strong> {new Date(publishResult.publishedAt).toLocaleString("es-CO")}
                 </p>
                 {publishResult.remoteRoot && (
-                  <p className="text-xs text-stone-500 font-mono">
+                  <p className="text-xs text-slate-500 font-mono">
                     Ruta remota: {publishResult.remoteRoot}
                   </p>
                 )}
@@ -690,7 +690,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-sand-600" />
+              <User className="h-5 w-5 text-cyan-600" />
               <CardTitle>Identificación del Sitio y Distribuidor</CardTitle>
             </div>
             <CardDescription>
@@ -712,7 +712,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               {fieldErrors.siteId ? (
                 <p className="mt-1 text-xs text-rose-600">{fieldErrors.siteId[0]}</p>
               ) : (
-                <p className="mt-1 text-[11px] text-stone-400">
+                <p className="mt-1 text-[11px] text-slate-400">
                   {mode === "edit"
                     ? "El identificador del sitio es fijo durante la edición."
                     : "Slug minúsculo sin espacios (ej. `jenny-varela`)."}
@@ -770,7 +770,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 value={form.role}
                 onChange={(e) => handleInputChange("role", e.target.value)}
               />
-              <p className="mt-1 text-[11px] text-stone-400">Cargo mostrado en perfil de contacto y footer.</p>
+              <p className="mt-1 text-[11px] text-slate-400">Cargo mostrado en perfil de contacto y footer.</p>
             </div>
           </CardContent>
         </Card>
@@ -779,7 +779,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Phone className="h-5 w-5 text-sand-600" />
+              <Phone className="h-5 w-5 text-cyan-600" />
               <CardTitle>Contacto y Conversión por WhatsApp</CardTitle>
             </div>
             <CardDescription>
@@ -800,7 +800,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               {fieldErrors.whatsappNumber ? (
                 <p className="mt-1 text-xs text-rose-600">{fieldErrors.whatsappNumber[0]}</p>
               ) : (
-                <p className="mt-1 text-[11px] text-stone-400">Incluir código de país sin símbolos (ej. 573188430283).</p>
+                <p className="mt-1 text-[11px] text-slate-400">Incluir código de país sin símbolos (ej. 573188430283).</p>
               )}
             </div>
 
@@ -812,7 +812,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 value={form.displayPhone}
                 onChange={(e) => handleInputChange("displayPhone", e.target.value)}
               />
-              <p className="mt-1 text-[11px] text-stone-400">Formato nacional mostrado en texto de llamado tel:.</p>
+              <p className="mt-1 text-[11px] text-slate-400">Formato nacional mostrado en texto de llamado tel:.</p>
             </div>
 
             <div className="md:col-span-2">
@@ -824,7 +824,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 value={form.defaultMessage}
                 onChange={(e) => handleInputChange("defaultMessage", e.target.value)}
               />
-              <p className="mt-1 text-[11px] text-stone-400">Texto inicial prellenado al abrir la conversación.</p>
+              <p className="mt-1 text-[11px] text-slate-400">Texto inicial prellenado al abrir la conversación.</p>
             </div>
           </CardContent>
         </Card>
@@ -833,7 +833,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Search className="h-5 w-5 text-sand-600" />
+              <Search className="h-5 w-5 text-cyan-600" />
               <CardTitle>Configuración SEO y Metadatos</CardTitle>
             </div>
             <CardDescription>
@@ -873,7 +873,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <ImageIcon className="h-5 w-5 text-sand-600" />
+              <ImageIcon className="h-5 w-5 text-cyan-600" />
               <CardTitle>Recursos Multimedia (Hero en Cloudflare R2)</CardTitle>
             </div>
             <CardDescription>
@@ -916,7 +916,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-sand-600" />
+              <BarChart3 className="h-5 w-5 text-cyan-600" />
               <CardTitle>Analítica y Métricas</CardTitle>
             </div>
             <CardDescription>
@@ -937,7 +937,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               {fieldErrors.measurementId ? (
                 <p className="mt-1 text-xs text-rose-600">{fieldErrors.measurementId[0]}</p>
               ) : (
-                <p className="mt-1 text-[11px] text-stone-400">
+                <p className="mt-1 text-[11px] text-slate-400">
                   Formato esperado: `G-XXXXXXXX`. El Measurement ID es público y se utiliza únicamente para recopilar analítica del sitio; no requiere claves privadas ni contraseñas.
                 </p>
               )}

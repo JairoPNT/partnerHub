@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 export function Label({ className, children, ...props }: LabelHTMLAttributes<HTMLLabelElement>) {
   return (
     <label
-      className={cn("text-xs font-semibold uppercase tracking-[0.08em] text-stone-500", className)}
+      className={cn("text-xs font-semibold uppercase tracking-[0.08em] text-slate-500", className)}
       {...props}
     >
       {children}
@@ -20,7 +20,7 @@ export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputE
       <input
         type={type}
         className={cn(
-          "flex w-full rounded-2xl border border-stone-250 bg-white/70 px-4 py-2.5 text-sm text-stone-900 transition-all duration-200 placeholder:text-stone-400 focus:border-sand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sand-400/20 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 transition-all duration-200 placeholder:text-slate-400 focus:border-cyan-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
         ref={ref}
@@ -37,7 +37,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectHTMLAttributes<HTMLSel
     return (
       <select
         className={cn(
-          "flex w-full rounded-2xl border border-stone-250 bg-white/70 px-4 py-2.5 text-sm text-stone-900 transition-all duration-200 focus:border-sand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sand-400/20 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 transition-all duration-200 focus:border-cyan-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
         ref={ref}
@@ -56,7 +56,7 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<H
     return (
       <textarea
         className={cn(
-          "flex min-h-[80px] w-full rounded-2xl border border-stone-250 bg-white/70 px-4 py-2.5 text-sm text-stone-900 transition-all duration-200 placeholder:text-stone-400 focus:border-sand-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-sand-400/20 disabled:cursor-not-allowed disabled:opacity-50",
+          "flex min-h-[80px] w-full rounded-2xl border border-slate-200 bg-white/80 px-4 py-2.5 text-sm text-slate-900 transition-all duration-200 placeholder:text-slate-400 focus:border-cyan-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-400/20 disabled:cursor-not-allowed disabled:opacity-50",
           className
         )}
         ref={ref}
@@ -74,7 +74,7 @@ export const Checkbox = forwardRef<HTMLInputElement, Omit<InputHTMLAttributes<HT
       <input
         type="checkbox"
         className={cn(
-          "h-4 w-4 rounded border-stone-300 text-sand-600 focus:ring-sand-500",
+          "h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500",
           className
         )}
         ref={ref}
@@ -105,8 +105,8 @@ export function Switch({
       disabled={disabled}
       onClick={() => onChange(!checked)}
       className={cn(
-        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-sand-400/20 disabled:opacity-50",
-        checked ? "bg-sand-500" : "bg-stone-200",
+        "relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-cyan-400/20 disabled:opacity-50",
+        checked ? "bg-cyan-600" : "bg-slate-200",
         className
       )}
     >
