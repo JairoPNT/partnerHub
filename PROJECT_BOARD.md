@@ -94,6 +94,12 @@ Status: In Progress
 
 Description: patch Next and NextAuth to remove the critical and moderate advisories, verify the build, and review remaining transitive advisories without forcing a breaking downgrade.
 
+### PH-006A Partner Onboarding Agreement and Consent
+
+Status: In Progress
+
+Description: define the onboarding agreement and separate consent records for service terms, data processing, media publication, optional portfolio use, and technical handoff before production onboarding.
+
 ## EPIC-100 PHOS Sync Engine
 
 Purpose: automatically synchronize selected brain files with Notion so executive state stays current without manual copy-paste.
