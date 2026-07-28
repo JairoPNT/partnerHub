@@ -62,14 +62,14 @@ Services must not introduce commercial follow-up, ownership of post-routing lead
 
 ## Migration Rule
 
-No migration should be created until PH-003C receives review and the schema naming is accepted.
+No migration should be created until PH-003D receives CTO quick check, PH-003E is explicitly authorized, schema implementation is completed, and a later migration ticket is explicitly approved.
 
-Do not run `prisma generate`, `prisma migrate`, or `prisma db push` before PH-003D reviews the schema.
+Do not run `prisma generate`, `prisma migrate`, or `prisma db push` during PH-003D closure.
 
 ## Open Questions
 
-- Should `lead.redirected_to_external_destination` remain in the minimum event list even though it was not in the original requested minimum events?
-- Should click/redirect metrics be aggregated only, or stored as individual BusinessEvents?
-- Should UserRole include `ENTREPRENEUR` before the entrepreneur has an MVP dashboard?
+- Resolved by PH-003D closure: `visitor.redirected_to_external_destination` remains in the minimum event list as terminal BusinessEvent/audit traceability.
+- Resolved by PH-003D closure: MVP starts with individual BusinessEvent records for visitor redirects; aggregated metrics can be added later if volume requires it.
+- Resolved by PH-003D closure: UserRole may include `ENTREPRENEUR` before the entrepreneur has an MVP dashboard, but no auth, permissions, endpoint access, or entrepreneur dashboard is implemented yet.
 - Should billing/payment remain out of PH-003C until a separate billing mission?
 - Should TrafficCampaign include only PartnerHub-managed traffic or also manually launched external traffic references?

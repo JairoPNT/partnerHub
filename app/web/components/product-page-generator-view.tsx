@@ -16,7 +16,8 @@ import {
   Check,
   RotateCcw,
   ArrowRight,
-  Folder
+  Folder,
+  UploadCloud
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,13 @@ interface GenerationResult {
   siteId: string;
   generatedAt: string;
   outputDirectory: string;
+  files: string[];
+}
+
+interface PublicationResult {
+  siteId: string;
+  publishedAt: string;
+  remoteRoot: string;
   files: string[];
 }
 
@@ -90,6 +98,11 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [copied, setCopied] = useState(false);
 
+  // Estados de publicación
+  const [isPublishing, setIsPublishing] = useState(false);
+  const [publishResult, setPublishResult] = useState<PublicationResult | null>(null);
+  const [publishError, setPublishError] = useState<string | null>(null);
+
   const handleInputChange = (field: keyof FormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (fieldErrors[field]) {
@@ -106,6 +119,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     setErrorMessage(null);
     setFieldErrors({});
     setResult(null);
+    setPublishResult(null);
+    setPublishError(null);
   };
 
   const resetForm = () => {
@@ -113,6 +128,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     setErrorMessage(null);
     setFieldErrors({});
     setResult(null);
+    setPublishResult(null);
+    setPublishError(null);
   };
 
   const validateFormClientSide = (): boolean => {
@@ -166,6 +183,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     e.preventDefault();
     setErrorMessage(null);
     setResult(null);
+    setPublishResult(null);
+    setPublishError(null);
 
     if (!validateFormClientSide()) {
       setErrorMessage("Por favor corrige los errores resaltados antes de continuar.");
@@ -246,6 +265,36 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     }
   };
 
+  const handlePublish = async () => {
+    if (!result || !result.siteId) return;
+
+    setIsPublishing(true);
+    setPublishError(null);
+    setPublishResult(null);
+
+    try {
+      const response = await fetch("/api/internal/product-pages/publish", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ siteId: result.siteId })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Error al publicar la página de producto.");
+      }
+
+      setPublishResult(data as PublicationResult);
+    } catch (err: any) {
+      setPublishError(err.message || "Ocurrió un error inesperado durante la publicación.");
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
   const copyManifest = () => {
     if (!result) return;
     const summary = `Sitio Generado: ${result.siteId}\nFecha: ${result.generatedAt}\nDirectorio: ${result.outputDirectory}\nArchivos:\n${result.files.map(f => `- ${f}`).join("\n")}`;
@@ -282,7 +331,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
           Generador de Página de Producto
         </h1>
         <p className="mt-3 max-w-3xl text-base leading-7 text-stone-600">
-          Genera un paquete estático completo preconfigurado (`index.html`, `styles.css`, `app.js`, `config.js`) listo para desplegar de manera aislada por cliente.
+          Genera un paquete estático completo preconfigurado (`index.html`, `styles.css`, `app.js`, `config.js`) listo para desplegar y publicar por cliente.
         </p>
       </section>
 
@@ -293,9 +342,9 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         </Alert>
       )}
 
-      {/* Pantalla de Éxito */}
+      {/* Pantalla de Éxito de Generación */}
       {result && (
-        <Card className="border-emerald-200 bg-emerald-50/30 p-6 sm:p-8">
+        <Card className="border-emerald-200 bg-emerald-50/30 p-6 sm:p-8 space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
@@ -314,17 +363,30 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               </div>
             </div>
 
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={copyManifest}
-              leftIcon={copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
-            >
-              {copied ? "¡Copiado!" : "Copiar Resumen"}
-            </Button>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyManifest}
+                leftIcon={copied ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+              >
+                {copied ? "¡Copiado!" : "Copiar Resumen"}
+              </Button>
+
+              {/* Botón de Publicación: aparece únicamente tras generar correctamente */}
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handlePublish}
+                isLoading={isPublishing}
+                leftIcon={<UploadCloud className="h-4 w-4 text-sand-300" />}
+              >
+                Publicar página
+              </Button>
+            </div>
           </div>
 
-          <div className="mt-6 grid gap-6 md:grid-cols-2">
+          <div className="grid gap-6 md:grid-cols-2">
             <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-subtle">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-stone-500 mb-3">
                 <Folder className="h-4 w-4 text-sand-600" />
@@ -350,6 +412,32 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               </ul>
             </div>
           </div>
+
+          {/* Mensaje de Error de Publicación */}
+          {publishError && (
+            <Alert variant="error" title="Error de Publicación" icon={<AlertCircle className="h-5 w-5 text-rose-600" />}>
+              {publishError}
+            </Alert>
+          )}
+
+          {/* Mensaje de Éxito de Publicación */}
+          {publishResult && (
+            <Alert variant="success" title="¡Página Publicada Correctamente!" icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}>
+              <div className="space-y-1">
+                <p className="font-medium text-stone-800">
+                  La página de producto para <strong className="text-emerald-950">{publishResult.siteId}</strong> ha sido publicada exitosamente.
+                </p>
+                <p className="text-xs text-stone-600">
+                  <strong>Publicada el:</strong> {new Date(publishResult.publishedAt).toLocaleString("es-CO")}
+                </p>
+                {publishResult.remoteRoot && (
+                  <p className="text-xs text-stone-500 font-mono">
+                    Ruta remota: {publishResult.remoteRoot}
+                  </p>
+                )}
+              </div>
+            </Alert>
+          )}
         </Card>
       )}
 

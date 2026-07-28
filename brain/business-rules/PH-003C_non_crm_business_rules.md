@@ -22,7 +22,7 @@ PartnerHub creates and updates assets, messages, channels, destinations, traffic
 - A LeadDestination must point outside PartnerHub or to an external channel controlled by the entrepreneur.
 - Routing to WhatsApp, checkout, form, booking, social DM, phone, or another approved external destination is valid.
 - The main PartnerHub flow ends once the visitor is routed to LeadDestination.
-- PartnerHub may record `lead.redirected_to_external_destination` only as a terminal traceability event.
+- PartnerHub may record `visitor.redirected_to_external_destination` only as a terminal traceability event.
 
 ## Prohibited Rules
 
