@@ -4,7 +4,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Ticket
 
-`PH-003C - Non-CRM Web Assets, Validated Messages, and Routing Model`
+`PH-003D - Schema Review and Migration Plan`
 
 ## Status Summary
 
@@ -22,6 +22,20 @@ PartnerHub is now documented and modeled as not being a CRM.
 
 The PH-003C core is web assets, validated messages, personalized channels, external lead destinations, traffic generation, and traceability.
 
+PH-003D has created database planning documentation for schema review before migration.
+
+Claude Code reviewed PH-003D as `APPROVED WITH WARNINGS`.
+
+The PH-003D closure pass incorporated W-A, W-B, and W-C documentally:
+
+- W-A: terminal redirect event is `visitor.redirected_to_external_destination`.
+- W-B: `OrganizationMembership` and `UserRole` are included in MVP planning.
+- W-C: `BillingMode` is documented for `TrafficCampaign`, with MVP default recommended as `MANUAL`.
+
+PH-003D does not authorize migrations, Prisma generate, Prisma migrate, Prisma db push, endpoint work, auth work, UI work, webhook implementation, Wompi integration, or billing automation.
+
+PH-004A Commercial Pricing Update: Approved official commercial rates for MVP launch saved in `brain/business/OFERTA_COMERCIAL_OFICIAL_MVP.md` ($247k Producto, $347k Negocio, $475.2k Plan 360, $59.9k/mo 1 servicio, $89.900/mo 2 servicios, Meta Ads $197k setup + $89.9k/mo).
+
 ## Path Integrity
 
 - Official project root: `D:\Proyectos multi agentes\PartnerHub`.
@@ -29,15 +43,15 @@ The PH-003C core is web assets, validated messages, personalized channels, exter
 
 ## Constraints Honored
 
-- Work changed `/brain`, Prisma schema planning, and backend service base files.
+- Work changed `/brain` database planning documentation only after PH-003C commit closure.
 - No UI changed.
-- Prisma schema changed.
+- Prisma schema was not changed during PH-003D.
 - No database migration was created or applied.
 - No Docker changed.
 - No endpoints changed.
 - No auth changed.
 - No dependencies added.
-- Schema planning was updated in Prisma.
+- Schema planning was documented in `brain/database/`.
 - No migrations created.
 
 ## Current Deliverables
@@ -48,6 +62,13 @@ The PH-003C core is web assets, validated messages, personalized channels, exter
 - PH-003C non-CRM business rules exist under `brain/business-rules/`.
 - Prisma schema uses Entrepreneur, WebAssetPackage, MasterAsset, PersonalizedChannel, LeadDestination, ValidatedMessage, TrafficCampaign, and BusinessEvent.
 - Backend service base files exist under `app/web/server/services/`.
+- PH-003D schema review exists under `brain/database/`.
+- PH-003D migration plan exists under `brain/database/`.
+- PH-003D Prisma model decisions exist under `brain/database/`.
+- PH-003D MVP vs future schema boundary exists under `brain/database/`.
+- PH-003D session handoff exists under `brain/session-handoffs/`.
+- PH-003D closure documents PaymentWebhookEvent minimum fields and idempotency/raw payload handling.
+- PH-003D closure ratifies Organization as tenant boundary, BillingStatement for MVP, ProductCatalog/Product/Kit/KitItem for MVP, MasterAsset GLOBAL/ORGANIZATION scope, and manual upgrade price policy.
 - PH-003B domain clarification files remain under `brain/domain-model/`.
 - PH-003B open questions exist under `brain/open-questions/`.
 - PH-003B dependencies for PH-003C exist under `brain/dependencies/`.
@@ -57,4 +78,8 @@ The PH-003C core is web assets, validated messages, personalized channels, exter
 
 ## Next Step
 
-Claude review of PH-003C.
+PH-003D is ready for CTO quick check.
+
+Suggested next mission after CTO approval: PH-003E - Controlled Prisma Schema Implementation.
+
+PH-003E is not authorized yet.

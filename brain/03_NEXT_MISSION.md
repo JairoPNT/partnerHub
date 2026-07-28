@@ -4,7 +4,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Current Gate
 
-Claude review of PH-003C - Non-CRM Web Assets, Validated Messages, and Routing Model.
+PH-003D CTO quick check after Claude review.
 
 PH-003C supersedes the CRM-like parts of the earlier model. PartnerHub is not a CRM.
 
@@ -14,15 +14,28 @@ PH-003B still contributes the MVP go-to-market addendum: manual / voz a voz / in
 
 PH-003B still contributes the domain/subdomain addendum: `nombre.pro` root domain reserved for future owner profile site, MVP operational landings preferably on subdominios such as `vsl.nombre.pro`, `shop.nombre.pro`, or `[producto].nombre.pro`.
 
+PH-003D documents the target schema direction for tenant isolation, commercial packages, billing, payment records, webhook records, publishing targets, domain records, master asset versioning, personalized channels, lead destinations, traffic campaigns, claims/compliance, and BusinessEvent auditability.
+
+Claude reviewed PH-003D as `APPROVED WITH WARNINGS`.
+
+PH-003D closure incorporated W-A, W-B, and W-C documentally:
+
+- W-A: redirect event naming is `visitor.redirected_to_external_destination`.
+- W-B: `OrganizationMembership` and `UserRole` are in MVP planning.
+- W-C: `BillingMode` is documented for `TrafficCampaign`, default recommended as `MANUAL`.
+
+PH-003D also documents PaymentWebhookEvent minimum fields, raw payload storage before processing, webhook idempotency, `BillingStatement` for MVP, `ProductCatalog` / `Product` / `Kit` / `KitItem` for MVP, `MasterAsset` GLOBAL or ORGANIZATION scope, and manual upgrade price policy.
+
 ## Current Queue
 
-1. PH-003C Claude review.
-2. PH-003D Schema review and migration plan after PH-003C approval.
-3. PH-004 Authentication Strategy after schema direction is accepted.
+1. PH-003D CTO quick check.
+2. PH-003E - Controlled Prisma Schema Implementation, only if CTO authorizes it.
+3. Migration ticket only after schema implementation is approved.
+4. PH-004 Authentication Strategy after schema direction is accepted.
 
 ## Hold
 
-Do not create migrations, endpoints, UI, or production workflows until PH-003C receives review.
+Do not create migrations, endpoints, UI, or production workflows until PH-003E or another explicit ticket authorizes implementation.
 
 ## Path Integrity
 
@@ -39,7 +52,12 @@ Do not create migrations, endpoints, UI, or production workflows until PH-003C r
 - Do not change auth.
 - Do not add dependencies.
 - Do not add CRM, inbox, pipeline, prospect, opportunity, deal, follow-up, CRM activity, or lead management features.
+- Do not run `prisma generate`.
+- Do not run `prisma migrate`.
+- Do not run `prisma db push`.
 
 ## Next Step
 
-Run Claude review on PH-003C deliverables.
+Run CTO quick check on PH-003D closure.
+
+Do not open PH-003E yet without CTO authorization.

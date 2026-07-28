@@ -166,9 +166,9 @@ BusinessEvent may record that a lead was redirected to an external destination. 
 - `validated_message.updated`
 - `traffic_campaign.requested`
 - `traffic_campaign.enabled`
-- `lead.redirected_to_external_destination`
+- `visitor.redirected_to_external_destination`
 
-The final event is added by PH-003C because the acceptance criteria require the flow to terminate when the lead is directed externally.
+The final event is added by PH-003C because the acceptance criteria require the flow to terminate when the visitor is directed externally.
 
 ## Technical Mapping
 

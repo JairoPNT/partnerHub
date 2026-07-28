@@ -30,7 +30,7 @@ The external visitor is not modeled as a managed PartnerHub lead.
 10. A visitor reaches the PersonalizedChannel.
 11. The PersonalizedChannel educates the visitor with validated messages.
 12. The visitor clicks or is routed to the LeadDestination.
-13. PartnerHub records `lead.redirected_to_external_destination`.
+13. PartnerHub records `visitor.redirected_to_external_destination`.
 14. The PartnerHub flow ends.
 
 ## Terminal Boundary
