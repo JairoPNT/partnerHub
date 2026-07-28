@@ -30,3 +30,7 @@ The Measurement ID is public configuration and may be embedded in the published 
 Each site receives its own GA4 property or web stream mapping. The PartnerHub backend must map `siteId` to the approved GA4 property and enforce tenant-level access before querying the Google Analytics Data API. The dashboard is read-only for this phase.
 
 Before activation, the generated static template must receive the site's Measurement ID through its validated configuration and the onboarding agreement must include the applicable analytics notice and consent language.
+
+## Editing relationship
+
+The product-page generator stores the validated source configuration in the durable service volume. A future dashboard editor can load it by `siteId`, update fields such as contact details, heroes, purchase URL, or Measurement ID, and regenerate the package. Regeneration does not publish automatically; publication remains an explicit reviewed action.
