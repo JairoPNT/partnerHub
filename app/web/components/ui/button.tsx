@@ -21,13 +21,13 @@ export function Button({
   ...props
 }: ButtonProps) {
   const baseStyles =
-    "inline-flex items-center justify-center rounded-2xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sand-500/50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
+    "inline-flex items-center justify-center rounded-2xl font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/40 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50";
 
   const variants = {
-    primary: "bg-stone-900 text-white hover:bg-stone-800 hover:shadow-subtle shadow-sm",
-    secondary: "bg-sand-100 text-stone-900 hover:bg-sand-200 border border-sand-200/50",
-    outline: "border border-stone-200 bg-white/50 text-stone-700 hover:border-stone-300 hover:bg-stone-50",
-    ghost: "text-stone-600 hover:bg-stone-100/70 hover:text-stone-900",
+    primary: "bg-slate-900 text-white hover:bg-slate-800 hover:shadow-md shadow-sm",
+    secondary: "bg-cyan-50 text-cyan-900 hover:bg-cyan-100 border border-cyan-200/70",
+    outline: "border border-slate-200 bg-white/60 text-slate-700 hover:border-slate-300 hover:bg-slate-50",
+    ghost: "text-slate-600 hover:bg-slate-100/70 hover:text-slate-950",
     danger: "bg-rose-600 text-white hover:bg-rose-700 shadow-sm"
   };
 

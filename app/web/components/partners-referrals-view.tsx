@@ -286,32 +286,32 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
   return (
     <div className="space-y-8">
       {/* Header del módulo */}
-      <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm sm:p-8">
+      <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-sand-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-sand-800">
+            <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-900">
               {record?.group || "Core"}
             </span>
-            <span className="rounded-full border border-stone-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-stone-600">
+            <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
               Programa de Invitación PartnerHub
             </span>
           </div>
 
-          <Button variant="outline" size="sm" onClick={fetchReferralData} isLoading={isLoading} leftIcon={<RefreshCw className="h-4 w-4 text-sand-600" />}>
+          <Button variant="outline" size="sm" onClick={fetchReferralData} isLoading={isLoading} leftIcon={<RefreshCw className="h-4 w-4 text-cyan-600" />}>
             Actualizar Datos
           </Button>
         </div>
 
-        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-stone-950 sm:text-4xl">
+        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
           Referidos y Beneficios
         </h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-stone-600">
+        <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
           Gestión manual de códigos de invitación de empresarios, seguimiento de referidos registrados y control de meses ganados por recomendación.
         </p>
       </section>
 
       {/* Nota Interna Obligatoria */}
-      <Alert variant="info" title="Regla Operativa Interna" icon={<ShieldAlert className="h-5 w-5 text-blue-600" />}>
+      <Alert variant="info" title="Regla Operativa Interna" icon={<ShieldAlert className="h-5 w-5 text-cyan-600" />}>
         El beneficio por referidos se valida y aplica manualmente en la cuenta del empresario. No representa un pago en efectivo ni aplica descuentos o cobros automáticos.
       </Alert>
 
@@ -338,68 +338,68 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Códigos Asignados
             </CardTitle>
-            <Tag className="h-5 w-5 text-sand-600" />
+            <Tag className="h-5 w-5 text-cyan-600" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-stone-950">{totalAssignedCodes}</div>
-            <p className="mt-1 text-xs text-stone-500">Empresarios con código activo</p>
+            <div className="text-3xl font-bold text-slate-950">{totalAssignedCodes}</div>
+            <p className="mt-1 text-xs text-slate-500">Empresarios con código activo</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Referidos Pendientes
             </CardTitle>
             <Clock className="h-5 w-5 text-amber-500" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-amber-600">{pendingReferrals}</div>
-            <p className="mt-1 text-xs text-stone-500">Pendientes de revisión/validación</p>
+            <p className="mt-1 text-xs text-slate-500">Pendientes de revisión/validación</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Referidos Calificados
             </CardTitle>
             <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           </CardHeader>
           <CardContent>
             <div className="text-3xl font-bold text-emerald-700">{qualifiedReferrals}</div>
-            <p className="mt-1 text-xs text-stone-500">Empresarios que cumplieron la meta</p>
+            <p className="mt-1 text-xs text-slate-500">Empresarios que cumplieron la meta</p>
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+            <CardTitle className="text-xs font-semibold uppercase tracking-wider text-slate-500">
               Meses Ganados Totales
             </CardTitle>
-            <Gift className="h-5 w-5 text-sand-700" />
+            <Gift className="h-5 w-5 text-cyan-700" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-stone-950">{totalEarnedMonths} <span className="text-sm font-normal text-stone-500">meses</span></div>
-            <p className="mt-1 text-xs text-stone-500">Calculado a razón de floor(calificados / 2)</p>
+            <div className="text-3xl font-bold text-slate-950">{totalEarnedMonths} <span className="text-sm font-normal text-slate-500">meses</span></div>
+            <p className="mt-1 text-xs text-slate-500">Calculado a razón de floor(calificados / 2)</p>
           </CardContent>
         </Card>
       </div>
 
       {/* Meta Visual Informativa de 12 Meses */}
-      <Card className="border-sand-300 bg-sand-50/20 p-6 sm:p-8">
+      <Card className="border-cyan-200/80 bg-cyan-50/20 p-6 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
             <div className="flex items-center gap-2">
-              <Award className="h-5 w-5 text-sand-700" />
-              <h3 className="text-lg font-bold text-stone-900 font-heading">
+              <Award className="h-5 w-5 text-cyan-700" />
+              <h3 className="text-lg font-bold text-slate-900 font-heading">
                 Meta Informativa del Programa de Invitación
               </h3>
             </div>
-            <p className="mt-1 text-xs text-stone-600">
+            <p className="mt-1 text-xs text-slate-600">
               Por cada 2 referidos calificados, el empresario obtiene 1 mes de beneficio en su plan PartnerHub. La meta de 12 meses es orientativa.
             </p>
           </div>
@@ -413,13 +413,13 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
 
         {/* Barra de progreso */}
         <div className="mt-5">
-          <div className="h-3 w-full overflow-hidden rounded-full bg-stone-200/80">
+          <div className="h-3 w-full overflow-hidden rounded-full bg-slate-200/80">
             <div
-              className="h-full rounded-full bg-sand-600 transition-all duration-500"
+              className="h-full rounded-full bg-gradient-to-r from-cyan-600 to-blue-600 transition-all duration-500"
               style={{ width: `${Math.min(100, (totalEarnedMonths / 12) * 100)}%` }}
             />
           </div>
-          <div className="mt-2 flex items-center justify-between text-[11px] text-stone-500 font-mono">
+          <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500 font-mono">
             <span>0 meses</span>
             <span>6 meses (12 referidos)</span>
             <span>12 meses (24 referidos)</span>
@@ -433,7 +433,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-sand-600" />
+              <UserPlus className="h-5 w-5 text-cyan-600" />
               <CardTitle>1. Asignar Código a Empresario</CardTitle>
             </div>
             <CardDescription>
@@ -491,11 +491,11 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-sand-600" />
+              <Users className="h-5 w-5 text-cyan-600" />
               <CardTitle>2. Registrar Nuevo Referido</CardTitle>
             </div>
             <CardDescription>
-              Vacula un nuevo sitio referido con el código del empresario invitador.
+              Vincula un nuevo sitio referido con el código del empresario invitador.
             </CardDescription>
           </CardHeader>
 
@@ -522,7 +522,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
                 />
               </div>
 
-              <p className="text-[11px] text-stone-400 leading-relaxed">
+              <p className="text-[11px] text-slate-400 leading-relaxed">
                 Si el código no está asignado previamente, el registro no se bloqueará y quedará en estado <strong>PENDING</strong> para su posterior validación.
               </p>
 
@@ -546,16 +546,16 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-6 w-6 text-amber-600 shrink-0 mt-0.5" />
             <div className="flex-1">
-              <h4 className="text-base font-bold text-stone-900">
+              <h4 className="text-base font-bold text-slate-900">
                 Confirmar Cambio de Estado para `{confirmation.referredSiteId}`
               </h4>
-              <p className="mt-1 text-xs text-stone-700 leading-relaxed">
+              <p className="mt-1 text-xs text-slate-700 leading-relaxed">
                 ¿Estás seguro de cambiar el estado de este referido a{" "}
                 <strong className="uppercase text-amber-900">{confirmation.targetStatus}</strong>?
               </p>
 
               {confirmation.targetStatus === "QUALIFIED" && (
-                <div className="mt-3 rounded-xl bg-white p-3 border border-amber-200 text-xs text-stone-600 space-y-1">
+                <div className="mt-3 rounded-xl bg-white p-3 border border-amber-200 text-xs text-slate-600 space-y-1">
                   <p className="font-medium text-emerald-800">
                     Impacto en Beneficios:
                   </p>
@@ -596,7 +596,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-sand-600" />
+              <Users className="h-5 w-5 text-cyan-600" />
               <CardTitle>Historial de Referidos Registrados</CardTitle>
             </div>
             <Badge variant="neutral">{data.referrals.length} registros</Badge>
@@ -608,7 +608,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
 
         <CardContent className="p-0">
           {data.referrals.length === 0 ? (
-            <div className="p-8 text-center text-xs text-stone-500">
+            <div className="p-8 text-center text-xs text-slate-500">
               No hay referidos registrados aún en el sistema.
             </div>
           ) : (
@@ -627,16 +627,16 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
               <TableBody>
                 {data.referrals.map((referral) => (
                   <TableRow key={referral.id}>
-                    <TableCell className="font-mono font-semibold text-stone-900">
+                    <TableCell className="font-mono font-semibold text-slate-900">
                       {referral.referrerCode}
                     </TableCell>
                     <TableCell className="text-xs">
                       {getOwnerDisplayName(referral.referrerCode, referral.referrerSiteId)}
                     </TableCell>
-                    <TableCell className="font-mono text-xs font-semibold text-sand-900">
+                    <TableCell className="font-mono text-xs font-semibold text-cyan-900">
                       {referral.referredSiteId}
                     </TableCell>
-                    <TableCell className="text-xs text-stone-500">
+                    <TableCell className="text-xs text-slate-500">
                       {new Date(referral.createdAt).toLocaleString("es-CO", {
                         year: "numeric",
                         month: "short",
@@ -646,7 +646,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
                       })}
                     </TableCell>
                     <TableCell>{renderStatusBadge(referral.status)}</TableCell>
-                    <TableCell className="text-xs text-stone-500 font-mono">
+                    <TableCell className="text-xs text-slate-500 font-mono">
                       {referral.qualifiedAt
                         ? new Date(referral.qualifiedAt).toLocaleDateString("es-CO")
                         : referral.validatedAt
@@ -690,7 +690,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
                             variant="ghost"
                             size="sm"
                             onClick={() => requestStatusChange(referral.id, referral.referredSiteId, "CANCELLED")}
-                            className="text-xs px-2 py-1 h-7 text-stone-400 hover:text-stone-700"
+                            className="text-xs px-2 py-1 h-7 text-slate-400 hover:text-slate-700"
                           >
                             Cancelar
                           </Button>
@@ -709,7 +709,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
       <Card>
         <CardHeader>
           <div className="flex items-center gap-2">
-            <Gift className="h-5 w-5 text-sand-600" />
+            <Gift className="h-5 w-5 text-cyan-600" />
             <CardTitle>Resumen de Beneficios Calculados por Empresario</CardTitle>
           </div>
           <CardDescription>
@@ -719,7 +719,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
 
         <CardContent className="p-0">
           {data.summary.length === 0 ? (
-            <div className="p-6 text-center text-xs text-stone-500">
+            <div className="p-6 text-center text-xs text-slate-500">
               No hay empresarios con referidos calificados aún.
             </div>
           ) : (
@@ -737,16 +737,16 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
                   const matchCode = data.codes.find((c) => c.siteId === sum.siteId);
                   return (
                     <TableRow key={sum.siteId}>
-                      <TableCell className="font-mono text-xs font-semibold text-stone-900">
+                      <TableCell className="font-mono text-xs font-semibold text-slate-900">
                         {sum.siteId}
                       </TableCell>
-                      <TableCell className="text-xs text-stone-600">
+                      <TableCell className="text-xs text-slate-600">
                         {matchCode ? matchCode.displayName : "Distribuidor Registrado"}
                       </TableCell>
                       <TableCell className="text-center font-mono font-bold text-emerald-700">
                         {sum.qualifiedReferrals}
                       </TableCell>
-                      <TableCell className="text-right font-mono font-bold text-sand-900">
+                      <TableCell className="text-right font-mono font-bold text-slate-950">
                         <Badge variant="success" className="font-mono text-xs">
                           {sum.earnedMonths} {sum.earnedMonths === 1 ? "mes" : "meses"}
                         </Badge>

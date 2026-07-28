@@ -51,18 +51,18 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-[280px] shrink-0 border-r border-stone-200 bg-white/60 px-4 py-6 backdrop-blur-md xl:flex xl:flex-col">
-      <div className="rounded-3xl bg-stone-900 px-5 py-4 text-white shadow-premium">
+    <aside className="hidden w-[285px] shrink-0 border-r border-slate-200/80 bg-white/80 px-4 py-6 backdrop-blur-md xl:flex xl:flex-col">
+      <div className="rounded-3xl bg-slate-950 px-5 py-4.5 text-white shadow-md">
         <div className="flex items-center gap-2">
-          <Sparkle className="h-5 w-5 text-sand-400" />
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sand-300">
+          <Sparkle className="h-5 w-5 text-cyan-400" />
+          <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-cyan-300">
             PartnerHub
           </p>
         </div>
-        <h1 className="mt-3 text-lg font-bold leading-tight font-heading">
+        <h1 className="mt-2 text-lg font-bold leading-tight font-heading">
           SaaS operativo
         </h1>
-        <p className="mt-1 text-xs leading-5 text-stone-400">
+        <p className="mt-1 text-xs leading-5 text-slate-400">
           Estructura modular para automatizar sitios, contenido y comisiones de socios.
         </p>
       </div>
@@ -70,7 +70,7 @@ export function Sidebar() {
       <nav className="mt-6 flex-1 space-y-6 overflow-y-auto pr-1">
         {Object.entries(groupedNavigation).map(([group, items]) => (
           <section key={group} className="space-y-1.5">
-            <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-stone-400">
+            <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
               {group}
             </p>
             <div className="space-y-1">
@@ -85,14 +85,14 @@ export function Sidebar() {
                     className={cn(
                       "flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition-all duration-200",
                       active
-                        ? "border-sand-300 bg-sand-100/70 text-stone-900 font-medium shadow-subtle"
-                        : "border-transparent text-stone-600 hover:bg-stone-100/60 hover:text-stone-900"
+                        ? "border-cyan-300/80 bg-cyan-50/80 text-cyan-950 font-semibold shadow-sm"
+                        : "border-transparent text-slate-600 hover:bg-slate-100/70 hover:text-slate-950"
                     )}
                   >
-                    <Icon className={cn("h-4.5 w-4.5 shrink-0", active ? "text-sand-600" : "text-stone-400")} />
+                    <Icon className={cn("h-4.5 w-4.5 shrink-0", active ? "text-cyan-600" : "text-slate-400")} />
                     <div className="min-w-0">
                       <span className="block text-xs font-semibold tracking-tight">{item.name}</span>
-                      <span className="block truncate text-[10px] text-stone-500">
+                      <span className="block truncate text-[10px] text-slate-500">
                         {item.description}
                       </span>
                     </div>
@@ -106,5 +106,3 @@ export function Sidebar() {
     </aside>
   );
 }
-
-
