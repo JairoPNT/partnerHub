@@ -100,6 +100,14 @@ Primary owner: Codex
 
 Goal: apply safe patch-level updates for the critical `next-auth` and high `next` findings, verify the production build, and separately assess remaining transitive PostCSS and Sharp findings without using a breaking `npm audit fix --force`.
 
+### PH-006A Partner Onboarding Agreement and Consent
+
+Status: In Progress
+
+Primary owner: Codex
+
+Goal: define the versioned service agreement, personal-data authorization, media-use permission, technical handoff terms, and evidence model required before generating or publishing an entrepreneur page. Final legal activation requires Colombian counsel review.
+
 ## EPIC-100 PHOS Sync Engine
 
 The PHOS queue exists to keep Notion updated from selected brain files without manual copy-paste.
