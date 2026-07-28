@@ -31,6 +31,10 @@ The entrepreneur accepts a versioned agreement covering:
 - Publication is scheduled within 24 to 48 hours after payment and receipt of the required information and assets.
 - Support is paid monthly in advance.
 - A five-calendar-day grace period applies after the support due date. After that period, the service may be suspended under the final agreement and applicable notices.
+- The support due date is the same calendar day on which the service starts each month.
+- A reminder is sent three days before the due date, another on the due date, and a further notice on the third day of arrears.
+- Suspension may occur after the fifth day of grace. Reactivation requires receipt of the outstanding payment.
+- Support suspension does not automatically release the domain; domain expiry and release are handled separately under the final agreement.
 - The final agreement must still state the exact plan price, due date, notice method, and restoration conditions.
 
 ## Separate Authorizations
