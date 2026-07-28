@@ -88,6 +88,12 @@ Status: In Progress
 
 Description: publish a generated product page to the verified Hostinger document root through SFTP credentials stored only in EasyPanel. The first release supports one fixed destination and an explicit protected backend action.
 
+### PH-005E Dependency Security Patch
+
+Status: In Progress
+
+Description: patch Next and NextAuth to remove the critical and moderate advisories, verify the build, and review remaining transitive advisories without forcing a breaking downgrade.
+
 ## EPIC-100 PHOS Sync Engine
 
 Purpose: automatically synchronize selected brain files with Notion so executive state stays current without manual copy-paste.

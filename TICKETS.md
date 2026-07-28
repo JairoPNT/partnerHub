@@ -92,6 +92,14 @@ Primary owner: Codex
 
 Goal: publish an already generated product-page package to the single Hostinger document root configured only through EasyPanel environment variables. This increment adds a protected backend endpoint; it does not add multi-domain routing, automatic publication after generation, R2 uploads, or frontend publishing controls.
 
+### PH-005E Dependency Security Patch
+
+Status: In Progress
+
+Primary owner: Codex
+
+Goal: apply safe patch-level updates for the critical `next-auth` and high `next` findings, verify the production build, and separately assess remaining transitive PostCSS and Sharp findings without using a breaking `npm audit fix --force`.
+
 ## EPIC-100 PHOS Sync Engine
 
 The PHOS queue exists to keep Notion updated from selected brain files without manual copy-paste.
