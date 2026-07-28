@@ -25,6 +25,14 @@ The entrepreneur accepts a versioned agreement covering:
 - export of the entrepreneur's own supplied assets and a generated-page backup when a handoff or service termination applies;
 - no guarantee of leads, sales, or a specific commercial result.
 
+## Confirmed Commercial Timing
+
+- The one-time installation fee is paid in full before work begins.
+- Publication is scheduled within 24 to 48 hours after payment and receipt of the required information and assets.
+- Support is paid monthly in advance.
+- A five-calendar-day grace period applies after the support due date. After that period, the service may be suspended under the final agreement and applicable notices.
+- The final agreement must still state the exact plan price, due date, notice method, and restoration conditions.
+
 ## Separate Authorizations
 
 The form must keep these acceptances distinct:

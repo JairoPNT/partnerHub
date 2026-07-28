@@ -6,6 +6,8 @@ This is a drafting aid for legal review. It is not a signed contract and must no
 
 The entrepreneur contracts the creation and operation of a static product page under the selected PartnerHub plan. The agreement must identify setup price, recurring support price, payment due date, what support includes, what is outside scope, suspension for non-payment, cancellation, and renewal.
 
+The one-time installation fee is paid in full before production begins. After payment and receipt of the required information and assets, the target installation window is 24 to 48 hours. Recurring support is paid monthly in advance. A five-calendar-day grace period applies after the support due date; after that period, the service may be suspended following the notices and procedure stated in the final agreement.
+
 The service is an administration and optimization service. Template changes may be made after reviewing performance and proposed improvements. No specific number of leads, sales, conversion rate, or income is guaranteed.
 
 ## Control and ownership
