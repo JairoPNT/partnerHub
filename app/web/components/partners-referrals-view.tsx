@@ -28,6 +28,7 @@ import { Label, Input } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { ModuleRecord } from "@/modules/catalog";
+import { EntrepreneurOperationsView } from "@/components/entrepreneur-operations-view";
 
 type PartnersReferralsViewProps = {
   record?: ModuleRecord;
@@ -72,6 +73,7 @@ interface StatusConfirmationState {
 }
 
 export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
+  const [activeTab, setActiveTab] = useState<"OPERATIONS" | "REFERRALS">("OPERATIONS");
   const [data, setData] = useState<ReferralDataResponse>({
     codes: [],
     referrals: [],
@@ -285,7 +287,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
 
   return (
     <div className="space-y-8">
-      {/* Header del módulo */}
+      {/* Header del módulo con Selector de Pestañas */}
       <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -293,27 +295,55 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
               {record?.group || "Core"}
             </span>
             <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
-              Programa de Invitación PartnerHub
+              Gestión de Partners y Operaciones
             </span>
           </div>
-
-          <Button variant="outline" size="sm" onClick={fetchReferralData} isLoading={isLoading} leftIcon={<RefreshCw className="h-4 w-4 text-cyan-600" />}>
-            Actualizar Datos
-          </Button>
         </div>
 
-        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-          Referidos y Beneficios
+        <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-950 sm:text-4xl font-heading">
+          Gestión de Empresarios y Referidos
         </h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
-          Gestión manual de códigos de invitación de empresarios, seguimiento de referidos registrados y control de meses ganados por recomendación.
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          Control central de solicitudes de activación (PH-009), estado de onboarding, vinculación de sitios y administración del programa de referidos.
         </p>
+
+        {/* Control de Pestañas */}
+        <div className="mt-6 flex border-b border-slate-200 gap-2">
+          <button
+            onClick={() => setActiveTab("OPERATIONS")}
+            className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition ${
+              activeTab === "OPERATIONS"
+                ? "border-cyan-600 text-cyan-950 font-extrabold"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <Users className="h-4 w-4 text-cyan-600" />
+            <span>Operación de Empresarios (Activation Leads)</span>
+          </button>
+
+          <button
+            onClick={() => setActiveTab("REFERRALS")}
+            className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition ${
+              activeTab === "REFERRALS"
+                ? "border-cyan-600 text-cyan-950 font-extrabold"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <Gift className="h-4 w-4 text-cyan-600" />
+            <span>Programa de Referidos Manual</span>
+          </button>
+        </div>
       </section>
 
-      {/* Nota Interna Obligatoria */}
-      <Alert variant="info" title="Regla Operativa Interna" icon={<ShieldAlert className="h-5 w-5 text-cyan-600" />}>
-        El beneficio por referidos se valida y aplica manualmente en la cuenta del empresario. No representa un pago en efectivo ni aplica descuentos o cobros automáticos.
-      </Alert>
+      {/* RENDERIZADO DE PESTAÑA ACTIVA */}
+      {activeTab === "OPERATIONS" ? (
+        <EntrepreneurOperationsView />
+      ) : (
+        <div className="space-y-8">
+          {/* Nota Interna Obligatoria */}
+          <Alert variant="info" title="Regla Operativa Interna" icon={<ShieldAlert className="h-5 w-5 text-cyan-600" />}>
+            El beneficio por referidos se valida y aplica manualmente en la cuenta del empresario. No representa un pago en efectivo ni aplica descuentos o cobros automáticos.
+          </Alert>
 
       {/* Mensajes de Alerta */}
       {errorMessage && (
@@ -759,6 +789,8 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
           )}
         </CardContent>
       </Card>
+        </div>
+      )}
     </div>
   );
 }
