@@ -82,6 +82,15 @@ function initDynamicConfig(cfg) {
       const metaDesc = document.querySelector('meta[name="description"]');
       if (metaDesc) metaDesc.setAttribute('content', cfg.site.metaDescription);
     }
+
+    const customFavicon = cfg.site.faviconUrl || cfg.faviconUrl;
+    if (customFavicon) {
+      const faviconEl = document.getElementById('faviconLink') || document.querySelector('link[rel="icon"]');
+      if (faviconEl) {
+        faviconEl.setAttribute('href', customFavicon);
+        faviconEl.removeAttribute('type');
+      }
+    }
   }
 
   // 3. Renderizar textos marcados con data-config

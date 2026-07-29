@@ -50,6 +50,7 @@ interface FormState {
   heroMobile: string;
   defaultMessage: string;
   measurementId: string;
+  faviconUrl: string;
 }
 
 interface GenerationResult {
@@ -85,7 +86,8 @@ const SAMPLE_DATA: FormState = {
   heroDesktop: "https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-desktop.webp",
   heroMobile: "https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-mobile.webp",
   defaultMessage: "Hola Jenny, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.",
-  measurementId: "G-7F24PBZPDM"
+  measurementId: "G-7F24PBZPDM",
+  faviconUrl: ""
 };
 
 const INITIAL_FORM: FormState = {
@@ -101,7 +103,8 @@ const INITIAL_FORM: FormState = {
   heroDesktop: "",
   heroMobile: "",
   defaultMessage: "",
-  measurementId: ""
+  measurementId: "",
+  faviconUrl: ""
 };
 
 export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewProps) {
@@ -182,7 +185,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         defaultMessage: dist.defaultMessage || "",
         heroDesktop: hero.desktop || "",
         heroMobile: hero.mobile || "",
-        measurementId: typeof analytics === "string" ? analytics : (analytics.measurementId || "")
+        measurementId: typeof analytics === "string" ? analytics : (analytics.measurementId || ""),
+        faviconUrl: site.faviconUrl || cfg.faviconUrl || ""
       });
     } catch (err: any) {
       setErrorMessage(err.message || "Error al cargar los datos de la página seleccionada.");
@@ -325,7 +329,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         appName: form.siteId.trim().replaceAll("-", "_"),
         ogTitle: form.siteTitle.trim(),
         ogDescription: form.metaDescription.trim() || undefined,
-        metaDescription: form.metaDescription.trim() || undefined
+        metaDescription: form.metaDescription.trim() || undefined,
+        faviconUrl: form.faviconUrl.trim() || undefined
       },
       distributor: {
         brandName: form.brandName.trim(),
@@ -864,6 +869,16 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 placeholder="ej. Descubre cómo transformar tu día a día con café, cacao y suplementos enriquecidos..."
                 value={form.metaDescription}
                 onChange={(e) => handleInputChange("metaDescription", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="faviconUrl">URL del Favicon (Opcional - si se omite, se generará uno automático)</Label>
+              <Input
+                id="faviconUrl"
+                placeholder="https://ejemplo.com/favicon.png"
+                value={form.faviconUrl}
+                onChange={(e) => handleInputChange("faviconUrl", e.target.value)}
               />
             </div>
           </CardContent>

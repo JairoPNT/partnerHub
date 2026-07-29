@@ -7,7 +7,7 @@ import { fileURLToPath } from "node:url";
 const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(SCRIPT_DIR, "..");
 const DEFAULT_TEMPLATE_DIR = resolve(PROJECT_ROOT, "plantillas-de-pagina", "producto");
-const PUBLIC_TEMPLATE_ENTRIES = ["index.html", "styles.css", "app.js", "tipografia"];
+const PUBLIC_TEMPLATE_ENTRIES = ["index.html", "styles.css", "app.js", "favicon.svg", "tipografia"];
 const REQUIRED_STRING_PATHS = [
   ["site", "id"],
   ["site", "title"],
@@ -18,6 +18,35 @@ const REQUIRED_STRING_PATHS = [
   ["hero", "desktop"],
   ["hero", "mobile"],
 ];
+
+function getFaviconInitial(brandName, fullName) {
+  const brandChar = brandName?.trim()?.[0];
+  const fullChar = fullName?.trim()?.[0];
+  return (brandChar || fullChar || "P").toUpperCase();
+}
+
+function generateFaviconSvg(initial) {
+  const char = (initial || "P").toUpperCase();
+  const safeInitial = char
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="fav-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#1E293B" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#fav-grad)" />
+  <rect width="64" height="64" rx="16" fill="none" stroke="#06B6D4" stroke-width="2" stroke-opacity="0.5" />
+  <text x="32" y="34" dominant-baseline="central" text-anchor="middle" fill="#06B6D4" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="34">${safeInitial}</text>
+</svg>
+`;
+}
 
 function usage() {
   console.log(`
@@ -107,6 +136,15 @@ function validateConfiguration(configuration) {
     validateAbsoluteHttpsUrl(configuration.logoUrl, "logoUrl");
   }
 
+  const customFavicon = configuration.site?.faviconUrl ?? configuration.faviconUrl;
+  if (customFavicon !== undefined) {
+    if (typeof customFavicon !== "string" || customFavicon.trim().length === 0) {
+      throw new Error("faviconUrl debe ser texto cuando se incluya.");
+    }
+    validateAbsoluteHttpsUrl(customFavicon, "faviconUrl");
+    configuration.site.faviconUrl = customFavicon.trim();
+  }
+
   configuration.site.appName ??= siteId.replaceAll("-", "_");
   configuration.site.ogTitle ??= configuration.site.title;
   configuration.site.ogDescription ??= configuration.site.metaDescription ?? "";
@@ -162,6 +200,11 @@ async function main() {
   }
   await mkdir(outputPath, { recursive: true });
   await copyTemplate(DEFAULT_TEMPLATE_DIR, outputPath);
+  if (!configuration.site?.faviconUrl) {
+    const initial = getFaviconInitial(configuration.distributor.brandName, configuration.distributor.fullName);
+    const svgContent = generateFaviconSvg(initial);
+    await writeFile(resolve(outputPath, "favicon.svg"), svgContent, "utf8");
+  }
   await writeFile(resolve(outputPath, "config.js"), buildConfigFile(configuration), "utf8");
 
   console.log(`Paquete generado para ${configuration.site.id}.`);
