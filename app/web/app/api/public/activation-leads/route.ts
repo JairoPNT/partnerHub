@@ -11,8 +11,15 @@ export const runtime = "nodejs";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const lead = await activationLeadService.create(activationLeadSchema.parse(body));
-    return NextResponse.json({ leadId: lead.id, receivedAt: lead.createdAt }, { status: 201 });
+    const result = await activationLeadService.create(activationLeadSchema.parse(body));
+    return NextResponse.json(
+      {
+        leadId: result.lead.id,
+        receivedAt: result.lead.createdAt,
+        onboardingPath: `/onboarding/${result.onboardingToken}`
+      },
+      { status: 201 }
+    );
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(

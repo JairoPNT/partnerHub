@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Send, ShieldCheck, CreditCard, Building2, User, Phone, Mail, Tag, Package, UserCheck, AlertCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Send, User, Phone, Mail, Tag, UserCheck, AlertCircle, CreditCard, Building2 } from "lucide-react";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 
 export interface FormDataState {
@@ -9,23 +10,23 @@ export interface FormDataState {
   whatsapp: string;
   email: string;
   brandName: string;
-  mainProduct: string;
+  mainProduct?: string;
   referrerCode: string;
   paymentMethod: "wompi" | "direct";
   termsAccepted: boolean;
 }
 
 interface ActivationFormProps {
-  onFormSubmit: (data: FormDataState) => void;
+  onFormSubmit: (data: FormDataState, onboardingPath?: string, leadId?: string) => void;
 }
 
 export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
+  const router = useRouter();
   const [formData, setFormData] = useState<FormDataState>({
     fullName: "",
     whatsapp: "",
     email: "",
     brandName: "",
-    mainProduct: "",
     referrerCode: "",
     paymentMethod: "wompi",
     termsAccepted: false,
@@ -42,8 +43,6 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
     if (!formData.email.trim() || !formData.email.includes("@"))
       newErrors.email = "Ingresa un correo electrónico válido";
     if (!formData.brandName.trim()) newErrors.brandName = "Ingresa el nombre de tu marca o negocio";
-    if (!formData.mainProduct.trim())
-      newErrors.mainProduct = "Indica el producto principal que deseas presentar";
     if (!formData.termsAccepted)
       newErrors.termsAccepted = "Debes aceptar los términos y condiciones de la oferta beta";
 
@@ -66,7 +65,6 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
       whatsapp: formData.whatsapp.trim(),
       email: formData.email.trim(),
       brandName: formData.brandName.trim(),
-      mainProduct: formData.mainProduct.trim(),
       referrerCode: formData.referrerCode.trim() ? formData.referrerCode.trim().toUpperCase() : null,
       paymentMethod: formData.paymentMethod,
       termsAccepted: formData.termsAccepted
@@ -87,7 +85,10 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
         throw new Error(json.error || "No pudimos registrar tu solicitud. Verifica los datos e inténtalo nuevamente.");
       }
 
-      onFormSubmit(formData);
+      onFormSubmit(formData, json.onboardingPath, json.leadId);
+      if (json.onboardingPath) {
+        router.push(json.onboardingPath);
+      }
     } catch {
       setSubmitError("No pudimos registrar tu solicitud. Verifica los datos e inténtalo nuevamente.");
     } finally {
@@ -233,33 +234,6 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
                 )}
               </div>
 
-            </div>
-
-            {/* Main Product */}
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                Producto o Servicio Principal a Presentar <span className="text-rose-400">*</span>
-              </label>
-              <div className="relative mt-2">
-                <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
-                  <Package className="h-4 w-4" />
-                </div>
-                <input
-                  type="text"
-                  disabled={isSubmitting}
-                  value={formData.mainProduct}
-                  onChange={(e) => setFormData({ ...formData, mainProduct: e.target.value })}
-                  placeholder="Ej. Programa de Nutrición / Kit de Cosmética Natural"
-                  className={`w-full rounded-xl border bg-slate-900/80 py-3 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 ${
-                    errors.mainProduct
-                      ? "border-rose-500 focus:ring-rose-500"
-                      : "border-slate-800 focus:border-cyan-500 focus:ring-cyan-500"
-                  }`}
-                />
-              </div>
-              {errors.mainProduct && (
-                <p className="mt-1 text-xs text-rose-400">{errors.mainProduct}</p>
-              )}
             </div>
 
             {/* Referrer Code */}

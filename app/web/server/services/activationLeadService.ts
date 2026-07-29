@@ -1,6 +1,6 @@
 import "server-only";
 
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
@@ -26,11 +26,26 @@ export const activationLeadSchema = z.object({
   whatsapp: z.string().trim().min(7).max(40),
   email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
   brandName: z.string().trim().min(2).max(160),
-  mainProduct: z.string().trim().min(2).max(240),
+  mainProduct: z.string().trim().max(240).optional().default(""),
   referrerCode: referralCodeSchema.optional().nullable(),
   paymentMethod: z.enum(["wompi", "direct"]),
   termsAccepted: z.literal(true)
 });
+
+export const onboardingDataSchema = z.object({
+  country: z.string().trim().max(80).optional(),
+  whatsapp: z.string().trim().max(40).optional(),
+  phone: z.string().trim().max(40).optional(),
+  purchaseUrl: z.string().trim().url().max(2048).optional(),
+  heroDesktopUrl: z.string().trim().url().max(2048).optional(),
+  heroMobileUrl: z.string().trim().url().max(2048).optional(),
+  logoMode: z.enum(["TYPOGRAPHY", "IMAGE"]).optional(),
+  logoUrl: z.string().trim().url().max(2048).optional(),
+  faviconUrl: z.string().trim().url().max(2048).optional(),
+  analyticsMeasurementId: z.string().trim().regex(/^G-[A-Z0-9]+$/i).optional(),
+  imageUseConsent: z.boolean().optional(),
+  agreementAccepted: z.boolean().optional()
+}).partial();
 
 export const linkActivationLeadSchema = z.object({
   siteId: siteIdSchema
@@ -54,6 +69,9 @@ type ActivationLead = z.infer<typeof activationLeadSchema> & {
   siteId: string | null;
   createdAt: string;
   updatedAt: string;
+  onboardingTokenHash: string;
+  onboardingData: z.infer<typeof onboardingDataSchema>;
+  onboardingUpdatedAt?: string;
 };
 
 function getStorageDirectory() {
@@ -83,25 +101,62 @@ async function writeLeads(leads: ActivationLead[]) {
   await rename(temporary, target);
 }
 
+function hashOnboardingToken(token: string) {
+  return createHash("sha256").update(token).digest("hex");
+}
+
+function toPublicLead(lead: ActivationLead) {
+  const { onboardingTokenHash: _tokenHash, ...publicLead } = lead;
+  return publicLead;
+}
+
 async function create(input: z.infer<typeof activationLeadSchema>) {
   const parsed = activationLeadSchema.parse(input);
   const leads = await readLeads();
   const now = new Date().toISOString();
+  const onboardingToken = randomUUID();
   const lead: ActivationLead = {
     ...parsed,
     id: randomUUID(),
     status: "NEW",
     siteId: null,
     createdAt: now,
-    updatedAt: now
+    updatedAt: now,
+    onboardingTokenHash: hashOnboardingToken(onboardingToken),
+    onboardingData: {}
   };
 
   await writeLeads([...leads, lead]);
-  return lead;
+  return { lead: toPublicLead(lead), onboardingToken };
 }
 
 async function list() {
-  return readLeads();
+  return (await readLeads()).map(toPublicLead);
+}
+
+async function getByOnboardingToken(token: string) {
+  const leads = await readLeads();
+  const existing = leads.find((lead) => lead.onboardingTokenHash === hashOnboardingToken(token));
+  if (!existing) throw new Error("Onboarding link was not found or has expired.");
+  return toPublicLead(existing);
+}
+
+async function updateOnboarding(token: string, input: z.infer<typeof onboardingDataSchema>) {
+  const parsed = onboardingDataSchema.parse(input);
+  const leads = await readLeads();
+  const existing = leads.find((lead) => lead.onboardingTokenHash === hashOnboardingToken(token));
+  if (!existing) throw new Error("Onboarding link was not found or has expired.");
+
+  const now = new Date().toISOString();
+  const next: ActivationLead = {
+    ...existing,
+    onboardingData: { ...existing.onboardingData, ...parsed },
+    onboardingUpdatedAt: now,
+    updatedAt: now
+  };
+
+  await writeLeads(leads.map((lead) => (lead.id === existing.id ? next : lead)));
+  return toPublicLead(next);
 }
 
 async function linkSite(id: string, input: z.infer<typeof linkActivationLeadSchema>) {
@@ -130,7 +185,7 @@ async function linkSite(id: string, input: z.infer<typeof linkActivationLeadSche
   };
 
   await writeLeads(leads.map((lead) => (lead.id === id ? next : lead)));
-  return { lead: next, referral };
+  return { lead: toPublicLead(next), referral };
 }
 
 async function updateStatus(id: string, input: z.infer<typeof updateActivationLeadSchema>) {
@@ -147,12 +202,14 @@ async function updateStatus(id: string, input: z.infer<typeof updateActivationLe
   };
 
   await writeLeads(leads.map((lead) => (lead.id === id ? next : lead)));
-  return next;
+  return toPublicLead(next);
 }
 
 export const activationLeadService = {
   create,
   list,
+  getByOnboardingToken,
+  updateOnboarding,
   linkSite,
   updateStatus
 };

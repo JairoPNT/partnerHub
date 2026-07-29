@@ -12,10 +12,12 @@ import { ActivationForm, FormDataState } from "@/components/beta-landing/Activat
 import { PaymentSection } from "@/components/beta-landing/PaymentSection";
 import { PaymentModal } from "@/components/beta-landing/PaymentModal";
 import { FaqSection } from "@/components/beta-landing/FaqSection";
+import { useRouter } from "next/navigation";
 import { FinalCtaSection } from "@/components/beta-landing/FinalCtaSection";
 import { Sparkles, ShieldCheck } from "lucide-react";
 
 export default function OfertaBetaPage() {
+  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submittedData, setSubmittedData] = useState<FormDataState | undefined>(undefined);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"wompi" | "direct">("wompi");
@@ -27,7 +29,11 @@ export default function OfertaBetaPage() {
     }
   };
 
-  const handleFormSubmit = (data: FormDataState) => {
+  const handleFormSubmit = (data: FormDataState, onboardingPath?: string) => {
+    if (onboardingPath) {
+      router.push(onboardingPath);
+      return;
+    }
     setSubmittedData(data);
     setSelectedPaymentMethod(data.paymentMethod);
     setIsModalOpen(true);
