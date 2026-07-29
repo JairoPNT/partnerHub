@@ -1,6 +1,6 @@
 # PH-008A Thank-you page and resumable onboarding
 
-Status: Backend contract implemented; public UI handoff pending
+Status: Implemented and Verified (Public UI, thank-you page & resumable onboarding)
 
 ## Public contract
 
