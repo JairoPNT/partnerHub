@@ -18,18 +18,16 @@ body {
   min-height: 100vh;
   font-family: var(--font-sans);
   background:
-    radial-gradient(circle at top left, rgba(208, 148, 63, 0.12), transparent 35%),
-    radial-gradient(circle at top right, rgba(120, 53, 15, 0.06), transparent 30%),
-    linear-gradient(180deg, #fbf6ef 0%, #f6f0e5 45%, #f1e9da 100%);
-  color: #1c1917;
+    radial-gradient(circle at top left, rgba(14, 165, 233, 0.07), transparent 35%),
+    radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent 30%),
+    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
+  color: #0f172a;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
 @layer components {
   .glass-panel {
-    @apply border border-white/70 bg-white/80 shadow-premium backdrop-blur-md;
+    @apply border border-white/80 bg-white/90 shadow-sm backdrop-blur-md;
   }
 }
-
-
