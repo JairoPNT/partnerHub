@@ -74,7 +74,6 @@ export default function PublicOnboardingPage({ params }: PageProps) {
   const [heroMobileUrl, setHeroMobileUrl] = useState("");
   const [logoMode, setLogoMode] = useState<"TYPOGRAPHY" | "IMAGE">("TYPOGRAPHY");
   const [logoUrl, setLogoUrl] = useState("");
-  const [faviconUrl, setFaviconUrl] = useState("");
   const [analyticsMeasurementId, setAnalyticsMeasurementId] = useState("");
   const [imageUseConsent, setImageUseConsent] = useState(false);
   const [agreementAccepted, setAgreementAccepted] = useState(false);
@@ -106,7 +105,6 @@ export default function PublicOnboardingPage({ params }: PageProps) {
         setHeroMobileUrl(ob.heroMobileUrl || "");
         setLogoMode(ob.logoMode || "TYPOGRAPHY");
         setLogoUrl(ob.logoUrl || "");
-        setFaviconUrl(ob.faviconUrl || "");
         setAnalyticsMeasurementId(ob.analyticsMeasurementId || "");
         setImageUseConsent(ob.imageUseConsent || false);
         setAgreementAccepted(ob.agreementAccepted || false);
@@ -143,7 +141,6 @@ export default function PublicOnboardingPage({ params }: PageProps) {
     if (heroMobileUrl.trim()) payload.heroMobileUrl = heroMobileUrl.trim();
     payload.logoMode = logoMode;
     if (logoUrl.trim()) payload.logoUrl = logoUrl.trim();
-    if (faviconUrl.trim()) payload.faviconUrl = faviconUrl.trim();
     if (analyticsMeasurementId.trim())
       payload.analyticsMeasurementId = analyticsMeasurementId.trim().toUpperCase();
     payload.imageUseConsent = imageUseConsent;
@@ -668,26 +665,13 @@ export default function PublicOnboardingPage({ params }: PageProps) {
                   />
                 </div>
               )}
-
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
-                  URL del Favicon (Icono de pestaña de navegador - Opcional)
-                </label>
-                <input
-                  type="url"
-                  value={faviconUrl}
-                  onChange={(e) => setFaviconUrl(e.target.value)}
-                  placeholder="https://ejemplo.com/favicon.ico"
-                  className="mt-2 w-full rounded-xl border border-slate-800 bg-slate-950 py-3 px-4 text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                />
-              </div>
             </div>
 
-            {/* Block 4: Analytics & Consents */}
+            {/* Block 4: Analytics */}
             <div className="space-y-4 pt-4 border-t border-slate-800">
               <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-cyan-400">
                 <BarChart3 className="h-4 w-4" />
-                4. Medición Analytics y Acuerdos de Servicio
+                4. Configuración de Analytics (Técnica)
               </h3>
 
               <div>
@@ -702,8 +686,16 @@ export default function PublicOnboardingPage({ params }: PageProps) {
                   className="mt-2 w-full rounded-xl border border-slate-800 bg-slate-950 py-3 px-4 text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono uppercase"
                 />
               </div>
+            </div>
 
-              <div className="space-y-3 pt-2">
+            {/* Block 5: Legal Consents & Agreements */}
+            <div className="space-y-4 pt-4 border-t border-slate-800">
+              <h3 className="flex items-center gap-2 text-sm font-bold uppercase tracking-wider text-cyan-400">
+                <FileCheck className="h-4 w-4" />
+                5. Acuerdos y Permisos Legales
+              </h3>
+
+              <div className="space-y-3 pt-1">
                 <label className="flex items-start gap-3 cursor-pointer rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
                   <input
                     type="checkbox"

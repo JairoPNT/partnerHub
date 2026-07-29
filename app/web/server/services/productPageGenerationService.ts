@@ -21,6 +21,35 @@ const measurementIdSchema = z
   .regex(/^G-[A-Z0-9]+$/i, "Measurement ID must use the G-XXXXXXXX format")
   .transform((value) => value.toUpperCase());
 
+export function getFaviconInitial(brandName?: string, fullName?: string): string {
+  const brandChar = brandName?.trim()?.[0];
+  const fullChar = fullName?.trim()?.[0];
+  return (brandChar || fullChar || "P").toUpperCase();
+}
+
+export function generateFaviconSvg(initial: string): string {
+  const char = (initial || "P").toUpperCase();
+  const safeInitial = char
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="fav-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0F172A" />
+      <stop offset="100%" stop-color="#1E293B" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="16" fill="url(#fav-grad)" />
+  <rect width="64" height="64" rx="16" fill="none" stroke="#06B6D4" stroke-width="2" stroke-opacity="0.5" />
+  <text x="32" y="34" dominant-baseline="central" text-anchor="middle" fill="#06B6D4" font-family="system-ui, -apple-system, sans-serif" font-weight="700" font-size="34">${safeInitial}</text>
+</svg>
+`;
+}
+
 export const productPageGenerationInputSchema = z.object({
   site: z.object({
     id: siteIdSchema,
@@ -28,7 +57,8 @@ export const productPageGenerationInputSchema = z.object({
     appName: z.string().trim().min(1).optional(),
     ogTitle: z.string().trim().min(1).optional(),
     ogDescription: z.string().trim().min(1).optional(),
-    metaDescription: z.string().trim().min(1).optional()
+    metaDescription: z.string().trim().min(1).optional(),
+    faviconUrl: httpsUrlSchema.optional()
   }),
   distributor: z.object({
     brandName: z.string().trim().min(1),
@@ -49,7 +79,8 @@ export const productPageGenerationInputSchema = z.object({
       measurementId: measurementIdSchema
     })
     .optional(),
-  mediaBaseUrl: httpsUrlSchema.optional()
+  mediaBaseUrl: httpsUrlSchema.optional(),
+  faviconUrl: httpsUrlSchema.optional()
 });
 
 export type ProductPageGenerationInput = z.infer<typeof productPageGenerationInputSchema>;
@@ -61,7 +92,7 @@ export type ProductPageGenerationResult = {
   files: string[];
 };
 
-const templateEntries = ["index.html", "styles.css", "app.js", "tipografia"];
+const templateEntries = ["index.html", "styles.css", "app.js", "favicon.svg", "tipografia"];
 
 function getTemplateDirectory() {
   return process.env.PRODUCT_PAGE_TEMPLATE_DIR ?? "/app/plantillas-de-pagina/producto";
@@ -89,6 +120,8 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
     throw new Error("distributor.whatsappNumber must contain between 10 and 15 digits.");
   }
 
+  const faviconUrl = input.site.faviconUrl ?? input.faviconUrl;
+
   return {
     site: {
       id: input.site.id,
@@ -96,7 +129,8 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
       appName: input.site.appName ?? input.site.id.replaceAll("-", "_"),
       ogTitle: input.site.ogTitle ?? input.site.title,
       ogDescription: input.site.ogDescription ?? input.site.metaDescription ?? "",
-      metaDescription: input.site.metaDescription ?? input.site.ogDescription ?? ""
+      metaDescription: input.site.metaDescription ?? input.site.ogDescription ?? "",
+      faviconUrl: faviconUrl ? faviconUrl : undefined
     },
     distributor: {
       brandName: input.distributor.brandName,
@@ -136,6 +170,12 @@ export const productPageGenerationService = {
         recursive: true,
         errorOnExist: false
       });
+    }
+
+    if (!configuration.site.faviconUrl) {
+      const initial = getFaviconInitial(configuration.distributor.brandName, configuration.distributor.fullName);
+      const svgContent = generateFaviconSvg(initial);
+      await writeFile(resolve(outputDirectory, "favicon.svg"), svgContent, "utf8");
     }
 
     const generatedAt = new Date().toISOString();
