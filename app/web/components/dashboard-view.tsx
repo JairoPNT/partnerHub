@@ -132,7 +132,7 @@ export function AdminDashboardPrototype() {
         <Card interactive>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <span className="text-xs font-semibold uppercase tracking-[0.1em] text-stone-500">Socios Activos</span>
-            <Users className="h-4 w-4 text-sand-500" />
+            <Users className="h-4 w-4 text-cyan-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-stone-900 font-heading">1,482</div>
@@ -145,7 +145,7 @@ export function AdminDashboardPrototype() {
         <Card interactive>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <span className="text-xs font-semibold uppercase tracking-[0.1em] text-stone-500">Sitios Duplicados</span>
-            <Layers className="h-4 w-4 text-sand-500" />
+            <Layers className="h-4 w-4 text-cyan-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-stone-900 font-heading">412</div>
@@ -156,7 +156,7 @@ export function AdminDashboardPrototype() {
         <Card interactive>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <span className="text-xs font-semibold uppercase tracking-[0.1em] text-stone-500">Dominios Conectados</span>
-            <Compass className="h-4 w-4 text-sand-500" />
+            <Compass className="h-4 w-4 text-cyan-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-stone-900 font-heading">98</div>
@@ -167,7 +167,7 @@ export function AdminDashboardPrototype() {
         <Card interactive>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <span className="text-xs font-semibold uppercase tracking-[0.1em] text-stone-500">Conversión VSL</span>
-            <Shield className="h-4 w-4 text-sand-500" />
+            <Shield className="h-4 w-4 text-cyan-600" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-stone-900 font-heading">4.82%</div>
