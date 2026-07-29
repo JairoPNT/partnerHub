@@ -1,0 +1,1001 @@
+"use client";
+
+import React, { useState, useEffect } from "react";
+import {
+  Users,
+  Search,
+  Filter,
+  RefreshCw,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+  Building2,
+  CreditCard,
+  Link2,
+  ExternalLink,
+  MessageCircle,
+  Tag,
+  X,
+  Check,
+  Edit3,
+  Globe,
+  Phone,
+  Mail,
+  FileCheck,
+  Image as ImageIcon,
+  BarChart3,
+  ShieldCheck,
+  AlertTriangle,
+  UserCheck,
+  ChevronRight,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+
+export type ActivationLeadStatus = "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
+
+export interface OnboardingData {
+  country?: string;
+  whatsapp?: string;
+  phone?: string;
+  purchaseUrl?: string;
+  heroDesktopUrl?: string;
+  heroMobileUrl?: string;
+  logoMode?: "TYPOGRAPHY" | "IMAGE";
+  logoUrl?: string;
+  faviconUrl?: string;
+  analyticsMeasurementId?: string;
+  imageUseConsent?: boolean;
+  agreementAccepted?: boolean;
+}
+
+export interface ActivationLeadRecord {
+  id: string;
+  fullName: string;
+  whatsapp: string;
+  email: string;
+  brandName: string;
+  mainProduct?: string;
+  referrerCode: string | null;
+  paymentMethod: "wompi" | "direct";
+  termsAccepted: boolean;
+  status: ActivationLeadStatus;
+  siteId: string | null;
+  createdAt: string;
+  updatedAt: string;
+  onboardingData?: OnboardingData;
+  onboardingUpdatedAt?: string;
+}
+
+export function EntrepreneurOperationsView() {
+  const [leads, setLeads] = useState<ActivationLeadRecord[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Search & Filters
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("ALL");
+  const [paymentFilter, setPaymentFilter] = useState<string>("ALL");
+
+  // Selected lead for detail modal/drawer
+  const [selectedLead, setSelectedLead] = useState<ActivationLeadRecord | null>(null);
+
+  // Edit action states inside modal
+  const [editingStatus, setEditingStatus] = useState<ActivationLeadStatus | "">("");
+  const [editingSiteId, setEditingSiteId] = useState<string>("");
+  const [isSubmittingPatch, setIsSubmittingPatch] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const fetchLeads = async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await fetch("/api/internal/activation-leads");
+      if (!res.ok) {
+        throw new Error("No se pudo cargar el listado de empresarios.");
+      }
+      const data = await res.json();
+      setLeads(data.leads || []);
+    } catch (err) {
+      setErrorMessage((err as Error).message);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  // Update selection state when selected lead changes
+  useEffect(() => {
+    if (selectedLead) {
+      setEditingStatus(selectedLead.status);
+      setEditingSiteId(selectedLead.siteId || "");
+      setActionError(null);
+    }
+  }, [selectedLead]);
+
+  // Patch status handler
+  const handleUpdateStatus = async (newStatus: ActivationLeadStatus) => {
+    if (!selectedLead) return;
+    setIsSubmittingPatch(true);
+    setActionError(null);
+
+    try {
+      const res = await fetch(`/api/internal/activation-leads/${selectedLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: newStatus }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Error al actualizar el estado.");
+      }
+
+      // Update lead in state
+      setLeads((prev) => prev.map((l) => (l.id === selectedLead.id ? json : l)));
+      setSelectedLead(json);
+      setSuccessMessage(`Estado de ${selectedLead.brandName} actualizado a ${newStatus}.`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setIsSubmittingPatch(false);
+    }
+  };
+
+  // Patch siteId handler
+  const handleLinkSiteId = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLead) return;
+    const cleanSiteId = editingSiteId.trim().toLowerCase();
+
+    if (!cleanSiteId) {
+      setActionError("Ingresa un slug de siteId válido.");
+      return;
+    }
+
+    setIsSubmittingPatch(true);
+    setActionError(null);
+
+    try {
+      const res = await fetch(`/api/internal/activation-leads/${selectedLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteId: cleanSiteId }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Error al vincular el sitio.");
+      }
+
+      const updatedLead = json.lead || json;
+      setLeads((prev) => prev.map((l) => (l.id === selectedLead.id ? updatedLead : l)));
+      setSelectedLead(updatedLead);
+      setSuccessMessage(`Sitio ${cleanSiteId} vinculado exitosamente a ${selectedLead.brandName}.`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setIsSubmittingPatch(false);
+    }
+  };
+
+  // Calculate Status Counts
+  const counts = {
+    total: leads.length,
+    NEW: leads.filter((l) => l.status === "NEW").length,
+    CONTACTED: leads.filter((l) => l.status === "CONTACTED").length,
+    PAID: leads.filter((l) => l.status === "PAID").length,
+    CONVERTED: leads.filter((l) => l.status === "CONVERTED").length,
+    CANCELLED: leads.filter((l) => l.status === "CANCELLED").length,
+  };
+
+  // Filtered Leads
+  const filteredLeads = leads.filter((lead) => {
+    // Status filter
+    if (statusFilter !== "ALL" && lead.status !== statusFilter) return false;
+    // Payment filter
+    if (paymentFilter !== "ALL" && lead.paymentMethod !== paymentFilter) return false;
+
+    // Search query
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      const matchName = lead.fullName.toLowerCase().includes(q);
+      const matchBrand = lead.brandName.toLowerCase().includes(q);
+      const matchEmail = lead.email.toLowerCase().includes(q);
+      const matchSite = lead.siteId?.toLowerCase().includes(q) || false;
+      const matchRef = lead.referrerCode?.toLowerCase().includes(q) || false;
+      const matchPhone = lead.whatsapp.toLowerCase().includes(q);
+      return matchName || matchBrand || matchEmail || matchSite || matchRef || matchPhone;
+    }
+
+    return true;
+  });
+
+  // Calculate missing fields for an onboarding payload
+  const getMissingFields = (lead: ActivationLeadRecord) => {
+    const ob = lead.onboardingData || {};
+    const missing: { field: string; label: string }[] = [];
+
+    if (!ob.country?.trim()) missing.push({ field: "country", label: "País de Operación" });
+    if (!ob.whatsapp?.trim()) missing.push({ field: "whatsapp", label: "WhatsApp de Atención" });
+    if (!ob.phone?.trim()) missing.push({ field: "phone", label: "Teléfono Directo" });
+    if (!ob.purchaseUrl?.trim()) missing.push({ field: "purchaseUrl", label: "URL de Compra / Pasarela" });
+    if (!ob.heroDesktopUrl?.trim()) missing.push({ field: "heroDesktopUrl", label: "Imagen Hero Desktop" });
+    if (!ob.heroMobileUrl?.trim()) missing.push({ field: "heroMobileUrl", label: "Imagen Hero Mobile" });
+    
+    // Only check logoUrl if logoMode === "IMAGE"
+    if (ob.logoMode === "IMAGE" && !ob.logoUrl?.trim()) {
+      missing.push({ field: "logoUrl", label: "Imagen de Logotipo" });
+    }
+    
+    // faviconUrl is optional and auto-generated (PH-008B), so it is excluded from missing fields checklist.
+    if (!ob.imageUseConsent) missing.push({ field: "imageUseConsent", label: "Consentimiento Uso de Imágenes" });
+    if (!ob.agreementAccepted) missing.push({ field: "agreementAccepted", label: "Aceptación de Acuerdo" });
+
+    // Dynamic total fields depending on logoMode (9 if IMAGE mode, 8 if TYPOGRAPHY mode)
+    const totalFields = ob.logoMode === "IMAGE" ? 9 : 8;
+    const completedCount = Math.max(0, totalFields - missing.length);
+    const percentage = Math.round((completedCount / totalFields) * 100);
+
+    return { missing, completedCount, totalFields, percentage };
+  };
+
+  // Helper for status badge styling
+  const getStatusBadge = (status: ActivationLeadStatus) => {
+    switch (status) {
+      case "NEW":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/60 bg-amber-500/15 px-3 py-1 text-xs font-bold text-amber-700 dark:text-amber-300">
+            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
+            NUEVO (Amarillo)
+          </span>
+        );
+      case "CONTACTED":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-400/60 bg-blue-500/15 px-3 py-1 text-xs font-bold text-blue-700 dark:text-blue-300">
+            <span className="h-2 w-2 rounded-full bg-blue-500" />
+            CONTACTADO (Azul)
+          </span>
+        );
+      case "PAID":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-400/60 bg-emerald-500/15 px-3 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-300">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            PAGADO (Verde claro)
+          </span>
+        );
+      case "CONVERTED":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-green-500/60 bg-green-600/20 px-3 py-1 text-xs font-bold text-green-800 dark:text-green-300">
+            <span className="h-2 w-2 rounded-full bg-green-600" />
+            CONVERTIDO (Verde)
+          </span>
+        );
+      case "CANCELLED":
+        return (
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-400/60 bg-rose-500/15 px-3 py-1 text-xs font-bold text-rose-700 dark:text-rose-300">
+            <span className="h-2 w-2 rounded-full bg-rose-500" />
+            CANCELADO (Rojo)
+          </span>
+        );
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      {/* Top Banner / Notification Toast */}
+      {successMessage && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4 text-sm font-semibold text-emerald-800 dark:text-emerald-200">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-500" />
+            <span>{successMessage}</span>
+          </div>
+          <button onClick={() => setSuccessMessage(null)} className="text-emerald-700 dark:text-emerald-300 hover:opacity-80">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {errorMessage && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-sm font-semibold text-rose-800 dark:text-rose-200">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="h-5 w-5 shrink-0 text-rose-500" />
+            <span>{errorMessage}</span>
+          </div>
+          <button onClick={fetchLeads} className="inline-flex items-center gap-1 text-xs font-bold underline">
+            <RefreshCw className="h-3.5 w-3.5" /> Reintentar
+          </button>
+        </div>
+      )}
+
+      {/* METRICS & STATUS COUNTERS */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">
+        <div
+          onClick={() => setStatusFilter("ALL")}
+          className={`cursor-pointer rounded-2xl border p-4 transition ${
+            statusFilter === "ALL"
+              ? "border-cyan-500 bg-cyan-50/60 dark:bg-cyan-950/40 shadow-sm ring-1 ring-cyan-500"
+              : "border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 hover:border-slate-300"
+          }`}
+        >
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            Total Registros
+          </p>
+          <p className="mt-1 font-heading text-2xl font-extrabold text-slate-900 dark:text-white">
+            {counts.total}
+          </p>
+        </div>
+
+        <div
+          onClick={() => setStatusFilter("NEW")}
+          className={`cursor-pointer rounded-2xl border p-4 transition ${
+            statusFilter === "NEW"
+              ? "border-amber-500 bg-amber-50 dark:bg-amber-950/40 ring-1 ring-amber-500"
+              : "border-amber-200 bg-amber-50/50 dark:border-amber-900/40 dark:bg-amber-950/20 hover:border-amber-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300">
+              NUEVO
+            </p>
+            <span className="h-2 w-2 rounded-full bg-amber-500" />
+          </div>
+          <p className="mt-1 font-heading text-2xl font-extrabold text-amber-900 dark:text-amber-200">
+            {counts.NEW}
+          </p>
+        </div>
+
+        <div
+          onClick={() => setStatusFilter("CONTACTED")}
+          className={`cursor-pointer rounded-2xl border p-4 transition ${
+            statusFilter === "CONTACTED"
+              ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40 ring-1 ring-blue-500"
+              : "border-blue-200 bg-blue-50/50 dark:border-blue-900/40 dark:bg-blue-950/20 hover:border-blue-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-blue-800 dark:text-blue-300">
+              CONTACTADO
+            </p>
+            <span className="h-2 w-2 rounded-full bg-blue-500" />
+          </div>
+          <p className="mt-1 font-heading text-2xl font-extrabold text-blue-900 dark:text-blue-200">
+            {counts.CONTACTED}
+          </p>
+        </div>
+
+        <div
+          onClick={() => setStatusFilter("PAID")}
+          className={`cursor-pointer rounded-2xl border p-4 transition ${
+            statusFilter === "PAID"
+              ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-950/40 ring-1 ring-emerald-500"
+              : "border-emerald-200 bg-emerald-50/50 dark:border-emerald-900/40 dark:bg-emerald-950/20 hover:border-emerald-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+              PAGADO
+            </p>
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+          </div>
+          <p className="mt-1 font-heading text-2xl font-extrabold text-emerald-900 dark:text-emerald-200">
+            {counts.PAID}
+          </p>
+        </div>
+
+        <div
+          onClick={() => setStatusFilter("CONVERTED")}
+          className={`cursor-pointer rounded-2xl border p-4 transition ${
+            statusFilter === "CONVERTED"
+              ? "border-green-600 bg-green-50 dark:bg-green-950/40 ring-1 ring-green-600"
+              : "border-green-200 bg-green-50/50 dark:border-green-900/40 dark:bg-green-950/20 hover:border-green-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-green-800 dark:text-green-300">
+              CONVERTIDO
+            </p>
+            <span className="h-2 w-2 rounded-full bg-green-600" />
+          </div>
+          <p className="mt-1 font-heading text-2xl font-extrabold text-green-900 dark:text-green-200">
+            {counts.CONVERTED}
+          </p>
+        </div>
+
+        <div
+          onClick={() => setStatusFilter("CANCELLED")}
+          className={`cursor-pointer rounded-2xl border p-4 transition ${
+            statusFilter === "CANCELLED"
+              ? "border-rose-500 bg-rose-50 dark:bg-rose-950/40 ring-1 ring-rose-500"
+              : "border-rose-200 bg-rose-50/50 dark:border-rose-900/40 dark:bg-rose-950/20 hover:border-rose-300"
+          }`}
+        >
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-bold uppercase tracking-wider text-rose-800 dark:text-rose-300">
+              CANCELADO
+            </p>
+            <span className="h-2 w-2 rounded-full bg-rose-500" />
+          </div>
+          <p className="mt-1 font-heading text-2xl font-extrabold text-rose-900 dark:text-rose-200">
+            {counts.CANCELLED}
+          </p>
+        </div>
+      </div>
+
+      {/* SEARCH AND FILTERS BAR */}
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4 md:space-y-0 md:flex md:items-center md:justify-between md:gap-4">
+        {/* Search */}
+        <div className="relative flex-1">
+          <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Buscar por empresario, marca, correo, siteId o código de referido..."
+            className="w-full rounded-xl border border-slate-200 bg-slate-50 py-2.5 pl-10 pr-4 text-xs font-medium text-slate-900 placeholder-slate-400 focus:border-cyan-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Status Select */}
+          <div className="flex items-center gap-2">
+            <Filter className="h-3.5 w-3.5 text-slate-400" />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-slate-50 py-2 px-3 text-xs font-semibold text-slate-700 focus:border-cyan-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+            >
+              <option value="ALL">Todos los Estados</option>
+              <option value="NEW">NUEVO</option>
+              <option value="CONTACTED">CONTACTADO</option>
+              <option value="PAID">PAGADO</option>
+              <option value="CONVERTED">CONVERTIDO</option>
+              <option value="CANCELLED">CANCELADO</option>
+            </select>
+          </div>
+
+          {/* Payment Method Select */}
+          <div>
+            <select
+              value={paymentFilter}
+              onChange={(e) => setPaymentFilter(e.target.value)}
+              className="rounded-xl border border-slate-200 bg-slate-50 py-2 px-3 text-xs font-semibold text-slate-700 focus:border-cyan-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+            >
+              <option value="ALL">Todos los Métodos de Pago</option>
+              <option value="wompi">Tarjeta (Wompi)</option>
+              <option value="direct">Transferencia Directa</option>
+            </select>
+          </div>
+
+          <button
+            onClick={fetchLeads}
+            disabled={isLoading}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+            title="Recargar datos"
+          >
+            <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
+            <span>Actualizar</span>
+          </button>
+        </div>
+      </div>
+
+      {/* MAIN TABLE SECTION */}
+      <div className="rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm overflow-hidden">
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center p-12 text-slate-400 space-y-3">
+            <RefreshCw className="h-8 w-8 animate-spin text-cyan-500" />
+            <p className="text-sm font-medium">Cargando operaciones de empresarios...</p>
+          </div>
+        ) : filteredLeads.length === 0 ? (
+          <div className="p-12 text-center space-y-4">
+            <Users className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600" />
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                No se encontraron empresarios
+              </h3>
+              <p className="text-xs text-slate-500 dark:text-slate-400">
+                {searchQuery || statusFilter !== "ALL" || paymentFilter !== "ALL"
+                  ? "Intenta modificar los filtros de búsqueda o restablecer la selección."
+                  : "Aún no se han registrado leads de activación en el sistema."}
+              </p>
+            </div>
+            {(searchQuery || statusFilter !== "ALL" || paymentFilter !== "ALL") && (
+              <button
+                onClick={() => {
+                  setSearchQuery("");
+                  setStatusFilter("ALL");
+                  setPaymentFilter("ALL");
+                }}
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-100 dark:bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200"
+              >
+                Limpiar Filtros
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+                <tr>
+                  <th className="py-3.5 px-4">Estado Operativo</th>
+                  <th className="py-3.5 px-4">Empresario / Marca</th>
+                  <th className="py-3.5 px-4">Contacto</th>
+                  <th className="py-3.5 px-4">Método de Pago</th>
+                  <th className="py-3.5 px-4">Referido por</th>
+                  <th className="py-3.5 px-4">Sitio Vinculado (siteId)</th>
+                  <th className="py-3.5 px-4">Fecha Registro</th>
+                  <th className="py-3.5 px-4 text-right">Acción</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                {filteredLeads.map((lead) => {
+                  const missingInfo = getMissingFields(lead);
+
+                  return (
+                    <tr
+                      key={lead.id}
+                      className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition"
+                    >
+                      {/* Estado */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        {getStatusBadge(lead.status)}
+                      </td>
+
+                      {/* Empresario / Marca */}
+                      <td className="py-4 px-4">
+                        <div>
+                          <p className="font-bold text-slate-900 dark:text-white text-sm">
+                            {lead.brandName}
+                          </p>
+                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                            {lead.fullName}
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* Contacto */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <div className="space-y-0.5">
+                          <a
+                            href={`https://wa.me/${lead.whatsapp.replace(/[^0-9]/g, "")}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+                          >
+                            <Phone className="h-3.5 w-3.5" />
+                            {lead.whatsapp}
+                          </a>
+                          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {lead.email}
+                          </p>
+                        </div>
+                      </td>
+
+                      {/* Método de Pago */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        <div className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 font-semibold">
+                          {lead.paymentMethod === "wompi" ? (
+                            <>
+                              <CreditCard className="h-3.5 w-3.5 text-cyan-600" />
+                              Tarjeta Wompi
+                            </>
+                          ) : (
+                            <>
+                              <Building2 className="h-3.5 w-3.5 text-cyan-600" />
+                              Directo / Transferencia
+                            </>
+                          )}
+                        </div>
+                      </td>
+
+                      {/* Código de Referido */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        {lead.referrerCode ? (
+                          <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400 rounded bg-cyan-50 dark:bg-cyan-950/60 px-2 py-0.5 border border-cyan-200 dark:border-cyan-800">
+                            {lead.referrerCode}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 text-[11px]">Directo</span>
+                        )}
+                      </td>
+
+                      {/* Sitio Vinculado */}
+                      <td className="py-4 px-4 whitespace-nowrap">
+                        {lead.siteId ? (
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-bold text-slate-900 dark:text-white rounded bg-slate-100 dark:bg-slate-800 px-2 py-1">
+                              {lead.siteId}
+                            </span>
+                            <Link2 className="h-3.5 w-3.5 text-emerald-500" />
+                          </div>
+                        ) : (
+                          <span className="inline-flex items-center gap-1 rounded bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                            Sin vincular
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Fecha */}
+                      <td className="py-4 px-4 whitespace-nowrap text-slate-500 dark:text-slate-400 text-[11px]">
+                        {new Date(lead.createdAt).toLocaleDateString("es-CO", {
+                          day: "2-digit",
+                          month: "short",
+                          year: "numeric"
+                        })}
+                      </td>
+
+                      {/* Acciones */}
+                      <td className="py-4 px-4 whitespace-nowrap text-right">
+                        <button
+                          onClick={() => setSelectedLead(lead)}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
+                        >
+                          <span>Detalle y Gestión</span>
+                          <ChevronRight className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* DETAIL AND MANAGEMENT MODAL / DRAWER */}
+      {selectedLead && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-2xl">
+            {/* Modal Header */}
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-slate-950 p-6 text-white dark:border-slate-800">
+              <div>
+                <div className="flex items-center gap-3">
+                  <h3 className="font-heading text-xl font-bold">{selectedLead.brandName}</h3>
+                  {getStatusBadge(selectedLead.status)}
+                </div>
+                <p className="mt-1 text-xs text-slate-400">
+                  Empresario: <strong className="text-white">{selectedLead.fullName}</strong> — Registrado el{" "}
+                  {new Date(selectedLead.createdAt).toLocaleString("es-CO")}
+                </p>
+              </div>
+
+              <button
+                onClick={() => setSelectedLead(null)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-white/10 text-slate-400 hover:bg-white/20 hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="p-6 space-y-8 text-slate-800 dark:text-slate-200">
+              {/* Action Error Banner */}
+              {actionError && (
+                <div className="flex items-center gap-2 rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-xs font-semibold text-rose-700 dark:text-rose-300">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
+                  <span>{actionError}</span>
+                </div>
+              )}
+
+              {/* OPERATIONAL QUICK ACTIONS */}
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* 1. Change Status */}
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-950 space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <Edit3 className="h-4 w-4 text-cyan-500" />
+                    Cambiar Estado Operativo
+                  </h4>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    {(["NEW", "CONTACTED", "PAID", "CONVERTED", "CANCELLED"] as ActivationLeadStatus[]).map((st) => (
+                      <button
+                        key={st}
+                        onClick={() => handleUpdateStatus(st)}
+                        disabled={isSubmittingPatch || selectedLead.status === st}
+                        className={`rounded-xl py-2 px-3 text-xs font-bold transition flex items-center justify-between ${
+                          selectedLead.status === st
+                            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 ring-2 ring-cyan-500"
+                            : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300"
+                        }`}
+                      >
+                        <span>{st}</span>
+                        {selectedLead.status === st && <Check className="h-3.5 w-3.5 text-cyan-400" />}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Link siteId */}
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-950 space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <Link2 className="h-4 w-4 text-cyan-500" />
+                    {selectedLead.siteId ? "Sitio Vinculado" : "Vincular Sitio"}
+                  </h4>
+
+                  {selectedLead.siteId ? (
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-1">
+                      <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                        <Check className="h-4 w-4 text-emerald-500" />
+                        Sitio Vinculado: <span className="font-mono text-sm underline">{selectedLead.siteId}</span>
+                      </p>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        El backend actual asigna el <code className="font-mono font-bold">siteId</code> de forma única al activar.
+                      </p>
+                    </div>
+                  ) : (
+                    <form onSubmit={handleLinkSiteId} className="space-y-3">
+                      <div>
+                        <input
+                          type="text"
+                          value={editingSiteId}
+                          onChange={(e) => setEditingSiteId(e.target.value)}
+                          placeholder="Ej. salud-vital"
+                          className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-mono font-bold text-slate-900 placeholder-slate-400 focus:border-cyan-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                        />
+                        <p className="mt-1 text-[11px] text-slate-400">
+                          Debe ser un slug en minúsculas (ej. yenny-garcia).
+                        </p>
+                      </div>
+
+                      <button
+                        type="submit"
+                        disabled={isSubmittingPatch || !editingSiteId.trim()}
+                        className="w-full rounded-xl bg-cyan-600 hover:bg-cyan-500 py-2.5 text-xs font-bold text-white shadow transition disabled:opacity-50"
+                      >
+                        {isSubmittingPatch ? "Vinculando..." : "Vincular Sitio"}
+                      </button>
+                    </form>
+                  )}
+                </div>
+              </div>
+
+              {/* ONBOARDING COMPLETENESS & MISSING FIELDS CHECKLIST */}
+              {(() => {
+                const { missing, completedCount, totalFields, percentage } = getMissingFields(selectedLead);
+                return (
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileCheck className="h-5 w-5 text-cyan-500" />
+                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                          Completitud de Onboarding ({percentage}%)
+                        </h4>
+                      </div>
+                      <span className="text-xs font-mono font-bold text-slate-500">
+                        {completedCount} de {totalFields} datos suministrados
+                      </span>
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                      <div
+                        className={`h-full transition-all duration-300 ${
+                          percentage === 100
+                            ? "bg-emerald-500"
+                            : percentage >= 50
+                            ? "bg-cyan-500"
+                            : "bg-amber-500"
+                        }`}
+                        style={{ width: `${percentage}%` }}
+                      />
+                    </div>
+
+                    {/* Missing items checklist */}
+                    {missing.length > 0 ? (
+                      <div>
+                        <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-2">
+                          Campos Faltantes por Suministrar ({missing.length}):
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {missing.map((m) => (
+                            <span
+                              key={m.field}
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/60 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-300"
+                            >
+                              <AlertTriangle className="h-3 w-3 text-amber-500" />
+                              {m.label}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 className="h-4 w-4" />
+                        <span>¡Onboarding completo al 100%! Todos los datos requeridos fueron suministrados.</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+
+              {/* DETAILED DATA TABS / SECTIONS */}
+              <div className="space-y-6">
+                {/* 1. Datos de Registro Base */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-2">
+                    Datos de Registro Mínimo
+                  </h4>
+
+                  <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 text-xs">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Nombre Completo</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{selectedLead.fullName}</span>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Marca / Comercial</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{selectedLead.brandName}</span>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Correo Electrónico</span>
+                      <span className="font-bold text-slate-900 dark:text-white">{selectedLead.email}</span>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">WhatsApp Registro</span>
+                      <a
+                        href={`https://wa.me/${selectedLead.whatsapp.replace(/[^0-9]/g, "")}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                      >
+                        <MessageCircle className="h-3 w-3" />
+                        {selectedLead.whatsapp}
+                      </a>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Código Referido</span>
+                      <span className="font-bold text-cyan-600 dark:text-cyan-400 font-mono">
+                        {selectedLead.referrerCode || "Ninguno (Directo)"}
+                      </span>
+                    </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Método Pago</span>
+                      <span className="font-bold text-slate-900 dark:text-white uppercase">
+                        {selectedLead.paymentMethod}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. Datos de Onboarding Suministrados */}
+                <div className="space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-2">
+                    Información Detallada de Onboarding
+                  </h4>
+
+                  {selectedLead.onboardingData ? (
+                    <div className="grid gap-4 sm:grid-cols-2 text-xs">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">País de Operación</span>
+                        <span className="font-bold text-slate-900 dark:text-white">
+                          {selectedLead.onboardingData.country || "No especificado"}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">WhatsApp Visible / Teléfono</span>
+                        <span className="font-bold text-slate-900 dark:text-white">
+                          {selectedLead.onboardingData.whatsapp || "No especificado"} / {selectedLead.onboardingData.phone || "N/A"}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900 sm:col-span-2">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">URL de Compra / Checkout</span>
+                        {selectedLead.onboardingData.purchaseUrl ? (
+                          <a
+                            href={selectedLead.onboardingData.purchaseUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 truncate"
+                          >
+                            {selectedLead.onboardingData.purchaseUrl}
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">Sin URL suministrada</span>
+                        )}
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Hero Desktop URL</span>
+                        {selectedLead.onboardingData.heroDesktopUrl ? (
+                          <a
+                            href={selectedLead.onboardingData.heroDesktopUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 truncate"
+                          >
+                            Ver Imagen Hero Desktop
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">No suministrada</span>
+                        )}
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Hero Mobile URL</span>
+                        {selectedLead.onboardingData.heroMobileUrl ? (
+                          <a
+                            href={selectedLead.onboardingData.heroMobileUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 truncate"
+                          >
+                            Ver Imagen Hero Mobile
+                            <ExternalLink className="h-3 w-3 shrink-0" />
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">No suministrada</span>
+                        )}
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Modo de Logotipo</span>
+                        <span className="font-bold text-slate-900 dark:text-white uppercase">
+                          {selectedLead.onboardingData.logoMode || "TYPOGRAPHY"}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">ID GA4</span>
+                        <span className="font-bold text-slate-900 dark:text-white font-mono">
+                          {selectedLead.onboardingData.analyticsMeasurementId || "No suministrado"}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Consentimiento Imágenes</span>
+                        <span className="font-bold text-slate-900 dark:text-white">
+                          {selectedLead.onboardingData.imageUseConsent ? "Sí, Autorizado" : "No otorgado"}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Aceptación Acuerdo</span>
+                        <span className="font-bold text-slate-900 dark:text-white">
+                          {selectedLead.onboardingData.agreementAccepted ? "Sí, Aceptado" : "No aceptado"}
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">El empresario aún no ha iniciado el formulario de onboarding.</p>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="border-t border-slate-200 bg-slate-50 p-4 text-right dark:border-slate-800 dark:bg-slate-950">
+              <button
+                onClick={() => setSelectedLead(null)}
+                className="rounded-xl border border-slate-300 bg-white px-5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+              >
+                Cerrar Detalle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
