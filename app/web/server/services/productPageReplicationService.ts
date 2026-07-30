@@ -25,7 +25,7 @@ export const productPageReplicationService = {
     }
 
     const configuration = productPageGenerationInputSchema.parse(source);
-    const generated = await productPageGenerationService.generate(configuration);
+    const generated = await productPageGenerationService.generate(configuration, { templateSource: "canonical" });
     const published = await productPagePublicationService.publish({ siteId: MASTER_SITE_ID });
 
     return {

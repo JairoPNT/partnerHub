@@ -2,7 +2,7 @@
 
 ## Decision MVP
 
-La plantilla maestra sigue siendo el contenido versionado en GitHub dentro de `plantillas-de-pagina/producto`. `ganomaster.pro` funcionara como sitio de referencia y vista previa publicada; no sera el editor tecnico directo del servidor.
+La plantilla maestra se inicializa desde el contenido versionado en GitHub dentro de `plantillas-de-pagina/producto` y, una vez publicada, el paquete de `ganomaster.pro` se convierte en la fuente operativa para construir nuevas páginas de clientes. `ganomaster.pro` funciona como sitio de referencia y vista previa publicada; no es el editor técnico directo del servidor.
 
 El `siteId` reservado para el master es `ganomaster` y su dominio es `ganomaster.pro`. La replicacion general excluye este sitio para evitar sobrescribir la referencia maestra.
 
@@ -64,4 +64,4 @@ La interfaz debe mostrar alcance, sitios afectados y pedir confirmacion antes de
 7. Verificar el dominio publicado.
 8. Ejecutar replicacion general solo despues de aprobar la prueba.
 
-Editar directamente el `public_html` de `ganomaster.pro` no actualiza GitHub ni convierte esos cambios en plantilla. Para un editor visual del master se requerira una fase posterior que escriba sobre la fuente versionada.
+Editar directamente el `public_html` de `ganomaster.pro` no actualiza GitHub ni convierte esos cambios en plantilla. Los nuevos clientes se generan a partir del paquete publicado del master y reciben encima su `config.js` particular. Si se modifica la estructura HTML/CSS/JS, el cambio debe entrar por GitHub, publicarse primero en el master y luego replicarse.

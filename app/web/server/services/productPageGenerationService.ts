@@ -1,6 +1,6 @@
 import "server-only";
 
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 
 import { z } from "zod";
@@ -110,6 +110,28 @@ function getOutputRoot() {
   return process.env.PRODUCT_PAGE_OUTPUT_DIR ?? "/data/generated-sites";
 }
 
+export type ProductPageGenerationOptions = {
+  templateSource?: "canonical" | "master";
+};
+
+async function resolveTemplateDirectory(siteId: string, options?: ProductPageGenerationOptions) {
+  const source = options?.templateSource ?? (siteId === "ganomaster" ? "canonical" : "master");
+  if (source === "canonical") {
+    return getTemplateDirectory();
+  }
+
+  const masterDirectory = resolveInsideDirectory(getOutputRoot(), "ganomaster");
+  try {
+    await access(masterDirectory);
+  } catch {
+    throw new Error(
+      "The master template is not published yet. Publish ganomaster.pro before generating client pages."
+    );
+  }
+
+  return masterDirectory;
+}
+
 function resolveInsideDirectory(rootDirectory: string, childName: string) {
   const root = resolve(rootDirectory);
   const target = resolve(root, childName);
@@ -166,9 +188,12 @@ function buildConfigSource(configuration: ReturnType<typeof normalizedConfigurat
 }
 
 export const productPageGenerationService = {
-  async generate(input: ProductPageGenerationInput): Promise<ProductPageGenerationResult> {
+  async generate(
+    input: ProductPageGenerationInput,
+    options?: ProductPageGenerationOptions
+  ): Promise<ProductPageGenerationResult> {
     const configuration = normalizedConfiguration(input);
-    const templateDirectory = getTemplateDirectory();
+    const templateDirectory = await resolveTemplateDirectory(configuration.site.id, options);
     const outputDirectory = resolveInsideDirectory(getOutputRoot(), configuration.site.id);
 
     await rm(outputDirectory, { recursive: true, force: true });

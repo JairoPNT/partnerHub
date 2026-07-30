@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, FormEvent } from "react";
 import {
   Globe,
   ExternalLink,
@@ -12,19 +12,51 @@ import {
   Square,
   Play,
   Layers,
-  FileCode2,
+  FileCode,
   Check,
   X,
   AlertTriangle,
-  Clock
+  Clock,
+  User,
+  Phone,
+  Search,
+  Image as ImageIcon,
+  BarChart3,
+  ArrowRight,
+  Folder,
+  UploadCloud,
+  FileCode2,
+  Copy
 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Label, Input, Textarea, Select } from "@/components/ui/form";
+import { Alert } from "@/components/ui/alert";
 import { ModuleRecord } from "@/modules/catalog";
 
 type MasterSiteManagementViewProps = {
   record?: ModuleRecord;
 };
 
-export interface ProductPageSiteItem {
+export interface MasterFormState {
+  brandName: string;
+  firstName: string;
+  fullName: string;
+  role: string;
+  whatsappNumber: string;
+  displayPhone: string;
+  purchaseUrl: string;
+  siteTitle: string;
+  metaDescription: string;
+  heroDesktop: string;
+  heroMobile: string;
+  defaultMessage: string;
+  measurementId: string;
+  faviconUrl: string;
+}
+
+export interface ClientSiteItem {
   siteId: string;
   domain?: string;
   publicationState?: "NOT_STARTED" | "GENERATED" | "PUBLISHED";
@@ -45,43 +77,103 @@ export interface ReplicationResponse {
   results: ReplicationResultItem[];
 }
 
-export function MasterSiteManagementView({ record }: MasterSiteManagementViewProps) {
-  // 1. Estado del Master (ganomaster.pro)
-  const [masterState, setMasterState] = useState<{
-    siteId: string;
-    domain: string;
-    publicationState: "NOT_STARTED" | "GENERATED" | "PUBLISHED";
-    lastPublishedAt: string | null;
-  }>({
-    siteId: "ganomaster",
-    domain: "ganomaster.pro",
-    publicationState: "PUBLISHED",
-    lastPublishedAt: null
-  });
+const INITIAL_MASTER_FORM: MasterFormState = {
+  brandName: "Gano Excel Master",
+  firstName: "Gano",
+  fullName: "Gano Excel Master Template",
+  role: "Plantilla Maestra Oficial · Gano Excel",
+  whatsappNumber: "573188430283",
+  displayPhone: "3188430283",
+  purchaseUrl: "https://wompi.co",
+  siteTitle: "Gano Excel — Bienestar y Vitalidad con Ganoderma Lucidum",
+  metaDescription: "Descubre la línea oficial de productos enriquecidos con Ganoderma Lucidum de Gano Excel.",
+  heroDesktop: "https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-desktop.webp",
+  heroMobile: "https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-mobile.webp",
+  defaultMessage: "Hola, me gustaría más información sobre la oportunidad y productos Gano Excel.",
+  measurementId: "G-7F24PBZPDM",
+  faviconUrl: ""
+};
 
+export function MasterSiteManagementView({ record }: MasterSiteManagementViewProps) {
+  // Configuración fija del sitio maestro
+  const MASTER_SITE_ID = "ganomaster";
+  const MASTER_DOMAIN = "ganomaster.pro";
+
+  // Estados del formulario y operación del master
+  const [form, setForm] = useState<MasterFormState>(INITIAL_MASTER_FORM);
+  const [isLoadingMasterConfig, setIsLoadingMasterConfig] = useState(true);
+  const [isGeneratingMaster, setIsGeneratingMaster] = useState(false);
   const [isPublishingMaster, setIsPublishingMaster] = useState(false);
+
+  // Estados de generación y publicación del master
+  const [publicationState, setPublicationState] = useState<"NOT_STARTED" | "GENERATED" | "PUBLISHED">("PUBLISHED");
+  const [generatedAt, setGeneratedAt] = useState<string | null>(null);
+  const [publishedAt, setPublishedAt] = useState<string | null>(null);
+  const [generationOutput, setGenerationOutput] = useState<any | null>(null);
+  const [copiedManifest, setCopiedManifest] = useState(false);
+
+  // Mensajes y alertas
   const [masterSuccessMessage, setMasterSuccessMessage] = useState<string | null>(null);
   const [masterErrorMessage, setMasterErrorMessage] = useState<string | null>(null);
 
-  // 2. Revisión y Aprobación
+  // Aprobación del equipo
   const [isApproved, setIsApproved] = useState(false);
 
-  // 3. Replicación de Sitios Receptores
-  const [sites, setSites] = useState<ProductPageSiteItem[]>([]);
-  const [isLoadingSites, setIsLoadingSites] = useState(true);
+  // Replicación en clientes
+  const [clientSites, setClientSites] = useState<ClientSiteItem[]>([]);
+  const [isLoadingClientSites, setIsLoadingClientSites] = useState(true);
   const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([]);
   const [confirmingReplication, setConfirmingReplication] = useState(false);
   const [isReplicating, setIsReplicating] = useState(false);
   const [replicationOutput, setReplicationOutput] = useState<ReplicationResponse | null>(null);
   const [replicationErrorMessage, setReplicationErrorMessage] = useState<string | null>(null);
 
-  // Carga de la lista de sitios desde GET /api/internal/product-pages y GET /api/internal/activation-leads
-  const fetchSitesAndLeads = async () => {
-    setIsLoadingSites(true);
+  // Carga inicial de la configuración guardada de ganomaster
+  const fetchMasterConfig = async () => {
+    setIsLoadingMasterConfig(true);
+    try {
+      const res = await fetch(`/api/internal/product-pages/${MASTER_SITE_ID}`);
+      if (res.ok) {
+        const data = await res.json();
+        const cfg = data.configuration || {};
+        const site = cfg.site || {};
+        const dist = cfg.distributor || {};
+        const hero = cfg.hero || {};
+        const analytics = cfg.analytics || {};
+
+        setForm({
+          brandName: dist.brandName || INITIAL_MASTER_FORM.brandName,
+          firstName: dist.firstName || INITIAL_MASTER_FORM.firstName,
+          fullName: dist.fullName || INITIAL_MASTER_FORM.fullName,
+          role: dist.role || INITIAL_MASTER_FORM.role,
+          whatsappNumber: dist.whatsappNumber || INITIAL_MASTER_FORM.whatsappNumber,
+          displayPhone: dist.displayPhone || dist.phoneNumber || INITIAL_MASTER_FORM.displayPhone,
+          purchaseUrl: dist.purchaseUrl || INITIAL_MASTER_FORM.purchaseUrl,
+          siteTitle: site.title || INITIAL_MASTER_FORM.siteTitle,
+          metaDescription: site.metaDescription || site.ogDescription || INITIAL_MASTER_FORM.metaDescription,
+          heroDesktop: hero.desktop || INITIAL_MASTER_FORM.heroDesktop,
+          heroMobile: hero.mobile || INITIAL_MASTER_FORM.heroMobile,
+          defaultMessage: dist.defaultMessage || INITIAL_MASTER_FORM.defaultMessage,
+          measurementId: typeof analytics === "string" ? analytics : (analytics.measurementId || INITIAL_MASTER_FORM.measurementId),
+          faviconUrl: site.faviconUrl || cfg.faviconUrl || ""
+        });
+
+        if (cfg.updatedAt) setPublishedAt(cfg.updatedAt);
+        if (cfg.generatedAt) setGeneratedAt(cfg.generatedAt);
+      }
+    } catch {
+      // Usar valores iniciales si no hay archivo guardado previo
+    } finally {
+      setIsLoadingMasterConfig(false);
+    }
+  };
+
+  // Carga de sitios clientes receptores (excluyendo ganomaster)
+  const fetchClientSites = async () => {
+    setIsLoadingClientSites(true);
     setReplicationErrorMessage(null);
 
     try {
-      // 1. Obtener sitios configurados
       const pagesRes = await fetch("/api/internal/product-pages");
       let pageSites: { siteId: string; configuration: any }[] = [];
       if (pagesRes.ok) {
@@ -89,7 +181,6 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         pageSites = data.sites || [];
       }
 
-      // 2. Obtener leads para complementar publicación y dominios
       const leadsRes = await fetch("/api/internal/activation-leads");
       let leads: any[] = [];
       if (leadsRes.ok) {
@@ -97,12 +188,12 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         leads = data.leads || [];
       }
 
-      // 3. Mapear y filtrar excluyendo ganomaster / ganomaster.pro
-      const filtered: ProductPageSiteItem[] = pageSites
+      // Exclusión obligatoria de ganomaster y ganomaster.pro
+      const filtered: ClientSiteItem[] = pageSites
         .filter((item) => {
           const sId = item.siteId?.toLowerCase();
           const dom = item.configuration?.site?.domain || item.configuration?.domain;
-          return sId !== "ganomaster" && dom !== "ganomaster.pro";
+          return sId !== MASTER_SITE_ID && dom !== MASTER_DOMAIN;
         })
         .map((item) => {
           const lead = leads.find((l) => l.siteId === item.siteId);
@@ -119,70 +210,124 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           };
         });
 
-      setSites(filtered);
-      // Seleccionar por defecto todos los sitios filtrados
+      setClientSites(filtered);
       setSelectedSiteIds(filtered.map((s) => s.siteId));
-
-      // Buscar si existe metadata guardada del master para obtener última fecha
-      const masterConfigRes = await fetch("/api/internal/product-pages/ganomaster");
-      if (masterConfigRes.ok) {
-        const masterData = await masterConfigRes.json();
-        if (masterData?.configuration) {
-          setMasterState((prev) => ({
-            ...prev,
-            lastPublishedAt: masterData.configuration.updatedAt || masterData.configuration.generatedAt || prev.lastPublishedAt
-          }));
-        }
-      }
     } catch (err) {
-      setReplicationErrorMessage((err as Error).message || "No se pudo cargar el listado de sitios.");
+      setReplicationErrorMessage((err as Error).message || "No se pudo cargar la lista de clientes.");
     } finally {
-      setIsLoadingSites(false);
+      setIsLoadingClientSites(false);
     }
   };
 
   useEffect(() => {
-    fetchSitesAndLeads();
+    fetchMasterConfig();
+    fetchClientSites();
   }, []);
 
-  // 1. Ejecutar actualización de vista previa del master via POST /api/internal/product-pages/master/preview
-  const handleUpdateMasterPreview = async () => {
+  const handleInputChange = (field: keyof MasterFormState, value: string) => {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  };
+
+  // 1. Generar Vista Previa Local (POST /api/internal/product-pages/generate) con payload fijo ganomaster / ganomaster.pro
+  const handleGenerateMaster = async (e: FormEvent) => {
+    e.preventDefault();
+    setIsGeneratingMaster(true);
+    setMasterSuccessMessage(null);
+    setMasterErrorMessage(null);
+    setGenerationOutput(null);
+
+    const payload = {
+      site: {
+        id: MASTER_SITE_ID,
+        domain: MASTER_DOMAIN,
+        title: form.siteTitle.trim(),
+        appName: "ganomaster",
+        ogTitle: form.siteTitle.trim(),
+        ogDescription: form.metaDescription.trim() || undefined,
+        metaDescription: form.metaDescription.trim() || undefined,
+        faviconUrl: form.faviconUrl.trim() || undefined
+      },
+      distributor: {
+        brandName: form.brandName.trim(),
+        firstName: form.firstName.trim(),
+        fullName: form.fullName.trim(),
+        role: form.role.trim() || "Plantilla Maestra Oficial · Gano Excel",
+        whatsappNumber: form.whatsappNumber.replace(/\D/g, ""),
+        phoneNumber: form.displayPhone.trim() || form.whatsappNumber.replace(/\D/g, ""),
+        displayPhone: form.displayPhone.trim() || form.whatsappNumber.replace(/\D/g, ""),
+        purchaseUrl: form.purchaseUrl.trim() || undefined,
+        defaultMessage: form.defaultMessage.trim() || undefined
+      },
+      hero: {
+        desktop: form.heroDesktop.trim(),
+        mobile: form.heroMobile.trim()
+      },
+      analytics: form.measurementId.trim()
+        ? { measurementId: form.measurementId.trim().toUpperCase() }
+        : undefined
+    };
+
+    try {
+      const response = await fetch("/api/internal/product-pages/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "No se pudo generar el paquete local de ganomaster.");
+      }
+
+      setGenerationOutput(data);
+      const now = new Date().toISOString();
+      setGeneratedAt(now);
+      setPublicationState("GENERATED");
+      setMasterSuccessMessage("Vista previa local generada. Haz clic en 'Publicar en ganomaster.pro' para desplegar los cambios en vivo.");
+    } catch (err: any) {
+      setMasterErrorMessage(err.message || "Error al generar la plantilla maestra.");
+    } finally {
+      setIsGeneratingMaster(false);
+    }
+  };
+
+  // 2. Publicar en ganomaster.pro (POST /api/internal/product-pages/publish)
+  const handlePublishMaster = async () => {
     setIsPublishingMaster(true);
     setMasterSuccessMessage(null);
     setMasterErrorMessage(null);
 
     try {
-      const res = await fetch("/api/internal/product-pages/master/preview", {
+      const response = await fetch("/api/internal/product-pages/publish", {
         method: "POST",
-        headers: { "Content-Type": "application/json" }
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteId: MASTER_SITE_ID })
       });
 
-      const json = await res.json();
-      if (!res.ok) {
-        throw new Error(json.error || "No se pudo actualizar la vista previa del master.");
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "No se pudo publicar en ganomaster.pro.");
       }
 
-      const publishedTime = new Date().toISOString();
-      setMasterState((prev) => ({
-        ...prev,
-        publicationState: "PUBLISHED",
-        lastPublishedAt: publishedTime
-      }));
-
+      const now = new Date().toISOString();
+      setPublishedAt(now);
+      setPublicationState("PUBLISHED");
       setMasterSuccessMessage("Vista previa publicada. Revisa ganomaster.pro antes de replicar.");
-    } catch (err) {
-      setMasterErrorMessage((err as Error).message || "Error al actualizar la vista previa del master.");
+    } catch (err: any) {
+      setMasterErrorMessage(err.message || "Error al publicar en ganomaster.pro.");
     } finally {
       setIsPublishingMaster(false);
     }
   };
 
-  // 2. Control de selección de sitios
+  // 3. Control de selección de clientes receptores
   const handleToggleSelectAll = () => {
-    if (selectedSiteIds.length === sites.length) {
+    if (selectedSiteIds.length === clientSites.length) {
       setSelectedSiteIds([]);
     } else {
-      setSelectedSiteIds(sites.map((s) => s.siteId));
+      setSelectedSiteIds(clientSites.map((s) => s.siteId));
     }
   };
 
@@ -192,7 +337,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
     );
   };
 
-  // 3. Ejecutar replicación de cambios aprobados via POST /api/internal/product-pages/replicate
+  // 4. Replicar Cambios Aprobados (POST /api/internal/product-pages/replicate)
   const handleExecuteReplication = async () => {
     if (!isApproved || selectedSiteIds.length === 0) return;
 
@@ -213,13 +358,12 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       const json = await res.json();
 
       if (!res.ok) {
-        throw new Error(json.error || "Error al replicar los cambios de la plantilla.");
+        throw new Error(json.error || "Error al realizar la replicación de la plantilla.");
       }
 
       setReplicationOutput(json);
       setConfirmingReplication(false);
-      // Recargar lista para actualizar fechas y estados
-      fetchSitesAndLeads();
+      fetchClientSites();
     } catch (err) {
       setReplicationErrorMessage((err as Error).message || "Ocurrió un error durante la replicación.");
     } finally {
@@ -227,18 +371,26 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
     }
   };
 
+  const copyManifest = () => {
+    if (!generationOutput) return;
+    const summary = `Sitio: ${generationOutput.siteId}\nFecha: ${generationOutput.generatedAt}\nDirectorio: ${generationOutput.outputDirectory}\nArchivos:\n${generationOutput.files.map((f: string) => `- ${f}`).join("\n")}`;
+    navigator.clipboard.writeText(summary);
+    setCopiedManifest(true);
+    setTimeout(() => setCopiedManifest(false), 2000);
+  };
+
   const getPublicationBadge = (pubState?: "NOT_STARTED" | "GENERATED" | "PUBLISHED") => {
     switch (pubState) {
       case "PUBLISHED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 text-xs font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
             <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
             PUBLISHED
           </span>
         );
       case "GENERATED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-950/60 px-2.5 py-0.5 text-xs font-bold text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800">
+          <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-950/60 px-2.5 py-1 text-xs font-bold text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800">
             <RefreshCw className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
             GENERATED
           </span>
@@ -246,7 +398,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       case "NOT_STARTED":
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950/60 px-2.5 py-0.5 text-xs font-bold text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950/60 px-2.5 py-1 text-xs font-bold text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
             <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
             NOT_STARTED
           </span>
@@ -264,7 +416,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
               {record?.group || "Operaciones"}
             </span>
             <span className="rounded-full border border-slate-200 dark:border-slate-800 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
-              Plantilla Maestra
+              Editor de Plantilla Maestra
             </span>
           </div>
 
@@ -281,112 +433,389 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         </div>
 
         <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
-          Gestión de Plantilla Maestra (Master Site)
+          Editor de Plantilla Maestra (`ganomaster.pro`)
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-          Administra la plantilla oficial <strong>ganomaster.pro</strong> como entorno de vista previa previa a la aprobación y replicación masiva en los sitios de empresarios.
+          Edita la configuración de la plantilla maestra con identificador fijo <code className="font-mono font-bold text-cyan-600 dark:text-cyan-400">ganomaster</code> y dominio <code className="font-mono font-bold text-cyan-600 dark:text-cyan-400">ganomaster.pro</code>. Genera la vista previa y publícala antes de replicar a los clientes.
         </p>
       </section>
 
-      {/* SECCIÓN 1 Y 2: ESTADO DEL MASTER Y ACTUALIZAR VISTA PREVIA */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+      {/* DASHBOARD DE ESTADO DEL MASTER */}
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
           <div className="flex items-center gap-3">
             <Globe className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
             <div>
-              <h2 className="text-lg font-bold text-slate-900 dark:text-white">
-                Estado Oficial de la Plantilla Maestra
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+                Estado Actual de ganomaster.pro
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Visualización de estado y publicación de vista previa en ganomaster.pro
+                Información técnica y fechas de actualización de la plantilla maestra
               </p>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={handleUpdateMasterPreview}
-            disabled={isPublishingMaster}
-            className="inline-flex items-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-cyan-600 dark:hover:bg-cyan-500 px-5 py-2.5 text-xs font-bold text-white shadow transition disabled:opacity-50"
-          >
-            {isPublishingMaster ? (
-              <RefreshCw className="h-4 w-4 animate-spin text-cyan-400" />
-            ) : (
-              <RefreshCw className="h-4 w-4 text-cyan-400" />
-            )}
-            <span>{isPublishingMaster ? "Actualizando Vista Previa..." : "Actualizar vista previa del master"}</span>
-          </button>
+          <div>{getPublicationBadge(publicationState)}</div>
         </div>
 
-        {/* Notificaciones del Master */}
-        {masterSuccessMessage && (
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
-              <span>{masterSuccessMessage}</span>
-            </div>
-            <button onClick={() => setMasterSuccessMessage(null)} className="text-emerald-800 dark:text-emerald-300">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {masterErrorMessage && (
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm font-semibold text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
-            <div className="flex items-center gap-2.5">
-              <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
-              <span>{masterErrorMessage}</span>
-            </div>
-            <button onClick={() => setMasterErrorMessage(null)} className="text-rose-800 dark:text-rose-300">
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-
-        {/* Tarjetas de Propiedades del Master */}
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 text-xs">
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950 space-y-1">
-            <span className="text-slate-400 font-bold text-[10px] uppercase block">Dominio Oficial</span>
+            <span className="text-slate-400 font-bold text-[10px] uppercase block">Dominio Fijo</span>
             <a
               href="https://ganomaster.pro"
               target="_blank"
               rel="noopener noreferrer"
               className="font-extrabold font-mono text-cyan-600 dark:text-cyan-400 text-sm hover:underline inline-flex items-center gap-1"
             >
-              {masterState.domain}
+              {MASTER_DOMAIN}
               <ExternalLink className="h-3 w-3" />
             </a>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950 space-y-1">
-            <span className="text-slate-400 font-bold text-[10px] uppercase block">Identificador siteId</span>
+            <span className="text-slate-400 font-bold text-[10px] uppercase block">siteId Fijo</span>
             <span className="font-extrabold font-mono text-slate-900 dark:text-white text-sm">
-              {masterState.siteId}
+              {MASTER_SITE_ID}
             </span>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950 space-y-1">
-            <span className="text-slate-400 font-bold text-[10px] uppercase block">Estado de Publicación</span>
-            <div>{getPublicationBadge(masterState.publicationState)}</div>
+            <span className="text-slate-400 font-bold text-[10px] uppercase block">Fecha de Generación</span>
+            <span className="font-bold text-slate-700 dark:text-slate-300 text-xs">
+              {generatedAt ? new Date(generatedAt).toLocaleString("es-CO") : "No generada aún"}
+            </span>
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950 space-y-1">
             <span className="text-slate-400 font-bold text-[10px] uppercase block">Última Publicación</span>
             <span className="font-bold text-slate-700 dark:text-slate-300 text-xs">
-              {masterState.lastPublishedAt
-                ? new Date(masterState.lastPublishedAt).toLocaleString("es-CO")
-                : "Recientemente actualizada"}
+              {publishedAt ? new Date(publishedAt).toLocaleString("es-CO") : "Publicación inicial activa"}
             </span>
           </div>
         </div>
       </section>
 
-      {/* SECCIÓN 3: REVISIÓN Y APROBACIÓN */}
+      {/* NOTIFICACIONES Y ALERTAS DEL MASTER */}
+      {masterSuccessMessage && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>{masterSuccessMessage}</span>
+          </div>
+          <button onClick={() => setMasterSuccessMessage(null)} className="text-emerald-800 dark:text-emerald-300">
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {masterErrorMessage && (
+        <Alert variant="error" title="Error en la Operación" icon={<AlertCircle className="h-5 w-5 text-rose-600" />}>
+          {masterErrorMessage}
+        </Alert>
+      )}
+
+      {/* RESUMEN DE ARCHIVOS GENERADOS */}
+      {generationOutput && (
+        <Card className="border-cyan-200 bg-cyan-50/30 dark:border-cyan-800 dark:bg-cyan-950/20 p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                Paquete Local de ganomaster Generado
+              </h3>
+              <p className="text-xs text-slate-600 dark:text-slate-400">
+                Directorio: <code className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{generationOutput.outputDirectory}</code>
+              </p>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyManifest}
+                leftIcon={copiedManifest ? <Check className="h-4 w-4 text-emerald-600" /> : <Copy className="h-4 w-4" />}
+              >
+                {copiedManifest ? "¡Copiado!" : "Copiar Resumen"}
+              </Button>
+
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={handlePublishMaster}
+                isLoading={isPublishingMaster}
+                leftIcon={<UploadCloud className="h-4 w-4 text-cyan-300" />}
+              >
+                Publicar en ganomaster.pro
+              </Button>
+            </div>
+          </div>
+        </Card>
+      )}
+
+      {/* FORMULARIO EDITABLE DE CONFIGURACIÓN DEL MASTER */}
+      <form onSubmit={handleGenerateMaster} className="space-y-6">
+        {/* Bloque 1: Identificación y Marca */}
+        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <User className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                1. Identificación y Datos de Marca (`ganomaster`)
+              </CardTitle>
+            </div>
+            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+              Configuración de la marca maestra oficial y nombres de presentación.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="grid gap-5 md:grid-cols-2">
+            <div>
+              <Label htmlFor="brandName">Nombre de Marca *</Label>
+              <Input
+                id="brandName"
+                required
+                placeholder="ej. Gano Excel Master"
+                value={form.brandName}
+                onChange={(e) => handleInputChange("brandName", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="firstName">Nombre (Pila) *</Label>
+              <Input
+                id="firstName"
+                required
+                placeholder="ej. Gano"
+                value={form.firstName}
+                onChange={(e) => handleInputChange("firstName", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="fullName">Nombre Completo *</Label>
+              <Input
+                id="fullName"
+                required
+                placeholder="ej. Gano Excel Master Template"
+                value={form.fullName}
+                onChange={(e) => handleInputChange("fullName", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="role">Rol o Cargo Visible</Label>
+              <Input
+                id="role"
+                placeholder="ej. Plantilla Maestra Oficial · Gano Excel"
+                value={form.role}
+                onChange={(e) => handleInputChange("role", e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bloque 2: Contacto y Pasarela */}
+        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Phone className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                2. Contacto, WhatsApp y URL de Compra
+              </CardTitle>
+            </div>
+            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+              Datos de contacto oficial y pasarela de pago para la plantilla maestra.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="grid gap-5 md:grid-cols-2">
+            <div>
+              <Label htmlFor="whatsappNumber">WhatsApp Internacional *</Label>
+              <Input
+                id="whatsappNumber"
+                required
+                placeholder="ej. 573188430283"
+                value={form.whatsappNumber}
+                onChange={(e) => handleInputChange("whatsappNumber", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="displayPhone">Teléfono Visible / Llamada Directa</Label>
+              <Input
+                id="displayPhone"
+                placeholder="ej. 3188430283"
+                value={form.displayPhone}
+                onChange={(e) => handleInputChange("displayPhone", e.target.value)}
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <Label htmlFor="purchaseUrl">URL de Compra / Pasarela (Checkout)</Label>
+              <Input
+                id="purchaseUrl"
+                placeholder="ej. https://wompi.co"
+                value={form.purchaseUrl}
+                onChange={(e) => handleInputChange("purchaseUrl", e.target.value)}
+              />
+            </div>
+
+            <div className="md:col-span-2">
+              <Label htmlFor="defaultMessage">Mensaje Predeterminado de WhatsApp</Label>
+              <Textarea
+                id="defaultMessage"
+                rows={2}
+                placeholder="ej. Hola, me gustaría tener más información..."
+                value={form.defaultMessage}
+                onChange={(e) => handleInputChange("defaultMessage", e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bloque 3: SEO y Favicon */}
+        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Search className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                3. Configuración SEO y Favicon
+              </CardTitle>
+            </div>
+            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+              Metadatos para la versión maestra ganomaster.pro.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            <div>
+              <Label htmlFor="siteTitle">Título SEO (&lt;title&gt;) *</Label>
+              <Input
+                id="siteTitle"
+                required
+                placeholder="ej. Gano Excel — Bienestar y Vitalidad con Ganoderma Lucidum"
+                value={form.siteTitle}
+                onChange={(e) => handleInputChange("siteTitle", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="metaDescription">Meta Descripción</Label>
+              <Textarea
+                id="metaDescription"
+                rows={2}
+                placeholder="ej. Descubre la línea oficial de productos enriquecidos..."
+                value={form.metaDescription}
+                onChange={(e) => handleInputChange("metaDescription", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="faviconUrl">URL del Favicon (Opcional - automático si se omite)</Label>
+              <Input
+                id="faviconUrl"
+                placeholder="https://ejemplo.com/favicon.png"
+                value={form.faviconUrl}
+                onChange={(e) => handleInputChange("faviconUrl", e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bloque 4: Multimedia y Héroes */}
+        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ImageIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                4. Recursos Multimedia (Hero Desktop y Mobile en R2)
+              </CardTitle>
+            </div>
+            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+              Imágenes de portada para la plantilla maestra.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-5">
+            <div>
+              <Label htmlFor="heroDesktop">URL HTTPS Hero Desktop *</Label>
+              <Input
+                id="heroDesktop"
+                required
+                placeholder="https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-desktop.webp"
+                value={form.heroDesktop}
+                onChange={(e) => handleInputChange("heroDesktop", e.target.value)}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="heroMobile">URL HTTPS Hero Mobile *</Label>
+              <Input
+                id="heroMobile"
+                required
+                placeholder="https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-mobile.webp"
+                value={form.heroMobile}
+                onChange={(e) => handleInputChange("heroMobile", e.target.value)}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Bloque 5: Analítica */}
+        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                5. Google Analytics
+              </CardTitle>
+            </div>
+          </CardHeader>
+
+          <CardContent>
+            <div>
+              <Label htmlFor="measurementId">Measurement ID de Google Analytics</Label>
+              <Input
+                id="measurementId"
+                placeholder="ej. G-7F24PBZPDM"
+                value={form.measurementId}
+                onChange={(e) => handleInputChange("measurementId", e.target.value)}
+                className="font-mono"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* BOTONES DE ACCIÓN PRINCIPALES DEL MASTER */}
+        <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
+          <Button
+            type="submit"
+            size="lg"
+            isLoading={isGeneratingMaster}
+            leftIcon={<RefreshCw className="h-4 w-4" />}
+          >
+            Generar vista previa
+          </Button>
+
+          <Button
+            type="button"
+            size="lg"
+            variant="primary"
+            onClick={handlePublishMaster}
+            isLoading={isPublishingMaster}
+            leftIcon={<UploadCloud className="h-4 w-4 text-cyan-300" />}
+          >
+            Publicar en ganomaster.pro
+          </Button>
+        </div>
+      </form>
+
+      {/* SECCIÓN 5: APROBACIÓN DEL EQUIPO */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
         <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
           <ShieldCheck className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
           <h2 className="text-base font-bold text-slate-900 dark:text-white">
-            Revisión del Equipo y Control de Seguridad
+            Aprobación del Equipo
           </h2>
         </div>
 
@@ -403,7 +832,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
                 He revisado y aprobado la versión actual de ganomaster.pro
               </span>
               <p className="text-[11px] text-slate-500 dark:text-slate-400">
-                Al marcar esta casilla confirmas que la plantilla en <code className="font-mono">ganomaster.pro</code> es visual y operativamente correcta para ser replicada masivamente.
+                La replicación masiva en clientes estará habilitada únicamente cuando la versión publicada en <code className="font-mono">ganomaster.pro</code> esté totalmente aprobada.
               </p>
             </div>
           </label>
@@ -411,23 +840,23 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           {!isApproved && (
             <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-xs font-semibold pt-1">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span>La opción de replicación masiva permanecerá deshabilitada hasta que apruebes la plantilla.</span>
+              <span>La replicación masiva está deshabilitada hasta que apruebes la versión publicada en ganomaster.pro.</span>
             </div>
           )}
         </div>
       </section>
 
-      {/* SECCIÓN 4: REPLICACIÓN */}
+      {/* SECCIÓN 6: REPLICAR CAMBIOS APROBADOS */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
           <div className="flex items-center gap-3">
             <Layers className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white">
-                Replicar Cambios Aprobados a Sitios Empresarios
+                Replicar Cambios Aprobados a Sitios Clientes
               </h2>
               <p className="text-xs text-slate-500 dark:text-slate-400">
-                Selecciona los sitios destino. El sitio maestro ganomaster.pro está excluido automáticamente.
+                Selecciona únicamente los sitios de clientes/empresarios receptores. El sitio ganomaster está excluido permanentemente.
               </p>
             </div>
           </div>
@@ -436,15 +865,15 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             <button
               type="button"
               onClick={handleToggleSelectAll}
-              disabled={sites.length === 0}
+              disabled={clientSites.length === 0}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition disabled:opacity-50"
             >
-              {selectedSiteIds.length === sites.length && sites.length > 0 ? (
+              {selectedSiteIds.length === clientSites.length && clientSites.length > 0 ? (
                 <CheckSquare className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
               ) : (
                 <Square className="h-4 w-4 text-slate-400" />
               )}
-              <span>Todos los sitios ({sites.length})</span>
+              <span>Todos los clientes ({clientSites.length})</span>
             </button>
 
             <button
@@ -466,11 +895,11 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
               <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
               <div className="space-y-1">
                 <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
-                  Confirmación de Replicación Masiva Aprobada
+                  Confirmación de Replicación Masiva en Clientes
                 </h4>
                 <p className="text-xs text-amber-800 dark:text-amber-300">
-                  Estás a punto de replicar los cambios aprobados de <strong>ganomaster.pro</strong> en{" "}
-                  <strong>{selectedSiteIds.length} sitio(s) de empresarios</strong>:
+                  Estás a punto de replicar la plantilla maestra aprobada <strong>ganomaster.pro</strong> en{" "}
+                  <strong>{selectedSiteIds.length} cliente(s) seleccionado(s)</strong>:
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200 dark:border-amber-800">
                   {selectedSiteIds.map((id) => (
@@ -521,20 +950,20 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           </div>
         )}
 
-        {/* TABLA DE SITIOS DISPONIBLES */}
-        {isLoadingSites ? (
+        {/* TABLA DE SITIOS CLIENTES */}
+        {isLoadingClientSites ? (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 space-y-3">
             <RefreshCw className="h-8 w-8 animate-spin text-cyan-500" />
-            <p className="text-sm font-medium">Cargando sitios receptores disponibles...</p>
+            <p className="text-sm font-medium">Cargando sitios clientes...</p>
           </div>
-        ) : sites.length === 0 ? (
+        ) : clientSites.length === 0 ? (
           <div className="p-12 text-center space-y-3">
             <FileCode2 className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600" />
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
-              No hay sitios de empresarios disponibles
+              No hay sitios clientes disponibles
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
-              Aún no existen configuraciones de páginas de producto guardadas para replicar.
+              Aún no existen configuraciones de páginas de clientes para recibir la replicación.
             </p>
           </div>
         ) : (
@@ -543,14 +972,14 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
               <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
                 <tr>
                   <th className="py-3 px-4 w-10">Selección</th>
-                  <th className="py-3 px-4">Site ID</th>
+                  <th className="py-3 px-4">Site ID Cliente</th>
                   <th className="py-3 px-4">Dominio</th>
                   <th className="py-3 px-4">Estado de Publicación</th>
-                  <th className="py-3 px-4">Fecha de Última Publicación</th>
+                  <th className="py-3 px-4">Última Publicación</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                {sites.map((site) => {
+                {clientSites.map((site) => {
                   const isChecked = selectedSiteIds.includes(site.siteId);
 
                   return (
@@ -617,7 +1046,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
             <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-              Resultado Individual de Replicación ({replicationOutput.count} sitios)
+              Resultado Individual de Replicación ({replicationOutput.count} clientes)
             </h3>
             <span className="text-xs font-mono text-slate-400">
               {new Date(replicationOutput.replicatedAt).toLocaleString("es-CO")}
@@ -646,7 +1075,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
                     )}
                   </div>
                   <p className="text-slate-500 dark:text-slate-400 text-[11px]">
-                    Plantilla de origen: <code className="font-mono font-bold">ganomaster.pro</code>
+                    Origen: <code className="font-mono font-bold">ganomaster.pro</code>
                   </p>
                 </div>
 
