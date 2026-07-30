@@ -9,6 +9,11 @@ const variantSchema = z.enum(["hero-desktop", "hero-mobile"]);
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 
+function buildVersionedPublicUrl(publicBaseUrl: string, key: string) {
+  const version = Date.now().toString(36);
+  return `${publicBaseUrl}/${key}?v=${version}`;
+}
+
 function getConfig() {
   const endpoint = process.env.R2_ENDPOINT;
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
@@ -61,6 +66,6 @@ export const mediaUploadService = {
       })
     );
 
-    return { siteId, variant, key, url: `${publicBaseUrl}/${key}`, bytes: body.byteLength };
+    return { siteId, variant, key, url: buildVersionedPublicUrl(publicBaseUrl, key), bytes: body.byteLength };
   }
 };
