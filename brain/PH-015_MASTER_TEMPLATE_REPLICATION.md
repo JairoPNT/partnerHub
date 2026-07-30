@@ -65,3 +65,9 @@ La interfaz debe mostrar alcance, sitios afectados y pedir confirmacion antes de
 8. Ejecutar replicacion general solo despues de aprobar la prueba.
 
 Editar directamente el `public_html` de `ganomaster.pro` no actualiza GitHub ni convierte esos cambios en plantilla. Los nuevos clientes se generan a partir del paquete publicado del master y reciben encima su `config.js` particular. Si se modifica la estructura HTML/CSS/JS, el cambio debe entrar por GitHub, publicarse primero en el master y luego replicarse.
+
+## Client conversion links
+
+La URL de compra de cada empresario vive en `distributor.purchaseUrl` dentro del `config.js` generado. Los botones `Comprar` de la plantilla no deben tener una tienda fija quemada en HTML; al cargar la pagina, `app.js` asigna esa URL a todos los enlaces `.product-btn-buy`.
+
+Si un empresario cambia su tienda o checkout externo, se actualiza el campo `URL de Compra / Pasarela` en `/partners` o `/landing-builder`, se regenera el paquete y se publica de nuevo el sitio. No se debe editar manualmente cada boton del catalogo.

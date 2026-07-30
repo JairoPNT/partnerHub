@@ -22,6 +22,7 @@ const getSiteConfig = () => {
       whatsappNumber: '573188430283',
       phoneNumber: '3188430283',
       displayPhone: '3188430283',
+      purchaseUrl: 'https://colombia.ganoexcel.com/GanoMaster',
       defaultMessage: 'Hola Jairo, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.'
     },
     hero: {
@@ -35,6 +36,7 @@ const getSiteConfig = () => {
 document.addEventListener('DOMContentLoaded', () => {
   const cfg = getSiteConfig();
   initDynamicConfig(cfg);
+  initPurchaseLinks();
   initMobileMenu();
   initFaqAccordion();
   initScrollAnimations();
@@ -119,6 +121,8 @@ function initDynamicConfig(cfg) {
       }
     } else if (key === 'displayPhone') {
       el.textContent = dist.displayPhone || dist.phoneNumber || '3188430283';
+    } else if (key === 'purchaseUrlText') {
+      el.textContent = dist.purchaseUrl || cfg.purchaseUrl || 'checkout configurado por el distribuidor';
     } else if (key === 'copyright') {
       const year = new Date().getFullYear();
       const name = dist.fullName || dist.brandName || 'GanoMaster';
@@ -267,6 +271,23 @@ function initPhoneLinks() {
   
   phoneButtons.forEach(btn => {
     btn.setAttribute('href', `tel:${phone}`);
+  });
+}
+
+/**
+ * Personalización dinámica de enlaces de compra directa
+ */
+function initPurchaseLinks() {
+  const cfg = getSiteConfig();
+  const dist = cfg.distributor || {};
+  const purchaseUrl = dist.purchaseUrl || cfg.purchaseUrl || '';
+
+  if (!purchaseUrl) return;
+
+  document.querySelectorAll('.product-btn-buy').forEach(btn => {
+    btn.setAttribute('href', purchaseUrl);
+    btn.setAttribute('target', '_blank');
+    btn.setAttribute('rel', 'noopener noreferrer');
   });
 }
 
