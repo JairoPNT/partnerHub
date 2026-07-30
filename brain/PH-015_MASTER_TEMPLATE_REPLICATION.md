@@ -23,6 +23,12 @@ Ejemplo conceptual:
 
 No se deben inventar rutas: cada ruta debe confirmarse en Hostinger por SSH.
 
+Para escalar nuevos dominios del mismo plan Hostinger se recomienda configurar una sola vez:
+
+`HOSTINGER_SFTP_REMOTE_ROOT_TEMPLATE=/home/u658137804/domains/{domain}/public_html`
+
+La configuracion guardada de cada sitio debe incluir `site.domain`. El sistema sustituye `{domain}` automaticamente y la lista JSON queda solo como compatibilidad para sitios antiguos o excepciones.
+
 ## Replication API
 
 `POST /api/internal/product-pages/replicate`

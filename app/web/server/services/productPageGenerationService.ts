@@ -11,6 +11,12 @@ const siteIdSchema = z
   .string()
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "site.id must be a lowercase slug");
 
+const domainSchema = z
+  .string()
+  .trim()
+  .toLowerCase()
+  .regex(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/, "domain must be a valid hostname");
+
 const httpsUrlSchema = z.string().url().refine((value) => new URL(value).protocol === "https:", {
   message: "URL must use HTTPS"
 });
@@ -53,6 +59,7 @@ export function generateFaviconSvg(initial: string): string {
 export const productPageGenerationInputSchema = z.object({
   site: z.object({
     id: siteIdSchema,
+    domain: domainSchema.optional(),
     title: z.string().trim().min(1),
     appName: z.string().trim().min(1).optional(),
     ogTitle: z.string().trim().min(1).optional(),
@@ -125,6 +132,7 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
   return {
     site: {
       id: input.site.id,
+      domain: input.site.domain,
       title: input.site.title,
       appName: input.site.appName ?? input.site.id.replaceAll("-", "_"),
       ogTitle: input.site.ogTitle ?? input.site.title,
