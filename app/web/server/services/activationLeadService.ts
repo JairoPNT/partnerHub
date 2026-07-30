@@ -59,6 +59,8 @@ export const activationLeadStatusSchema = z.enum([
   "CANCELLED"
 ]);
 
+export const activationLeadRecordStateSchema = z.enum(["ACTIVE", "ARCHIVED"]);
+
 export const updateActivationLeadSchema = z.object({
   status: activationLeadStatusSchema
 });
@@ -69,6 +71,7 @@ type ActivationLead = z.infer<typeof activationLeadSchema> & {
   siteId: string | null;
   createdAt: string;
   updatedAt: string;
+  recordState?: z.infer<typeof activationLeadRecordStateSchema>;
   onboardingTokenHash: string;
   onboardingData: z.infer<typeof onboardingDataSchema>;
   onboardingUpdatedAt?: string;
@@ -107,7 +110,7 @@ function hashOnboardingToken(token: string) {
 
 function toPublicLead(lead: ActivationLead) {
   const { onboardingTokenHash: _tokenHash, ...publicLead } = lead;
-  return publicLead;
+  return { ...publicLead, recordState: lead.recordState ?? "ACTIVE" };
 }
 
 async function create(input: z.infer<typeof activationLeadSchema>) {
@@ -119,6 +122,7 @@ async function create(input: z.infer<typeof activationLeadSchema>) {
     ...parsed,
     id: randomUUID(),
     status: "NEW",
+    recordState: "ACTIVE",
     siteId: null,
     createdAt: now,
     updatedAt: now,
@@ -130,8 +134,12 @@ async function create(input: z.infer<typeof activationLeadSchema>) {
   return { lead: toPublicLead(lead), onboardingToken };
 }
 
-async function list() {
-  return (await readLeads()).map(toPublicLead);
+async function list(options: { includeArchived?: boolean } = {}) {
+  const leads = await readLeads();
+  const visible = options.includeArchived
+    ? leads
+    : leads.filter((lead) => (lead.recordState ?? "ACTIVE") === "ACTIVE");
+  return visible.map(toPublicLead);
 }
 
 async function getByOnboardingToken(token: string) {
@@ -205,11 +213,46 @@ async function updateStatus(id: string, input: z.infer<typeof updateActivationLe
   return toPublicLead(next);
 }
 
+async function updateRecordState(id: string, recordState: z.infer<typeof activationLeadRecordStateSchema>) {
+  const leads = await readLeads();
+  const existing = leads.find((lead) => lead.id === id);
+
+  if (!existing) throw new Error(`Activation lead ${id} was not found.`);
+
+  const next: ActivationLead = {
+    ...existing,
+    recordState,
+    updatedAt: new Date().toISOString()
+  };
+
+  await writeLeads(leads.map((lead) => (lead.id === id ? next : lead)));
+  return toPublicLead(next);
+}
+
+async function deleteTest(id: string, confirmation: string) {
+  if (confirmation !== "DELETE_TEST") {
+    throw new Error("Test deletion requires explicit confirmation.");
+  }
+
+  const leads = await readLeads();
+  const existing = leads.find((lead) => lead.id === id);
+
+  if (!existing) throw new Error(`Activation lead ${id} was not found.`);
+  if (existing.siteId || ["PAID", "CONVERTED"].includes(existing.status)) {
+    throw new Error("Linked or paid entrepreneurs cannot be deleted as tests.");
+  }
+
+  await writeLeads(leads.filter((lead) => lead.id !== id));
+  return { id, deleted: true };
+}
+
 export const activationLeadService = {
   create,
   list,
   getByOnboardingToken,
   updateOnboarding,
   linkSite,
-  updateStatus
+  updateStatus,
+  updateRecordState,
+  deleteTest
 };
