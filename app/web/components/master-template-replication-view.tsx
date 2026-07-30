@@ -318,6 +318,7 @@ export function MasterTemplateReplicationView() {
                 <tr>
                   <th className="py-3 px-4 w-10">Selección</th>
                   <th className="py-3 px-4">Identificador del Sitio (siteId)</th>
+                  <th className="py-3 px-4">Dominio de Publicación</th>
                   <th className="py-3 px-4">Plantilla / Título</th>
                   <th className="py-3 px-4">Estado de Selección</th>
                 </tr>
@@ -326,6 +327,7 @@ export function MasterTemplateReplicationView() {
                 {sites.map((site) => {
                   const isChecked = selectedSiteIds.includes(site.siteId);
                   const title = site.configuration?.brandName || site.configuration?.title || site.siteId;
+                  const domain = site.configuration?.site?.domain || site.configuration?.domain;
 
                   return (
                     <tr
@@ -348,6 +350,23 @@ export function MasterTemplateReplicationView() {
 
                       <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
                         {site.siteId}
+                      </td>
+
+                      <td className="py-3.5 px-4 font-mono text-xs font-semibold">
+                        {domain ? (
+                          <a
+                            href={`https://${domain}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-cyan-600 dark:text-cyan-400 hover:underline inline-flex items-center gap-1"
+                          >
+                            <Globe className="h-3.5 w-3.5" />
+                            {domain}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : (
+                          <span className="text-slate-400 italic">Sin dominio</span>
+                        )}
                       </td>
 
                       <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300">

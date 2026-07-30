@@ -33,6 +33,13 @@ export const activationLeadSchema = z.object({
 });
 
 export const onboardingDataSchema = z.object({
+  domain: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .transform((val) => val.replace(/^https?:\/\//i, "").replace(/\/.*$/, ""))
+    .pipe(z.string().regex(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/, "Formato de dominio inválido (ej. dorianhiguita.pro)"))
+    .optional(),
   country: z.string().trim().max(80).optional(),
   whatsapp: z.string().trim().max(40).optional(),
   phone: z.string().trim().max(40).optional(),

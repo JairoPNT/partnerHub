@@ -40,6 +40,7 @@ import { Badge } from "@/components/ui/badge";
 export type ActivationLeadStatus = "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
 
 export interface OnboardingData {
+  domain?: string;
   country?: string;
   whatsapp?: string;
   phone?: string;
@@ -101,6 +102,7 @@ export function EntrepreneurOperationsView() {
     email: "",
     brandName: "",
     mainProduct: "",
+    domain: "",
     paymentMethod: "direct" as "wompi" | "direct",
     country: "",
     phone: "",
@@ -128,6 +130,8 @@ export function EntrepreneurOperationsView() {
     email: "",
     brandName: "",
     mainProduct: "Landing Page PartnerHub",
+    siteId: "",
+    domain: "",
     referrerCode: "",
     paymentMethod: "direct" as "wompi" | "direct",
     status: "PAID" as ActivationLeadStatus
@@ -168,6 +172,7 @@ export function EntrepreneurOperationsView() {
         email: selectedLead.email || "",
         brandName: selectedLead.brandName || "",
         mainProduct: selectedLead.mainProduct || "",
+        domain: selectedLead.onboardingData?.domain || "",
         paymentMethod: selectedLead.paymentMethod || "direct",
         country: selectedLead.onboardingData?.country || "",
         phone: selectedLead.onboardingData?.phone || "",
@@ -197,6 +202,7 @@ export function EntrepreneurOperationsView() {
         mainProduct: editForm.mainProduct.trim() || undefined,
         paymentMethod: editForm.paymentMethod,
         onboardingData: {
+          domain: editForm.domain.trim().toLowerCase() || undefined,
           country: editForm.country.trim() || undefined,
           phone: editForm.phone.trim() || undefined,
           purchaseUrl: editForm.purchaseUrl.trim() || undefined,
@@ -235,6 +241,10 @@ export function EntrepreneurOperationsView() {
   // Handle Create Paid Lead via POST /api/internal/activation-leads
   const handleCreatePaidLead = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!createForm.domain.trim()) {
+      setActionError("El Dominio de publicación es obligatorio.");
+      return;
+    }
     setIsCreatingLead(true);
     setActionError(null);
 
@@ -245,10 +255,14 @@ export function EntrepreneurOperationsView() {
         email: createForm.email.trim() || null,
         brandName: createForm.brandName.trim(),
         mainProduct: createForm.mainProduct.trim() || "Landing Page PartnerHub",
+        siteId: createForm.siteId.trim().toLowerCase() || undefined,
         referrerCode: createForm.referrerCode.trim().toUpperCase() || undefined,
         paymentMethod: createForm.paymentMethod,
         status: createForm.status,
-        termsAccepted: true
+        termsAccepted: true,
+        onboardingData: {
+          domain: createForm.domain.trim().toLowerCase()
+        }
       };
 
       const res = await fetch("/api/internal/activation-leads", {
@@ -432,7 +446,8 @@ export function EntrepreneurOperationsView() {
       const matchSite = lead.siteId?.toLowerCase().includes(q) || false;
       const matchRef = lead.referrerCode?.toLowerCase().includes(q) || false;
       const matchPhone = lead.whatsapp.toLowerCase().includes(q);
-      return matchName || matchBrand || matchEmail || matchSite || matchRef || matchPhone;
+      const matchDomain = lead.onboardingData?.domain?.toLowerCase().includes(q) || false;
+      return matchName || matchBrand || matchEmail || matchSite || matchRef || matchPhone || matchDomain;
     }
 
     return true;
@@ -443,6 +458,7 @@ export function EntrepreneurOperationsView() {
     const ob = lead.onboardingData || {};
     const missing: { field: string; label: string }[] = [];
 
+    if (!ob.domain?.trim()) missing.push({ field: "domain", label: "Dominio de publicación" });
     if (!ob.country?.trim()) missing.push({ field: "country", label: "País de Operación" });
     if (!ob.whatsapp?.trim()) missing.push({ field: "whatsapp", label: "WhatsApp de Atención" });
     if (!ob.phone?.trim()) missing.push({ field: "phone", label: "Teléfono Directo" });
@@ -459,8 +475,8 @@ export function EntrepreneurOperationsView() {
     if (!ob.imageUseConsent) missing.push({ field: "imageUseConsent", label: "Consentimiento Uso de Imágenes" });
     if (!ob.agreementAccepted) missing.push({ field: "agreementAccepted", label: "Aceptación de Acuerdo" });
 
-    // Dynamic total fields depending on logoMode (9 if IMAGE mode, 8 if TYPOGRAPHY mode)
-    const totalFields = ob.logoMode === "IMAGE" ? 9 : 8;
+    // Dynamic total fields depending on logoMode (10 if IMAGE mode, 9 if TYPOGRAPHY mode)
+    const totalFields = ob.logoMode === "IMAGE" ? 10 : 9;
     const completedCount = Math.max(0, totalFields - missing.length);
     const percentage = Math.round((completedCount / totalFields) * 100);
 
@@ -857,6 +873,41 @@ export function EntrepreneurOperationsView() {
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Identificador de Sitio / siteId (Slug)
+                    </label>
+                    <input
+                      type="text"
+                      value={createForm.siteId}
+                      onChange={(e) => setCreateForm({ ...createForm, siteId: e.target.value })}
+                      placeholder="Ej. dorian-higuita"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    />
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Formato slug en minúsculas (ej. dorian-higuita)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Dominio de Publicación *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.domain}
+                      onChange={(e) => setCreateForm({ ...createForm, domain: e.target.value })}
+                      placeholder="Ej. dorianhiguita.pro"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    />
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Dominio independiente (ej. dorianhiguita.pro)
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
                       Método de Pago
                     </label>
                     <select
@@ -965,6 +1016,7 @@ export function EntrepreneurOperationsView() {
                   <th className="py-3.5 px-4">Método de Pago</th>
                   <th className="py-3.5 px-4">Referido por</th>
                   <th className="py-3.5 px-4">Sitio Vinculado (siteId)</th>
+                  <th className="py-3.5 px-4">Dominio de Publicación</th>
                   <th className="py-3.5 px-4">Fecha Registro</th>
                   <th className="py-3.5 px-4 text-right">Acción</th>
                 </tr>
@@ -1054,6 +1106,26 @@ export function EntrepreneurOperationsView() {
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
                             Sin vincular
+                          </span>
+                        )}
+                      </td>
+
+                      {/* Dominio de Publicación */}
+                      <td className="py-4 px-4 whitespace-nowrap font-mono text-xs">
+                        {lead.onboardingData?.domain ? (
+                          <a
+                            href={`https://${lead.onboardingData.domain}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold text-cyan-600 dark:text-cyan-400 hover:underline inline-flex items-center gap-1"
+                          >
+                            <Globe className="h-3.5 w-3.5" />
+                            {lead.onboardingData.domain}
+                            <ExternalLink className="h-3 w-3" />
+                          </a>
+                        ) : (
+                          <span className="text-amber-600 dark:text-amber-400 font-semibold text-[11px]">
+                            Pendiente
                           </span>
                         )}
                       </td>
@@ -1407,6 +1479,23 @@ export function EntrepreneurOperationsView() {
                     <div className="space-y-3 pt-3 border-t border-cyan-200 dark:border-cyan-900/60">
                       <p className="text-[11px] font-bold uppercase text-slate-500">Campos de Onboarding Especificados</p>
                       <div className="grid gap-4 sm:grid-cols-2">
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                            Dominio de Publicación *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            value={editForm.domain}
+                            onChange={(e) => setEditForm({ ...editForm, domain: e.target.value })}
+                            placeholder="Ej. jairopinto.pro"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-mono font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                          <p className="mt-1 text-[11px] text-slate-400">
+                            Ruta destino en Hostinger: <code className="font-mono">/home/u658137804/domains/&#123;domain&#125;/public_html</code>
+                          </p>
+                        </div>
+
                         <div>
                           <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">País de Operación</label>
                           <input
@@ -1579,6 +1668,24 @@ export function EntrepreneurOperationsView() {
 
                   {selectedLead.onboardingData ? (
                     <div className="grid gap-4 sm:grid-cols-2 text-xs">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900 sm:col-span-2">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Dominio de Publicación</span>
+                        {selectedLead.onboardingData.domain ? (
+                          <a
+                            href={`https://${selectedLead.onboardingData.domain}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 font-mono text-sm"
+                          >
+                            <Globe className="h-4 w-4" />
+                            {selectedLead.onboardingData.domain}
+                            <ExternalLink className="h-3.5 w-3.5 shrink-0" />
+                          </a>
+                        ) : (
+                          <span className="text-amber-600 font-bold text-xs">Dominio no configurado</span>
+                        )}
+                      </div>
+
                       <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">País de Operación</span>
                         <span className="font-bold text-slate-900 dark:text-white">
