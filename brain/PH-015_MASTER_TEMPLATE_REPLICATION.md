@@ -77,3 +77,5 @@ Ejemplo aplicado: se elimino el boton externo de TikTok y su modal de advertenci
 La URL de compra de cada empresario vive en `distributor.purchaseUrl` dentro del `config.js` generado. Los botones `Comprar` de la plantilla no deben tener una tienda fija quemada en HTML; al cargar la pagina, `app.js` asigna esa URL a todos los enlaces `.product-btn-buy`.
 
 Si un empresario cambia su tienda o checkout externo, se actualiza el campo `URL de Compra / Pasarela` en `/partners` o `/landing-builder`, se regenera el paquete y se publica de nuevo el sitio. No se debe editar manualmente cada boton del catalogo.
+
+Los botones de compra tampoco deben usar `href="#comprar"` como fallback, porque el navegador lo convierte en una URL falsa del dominio publicado, por ejemplo `https://dorianhiguita.pro/#comprar`. Si no existe `purchaseUrl`, el boton debe quedar sin `href` hasta que `app.js` cargue la URL real del empresario.

@@ -281,13 +281,25 @@ function initPurchaseLinks() {
   const cfg = getSiteConfig();
   const dist = cfg.distributor || {};
   const purchaseUrl = dist.purchaseUrl || cfg.purchaseUrl || '';
+  const purchaseButtons = document.querySelectorAll('.product-btn-buy');
 
-  if (!purchaseUrl) return;
+  if (!purchaseUrl) {
+    purchaseButtons.forEach(btn => {
+      btn.removeAttribute('href');
+      btn.removeAttribute('target');
+      btn.removeAttribute('rel');
+      btn.setAttribute('aria-disabled', 'true');
+      btn.setAttribute('title', 'Checkout pendiente de configuracion');
+    });
+    return;
+  }
 
-  document.querySelectorAll('.product-btn-buy').forEach(btn => {
+  purchaseButtons.forEach(btn => {
     btn.setAttribute('href', purchaseUrl);
     btn.setAttribute('target', '_blank');
     btn.setAttribute('rel', 'noopener noreferrer');
+    btn.setAttribute('aria-disabled', 'false');
+    btn.removeAttribute('title');
   });
 }
 
