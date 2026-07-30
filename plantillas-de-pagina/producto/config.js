@@ -16,14 +16,14 @@ const CONFIG = {
   // Datos del Distribuidor / Contacto
   distributor: {
     brandName: 'GanoMaster',
-    firstName: 'Jairo',
+    firstName: 'GanoMaster',
     fullName: 'GanoMaster',
     role: 'Distribuidor Autorizado · Gano Excel',
-    whatsappNumber: '573188430283',
-    phoneNumber: '3188430283',
-    displayPhone: '3188430283',
+    whatsappNumber: '',
+    phoneNumber: '',
+    displayPhone: '',
     purchaseUrl: '',
-    defaultMessage: 'Hola Jairo, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.'
+    defaultMessage: 'Hola, vengo de tu pagina web. Me gustaria tener mas informacion sobre el Ganoderma de Gano Excel.'
   },
 
   // Imágenes del Hero (Específicas del cliente)

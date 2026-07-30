@@ -16,14 +16,14 @@ const getSiteConfig = () => {
     },
     distributor: {
       brandName: 'GanoMaster',
-      firstName: 'Jairo',
+      firstName: 'GanoMaster',
       fullName: 'GanoMaster',
       role: 'Distribuidor Autorizado · Gano Excel',
-      whatsappNumber: '573188430283',
-      phoneNumber: '3188430283',
-      displayPhone: '3188430283',
+      whatsappNumber: '',
+      phoneNumber: '',
+      displayPhone: '',
       purchaseUrl: '',
-      defaultMessage: 'Hola Jairo, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.'
+      defaultMessage: 'Hola, vengo de tu pagina web. Me gustaria tener mas informacion sobre el Ganoderma de Gano Excel.'
     },
     hero: {
       desktop: 'https://media.partnerhub.club/clientes/ganomaster/producto/v1/hero-desktop.webp',
@@ -109,18 +109,18 @@ function initDynamicConfig(cfg) {
     } else if (key === 'fullName') {
       el.textContent = dist.fullName || dist.brandName || 'GanoMaster';
     } else if (key === 'firstName') {
-      el.textContent = dist.firstName || 'Jairo';
+      el.textContent = dist.firstName || 'GanoMaster';
     } else if (key === 'role') {
       el.textContent = dist.role || 'Distribuidor Autorizado · Gano Excel';
     } else if (key === 'contactFirstNameBtn') {
-      const firstName = dist.firstName || 'Jairo';
+      const firstName = dist.firstName || 'GanoMaster';
       if (el.childNodes.length > 0 && el.childNodes[0].nodeType === Node.TEXT_NODE) {
         el.childNodes[0].nodeValue = `Hablar con ${firstName}\n            `;
       } else {
         el.textContent = `Hablar con ${firstName}`;
       }
     } else if (key === 'displayPhone') {
-      el.textContent = dist.displayPhone || dist.phoneNumber || '3188430283';
+      el.textContent = dist.displayPhone || dist.phoneNumber || 'Pendiente';
     } else if (key === 'purchaseUrlText') {
       el.textContent = dist.purchaseUrl || cfg.purchaseUrl || 'checkout configurado por el distribuidor';
     } else if (key === 'copyright') {
@@ -229,8 +229,8 @@ function initScrollAnimations() {
 function initWhatsAppLinks() {
   const cfg = getSiteConfig();
   const dist = cfg.distributor || {};
-  const waNumber = dist.whatsappNumber || '573188430283';
-  const firstName = dist.firstName || 'Jairo';
+  const waNumber = dist.whatsappNumber || '';
+  const firstName = dist.firstName || 'GanoMaster';
   const defaultMsg = dist.defaultMessage || `Hola ${firstName}, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.`;
   
   const actionButtons = document.querySelectorAll('[data-wa-action]');
@@ -266,7 +266,7 @@ function initWhatsAppLinks() {
 function initPhoneLinks() {
   const cfg = getSiteConfig();
   const dist = cfg.distributor || {};
-  const phone = dist.phoneNumber || '3188430283';
+  const phone = dist.phoneNumber || '';
   const phoneButtons = document.querySelectorAll('[data-phone-action]');
   
   phoneButtons.forEach(btn => {
