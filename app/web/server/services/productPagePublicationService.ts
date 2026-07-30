@@ -94,7 +94,7 @@ function getSftpConfiguration(): SftpConfiguration {
     password: requiredEnvironmentVariable("HOSTINGER_SFTP_PASSWORD"),
     remoteRoot,
     remoteRoots,
-    remoteRootTemplate: process.env.HOSTINGER_SFTP_REMOTE_ROOT_TEMPLATE?.trim() || undefined,
+    remoteRootTemplate: process.env.HOSTINGER_SFTP_REMOTE_ROOT_TEMPLATE?.trim() || "/home/u658137804/domains/{domain}/public_html",
   };
 }
 
@@ -102,22 +102,19 @@ async function getRemoteRoot(configuration: SftpConfiguration, siteId: string) {
   const mappedRoot = configuration.remoteRoots[siteId];
   if (mappedRoot) return mappedRoot;
 
-  if (configuration.remoteRootTemplate) {
-    const source = await productPageSourceService.get(siteId) as { site?: { domain?: unknown } } | null;
-    const domain = typeof source?.site?.domain === "string" ? source.site.domain : null;
+  const template = configuration.remoteRootTemplate || "/home/u658137804/domains/{domain}/public_html";
+  const source = await productPageSourceService.get(siteId) as { site?: { domain?: unknown } } | null;
+  const domain = typeof source?.site?.domain === "string" ? source.site.domain : null;
 
-    if (domain) {
-      return configuration.remoteRootTemplate.replaceAll("{domain}", domain);
-    }
-
-    throw new Error(`No publication domain is configured for siteId: ${siteId}.`);
+  if (domain) {
+    return template.replaceAll("{domain}", domain);
   }
 
   if (Object.keys(configuration.remoteRoots).length > 0) {
     throw new Error(`No Hostinger remote root is configured for siteId: ${siteId}.`);
   }
 
-  return mappedRoot ?? configuration.remoteRoot;
+  return configuration.remoteRoot;
 }
 
 function resolveInsideDirectory(rootDirectory: string, childName: string) {

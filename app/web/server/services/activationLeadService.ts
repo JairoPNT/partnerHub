@@ -33,6 +33,7 @@ export const activationLeadSchema = z.object({
 });
 
 export const onboardingDataSchema = z.object({
+  domain: z.string().trim().toLowerCase().max(253).optional(),
   country: z.string().trim().max(80).optional(),
   whatsapp: z.string().trim().max(40).optional(),
   phone: z.string().trim().max(40).optional(),
