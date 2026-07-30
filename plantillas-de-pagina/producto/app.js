@@ -281,13 +281,25 @@ function initPurchaseLinks() {
   const cfg = getSiteConfig();
   const dist = cfg.distributor || {};
   const purchaseUrl = dist.purchaseUrl || cfg.purchaseUrl || '';
+  const purchaseButtons = document.querySelectorAll('.product-btn-buy');
 
-  if (!purchaseUrl) return;
+  if (!purchaseUrl) {
+    purchaseButtons.forEach(btn => {
+      btn.removeAttribute('href');
+      btn.removeAttribute('target');
+      btn.removeAttribute('rel');
+      btn.setAttribute('aria-disabled', 'true');
+      btn.setAttribute('title', 'Checkout pendiente de configuracion');
+    });
+    return;
+  }
 
-  document.querySelectorAll('.product-btn-buy').forEach(btn => {
+  purchaseButtons.forEach(btn => {
     btn.setAttribute('href', purchaseUrl);
     btn.setAttribute('target', '_blank');
     btn.setAttribute('rel', 'noopener noreferrer');
+    btn.setAttribute('aria-disabled', 'false');
+    btn.removeAttribute('title');
   });
 }
 
@@ -568,13 +580,9 @@ function initModals() {
   
   const modalPrivacy = document.getElementById('modalPrivacy');
   const modalTerms = document.getElementById('modalTerms');
-  const modalTiktokWarning = document.getElementById('modalTiktokWarning');
   
   const btnClosePrivacy = document.getElementById('btnClosePrivacy');
   const btnCloseTerms = document.getElementById('btnCloseTerms');
-  const btnCloseTiktok = document.getElementById('btnCloseTiktok');
-  const btnCancelTiktok = document.getElementById('btnCancelTiktok');
-  const btnConfirmTiktok = document.getElementById('btnConfirmTiktok');
   
   const openModal = (modal) => {
     if (modal) {
@@ -605,32 +613,6 @@ function initModals() {
     });
   }
   
-  // Lógica del Modal de Advertencia de Salida (Solo para el botón de Canal de TikTok)
-  let pendingTiktokUrl = '';
-  
-  const handleTiktokChannelClick = (e, url) => {
-    e.preventDefault();
-    pendingTiktokUrl = url;
-    if (modalTiktokWarning) {
-      if (btnConfirmTiktok) {
-        btnConfirmTiktok.setAttribute('href', pendingTiktokUrl);
-      }
-      openModal(modalTiktokWarning);
-    } else {
-      window.open(url, '_blank', 'noopener,noreferrer');
-    }
-  };
-
-  const btnFollowTiktok = document.getElementById('btnFollowTiktok');
-  if (btnFollowTiktok) {
-    btnFollowTiktok.addEventListener('click', (e) => {
-      const url = btnFollowTiktok.getAttribute('href');
-      if (url) {
-        handleTiktokChannelClick(e, url);
-      }
-    });
-  }
-
   // Eventos de cierre para todos los modales
   if (btnClosePrivacy) {
     btnClosePrivacy.addEventListener('click', () => closeModal(modalPrivacy));
@@ -640,22 +622,8 @@ function initModals() {
     btnCloseTerms.addEventListener('click', () => closeModal(modalTerms));
   }
 
-  if (btnCloseTiktok) {
-    btnCloseTiktok.addEventListener('click', () => closeModal(modalTiktokWarning));
-  }
-
-  if (btnCancelTiktok) {
-    btnCancelTiktok.addEventListener('click', () => closeModal(modalTiktokWarning));
-  }
-
-  if (btnConfirmTiktok) {
-    btnConfirmTiktok.addEventListener('click', () => {
-      closeModal(modalTiktokWarning);
-    });
-  }
-  
   // Cerrar al hacer clic fuera del contenedor (para cualquier modal)
-  [modalPrivacy, modalTerms, modalTiktokWarning].forEach(modal => {
+  [modalPrivacy, modalTerms].forEach(modal => {
     if (modal) {
       modal.addEventListener('click', (e) => {
         if (e.target === modal) {
@@ -670,7 +638,6 @@ function initModals() {
     if (e.key === 'Escape') {
       closeModal(modalPrivacy);
       closeModal(modalTerms);
-      if (modalTiktokWarning) closeModal(modalTiktokWarning);
     }
   });
 }
