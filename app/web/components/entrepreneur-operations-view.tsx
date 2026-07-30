@@ -33,8 +33,10 @@ import {
   AlertOctagon,
   UserPlus,
   Copy,
-  Save
+  Save,
+  Eye
 } from "lucide-react";
+import { HeroImageUploader } from "@/components/ui/hero-image-uploader";
 import { Badge } from "@/components/ui/badge";
 
 export type ActivationLeadStatus = "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
@@ -1529,25 +1531,21 @@ export function EntrepreneurOperationsView() {
                           />
                         </div>
 
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Hero Desktop URL</label>
-                          <input
-                            type="url"
+                        <div className="sm:col-span-2 space-y-4">
+                          <HeroImageUploader
+                            label="Hero Desktop"
+                            variant="hero-desktop"
+                            siteId={selectedLead.siteId || editForm.domain || "sitio"}
                             value={editForm.heroDesktopUrl}
-                            onChange={(e) => setEditForm({ ...editForm, heroDesktopUrl: e.target.value })}
-                            placeholder="https://.../hero-desktop.jpg"
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            onChange={(url) => setEditForm({ ...editForm, heroDesktopUrl: url })}
                           />
-                        </div>
 
-                        <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Hero Mobile URL</label>
-                          <input
-                            type="url"
+                          <HeroImageUploader
+                            label="Hero Mobile"
+                            variant="hero-mobile"
+                            siteId={selectedLead.siteId || editForm.domain || "sitio"}
                             value={editForm.heroMobileUrl}
-                            onChange={(e) => setEditForm({ ...editForm, heroMobileUrl: e.target.value })}
-                            placeholder="https://.../hero-mobile.jpg"
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            onChange={(url) => setEditForm({ ...editForm, heroMobileUrl: url })}
                           />
                         </div>
 

@@ -35,6 +35,8 @@ import { Label, Input, Textarea, Select } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
 import { ModuleRecord } from "@/modules/catalog";
 
+import { HeroImageUploader } from "@/components/ui/hero-image-uploader";
+
 type MasterSiteManagementViewProps = {
   record?: ModuleRecord;
 };
@@ -87,8 +89,8 @@ const INITIAL_MASTER_FORM: MasterFormState = {
   purchaseUrl: "https://wompi.co",
   siteTitle: "Gano Excel — Bienestar y Vitalidad con Ganoderma Lucidum",
   metaDescription: "Descubre la línea oficial de productos enriquecidos con Ganoderma Lucidum de Gano Excel.",
-  heroDesktop: "https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-desktop.webp",
-  heroMobile: "https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-mobile.webp",
+  heroDesktop: "",
+  heroMobile: "",
   defaultMessage: "Hola, me gustaría más información sobre la oportunidad y productos Gano Excel.",
   measurementId: "G-7F24PBZPDM",
   faviconUrl: ""
@@ -722,42 +724,38 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           </CardContent>
         </Card>
 
-        {/* Bloque 4: Multimedia y Héroes */}
+        {/* Bloque 4: Multimedia y Héroes en R2 */}
         <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
               <ImageIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
               <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
-                4. Recursos Multimedia (Hero Desktop y Mobile en R2)
+                4. Recursos Multimedia (Imágenes Hero en Cloudflare R2)
               </CardTitle>
             </div>
             <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
-              Imágenes de portada para la plantilla maestra.
+              Selecciona los archivos de imagen para Hero Desktop y Hero Mobile. Se subirán y optimizarán automáticamente a R2.
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-5">
-            <div>
-              <Label htmlFor="heroDesktop">URL HTTPS Hero Desktop *</Label>
-              <Input
-                id="heroDesktop"
-                required
-                placeholder="https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-desktop.webp"
-                value={form.heroDesktop}
-                onChange={(e) => handleInputChange("heroDesktop", e.target.value)}
-              />
-            </div>
+          <CardContent className="space-y-6">
+            <HeroImageUploader
+              label="Hero Desktop (Pantallas Grandes)"
+              variant="hero-desktop"
+              siteId={MASTER_SITE_ID}
+              value={form.heroDesktop}
+              onChange={(url) => handleInputChange("heroDesktop", url)}
+              helpText="Imagen de héroe optimizada para computadores y pantallas de escritorio."
+            />
 
-            <div>
-              <Label htmlFor="heroMobile">URL HTTPS Hero Mobile *</Label>
-              <Input
-                id="heroMobile"
-                required
-                placeholder="https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-mobile.webp"
-                value={form.heroMobile}
-                onChange={(e) => handleInputChange("heroMobile", e.target.value)}
-              />
-            </div>
+            <HeroImageUploader
+              label="Hero Mobile (Dispositivos Móviles)"
+              variant="hero-mobile"
+              siteId={MASTER_SITE_ID}
+              value={form.heroMobile}
+              onChange={(url) => handleInputChange("heroMobile", url)}
+              helpText="Imagen de héroe optimizada para smartphones y tablets."
+            />
           </CardContent>
         </Card>
 
