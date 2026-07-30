@@ -17,10 +17,17 @@ import {
   Folder,
   UploadCloud,
   Edit3,
-  PlusCircle,
   BarChart3,
   RefreshCw,
-  AlertTriangle
+  AlertTriangle,
+  Globe,
+  Link2,
+  CheckCircle,
+  Clock,
+  ExternalLink,
+  Users,
+  CreditCard,
+  Building2
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -34,16 +41,42 @@ type ProductPageGeneratorViewProps = {
   record?: ModuleRecord;
 };
 
-type ViewMode = "create" | "edit";
+export interface ActivationLeadRecord {
+  id: string;
+  fullName: string;
+  whatsapp: string;
+  email: string | null;
+  brandName: string;
+  mainProduct?: string;
+  paymentMethod: "wompi" | "direct";
+  status: "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
+  siteId: string | null;
+  publicationState?: "NOT_STARTED" | "GENERATED" | "PUBLISHED";
+  onboardingData?: {
+    domain?: string;
+    country?: string;
+    phone?: string;
+    purchaseUrl?: string;
+    heroDesktopUrl?: string;
+    heroMobileUrl?: string;
+    logoMode?: "TYPOGRAPHY" | "IMAGE";
+    logoUrl?: string;
+    faviconUrl?: string;
+    analyticsMeasurementId?: string;
+  };
+  createdAt: string;
+}
 
 interface FormState {
   siteId: string;
+  domain: string;
   brandName: string;
   firstName: string;
   fullName: string;
   role: string;
   whatsappNumber: string;
   displayPhone: string;
+  purchaseUrl: string;
   siteTitle: string;
   metaDescription: string;
   heroDesktop: string;
@@ -68,36 +101,16 @@ interface PublicationResult {
   files: string[];
 }
 
-interface SiteListItem {
-  siteId: string;
-  configuration: any;
-}
-
-const SAMPLE_DATA: FormState = {
-  siteId: "jenny-varela",
-  brandName: "Jenny Varela",
-  firstName: "Jenny",
-  fullName: "Jenny Varela",
-  role: "Distribuidora Autorizada · Gano Excel",
-  whatsappNumber: "573188430283",
-  displayPhone: "3188430283",
-  siteTitle: "Jenny Varela — Bienestar y Vitalidad con Gano Excel",
-  metaDescription: "Descubre cómo transformar tu día a día con café, cacao y suplementos enriquecidos con Ganoderma lucidum.",
-  heroDesktop: "https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-desktop.webp",
-  heroMobile: "https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-mobile.webp",
-  defaultMessage: "Hola Jenny, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.",
-  measurementId: "G-7F24PBZPDM",
-  faviconUrl: ""
-};
-
 const INITIAL_FORM: FormState = {
   siteId: "",
+  domain: "",
   brandName: "",
   firstName: "",
   fullName: "",
   role: "Distribuidor Autorizado · Gano Excel",
   whatsappNumber: "",
   displayPhone: "",
+  purchaseUrl: "",
   siteTitle: "",
   metaDescription: "",
   heroDesktop: "",
@@ -107,118 +120,152 @@ const INITIAL_FORM: FormState = {
   faviconUrl: ""
 };
 
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^a-z0-9\s-]/g, "")
+    .trim()
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-");
+}
+
+function suggestSiteId(lead: ActivationLeadRecord): string {
+  const base = lead.brandName || lead.fullName || "sitio";
+  return slugify(base);
+}
+
 export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewProps) {
-  const [mode, setMode] = useState<ViewMode>("create");
   const [form, setForm] = useState<FormState>(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string[]>>({});
   const [copied, setCopied] = useState(false);
 
-  // Estados de lista y edición de sitios
-  const [siteList, setSiteList] = useState<SiteListItem[]>([]);
-  const [isLoadingList, setIsLoadingList] = useState(false);
-  const [selectedSiteId, setSelectedSiteId] = useState<string>("");
-  const [isLoadingSiteConfig, setIsLoadingSiteConfig] = useState(false);
-  const [isOldPageWithoutConfig, setIsOldPageWithoutConfig] = useState(false);
+  // Estados de empresarios
+  const [leads, setLeads] = useState<ActivationLeadRecord[]>([]);
+  const [isLoadingLeads, setIsLoadingLeads] = useState(true);
+  const [selectedLead, setSelectedLead] = useState<ActivationLeadRecord | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [isLinkingSiteId, setIsLinkingSiteId] = useState(false);
 
   // Estados de publicación
   const [isPublishing, setIsPublishing] = useState(false);
   const [publishResult, setPublishResult] = useState<PublicationResult | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
 
-  const fetchSiteList = async () => {
-    setIsLoadingList(true);
+  const fetchLeads = async () => {
+    setIsLoadingLeads(true);
     try {
-      const res = await fetch("/api/internal/product-pages");
+      const res = await fetch("/api/internal/activation-leads");
       if (res.ok) {
         const data = await res.json();
-        setSiteList(data.sites || []);
+        setLeads(data.leads || []);
       }
     } catch {
       // Ignorar fallos de red secundarios al listar
     } finally {
-      setIsLoadingList(false);
+      setIsLoadingLeads(false);
     }
   };
 
-  const fetchSiteConfig = async (siteId: string) => {
-    if (!siteId) return;
-    setIsLoadingSiteConfig(true);
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  // Ordenar empresarios: PAID y CONTACTED primero
+  const sortedLeads = [...leads].sort((a, b) => {
+    const priorityOrder: Record<string, number> = {
+      PAID: 1,
+      CONTACTED: 2,
+      NEW: 3,
+      CONVERTED: 4,
+      CANCELLED: 5
+    };
+    const pA = priorityOrder[a.status] || 99;
+    const pB = priorityOrder[b.status] || 99;
+    if (pA !== pB) return pA - pB;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  const filteredLeads = sortedLeads.filter((lead) => {
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    return (
+      lead.fullName.toLowerCase().includes(q) ||
+      lead.brandName.toLowerCase().includes(q) ||
+      lead.whatsapp.toLowerCase().includes(q) ||
+      (lead.siteId && lead.siteId.toLowerCase().includes(q)) ||
+      (lead.onboardingData?.domain && lead.onboardingData.domain.toLowerCase().includes(q))
+    );
+  });
+
+  const handleSelectLead = (lead: ActivationLeadRecord) => {
+    setSelectedLead(lead);
     setErrorMessage(null);
-    setIsOldPageWithoutConfig(false);
-    setResult(null);
-    setPublishResult(null);
-    setPublishError(null);
-
-    try {
-      const res = await fetch(`/api/internal/product-pages/${siteId}`);
-      if (res.status === 404) {
-        setIsOldPageWithoutConfig(true);
-        setForm((prev) => ({ ...INITIAL_FORM, siteId }));
-        return;
-      }
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        throw new Error(data.error || "No se pudo cargar la configuración de la página.");
-      }
-
-      const cfg = data.configuration || {};
-      const site = cfg.site || {};
-      const dist = cfg.distributor || {};
-      const hero = cfg.hero || {};
-      const analytics = cfg.analytics || {};
-
-      setForm({
-        siteId: siteId,
-        siteTitle: site.title || "",
-        metaDescription: site.metaDescription || site.ogDescription || "",
-        brandName: dist.brandName || "",
-        firstName: dist.firstName || "",
-        fullName: dist.fullName || "",
-        role: dist.role || "Distribuidor Autorizado · Gano Excel",
-        whatsappNumber: dist.whatsappNumber || "",
-        displayPhone: dist.displayPhone || dist.phoneNumber || "",
-        defaultMessage: dist.defaultMessage || "",
-        heroDesktop: hero.desktop || "",
-        heroMobile: hero.mobile || "",
-        measurementId: typeof analytics === "string" ? analytics : (analytics.measurementId || ""),
-        faviconUrl: site.faviconUrl || cfg.faviconUrl || ""
-      });
-    } catch (err: any) {
-      setErrorMessage(err.message || "Error al cargar los datos de la página seleccionada.");
-    } finally {
-      setIsLoadingSiteConfig(false);
-    }
-  };
-
-  const handleModeChange = (newMode: ViewMode) => {
-    setMode(newMode);
-    setErrorMessage(null);
+    setSuccessMessage(null);
     setFieldErrors({});
     setResult(null);
     setPublishResult(null);
     setPublishError(null);
-    setIsOldPageWithoutConfig(false);
 
-    if (newMode === "edit") {
-      fetchSiteList();
-    } else {
-      setSelectedSiteId("");
-      setForm(INITIAL_FORM);
-    }
+    const suggestedSlug = suggestSiteId(lead);
+    const effectiveSiteId = lead.siteId || suggestedSlug;
+    const domain = lead.onboardingData?.domain || "";
+    const firstName = lead.fullName?.trim().split(" ")[0] || "";
+
+    setForm({
+      siteId: effectiveSiteId,
+      domain: domain,
+      brandName: lead.brandName || "",
+      fullName: lead.fullName || "",
+      firstName: firstName,
+      role: "Distribuidor Autorizado · Gano Excel",
+      whatsappNumber: lead.whatsapp || "",
+      displayPhone: lead.onboardingData?.phone || lead.whatsapp || "",
+      purchaseUrl: lead.onboardingData?.purchaseUrl || "",
+      siteTitle: lead.brandName ? `${lead.brandName} — Bienestar y Vitalidad con Gano Excel` : "",
+      metaDescription: lead.brandName
+        ? `Descubre cómo transformar tu día a día con café, cacao y suplementos enriquecidos con Ganoderma lucidum por ${lead.brandName}.`
+        : "",
+      heroDesktop: lead.onboardingData?.heroDesktopUrl || "",
+      heroMobile: lead.onboardingData?.heroMobileUrl || "",
+      defaultMessage: `Hola ${firstName}, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.`,
+      measurementId: lead.onboardingData?.analyticsMeasurementId || "",
+      faviconUrl: lead.onboardingData?.faviconUrl || ""
+    });
   };
 
-  const handleSelectSiteChange = (siteId: string) => {
-    setSelectedSiteId(siteId);
-    if (siteId) {
-      fetchSiteConfig(siteId);
-    } else {
-      setForm(INITIAL_FORM);
-      setIsOldPageWithoutConfig(false);
+  const handleLinkSiteIdToLead = async () => {
+    if (!selectedLead || !form.siteId.trim()) return;
+
+    setIsLinkingSiteId(true);
+    setErrorMessage(null);
+
+    try {
+      const res = await fetch(`/api/internal/activation-leads/${selectedLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ siteId: form.siteId.trim().toLowerCase() })
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "No se pudo vincular el siteId al empresario.");
+      }
+
+      const updatedLead = json.lead || json;
+      setSelectedLead(updatedLead);
+      setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+      setSuccessMessage(`Sitio "${updatedLead.siteId}" vinculado correctamente a ${updatedLead.brandName}.`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err) {
+      setErrorMessage((err as Error).message);
+    } finally {
+      setIsLinkingSiteId(false);
     }
   };
 
@@ -233,23 +280,11 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     }
   };
 
-  const loadPreset = () => {
-    setMode("create");
-    setSelectedSiteId("");
-    setIsOldPageWithoutConfig(false);
-    setForm(SAMPLE_DATA);
-    setErrorMessage(null);
-    setFieldErrors({});
-    setResult(null);
-    setPublishResult(null);
-    setPublishError(null);
-  };
-
   const resetForm = () => {
+    setSelectedLead(null);
     setForm(INITIAL_FORM);
-    setSelectedSiteId("");
-    setIsOldPageWithoutConfig(false);
     setErrorMessage(null);
+    setSuccessMessage(null);
     setFieldErrors({});
     setResult(null);
     setPublishResult(null);
@@ -262,9 +297,9 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     const measurementIdRegex = /^G-[A-Z0-9]+$/i;
 
     if (!form.siteId.trim()) {
-      errors.siteId = ["El ID de sitio es requerido."];
+      errors.siteId = ["El ID de sitio (slug) es requerido."];
     } else if (!slugRegex.test(form.siteId.trim())) {
-      errors.siteId = ["El ID de sitio debe ser un slug en minúsculas (ej. jenny-varela)."];
+      errors.siteId = ["El ID de sitio debe ser un slug en minúsculas (ej. dorian-higuita)."];
     }
 
     if (!form.brandName.trim()) {
@@ -311,6 +346,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
+    setSuccessMessage(null);
     setResult(null);
     setPublishResult(null);
     setPublishError(null);
@@ -325,6 +361,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     const payload = {
       site: {
         id: form.siteId.trim(),
+        domain: form.domain.trim().toLowerCase() || undefined,
         title: form.siteTitle.trim(),
         appName: form.siteId.trim().replaceAll("-", "_"),
         ogTitle: form.siteTitle.trim(),
@@ -352,14 +389,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     };
 
     try {
-      const endpoint = mode === "edit"
-        ? `/api/internal/product-pages/${encodeURIComponent(form.siteId.trim())}`
-        : "/api/internal/product-pages/generate";
-
-      const method = mode === "edit" ? "PATCH" : "POST";
-
-      const response = await fetch(endpoint, {
-        method,
+      const response = await fetch("/api/internal/product-pages/generate", {
+        method: "POST",
         headers: {
           "Content-Type": "application/json"
         },
@@ -394,27 +425,27 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
           setFieldErrors(parsedErrors);
         }
-        throw new Error(data.error || `Error al ${mode === "edit" ? "actualizar" : "generar"} la página de producto.`);
+        throw new Error(data.error || "Error al generar la página de producto.");
       }
 
-      setResult({
-        ...data,
-        requiresPublication: mode === "edit" ? true : data.requiresPublication
-      } as GenerationResult);
+      setResult(data as GenerationResult);
 
-      if (mode === "edit") {
-        setIsOldPageWithoutConfig(false);
-        fetchSiteList();
+      // Actualizar publicationState a GENERATED localmente
+      if (selectedLead) {
+        const updated = { ...selectedLead, publicationState: "GENERATED" as const };
+        setSelectedLead(updated);
+        setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
       }
     } catch (err: any) {
-      setErrorMessage(err.message || "Ocurrió un error inesperado durante la operación.");
+      setErrorMessage(err.message || "Ocurrió un error inesperado durante la generación.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
   const handlePublish = async () => {
-    if (!result || !result.siteId) return;
+    const targetSiteId = result?.siteId || form.siteId.trim();
+    if (!targetSiteId) return;
 
     setIsPublishing(true);
     setPublishError(null);
@@ -426,7 +457,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         headers: {
           "Content-Type": "application/json"
         },
-        body: JSON.stringify({ siteId: result.siteId })
+        body: JSON.stringify({ siteId: targetSiteId })
       });
 
       const data = await response.json();
@@ -436,6 +467,13 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       }
 
       setPublishResult(data as PublicationResult);
+
+      // Actualizar publicationState a PUBLISHED localmente
+      if (selectedLead) {
+        const updated = { ...selectedLead, publicationState: "PUBLISHED" as const };
+        setSelectedLead(updated);
+        setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+      }
     } catch (err: any) {
       setPublishError(err.message || "Ocurrió un error inesperado durante la publicación.");
     } finally {
@@ -445,144 +483,255 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
   const copyManifest = () => {
     if (!result) return;
-    const summary = `Sitio: ${result.siteId}\nFecha: ${result.generatedAt}\nDirectorio: ${result.outputDirectory}\nArchivos:\n${result.files.map(f => `- ${f}`).join("\n")}`;
+    const summary = `Sitio: ${result.siteId}\nFecha: ${result.generatedAt}\nDirectorio: ${result.outputDirectory}\nArchivos:\n${result.files.map((f) => `- ${f}`).join("\n")}`;
     navigator.clipboard.writeText(summary);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const getPublicationBadge = (pubState?: "NOT_STARTED" | "GENERATED" | "PUBLISHED") => {
+    switch (pubState) {
+      case "PUBLISHED":
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+            <CheckCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+            Publicado
+          </span>
+        );
+      case "GENERATED":
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-950/60 px-2.5 py-1 text-xs font-bold text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800">
+            <RefreshCw className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+            Generado
+          </span>
+        );
+      case "NOT_STARTED":
+      default:
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950/60 px-2.5 py-1 text-xs font-bold text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
+            <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+            Pendiente
+          </span>
+        );
+    }
+  };
+
   return (
-    <div className="space-y-8">
+    <div className="space-y-8 text-slate-900 dark:text-slate-100">
       {/* Header del módulo */}
-      <section className="rounded-3xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-cyan-900">
-              {record?.group || "Operations"}
+            <span className="rounded-full bg-cyan-100 dark:bg-cyan-950 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-900 dark:text-cyan-300">
+              {record?.group || "Operaciones"}
             </span>
-            <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-slate-600">
-              Generador Interno
+            <span className="rounded-full border border-slate-200 dark:border-slate-800 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+              Generación y Publicación de Páginas
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Toggles Modo Crear / Modo Editar */}
-            <div className="inline-flex rounded-2xl border border-slate-200 bg-slate-100/70 p-1">
-              <button
-                type="button"
-                onClick={() => handleModeChange("create")}
-                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                  mode === "create"
-                    ? "bg-white text-slate-950 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <PlusCircle className="h-3.5 w-3.5" />
-                Nueva Página
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeChange("edit")}
-                className={`flex items-center gap-1.5 rounded-xl px-3.5 py-1.5 text-xs font-semibold transition-all ${
-                  mode === "edit"
-                    ? "bg-white text-slate-950 shadow-sm"
-                    : "text-slate-600 hover:text-slate-900"
-                }`}
-              >
-                <Edit3 className="h-3.5 w-3.5" />
-                Editar Existente
-              </button>
-            </div>
-
-            {mode === "create" && (
-              <Button variant="outline" size="sm" onClick={loadPreset} leftIcon={<Sparkles className="h-4 w-4 text-cyan-600" />}>
-                Cargar Ejemplo (Jenny Varela)
-              </Button>
-            )}
-
+          <div className="flex items-center gap-2">
             <Button variant="ghost" size="sm" onClick={resetForm} leftIcon={<RotateCcw className="h-4 w-4" />}>
-              Limpiar
+              Limpiar Selección
             </Button>
           </div>
         </div>
 
-        <h1 className="mt-5 text-3xl font-semibold tracking-tight text-slate-950 sm:text-4xl">
-          {mode === "create" ? "Generador de Página de Producto" : "Edición de Página de Producto"}
+        <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+          Generador de Páginas de Producto
         </h1>
-        <p className="mt-3 max-w-3xl text-base leading-7 text-slate-600">
-          {mode === "create"
-            ? "Genera un paquete estático completo preconfigurado (`index.html`, `styles.css`, `app.js`, `config.js`) listo para desplegar y publicar por cliente."
-            : "Consulta la configuración de una página existente, edita sus datos, regenera el paquete estático y publícalo de forma independiente."}
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+          Selecciona un empresario registrado para precargar sus datos de onboarding, configurar su identificador de sitio, generar el paquete de archivos estáticos y publicarlo en su dominio oficial.
         </p>
       </section>
 
-      {/* Selector de Sitio en Modo Edición */}
-      {mode === "edit" && (
-        <Card className="border-cyan-200/80 bg-cyan-50/20">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Search className="h-5 w-5 text-cyan-600" />
-                <CardTitle>Seleccionar Página Existente</CardTitle>
+      {/* BUSCADOR DE EMPRESARIOS */}
+      <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <CardHeader className="border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Users className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <div>
+                <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                  Buscador de Empresarios Registrados
+                </CardTitle>
+                <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+                  Priorizados por estado comercial (PAID / CONTACTED primero). Selecciona para cargar datos de onboarding.
+                </CardDescription>
               </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={fetchSiteList}
-                isLoading={isLoadingList}
-                leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
-              >
-                Actualizar Lista
-              </Button>
             </div>
-            <CardDescription>
-              Selecciona el slug del sitio que deseas consultar y editar.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="max-w-md">
-              <Label htmlFor="siteSelector">Página de Producto Registrada</Label>
-              <Select
-                id="siteSelector"
-                value={selectedSiteId}
-                onChange={(e) => handleSelectSiteChange(e.target.value)}
-                disabled={isLoadingList || isLoadingSiteConfig}
-                className="mt-1.5"
-              >
-                <option value="">-- Selecciona una página --</option>
-                {siteList.map((item) => (
-                  <option key={item.siteId} value={item.siteId}>
-                    {item.siteId} {item.configuration?.distributor?.brandName ? `(${item.configuration.distributor.brandName})` : ""}
-                  </option>
-                ))}
-              </Select>
 
-              {isLoadingSiteConfig && (
-                <p className="mt-2 text-xs text-cyan-800 flex items-center gap-1.5">
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  Cargando configuración de `{selectedSiteId}`...
-                </p>
-              )}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={fetchLeads}
+              isLoading={isLoadingLeads}
+              leftIcon={<RefreshCw className="h-3.5 w-3.5" />}
+            >
+              Actualizar Lista
+            </Button>
+          </div>
+        </CardHeader>
+
+        <CardContent className="p-4 space-y-4">
+          {/* Barra de Búsqueda */}
+          <div className="relative">
+            <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Buscar por nombre, marca, WhatsApp, siteId o dominio..."
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-10 pr-4 py-2 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:border-cyan-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+            />
+          </div>
+
+          {/* Lista de Empresarios */}
+          {isLoadingLeads ? (
+            <div className="flex items-center justify-center p-8 text-slate-400 space-y-2">
+              <RefreshCw className="h-6 w-6 animate-spin text-cyan-500" />
+              <span className="text-xs font-medium ml-2">Cargando empresarios...</span>
             </div>
-          </CardContent>
-        </Card>
+          ) : filteredLeads.length === 0 ? (
+            <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400">
+              No se encontraron empresarios con el criterio ingresado.
+            </div>
+          ) : (
+            <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
+              {filteredLeads.map((lead) => {
+                const isSelected = selectedLead?.id === lead.id;
+                const domain = lead.onboardingData?.domain;
+
+                return (
+                  <div
+                    key={lead.id}
+                    onClick={() => handleSelectLead(lead)}
+                    className={`cursor-pointer rounded-2xl border p-3.5 transition flex flex-wrap items-center justify-between gap-3 text-xs ${
+                      isSelected
+                        ? "border-cyan-500 bg-cyan-50/50 dark:border-cyan-500 dark:bg-cyan-950/40 ring-1 ring-cyan-500"
+                        : "border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900"
+                    }`}
+                  >
+                    <div className="space-y-1 min-w-[200px]">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-900 dark:text-white text-sm">
+                          {lead.brandName}
+                        </span>
+                        <span
+                          className={`rounded px-2 py-0.5 text-[10px] font-extrabold uppercase ${
+                            lead.status === "PAID"
+                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                              : lead.status === "CONTACTED"
+                              ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
+                              : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                          }`}
+                        >
+                          {lead.status}
+                        </span>
+                      </div>
+                      <p className="text-slate-500 dark:text-slate-400 text-[11px]">
+                        Empresario: <strong>{lead.fullName}</strong> — WA: {lead.whatsapp}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-3 font-mono text-[11px]">
+                      {/* siteId */}
+                      <div className="flex items-center gap-1">
+                        <span className="text-slate-400">siteId:</span>
+                        {lead.siteId ? (
+                          <span className="font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                            {lead.siteId}
+                          </span>
+                        ) : (
+                          <span className="text-amber-600 dark:text-amber-400 font-semibold italic">Sin vincular</span>
+                        )}
+                      </div>
+
+                      {/* Dominio */}
+                      <div className="flex items-center gap-1">
+                        <Globe className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+                        {domain ? (
+                          <span className="font-bold text-cyan-600 dark:text-cyan-400">{domain}</span>
+                        ) : (
+                          <span className="text-slate-400 italic">Sin dominio</span>
+                        )}
+                      </div>
+
+                      {/* Estado de Publicación */}
+                      <div>{getPublicationBadge(lead.publicationState)}</div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* NOTIFICACIONES Y ALERTAS */}
+      {successMessage && (
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <span>{successMessage}</span>
+          </div>
+        </div>
       )}
 
-      {/* Alerta para páginas antiguas sin configuración guardada */}
-      {isOldPageWithoutConfig && (
-        <Alert variant="warning" title="Configuración de versión anterior" icon={<AlertTriangle className="h-5 w-5 text-amber-600" />}>
-          Esta página fue generada antes de activar la edición. Regénérala una vez para habilitar modificaciones futuras.
-        </Alert>
-      )}
-
-      {/* Alerta de Error Principal */}
       {errorMessage && (
         <Alert variant="error" title="Error en la Operación" icon={<AlertCircle className="h-5 w-5 text-rose-600" />}>
           {errorMessage}
         </Alert>
       )}
 
-      {/* Pantalla de Éxito / Estado de Revisión de Generación */}
+      {/* RESUMEN DEL EMPRESARIO SELECCIONADO Y BOTÓN VINCULAR SITEID */}
+      {selectedLead && (
+        <Card className="border-cyan-300 bg-cyan-50/30 dark:border-cyan-800 dark:bg-cyan-950/20 p-5 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                  {selectedLead.brandName} ({selectedLead.fullName})
+                </h3>
+                {getPublicationBadge(selectedLead.publicationState)}
+              </div>
+              <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                <span>Estado Comercial: <strong>{selectedLead.status}</strong></span>
+                <span>•</span>
+                <span>Dominio: <strong>{selectedLead.onboardingData?.domain || "No configurado"}</strong></span>
+              </p>
+            </div>
+
+            {/* Asignación/Vinculación de siteId si no existe */}
+            {!selectedLead.siteId ? (
+              <div className="flex items-center gap-2 rounded-xl bg-amber-100 dark:bg-amber-950/80 p-2.5 border border-amber-300 dark:border-amber-800 text-xs">
+                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
+                <span className="text-amber-900 dark:text-amber-200 font-semibold">
+                  Sin siteId vinculado. Sugerido: <code className="font-mono font-bold">{form.siteId}</code>
+                </span>
+                <button
+                  type="button"
+                  onClick={handleLinkSiteIdToLead}
+                  disabled={isLinkingSiteId}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 px-3 py-1 text-xs font-bold text-white shadow transition disabled:opacity-50"
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  <span>{isLinkingSiteId ? "Vinculando..." : "Confirmar Vinculación"}</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 p-2.5 border border-emerald-300 dark:border-emerald-800 text-xs">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                <span className="text-emerald-900 dark:text-emerald-200 font-bold">
+                  Sitio Vinculado: <code className="font-mono">{selectedLead.siteId}</code>
+                </span>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
+      {/* PANTALLA DE ÉXITO DE GENERACIÓN / PUBLICACIÓN */}
       {result && (
         <Card className="border-emerald-200 bg-emerald-50/30 p-6 sm:p-8 space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -593,9 +742,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <div>
                 <div className="flex items-center gap-2">
                   <h2 className="text-xl font-bold tracking-tight text-slate-900">
-                    {result.requiresPublication
-                      ? "¡Paquete Regenerado — Pendiente de Publicación!"
-                      : "¡Página Generada con Éxito!"}
+                    ¡Paquete Generado Exitosamente!
                   </h2>
                   <Badge variant="success">{result.siteId}</Badge>
                 </div>
@@ -627,12 +774,6 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               </Button>
             </div>
           </div>
-
-          {result.requiresPublication && (
-            <Alert variant="info" title="Estado de Revisión" icon={<RefreshCw className="h-4 w-4 text-blue-600" />}>
-              La página ha sido actualizada y regenerada localmente. Haz clic en <strong>"Publicar página"</strong> para sincronizar los cambios con la infraestructura de Hostinger.
-            </Alert>
-          )}
 
           <div className="grid gap-6 md:grid-cols-2">
             <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-subtle">
@@ -689,47 +830,60 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         </Card>
       )}
 
-      {/* Formulario principal */}
+      {/* FORMULARIO PRINCIPAL DE GENERACIÓN */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Bloque 1: Identificación del Sitio y Distribuidor */}
-        <Card>
+        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-cyan-600" />
-              <CardTitle>Identificación del Sitio y Distribuidor</CardTitle>
+              <User className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                Identificación del Sitio y Distribuidor
+              </CardTitle>
             </div>
-            <CardDescription>
-              Datos principales de identidad del partner y slug único de sitio.
+            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+              Datos principales de identidad del partner, slug único de sitio y dominio de publicación.
             </CardDescription>
           </CardHeader>
 
           <CardContent className="grid gap-5 md:grid-cols-2">
             <div>
-              <Label htmlFor="siteId">ID de sitio (Slug) *</Label>
+              <Label htmlFor="siteId">ID de sitio / siteId (Slug) *</Label>
               <Input
                 id="siteId"
-                placeholder="ej. jenny-varela"
+                placeholder="ej. dorian-higuita"
                 value={form.siteId}
-                disabled={mode === "edit"}
                 onChange={(e) => handleInputChange("siteId", e.target.value)}
-                className={fieldErrors.siteId ? "border-rose-400 focus:border-rose-500" : ""}
+                className={fieldErrors.siteId ? "border-rose-400 focus:border-rose-500 font-mono" : "font-mono"}
               />
               {fieldErrors.siteId ? (
                 <p className="mt-1 text-xs text-rose-600">{fieldErrors.siteId[0]}</p>
               ) : (
                 <p className="mt-1 text-[11px] text-slate-400">
-                  {mode === "edit"
-                    ? "El identificador del sitio es fijo durante la edición."
-                    : "Slug minúsculo sin espacios (ej. `jenny-varela`)."}
+                  Slug minúsculo sin espacios (ej. <code className="font-mono">dorian-higuita</code>).
                 </p>
               )}
+            </div>
+
+            <div>
+              <Label htmlFor="domain">Dominio de Publicación (Hostinger)</Label>
+              <Input
+                id="domain"
+                placeholder="ej. dorianhiguita.pro"
+                value={form.domain}
+                onChange={(e) => handleInputChange("domain", e.target.value)}
+                className="font-mono"
+              />
+              <p className="mt-1 text-[11px] text-slate-400">
+                Hostinger remoto: <code className="font-mono">/home/u658137804/domains/&#123;domain&#125;/public_html</code>
+              </p>
             </div>
 
             <div>
               <Label htmlFor="brandName">Nombre de Marca *</Label>
               <Input
                 id="brandName"
-                placeholder="ej. Jenny Varela"
+                placeholder="ej. Dorian Higüita"
                 value={form.brandName}
                 onChange={(e) => handleInputChange("brandName", e.target.value)}
                 className={fieldErrors.brandName ? "border-rose-400 focus:border-rose-500" : ""}
@@ -743,7 +897,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="firstName">Nombre (Pila) *</Label>
               <Input
                 id="firstName"
-                placeholder="ej. Jenny"
+                placeholder="ej. Dorian"
                 value={form.firstName}
                 onChange={(e) => handleInputChange("firstName", e.target.value)}
                 className={fieldErrors.firstName ? "border-rose-400 focus:border-rose-500" : ""}
@@ -757,7 +911,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="fullName">Nombre Completo *</Label>
               <Input
                 id="fullName"
-                placeholder="ej. Jenny Varela"
+                placeholder="ej. Dorian Higüita"
                 value={form.fullName}
                 onChange={(e) => handleInputChange("fullName", e.target.value)}
                 className={fieldErrors.fullName ? "border-rose-400 focus:border-rose-500" : ""}
@@ -767,11 +921,11 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               )}
             </div>
 
-            <div className="md:col-span-2">
+            <div>
               <Label htmlFor="role">Rol o Cargo Visible</Label>
               <Input
                 id="role"
-                placeholder="ej. Distribuidora Autorizada · Gano Excel"
+                placeholder="ej. Distribuidor Autorizado · Gano Excel"
                 value={form.role}
                 onChange={(e) => handleInputChange("role", e.target.value)}
               />
@@ -780,15 +934,17 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
           </CardContent>
         </Card>
 
-        {/* Bloque 2: Contacto y WhatsApp */}
-        <Card>
+        {/* Bloque 2: Contacto, Conversión y Pasarela de Pago */}
+        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Phone className="h-5 w-5 text-cyan-600" />
-              <CardTitle>Contacto y Conversión por WhatsApp</CardTitle>
+              <Phone className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                Contacto, WhatsApp y Pasarela de Pago
+              </CardTitle>
             </div>
-            <CardDescription>
-              Teléfonos de contacto directo y mensaje automático configurado.
+            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+              Teléfonos de contacto directo, mensaje automático de WhatsApp y enlace a pasarela de compra.
             </CardDescription>
           </CardHeader>
 
@@ -821,11 +977,22 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             </div>
 
             <div className="md:col-span-2">
+              <Label htmlFor="purchaseUrl">URL de Compra / Pasarela (Checkout)</Label>
+              <Input
+                id="purchaseUrl"
+                placeholder="ej. https://wompi.co/l/o-123456"
+                value={form.purchaseUrl}
+                onChange={(e) => handleInputChange("purchaseUrl", e.target.value)}
+              />
+              <p className="mt-1 text-[11px] text-slate-400">Enlace directo a pasarela Wompi o checkout de pago.</p>
+            </div>
+
+            <div className="md:col-span-2">
               <Label htmlFor="defaultMessage">Mensaje Predeterminado de WhatsApp</Label>
               <Textarea
                 id="defaultMessage"
                 rows={2}
-                placeholder="ej. Hola Jenny, vengo de tu página web. Me gustaría tener más información..."
+                placeholder="ej. Hola Dorian, vengo de tu página web. Me gustaría tener más información..."
                 value={form.defaultMessage}
                 onChange={(e) => handleInputChange("defaultMessage", e.target.value)}
               />
@@ -835,13 +1002,15 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         </Card>
 
         {/* Bloque 3: Configuración SEO */}
-        <Card>
+        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Search className="h-5 w-5 text-cyan-600" />
-              <CardTitle>Configuración SEO y Metadatos</CardTitle>
+              <Search className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                Configuración SEO y Metadatos
+              </CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
               Títulos e información para motores de búsqueda y previsualización social.
             </CardDescription>
           </CardHeader>
@@ -851,7 +1020,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="siteTitle">Título SEO (&lt;title&gt;) *</Label>
               <Input
                 id="siteTitle"
-                placeholder="ej. Jenny Varela — Bienestar y Vitalidad con Gano Excel"
+                placeholder="ej. Dorian Higüita — Bienestar y Vitalidad con Gano Excel"
                 value={form.siteTitle}
                 onChange={(e) => handleInputChange("siteTitle", e.target.value)}
                 className={fieldErrors.siteTitle ? "border-rose-400 focus:border-rose-500" : ""}
@@ -885,13 +1054,15 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         </Card>
 
         {/* Bloque 4: Multimedia y Heroes en R2 */}
-        <Card>
+        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <ImageIcon className="h-5 w-5 text-cyan-600" />
-              <CardTitle>Recursos Multimedia (Hero en Cloudflare R2)</CardTitle>
+              <ImageIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                Recursos Multimedia (Hero en Cloudflare R2)
+              </CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
               URLs absolutas HTTPS a las imágenes de héroe alojadas en Cloudflare R2 / media.partnerhub.club.
             </CardDescription>
           </CardHeader>
@@ -901,7 +1072,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="heroDesktop">URL HTTPS Hero Desktop *</Label>
               <Input
                 id="heroDesktop"
-                placeholder="https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-desktop.webp"
+                placeholder="https://media.partnerhub.club/clientes/dorian-higuita/producto/v1/hero-desktop.webp"
                 value={form.heroDesktop}
                 onChange={(e) => handleInputChange("heroDesktop", e.target.value)}
                 className={fieldErrors.heroDesktop ? "border-rose-400 focus:border-rose-500" : ""}
@@ -915,7 +1086,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="heroMobile">URL HTTPS Hero Mobile *</Label>
               <Input
                 id="heroMobile"
-                placeholder="https://media.partnerhub.club/clientes/jenny-varela/producto/v1/hero-mobile.webp"
+                placeholder="https://media.partnerhub.club/clientes/dorian-higuita/producto/v1/hero-mobile.webp"
                 value={form.heroMobile}
                 onChange={(e) => handleInputChange("heroMobile", e.target.value)}
                 className={fieldErrors.heroMobile ? "border-rose-400 focus:border-rose-500" : ""}
@@ -928,13 +1099,15 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         </Card>
 
         {/* Bloque 5: Analítica de Google Analytics */}
-        <Card>
+        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-cyan-600" />
-              <CardTitle>Analítica y Métricas</CardTitle>
+              <BarChart3 className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                Analítica y Métricas
+              </CardTitle>
             </div>
-            <CardDescription>
+            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
               Configura el seguimiento de visitas y eventos de conversión en Google Analytics.
             </CardDescription>
           </CardHeader>
@@ -953,7 +1126,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 <p className="mt-1 text-xs text-rose-600">{fieldErrors.measurementId[0]}</p>
               ) : (
                 <p className="mt-1 text-[11px] text-slate-400">
-                  Formato esperado: `G-XXXXXXXX`. El Measurement ID es público y se utiliza únicamente para recopilar analítica del sitio; no requiere claves privadas ni contraseñas.
+                  Formato esperado: `G-XXXXXXXX`. Se utiliza únicamente para recopilar analítica del sitio.
                 </p>
               )}
             </div>
@@ -968,7 +1141,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             isLoading={isSubmitting}
             rightIcon={<ArrowRight className="h-4 w-4" />}
           >
-            {mode === "edit" ? "Guardar y Regenerar Paquete" : "Generar Paquete de Producto"}
+            Generar Paquete de Producto
           </Button>
         </div>
       </form>
