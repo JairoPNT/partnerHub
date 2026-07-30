@@ -5,7 +5,9 @@ import {
   productPagePublicationInputSchema,
   productPagePublicationService
 } from "@/server/services/productPagePublicationService";
+import { activationLeadService } from "@/server/services/activationLeadService";
 import { productPageGenerationService } from "@/server/services/productPageGenerationService";
+import { productPageLeadSyncService } from "@/server/services/productPageLeadSyncService";
 
 export const runtime = "nodejs";
 
@@ -13,6 +15,11 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const input = productPagePublicationInputSchema.parse(body);
+    const linkedLead = await activationLeadService.getBySiteId(input.siteId);
+
+    if (linkedLead) {
+      await productPageLeadSyncService.syncLeadToExistingSource(linkedLead);
+    }
 
     await productPageGenerationService.regenerateFromSavedSource(input.siteId);
 
