@@ -13,6 +13,8 @@ La ruta publica se construye con `R2_PUBLIC_BASE_URL`, actualmente `https://medi
 
 Cada reemplazo genera un objeto fisico nuevo en R2. No se sobrescribe el mismo nombre de archivo, porque `media.partnerhub.club` usa cache agresivo y puede conservar versiones anteriores aun en navegadores nuevos. La configuracion del sitio guarda la URL exacta devuelta por el uploader.
 
+Los objetos nuevos se suben con `Cache-Control: public, max-age=300, must-revalidate`. Durante el MVP priorizamos que las correcciones visuales se reflejen rapido; mas adelante se puede subir el cache para assets definitivos.
+
 El endpoint S3/R2 configurado para el bucket es:
 `https://432a9c2d446773ce8cb3abe45f1f9d89.r2.cloudflarestorage.com`
 
