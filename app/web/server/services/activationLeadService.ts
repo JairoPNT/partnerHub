@@ -49,6 +49,9 @@ export const onboardingDataSchema = z.object({
   logoMode: z.enum(["TYPOGRAPHY", "IMAGE"]).optional(),
   logoUrl: z.string().trim().url().max(2048).optional(),
   faviconUrl: z.string().trim().url().max(2048).optional(),
+  seoTitle: z.string().trim().max(180).optional(),
+  metaDescription: z.string().trim().max(320).optional(),
+  defaultMessage: z.string().trim().max(500).optional(),
   analyticsMeasurementId: z.string().trim().regex(/^G-[A-Z0-9]+$/i).optional(),
   imageUseConsent: z.boolean().optional(),
   agreementAccepted: z.boolean().optional()
