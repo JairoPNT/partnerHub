@@ -49,7 +49,7 @@ export async function DELETE(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const body = await request.json();
-    return NextResponse.json(await activationLeadService.deleteTest(id, body.confirm));
+    return NextResponse.json(await activationLeadService.deleteTest(id, body.confirmation ?? body.confirm));
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unable to delete activation lead.";
     return NextResponse.json({ error: message }, { status: 409 });

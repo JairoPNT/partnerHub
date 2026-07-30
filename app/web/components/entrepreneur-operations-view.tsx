@@ -28,6 +28,9 @@ import {
   AlertTriangle,
   UserCheck,
   ChevronRight,
+  Archive,
+  Trash2,
+  AlertOctagon,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -83,6 +86,7 @@ export function EntrepreneurOperationsView() {
   // Edit action states inside modal
   const [editingStatus, setEditingStatus] = useState<ActivationLeadStatus | "">("");
   const [editingSiteId, setEditingSiteId] = useState<string>("");
+  const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isSubmittingPatch, setIsSubmittingPatch] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -112,6 +116,7 @@ export function EntrepreneurOperationsView() {
     if (selectedLead) {
       setEditingStatus(selectedLead.status);
       setEditingSiteId(selectedLead.siteId || "");
+      setConfirmingDelete(false);
       setActionError(null);
     }
   }, [selectedLead]);
@@ -176,6 +181,65 @@ export function EntrepreneurOperationsView() {
       setLeads((prev) => prev.map((l) => (l.id === selectedLead.id ? updatedLead : l)));
       setSelectedLead(updatedLead);
       setSuccessMessage(`Sitio ${cleanSiteId} vinculado exitosamente a ${selectedLead.brandName}.`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setIsSubmittingPatch(false);
+    }
+  };
+
+  // Archive lead handler
+  const handleArchiveLead = async () => {
+    if (!selectedLead) return;
+    setIsSubmittingPatch(true);
+    setActionError(null);
+
+    try {
+      const res = await fetch(`/api/internal/activation-leads/${selectedLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ recordState: "ARCHIVED" }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "No se pudo archivar el registro.");
+      }
+
+      setLeads((prev) => prev.filter((l) => l.id !== selectedLead.id));
+      setSelectedLead(null);
+      setSuccessMessage(`El registro de ${selectedLead.brandName} ha sido archivado exitosamente.`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setIsSubmittingPatch(false);
+    }
+  };
+
+  // Delete test lead handler
+  const handleDeleteTestLead = async () => {
+    if (!selectedLead) return;
+    setIsSubmittingPatch(true);
+    setActionError(null);
+
+    try {
+      const res = await fetch(`/api/internal/activation-leads/${selectedLead.id}`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ confirmation: "DELETE_TEST" }),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "No se pudo eliminar el registro de prueba.");
+      }
+
+      setLeads((prev) => prev.filter((l) => l.id !== selectedLead.id));
+      setSelectedLead(null);
+      setConfirmingDelete(false);
+      setSuccessMessage(`El registro de prueba de ${selectedLead.brandName} fue eliminado exitosamente.`);
       setTimeout(() => setSuccessMessage(null), 4000);
     } catch (err) {
       setActionError((err as Error).message);
@@ -761,6 +825,62 @@ export function EntrepreneurOperationsView() {
                       </button>
                     </form>
                   )}
+                </div>
+
+                {/* 3. Acciones Especiales de Registro (Archivar & Eliminar prueba) */}
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-950 space-y-3 md:col-span-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                    <Archive className="h-4 w-4 text-cyan-500" />
+                    Acciones Especiales de Registro
+                  </h4>
+
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* Botón Archivar */}
+                    <button
+                      type="button"
+                      onClick={handleArchiveLead}
+                      disabled={isSubmittingPatch}
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50"
+                    >
+                      <Archive className="h-4 w-4 text-slate-500" />
+                      <span>Archivar Empresario</span>
+                    </button>
+
+                    {/* Botón Eliminar Prueba (Condicional: sólo si no tiene siteId y estado no es PAID ni CONVERTED) */}
+                    {!selectedLead.siteId && selectedLead.status !== "PAID" && selectedLead.status !== "CONVERTED" && (
+                      !confirmingDelete ? (
+                        <button
+                          type="button"
+                          onClick={() => setConfirmingDelete(true)}
+                          disabled={isSubmittingPatch}
+                          className="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950/40 px-4 py-2 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition"
+                        >
+                          <Trash2 className="h-4 w-4 text-rose-500" />
+                          <span>Eliminar prueba</span>
+                        </button>
+                      ) : (
+                        <div className="inline-flex flex-wrap items-center gap-2.5 rounded-xl border border-rose-500/50 bg-rose-500/10 p-2.5 text-xs font-semibold text-rose-700 dark:text-rose-300">
+                          <AlertOctagon className="h-4 w-4 text-rose-500 shrink-0" />
+                          <span>¿Confirmas eliminar este registro de prueba de forma irreversible?</span>
+                          <button
+                            type="button"
+                            onClick={handleDeleteTestLead}
+                            disabled={isSubmittingPatch}
+                            className="rounded-lg bg-rose-600 hover:bg-rose-500 px-3 py-1 text-xs font-bold text-white shadow"
+                          >
+                            {isSubmittingPatch ? "Eliminando..." : "Sí, Eliminar"}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setConfirmingDelete(false)}
+                            className="rounded-lg border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900 px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-300"
+                          >
+                            Cancelar
+                          </button>
+                        </div>
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
 
