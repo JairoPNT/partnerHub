@@ -143,6 +143,12 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         const hero = cfg.hero || {};
         const analytics = cfg.analytics || {};
 
+        const sanitizeHeroUrl = (url: string | undefined): string => {
+          if (!url || typeof url !== "string") return "";
+          if (url.toLowerCase().includes("jenny")) return "";
+          return url.trim();
+        };
+
         setForm({
           brandName: dist.brandName || INITIAL_MASTER_FORM.brandName,
           firstName: dist.firstName || INITIAL_MASTER_FORM.firstName,
@@ -153,8 +159,8 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           purchaseUrl: dist.purchaseUrl || INITIAL_MASTER_FORM.purchaseUrl,
           siteTitle: site.title || INITIAL_MASTER_FORM.siteTitle,
           metaDescription: site.metaDescription || site.ogDescription || INITIAL_MASTER_FORM.metaDescription,
-          heroDesktop: hero.desktop || INITIAL_MASTER_FORM.heroDesktop,
-          heroMobile: hero.mobile || INITIAL_MASTER_FORM.heroMobile,
+          heroDesktop: sanitizeHeroUrl(hero.desktop),
+          heroMobile: sanitizeHeroUrl(hero.mobile),
           defaultMessage: dist.defaultMessage || INITIAL_MASTER_FORM.defaultMessage,
           measurementId: typeof analytics === "string" ? analytics : (analytics.measurementId || INITIAL_MASTER_FORM.measurementId),
           faviconUrl: site.faviconUrl || cfg.faviconUrl || ""
