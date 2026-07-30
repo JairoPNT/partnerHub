@@ -19,7 +19,7 @@ Ejemplo conceptual:
 ```json
 {
   "ganomaster": "/home/usuario/domains/ganomaster.pro/public_html",
-  "jairo-pinto-test": "/home/usuario/domains/jairopinto.pro/public_html"
+  "jairopinto": "/home/usuario/domains/jairopinto.pro/public_html"
 }
 ```
 

@@ -493,7 +493,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
                 <Label htmlFor="assignSiteId">ID de Sitio del Empresario (Slug) *</Label>
                 <Input
                   id="assignSiteId"
-                  placeholder="ej. jairo-pinto-test"
+                  placeholder="ej. dorian-higuita"
                   value={assignForm.siteId}
                   onChange={(e) => setAssignForm((prev) => ({ ...prev, siteId: e.target.value }))}
                 />
@@ -503,7 +503,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
                 <Label htmlFor="assignDisplayName">Nombre del Empresario *</Label>
                 <Input
                   id="assignDisplayName"
-                  placeholder="ej. Jairo Pinto"
+                  placeholder="ej. Nombre del empresario"
                   value={assignForm.displayName}
                   onChange={(e) => setAssignForm((prev) => ({ ...prev, displayName: e.target.value }))}
                 />

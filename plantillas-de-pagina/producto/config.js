@@ -1,23 +1,23 @@
 /**
  * Configuración del Sitio - Plantilla de Producto
- * Cliente actual / Sitio de prueba: jairo-pinto-test
+ * Fuente maestra: ganomaster
  */
 const CONFIG = {
   // Configuración del sitio y SEO
   site: {
-    id: 'jairo-pinto-test',
-    title: 'Jairo Pinto — Bienestar y Vitalidad con Gano Excel',
-    appName: 'jairo_pinto_wellness',
-    ogTitle: 'Jairo Pinto — Bienestar y Vitalidad con Gano Excel',
+    id: 'ganomaster',
+    title: 'GanoMaster — Bienestar y Vitalidad con Gano Excel',
+    appName: 'ganomaster',
+    ogTitle: 'GanoMaster — Bienestar y Vitalidad con Gano Excel',
     ogDescription: 'Transforma tus rituales diarios con el poder adaptógeno del Ganoderma Lucidum. Energía y claridad sin límites.',
     metaDescription: 'Descubre cómo transformar tu día a día con café, cacao y suplementos enriquecidos con Ganoderma lucidum. Bienestar, energía y equilibrio natural.'
   },
 
   // Datos del Distribuidor / Contacto
   distributor: {
-    brandName: 'Jairo Pinto',
+    brandName: 'GanoMaster',
     firstName: 'Jairo',
-    fullName: 'Jairo Pinto',
+    fullName: 'GanoMaster',
     role: 'Distribuidor Autorizado · Gano Excel',
     whatsappNumber: '573188430283',
     phoneNumber: '3188430283',
@@ -27,8 +27,8 @@ const CONFIG = {
 
   // Imágenes del Hero (Específicas del cliente)
   hero: {
-    desktop: 'https://media.partnerhub.club/clientes/jairo-pinto-test/producto/v1/hero-desktop.webp',
-    mobile: 'https://media.partnerhub.club/clientes/jairo-pinto-test/producto/v1/hero-mobile.webp'
+    desktop: 'https://media.partnerhub.club/clientes/ganomaster/producto/v1/hero-desktop.webp',
+    mobile: 'https://media.partnerhub.club/clientes/ganomaster/producto/v1/hero-mobile.webp'
   },
 
   // Base URL para Recursos Comunes (Imágenes de productos y Videos)
