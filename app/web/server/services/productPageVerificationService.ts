@@ -6,6 +6,7 @@ import { resolve, sep } from "node:path";
 import { z } from "zod";
 
 import { activationLeadService } from "@/server/services/activationLeadService";
+import { productPageLeadSyncService } from "@/server/services/productPageLeadSyncService";
 import { productPageGenerationInputSchema } from "@/server/services/productPageGenerationService";
 import { productPageSourceService } from "@/server/services/productPageSourceService";
 
@@ -159,6 +160,12 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
   const parsed = productPageVerificationInputSchema.parse(input);
   const verifiedAt = new Date().toISOString();
   const checks: ProductPageVerificationCheck[] = [];
+
+  const linkedLead = await activationLeadService.getBySiteId(parsed.siteId);
+  if (linkedLead) {
+    await productPageLeadSyncService.syncLeadToExistingSource(linkedLead);
+  }
+
   const source = await productPageSourceService.get(parsed.siteId);
 
   if (!source) {

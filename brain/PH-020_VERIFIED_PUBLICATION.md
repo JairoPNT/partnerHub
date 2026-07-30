@@ -236,10 +236,13 @@ Cambios realizados:
 - Se agrego `productPageVerificationService` para consultar `https://{domain}/` y `https://{domain}/config.js`.
 - Se agrego `POST /api/internal/product-pages/verify` para ejecutar verificacion manual sin republicar.
 - `POST /api/internal/product-pages/publish` ahora ejecuta verificacion automaticamente despues del SFTP.
+- `POST /api/internal/product-pages/publish` regenera el paquete desde la fuente guardada antes de subirlo, para que cambios recientes de `/partners` no dependan de archivos estaticos anteriores.
+- `POST /api/internal/product-pages/verify` sincroniza primero el lead vinculado con la fuente de pagina antes de comparar `expected` vs `actual`.
 - La respuesta de publicacion incluye `publishedAt`, `verifiedAt`, `publicationState`, `verificationStatus` y `checks`.
 - `publicationState` file-backed ahora acepta `VERIFIED` y `VERIFY_FAILED`.
 - La ultima verificacion se guarda en `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`.
 - `GET /api/internal/product-pages` incluye `lastVerification` para consumo futuro del dashboard.
+- La plantilla base ya no define una `purchaseUrl` de prueba. Si el operador no configura `URL de Compra / Pasarela`, los botones de compra quedan deshabilitados en vez de apuntar a una URL heredada.
 
 Checks implementados:
 
