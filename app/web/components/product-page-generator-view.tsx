@@ -383,6 +383,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         whatsappNumber: form.whatsappNumber.replace(/\D/g, ""),
         phoneNumber: form.displayPhone.trim() || form.whatsappNumber.replace(/\D/g, ""),
         displayPhone: form.displayPhone.trim() || form.whatsappNumber.replace(/\D/g, ""),
+        purchaseUrl: form.purchaseUrl.trim() || undefined,
         defaultMessage: form.defaultMessage.trim() || undefined
       },
       hero: {
@@ -418,6 +419,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             "distributor.role": "role",
             "distributor.whatsappNumber": "whatsappNumber",
             "distributor.displayPhone": "displayPhone",
+            "distributor.purchaseUrl": "purchaseUrl",
             "distributor.defaultMessage": "defaultMessage",
             "hero.desktop": "heroDesktop",
             "hero.mobile": "heroMobile",

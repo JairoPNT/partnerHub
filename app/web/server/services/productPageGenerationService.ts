@@ -76,6 +76,7 @@ export const productPageGenerationInputSchema = z.object({
     whatsappNumber: z.string().trim().min(10).max(20),
     phoneNumber: z.string().trim().min(1).optional(),
     displayPhone: z.string().trim().min(1).optional(),
+    purchaseUrl: httpsUrlSchema.optional(),
     defaultMessage: z.string().trim().min(1).optional()
   }),
   hero: z.object({
@@ -171,6 +172,7 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
       whatsappNumber,
       phoneNumber: input.distributor.phoneNumber ?? whatsappNumber,
       displayPhone: input.distributor.displayPhone ?? input.distributor.phoneNumber ?? whatsappNumber,
+      purchaseUrl: input.distributor.purchaseUrl,
       defaultMessage:
         input.distributor.defaultMessage ??
         `Hola ${input.distributor.firstName}, vengo de tu página web y me gustaría recibir más información.`
