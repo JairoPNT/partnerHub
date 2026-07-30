@@ -176,8 +176,13 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     fetchLeads();
   }, []);
 
+  // Filtrar exclusivamente empresarios/clientes (excluyendo ganomaster)
+  const clientLeads = leads.filter(
+    (lead) => lead.siteId !== "ganomaster" && lead.onboardingData?.domain !== "ganomaster.pro"
+  );
+
   // Ordenar empresarios: PAID y CONTACTED primero
-  const sortedLeads = [...leads].sort((a, b) => {
+  const sortedLeads = [...clientLeads].sort((a, b) => {
     const priorityOrder: Record<string, number> = {
       PAID: 1,
       CONTACTED: 2,

@@ -14,7 +14,7 @@ El dominio se guarda en la configuracion individual del sitio y el publicador ca
 
 ## Compatibilidad
 
-`HOSTINGER_SFTP_REMOTE_ROOTS_JSON` se conserva temporalmente para `ganomaster`, `dorian-higuita`, `jairo-pinto-test` y excepciones. Cuando todos los sitios tengan `site.domain`, se puede retirar esa variable.
+`HOSTINGER_SFTP_REMOTE_ROOTS_JSON` se conserva temporalmente para `ganomaster`, `dorian-higuita`, `jairopinto` y excepciones. Cuando todos los sitios tengan `site.domain`, se puede retirar esa variable.
 
 ## Requisito de interfaz
 

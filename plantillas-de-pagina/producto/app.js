@@ -7,17 +7,17 @@ const getSiteConfig = () => {
   }
   return {
     site: {
-      id: 'jairo-pinto-test',
-      title: 'Jairo Pinto — Bienestar y Vitalidad con Gano Excel',
-      appName: 'jairo_pinto_wellness',
-      ogTitle: 'Jairo Pinto — Bienestar y Vitalidad con Gano Excel',
+      id: 'ganomaster',
+      title: 'GanoMaster — Bienestar y Vitalidad con Gano Excel',
+      appName: 'ganomaster',
+      ogTitle: 'GanoMaster — Bienestar y Vitalidad con Gano Excel',
       ogDescription: 'Transforma tus rituales diarios con el poder adaptógeno del Ganoderma Lucidum. Energía y claridad sin límites.',
       metaDescription: 'Descubre cómo transformar tu día a día con café, cacao y suplementos enriquecidos con Ganoderma lucidum. Bienestar, energía y equilibrio natural.'
     },
     distributor: {
-      brandName: 'Jairo Pinto',
+      brandName: 'GanoMaster',
       firstName: 'Jairo',
-      fullName: 'Jairo Pinto',
+      fullName: 'GanoMaster',
       role: 'Distribuidor Autorizado · Gano Excel',
       whatsappNumber: '573188430283',
       phoneNumber: '3188430283',
@@ -25,8 +25,8 @@ const getSiteConfig = () => {
       defaultMessage: 'Hola Jairo, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.'
     },
     hero: {
-      desktop: 'https://media.partnerhub.club/clientes/jairo-pinto-test/producto/v1/hero-desktop.webp',
-      mobile: 'https://media.partnerhub.club/clientes/jairo-pinto-test/producto/v1/hero-mobile.webp'
+      desktop: 'https://media.partnerhub.club/clientes/ganomaster/producto/v1/hero-desktop.webp',
+      mobile: 'https://media.partnerhub.club/clientes/ganomaster/producto/v1/hero-mobile.webp'
     },
     mediaBaseUrl: 'https://media.partnerhub.club/comunes/producto/v1/'
   };
@@ -100,12 +100,12 @@ function initDynamicConfig(cfg) {
     const key = el.getAttribute('data-config');
     if (key === 'brandName') {
       if (el.childNodes.length > 0 && el.childNodes[0].nodeType === Node.TEXT_NODE) {
-        el.childNodes[0].nodeValue = (dist.brandName || 'Jairo Pinto') + ' ';
+        el.childNodes[0].nodeValue = (dist.brandName || 'GanoMaster') + ' ';
       } else {
-        el.textContent = dist.brandName || 'Jairo Pinto';
+      el.textContent = dist.brandName || 'GanoMaster';
       }
     } else if (key === 'fullName') {
-      el.textContent = dist.fullName || dist.brandName || 'Jairo Pinto';
+      el.textContent = dist.fullName || dist.brandName || 'GanoMaster';
     } else if (key === 'firstName') {
       el.textContent = dist.firstName || 'Jairo';
     } else if (key === 'role') {
@@ -121,7 +121,7 @@ function initDynamicConfig(cfg) {
       el.textContent = dist.displayPhone || dist.phoneNumber || '3188430283';
     } else if (key === 'copyright') {
       const year = new Date().getFullYear();
-      const name = dist.fullName || dist.brandName || 'Jairo Pinto';
+      const name = dist.fullName || dist.brandName || 'GanoMaster';
       const role = dist.role || 'Distribuidor Autorizado Gano Excel';
       el.innerHTML = `&copy; ${year} ${name}. ${role}. Todos los derechos reservados.`;
     }
