@@ -8,6 +8,10 @@ import { z } from "zod";
 
 import { productPageSourceService } from "@/server/services/productPageSourceService";
 import { activationLeadService } from "@/server/services/activationLeadService";
+import {
+  productPageVerificationService,
+  type ProductPageVerificationCheck
+} from "@/server/services/productPageVerificationService";
 
 const siteIdSchema = z
   .string()
@@ -22,8 +26,12 @@ export type ProductPagePublicationInput = z.infer<typeof productPagePublicationI
 export type ProductPagePublicationResult = {
   siteId: string;
   publishedAt: string;
+  verifiedAt: string;
+  publicationState: "VERIFIED" | "VERIFY_FAILED";
+  verificationStatus: "VERIFIED" | "VERIFY_FAILED";
   remoteRoot: string;
   files: string[];
+  checks: ProductPageVerificationCheck[];
 };
 
 type SftpConfiguration = {
@@ -259,11 +267,17 @@ export const productPagePublicationService = {
 
     await activationLeadService.updatePublicationStateBySiteId(input.siteId, "PUBLISHED");
 
+    const verification = await productPageVerificationService.verify(input);
+
     return {
       siteId: input.siteId,
       publishedAt: new Date().toISOString(),
+      verifiedAt: verification.verifiedAt,
+      publicationState: verification.status,
+      verificationStatus: verification.status,
       remoteRoot,
-      files: localFiles.map((localFile) => relative(localDirectory, localFile).split(sep).join("/"))
+      files: localFiles.map((localFile) => relative(localDirectory, localFile).split(sep).join("/")),
+      checks: verification.checks
     };
   }
 };

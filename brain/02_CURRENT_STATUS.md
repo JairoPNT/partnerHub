@@ -4,7 +4,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Ticket
 
-`PH-003D - Schema Review and Migration Plan`
+`PH-020 - Publicacion verificada`
 
 ## Status Summary
 
@@ -37,6 +37,8 @@ PH-003D does not authorize migrations, Prisma generate, Prisma migrate, Prisma d
 PH-004A Commercial Pricing Update: Approved official commercial rates for MVP launch saved in `brain/business/OFERTA_COMERCIAL_OFICIAL_MVP.md` ($247k Producto, $347k Negocio, $475.2k Plan 360, $59.9k/mo 1 servicio, $89.900/mo 2 servicios, Meta Ads $197k setup + $89.9k/mo).
 
 PH-004B Product Ecosystem Beta Sales Campaign: CEO direction saved in `brain/business/PH-004B_PRODUCT_ECOSYSTEM_BETA_SALES_CAMPAIGN.md`. Current sales hook focuses only on Ecosistema de Producto at $247.000 COP implementation, first month of administration included during implementation, $59.900 COP/month required after the first implementation month, special meeting-day benefit of 2 waived monthly management months worth $119.800 COP, beta entry price maintained during MVP validation without a public fixed deadline, live demos at jairopinto.pro, yennygarcia.pro, claudiacalero.pro and blancastella.pro, direct transfer/Nequi/Nu/Bancolombia/Wompi payment options, and referral rule of 1 waived month per 2 activated referrals capped at 12 months.
+
+PH-020 Publicacion verificada was implemented in backend MVP on 2026-07-30. Publishing now performs SFTP upload followed by public-domain verification against the saved product page source. Manual verification is available at `POST /api/internal/product-pages/verify`. Verification results are stored under `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`, and `GET /api/internal/product-pages` returns `lastVerification`.
 
 ## Path Integrity
 
@@ -80,8 +82,4 @@ PH-004B Product Ecosystem Beta Sales Campaign: CEO direction saved in `brain/bus
 
 ## Next Step
 
-PH-003D is ready for CTO quick check.
-
-Suggested next mission after CTO approval: PH-003E - Controlled Prisma Schema Implementation.
-
-PH-003E is not authorized yet.
+Antigravity should wire PH-020 dashboard states and the `Verificar ahora` control without changing backend contracts.
