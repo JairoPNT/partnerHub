@@ -6,6 +6,8 @@ import { basename, join, posix, relative, resolve, sep } from "node:path";
 import SftpClient from "ssh2-sftp-client";
 import { z } from "zod";
 
+import { productPageSourceService } from "@/server/services/productPageSourceService";
+
 const siteIdSchema = z
   .string()
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "siteId must be a lowercase slug");
@@ -30,6 +32,7 @@ type SftpConfiguration = {
   password: string;
   remoteRoot: string;
   remoteRoots: Record<string, string>;
+  remoteRootTemplate?: string;
 };
 
 function getOutputRoot() {
@@ -91,12 +94,26 @@ function getSftpConfiguration(): SftpConfiguration {
     password: requiredEnvironmentVariable("HOSTINGER_SFTP_PASSWORD"),
     remoteRoot,
     remoteRoots,
+    remoteRootTemplate: process.env.HOSTINGER_SFTP_REMOTE_ROOT_TEMPLATE?.trim() || undefined,
   };
 }
 
-function getRemoteRoot(configuration: SftpConfiguration, siteId: string) {
+async function getRemoteRoot(configuration: SftpConfiguration, siteId: string) {
   const mappedRoot = configuration.remoteRoots[siteId];
-  if (Object.keys(configuration.remoteRoots).length > 0 && !mappedRoot) {
+  if (mappedRoot) return mappedRoot;
+
+  if (configuration.remoteRootTemplate) {
+    const source = await productPageSourceService.get(siteId) as { site?: { domain?: unknown } } | null;
+    const domain = typeof source?.site?.domain === "string" ? source.site.domain : null;
+
+    if (domain) {
+      return configuration.remoteRootTemplate.replaceAll("{domain}", domain);
+    }
+
+    throw new Error(`No publication domain is configured for siteId: ${siteId}.`);
+  }
+
+  if (Object.keys(configuration.remoteRoots).length > 0) {
     throw new Error(`No Hostinger remote root is configured for siteId: ${siteId}.`);
   }
 
@@ -178,7 +195,7 @@ export const productPagePublicationService = {
   async publish(input: ProductPagePublicationInput): Promise<ProductPagePublicationResult> {
     const configuration = getSftpConfiguration();
     const localDirectory = resolveInsideDirectory(getOutputRoot(), input.siteId);
-    const remoteRoot = getRemoteRoot(configuration, input.siteId);
+    const remoteRoot = await getRemoteRoot(configuration, input.siteId);
 
     try {
       await access(localDirectory);
