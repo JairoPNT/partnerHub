@@ -2,36 +2,31 @@
 
 import React, { useState, useEffect, FormEvent } from "react";
 import {
-  Globe,
-  ExternalLink,
   RefreshCw,
   CheckCircle2,
   AlertCircle,
   ShieldCheck,
-  CheckSquare,
-  Square,
-  Play,
-  Layers,
-  FileCode,
   Check,
-  X,
+  ExternalLink,
+  Globe,
   AlertTriangle,
-  Clock,
   User,
   Phone,
   Search,
-  Image as ImageIcon,
+  ImageIcon,
   BarChart3,
-  ArrowRight,
-  Folder,
   UploadCloud,
   FileCode2,
-  Copy
+  Copy,
+  X,
+  Layers,
+  CheckSquare,
+  Square,
+  Play
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Label, Input, Textarea, Select } from "@/components/ui/form";
+import { Label, Input, Textarea } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
 import { ModuleRecord } from "@/modules/catalog";
 
@@ -42,7 +37,7 @@ import {
   FailedChecksDetails,
   DeliveryGuardAlert,
   ProductPageVerificationResult,
-  ProductPageVerificationCheck
+  ProductPageSiteSummary
 } from "@/components/ui/verification-status-panel";
 
 type MasterSiteManagementViewProps = {
@@ -72,13 +67,13 @@ export interface ClientSiteItem {
   publicationState?: string;
   lastPublishedAt?: string;
   lastVerification?: ProductPageVerificationResult | null;
-  configuration?: any;
+  configuration?: Record<string, unknown> | null;
 }
 
 export interface ReplicationResultItem {
   siteId: string;
-  generated?: any;
-  published?: any;
+  generated?: unknown;
+  published?: unknown;
   error?: string;
 }
 
@@ -86,6 +81,15 @@ export interface ReplicationResponse {
   replicatedAt: string;
   count: number;
   results: ReplicationResultItem[];
+}
+
+export interface MasterGenerationOutput {
+  siteId?: string;
+  generatedAt?: string;
+  count?: number;
+  outputDirectory?: string;
+  files?: string[];
+  manifestPath?: string;
 }
 
 const INITIAL_MASTER_FORM: MasterFormState = {
@@ -112,13 +116,13 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
   // Estados del formulario y operación del master
   const [form, setForm] = useState<MasterFormState>(INITIAL_MASTER_FORM);
-  const [isLoadingMasterConfig, setIsLoadingMasterConfig] = useState(true);
+  const [_isLoadingMasterConfig, setIsLoadingMasterConfig] = useState(true);
   const [isGeneratingMaster, setIsGeneratingMaster] = useState(false);
   const [isPublishingMaster, setIsPublishingMaster] = useState(false);
   const [publicationState, setPublicationState] = useState<string>("PUBLISHED");
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [publishedAt, setPublishedAt] = useState<string | null>(null);
-  const [generationOutput, setGenerationOutput] = useState<any | null>(null);
+  const [generationOutput, setGenerationOutput] = useState<MasterGenerationOutput | null>(null);
   const [copiedManifest, setCopiedManifest] = useState(false);
   const [masterVerification, setMasterVerification] = useState<ProductPageVerificationResult | null>(null);
   const [isPublishStepMaster, setIsPublishStepMaster] = useState<"IDLE" | "SFTP" | "VERIFYING">("IDLE");
@@ -150,7 +154,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
       if (pagesRes.ok) {
         const pData = await pagesRes.json();
-        const masterPage = (pData.sites || []).find((s: any) => s.siteId === MASTER_SITE_ID);
+        const masterPage = (pData.sites || []).find((s: ProductPageSiteSummary) => s.siteId === MASTER_SITE_ID);
         if (masterPage?.lastVerification) {
           setMasterVerification(masterPage.lastVerification);
           setPublicationState(masterPage.lastVerification.status);
@@ -205,14 +209,14 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
     try {
       const pagesRes = await fetch("/api/internal/product-pages");
-      let pageSites: { siteId: string; configuration: any; lastVerification?: ProductPageVerificationResult | null }[] = [];
+      let pageSites: ProductPageSiteSummary[] = [];
       if (pagesRes.ok) {
         const data = await pagesRes.json();
         pageSites = data.sites || [];
       }
 
       const leadsRes = await fetch("/api/internal/activation-leads");
-      let leads: any[] = [];
+      let leads: Array<{ siteId?: string; publicationState?: string; updatedAt?: string; createdAt?: string; onboardingData?: { domain?: string } }> = [];
       if (leadsRes.ok) {
         const data = await leadsRes.json();
         leads = data.leads || [];
@@ -229,7 +233,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           const lead = leads.find((l) => l.siteId === item.siteId);
           const domain = item.configuration?.site?.domain || item.configuration?.domain || lead?.onboardingData?.domain;
           const pubState = item.lastVerification?.status || lead?.publicationState || "PUBLISHED";
-          const lastPublishedAt = lead?.updatedAt || item.configuration?.updatedAt || lead?.createdAt;
+          const lastPublishedAt = lead?.updatedAt || (typeof item.configuration?.updatedAt === "string" ? item.configuration.updatedAt : undefined) || lead?.createdAt;
 
           return {
             siteId: item.siteId,
@@ -331,8 +335,8 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       setPublicationState("GENERATED");
       setGenerationOutput(data);
       setMasterSuccessMessage("Paquete estático maestro generado localmente. Ahora puedes publicarlo en ganomaster.pro.");
-    } catch (err: any) {
-      setMasterErrorMessage(err.message || "Error al generar la plantilla maestra.");
+    } catch (err: unknown) {
+      setMasterErrorMessage(err instanceof Error ? err.message : "Error al generar la plantilla maestra.");
     } finally {
       setIsGeneratingMaster(false);
     }
@@ -382,13 +386,26 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       } else {
         setMasterErrorMessage("Vista previa publicada, pero la verificación en ganomaster.pro requiere revisión.");
       }
-    } catch (err: any) {
-      setMasterErrorMessage(err.message || "Error al publicar en ganomaster.pro.");
+    } catch (err: unknown) {
+      setMasterErrorMessage(err instanceof Error ? err.message : "Error al publicar en ganomaster.pro.");
     } finally {
       clearTimeout(timer);
       setIsPublishingMaster(false);
       setIsPublishStepMaster("IDLE");
     }
+  };
+
+  const getMasterPublishButtonLabel = (): string => {
+    if (isPublishingMaster) {
+      return isPublishStepMaster === "VERIFYING" ? "Verificando dominio..." : "Publicando...";
+    }
+    if (publicationState === "VERIFIED") {
+      return "Publicado y verificado";
+    }
+    if (publicationState === "VERIFY_FAILED") {
+      return "Publicado, pero requiere revisión";
+    }
+    return "Publicar en ganomaster.pro";
   };
 
   // 3. Control de selección de clientes receptores
@@ -442,7 +459,8 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
   const copyManifest = () => {
     if (!generationOutput) return;
-    const summary = `Sitio: ${generationOutput.siteId}\nFecha: ${generationOutput.generatedAt}\nDirectorio: ${generationOutput.outputDirectory}\nArchivos:\n${generationOutput.files.map((f: string) => `- ${f}`).join("\n")}`;
+    const filesList = generationOutput.files || [];
+    const summary = `Sitio: ${generationOutput.siteId || MASTER_SITE_ID}\nFecha: ${generationOutput.generatedAt || generatedAt || ""}\nDirectorio: ${generationOutput.outputDirectory || ""}\nArchivos:\n${filesList.map((f: string) => `- ${f}`).join("\n")}`;
     navigator.clipboard.writeText(summary);
     setCopiedManifest(true);
     setTimeout(() => setCopiedManifest(false), 2000);
@@ -600,13 +618,13 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
               </Button>
 
               <Button
-                variant="primary"
+                variant={publicationState === "VERIFY_FAILED" ? "secondary" : "primary"}
                 size="sm"
                 onClick={handlePublishMaster}
                 isLoading={isPublishingMaster}
                 leftIcon={<UploadCloud className="h-4 w-4 text-cyan-300" />}
               >
-                Publicar en ganomaster.pro
+                {getMasterPublishButtonLabel()}
               </Button>
             </div>
           </div>
@@ -857,12 +875,12 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           <Button
             type="button"
             size="lg"
-            variant="primary"
+            variant={publicationState === "VERIFY_FAILED" ? "secondary" : "primary"}
             onClick={handlePublishMaster}
             isLoading={isPublishingMaster}
             leftIcon={<UploadCloud className="h-4 w-4 text-cyan-300" />}
           >
-            Publicar en ganomaster.pro
+            {getMasterPublishButtonLabel()}
           </Button>
         </div>
       </form>

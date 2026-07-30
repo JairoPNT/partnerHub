@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from "react";
 import {
   Layers,
-  Copy,
   CheckCircle2,
   AlertCircle,
   RefreshCw,
@@ -27,14 +26,20 @@ import {
 
 export interface ProductPageSite {
   siteId: string;
-  configuration?: any;
+  configuration?: {
+    brandName?: string;
+    title?: string;
+    domain?: string;
+    site?: { domain?: string };
+    [key: string]: unknown;
+  } | null;
   lastVerification?: ProductPageVerificationResult | null;
 }
 
 export interface ReplicationResultItem {
   siteId: string;
-  generated?: any;
-  published?: any;
+  generated?: unknown;
+  published?: unknown;
   error?: string;
 }
 
