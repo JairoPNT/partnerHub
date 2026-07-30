@@ -52,19 +52,20 @@ export function Sidebar() {
 
   return (
     <aside className="hidden w-[285px] shrink-0 border-r border-slate-200/80 bg-white/80 px-4 py-6 backdrop-blur-md xl:flex xl:flex-col">
-      <div className="rounded-3xl bg-slate-950 px-5 py-4.5 text-white shadow-md">
-        <div className="flex items-center gap-2">
-          <Sparkle className="h-5 w-5 text-cyan-400" />
-          <p className="text-[11px] font-bold uppercase tracking-[0.24em] text-cyan-300">
-            PartnerHub
-          </p>
+      <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-cyan-50/40 to-slate-100/60 p-5 shadow-sm text-slate-900">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-600 text-white shadow-sm">
+            <Sparkle className="h-4.5 w-4.5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-700">
+              PartnerHub
+            </p>
+            <h1 className="text-sm font-extrabold leading-tight text-slate-900 font-heading">
+              SaaS Operativo
+            </h1>
+          </div>
         </div>
-        <h1 className="mt-2 text-lg font-bold leading-tight font-heading">
-          SaaS operativo
-        </h1>
-        <p className="mt-1 text-xs leading-5 text-slate-400">
-          Estructura modular para automatizar sitios, contenido y comisiones de socios.
-        </p>
       </div>
 
       <nav className="mt-6 flex-1 space-y-6 overflow-y-auto pr-1">

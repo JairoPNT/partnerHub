@@ -504,23 +504,23 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     switch (pubState) {
       case "PUBLISHED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-            <CheckCircle className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800 border border-emerald-300">
+            <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
             Publicado
           </span>
         );
       case "GENERATED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-950/60 px-2.5 py-1 text-xs font-bold text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800">
-            <RefreshCw className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+          <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-bold text-cyan-800 border border-cyan-300">
+            <RefreshCw className="h-3.5 w-3.5 text-cyan-600" />
             Generado
           </span>
         );
       case "NOT_STARTED":
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950/60 px-2.5 py-1 text-xs font-bold text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-            <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 border border-amber-300">
+            <Clock className="h-3.5 w-3.5 text-amber-600" />
             Pendiente
           </span>
         );
@@ -528,15 +528,15 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   };
 
   return (
-    <div className="space-y-8 text-slate-900 dark:text-slate-100">
+    <div className="space-y-8 text-slate-900">
       {/* Header del módulo */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-cyan-100 dark:bg-cyan-950 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-900 dark:text-cyan-300">
+            <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-900">
               {record?.group || "Operaciones"}
             </span>
-            <span className="rounded-full border border-slate-200 dark:border-slate-800 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+            <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600">
               Generación y Publicación de Páginas
             </span>
           </div>
@@ -548,25 +548,25 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
           </div>
         </div>
 
-        <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+        <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
           Generador de Páginas de Producto
         </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           Selecciona un empresario registrado para precargar sus datos de onboarding, configurar su identificador de sitio, generar el paquete de archivos estáticos y publicarlo en su dominio oficial.
         </p>
       </section>
 
       {/* BUSCADOR DE EMPRESARIOS */}
-      <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
-        <CardHeader className="border-b border-slate-200 dark:border-slate-800 pb-4">
+      <Card className="border-slate-200 bg-white shadow-sm">
+        <CardHeader className="border-b border-slate-200 pb-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <Users className="h-5 w-5 text-cyan-600" />
               <div>
-                <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+                <CardTitle className="text-base font-bold text-slate-900">
                   Buscador de Empresarios Registrados
                 </CardTitle>
-                <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+                <CardDescription className="text-xs text-slate-500">
                   Priorizados por estado comercial (PAID / CONTACTED primero). Selecciona para cargar datos de onboarding.
                 </CardDescription>
               </div>
@@ -593,7 +593,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Buscar por nombre, marca, WhatsApp, siteId o dominio..."
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-10 pr-4 py-2 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:border-cyan-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+              className="w-full rounded-xl border border-slate-200 bg-slate-50/80 pl-10 pr-4 py-2 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:border-cyan-500 focus:outline-none"
             />
           </div>
 
@@ -604,7 +604,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <span className="text-xs font-medium ml-2">Cargando empresarios...</span>
             </div>
           ) : filteredLeads.length === 0 ? (
-            <div className="p-8 text-center text-xs text-slate-500 dark:text-slate-400">
+            <div className="p-8 text-center text-xs text-slate-500">
               No se encontraron empresarios con el criterio ingresado.
             </div>
           ) : (
@@ -619,28 +619,28 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                     onClick={() => handleSelectLead(lead)}
                     className={`cursor-pointer rounded-2xl border p-3.5 transition flex flex-wrap items-center justify-between gap-3 text-xs ${
                       isSelected
-                        ? "border-cyan-500 bg-cyan-50/50 dark:border-cyan-500 dark:bg-cyan-950/40 ring-1 ring-cyan-500"
-                        : "border-slate-200 bg-white hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:hover:bg-slate-900"
+                        ? "border-cyan-500 bg-cyan-50/50 ring-1 ring-cyan-500"
+                        : "border-slate-200 bg-white hover:bg-slate-50:bg-slate-900"
                     }`}
                   >
                     <div className="space-y-1 min-w-[200px]">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-slate-900 dark:text-white text-sm">
+                        <span className="font-bold text-slate-900 text-sm">
                           {lead.brandName}
                         </span>
                         <span
                           className={`rounded px-2 py-0.5 text-[10px] font-extrabold uppercase ${
                             lead.status === "PAID"
-                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300"
+                              ? "bg-emerald-100 text-emerald-800"
                               : lead.status === "CONTACTED"
-                              ? "bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300"
-                              : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300"
+                              ? "bg-blue-100 text-blue-800"
+                              : "bg-slate-100 text-slate-700"
                           }`}
                         >
                           {lead.status}
                         </span>
                       </div>
-                      <p className="text-slate-500 dark:text-slate-400 text-[11px]">
+                      <p className="text-slate-500 text-[11px]">
                         Empresario: <strong>{lead.fullName}</strong> — WA: {lead.whatsapp}
                       </p>
                     </div>
@@ -650,19 +650,19 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                       <div className="flex items-center gap-1">
                         <span className="text-slate-400">siteId:</span>
                         {lead.siteId ? (
-                          <span className="font-bold text-slate-900 dark:text-white bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">
+                          <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
                             {lead.siteId}
                           </span>
                         ) : (
-                          <span className="text-amber-600 dark:text-amber-400 font-semibold italic">Sin vincular</span>
+                          <span className="text-amber-600 font-semibold italic">Sin vincular</span>
                         )}
                       </div>
 
                       {/* Dominio */}
                       <div className="flex items-center gap-1">
-                        <Globe className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+                        <Globe className="h-3.5 w-3.5 text-cyan-600" />
                         {domain ? (
-                          <span className="font-bold text-cyan-600 dark:text-cyan-400">{domain}</span>
+                          <span className="font-bold text-cyan-600">{domain}</span>
                         ) : (
                           <span className="text-slate-400 italic">Sin dominio</span>
                         )}
@@ -681,9 +681,9 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
       {/* NOTIFICACIONES Y ALERTAS */}
       {successMessage && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
             <span>{successMessage}</span>
           </div>
         </div>
@@ -697,16 +697,16 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
       {/* RESUMEN DEL EMPRESARIO SELECCIONADO Y BOTÓN VINCULAR SITEID */}
       {selectedLead && (
-        <Card className="border-cyan-300 bg-cyan-50/30 dark:border-cyan-800 dark:bg-cyan-950/20 p-5 space-y-4">
+        <Card className="border-cyan-300 bg-cyan-50/30 p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white">
+                <h3 className="text-lg font-bold text-slate-900">
                   {selectedLead.brandName} ({selectedLead.fullName})
                 </h3>
                 {getPublicationBadge(selectedLead.publicationState)}
               </div>
-              <p className="text-xs text-slate-600 dark:text-slate-400 flex items-center gap-2">
+              <p className="text-xs text-slate-600 flex items-center gap-2">
                 <span>Estado Comercial: <strong>{selectedLead.status}</strong></span>
                 <span>•</span>
                 <span>Dominio: <strong>{selectedLead.onboardingData?.domain || "No configurado"}</strong></span>
@@ -715,9 +715,9 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
             {/* Asignación/Vinculación de siteId si no existe */}
             {!selectedLead.siteId ? (
-              <div className="flex items-center gap-2 rounded-xl bg-amber-100 dark:bg-amber-950/80 p-2.5 border border-amber-300 dark:border-amber-800 text-xs">
-                <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                <span className="text-amber-900 dark:text-amber-200 font-semibold">
+              <div className="flex items-center gap-2 rounded-xl bg-amber-100 p-2.5 border border-amber-300 text-xs">
+                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                <span className="text-amber-900 font-semibold">
                   Sin siteId vinculado. Sugerido: <code className="font-mono font-bold">{form.siteId}</code>
                 </span>
                 <button
@@ -731,9 +731,9 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 </button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 p-2.5 border border-emerald-300 dark:border-emerald-800 text-xs">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                <span className="text-emerald-900 dark:text-emerald-200 font-bold">
+              <div className="flex items-center gap-2 rounded-xl bg-emerald-100 p-2.5 border border-emerald-300 text-xs">
+                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span className="text-emerald-900 font-bold">
                   Sitio Vinculado: <code className="font-mono">{selectedLead.siteId}</code>
                 </span>
               </div>
@@ -844,15 +844,15 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       {/* FORMULARIO PRINCIPAL DE GENERACIÓN */}
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Bloque 1: Identificación del Sitio y Distribuidor */}
-        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+              <User className="h-5 w-5 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
                 Identificación del Sitio y Distribuidor
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+            <CardDescription className="text-xs text-slate-500">
               Datos principales de identidad del partner, slug único de sitio y dominio de publicación.
             </CardDescription>
           </CardHeader>
@@ -951,15 +951,15 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         </Card>
 
         {/* Bloque 2: Contacto, Conversión y Pasarela de Pago */}
-        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Phone className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+              <Phone className="h-5 w-5 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
                 Contacto, WhatsApp y Pasarela de Pago
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+            <CardDescription className="text-xs text-slate-500">
               Teléfonos de contacto directo, mensaje automático de WhatsApp y enlace a pasarela de compra.
             </CardDescription>
           </CardHeader>
@@ -1018,15 +1018,15 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         </Card>
 
         {/* Bloque 3: Configuración SEO */}
-        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Search className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+              <Search className="h-5 w-5 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
                 Configuración SEO y Metadatos
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+            <CardDescription className="text-xs text-slate-500">
               Títulos e información para motores de búsqueda y previsualización social.
             </CardDescription>
           </CardHeader>
@@ -1070,15 +1070,15 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         </Card>
 
         {/* Bloque 4: Multimedia y Heroes en R2 */}
-        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <ImageIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+              <ImageIcon className="h-5 w-5 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
                 Recursos Multimedia (Imágenes Hero en Cloudflare R2)
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+            <CardDescription className="text-xs text-slate-500">
               Selecciona las imágenes de portada. Se subirán y optimizarán automáticamente a R2.
             </CardDescription>
           </CardHeader>
@@ -1105,15 +1105,15 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         </Card>
 
         {/* Bloque 5: Analítica de Google Analytics */}
-        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+              <BarChart3 className="h-5 w-5 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
                 Analítica y Métricas
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+            <CardDescription className="text-xs text-slate-500">
               Configura el seguimiento de visitas y eventos de conversión en Google Analytics.
             </CardDescription>
           </CardHeader>
