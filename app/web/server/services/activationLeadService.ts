@@ -67,6 +67,7 @@ export const activationLeadStatusSchema = z.enum([
 ]);
 
 export const activationLeadRecordStateSchema = z.enum(["ACTIVE", "ARCHIVED"]);
+export const publicationStateSchema = z.enum(["NOT_STARTED", "GENERATED", "PUBLISHED"]);
 
 export const editableOnboardingDataSchema = onboardingDataSchema.omit({
   imageUseConsent: true,
@@ -100,6 +101,7 @@ type ActivationLead = Omit<z.infer<typeof activationLeadSchema>, "email"> & {
   createdAt: string;
   updatedAt: string;
   recordState?: z.infer<typeof activationLeadRecordStateSchema>;
+  publicationState?: z.infer<typeof publicationStateSchema>;
   onboardingTokenHash: string;
   onboardingData: z.infer<typeof onboardingDataSchema>;
   onboardingUpdatedAt?: string;
@@ -138,7 +140,11 @@ function hashOnboardingToken(token: string) {
 
 function toPublicLead(lead: ActivationLead) {
   const { onboardingTokenHash: _tokenHash, ...publicLead } = lead;
-  return { ...publicLead, recordState: lead.recordState ?? "ACTIVE" };
+  return {
+    ...publicLead,
+    recordState: lead.recordState ?? "ACTIVE",
+    publicationState: lead.publicationState ?? "NOT_STARTED"
+  };
 }
 
 async function create(input: z.infer<typeof activationLeadSchema>) {
@@ -151,6 +157,7 @@ async function create(input: z.infer<typeof activationLeadSchema>) {
     id: randomUUID(),
     status: "NEW",
     recordState: "ACTIVE",
+    publicationState: "NOT_STARTED",
     siteId: null,
     createdAt: now,
     updatedAt: now,
@@ -179,6 +186,7 @@ async function createInternal(input: z.infer<typeof internalActivationLeadCreate
     id: randomUUID(),
     status: parsed.status,
     recordState: "ACTIVE",
+    publicationState: "NOT_STARTED",
     siteId: parsed.siteId ?? null,
     createdAt: now,
     updatedAt: now,
@@ -312,6 +320,24 @@ async function updateRecordState(id: string, recordState: z.infer<typeof activat
   return toPublicLead(next);
 }
 
+async function updatePublicationStateBySiteId(
+  siteId: string,
+  publicationState: z.infer<typeof publicationStateSchema>
+) {
+  const leads = await readLeads();
+  const existing = leads.find((lead) => lead.siteId === siteId);
+  if (!existing) return null;
+
+  const next: ActivationLead = {
+    ...existing,
+    publicationState,
+    updatedAt: new Date().toISOString()
+  };
+
+  await writeLeads(leads.map((lead) => (lead.id === existing.id ? next : lead)));
+  return toPublicLead(next);
+}
+
 async function deleteTest(id: string, confirmation: string) {
   if (confirmation !== "DELETE_TEST") {
     throw new Error("Test deletion requires explicit confirmation.");
@@ -338,5 +364,6 @@ export const activationLeadService = {
   linkSite,
   updateStatus,
   updateRecordState,
+  updatePublicationStateBySiteId,
   deleteTest
 };

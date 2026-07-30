@@ -7,6 +7,7 @@ import SftpClient from "ssh2-sftp-client";
 import { z } from "zod";
 
 import { productPageSourceService } from "@/server/services/productPageSourceService";
+import { activationLeadService } from "@/server/services/activationLeadService";
 
 const siteIdSchema = z
   .string()
@@ -255,6 +256,8 @@ export const productPagePublicationService = {
         await sftp.end();
       }
     }
+
+    await activationLeadService.updatePublicationStateBySiteId(input.siteId, "PUBLISHED");
 
     return {
       siteId: input.siteId,

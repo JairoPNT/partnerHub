@@ -15,6 +15,7 @@ Exponer en el dashboard las capacidades que ya existen en backend, sin incluir t
 - Replicacion selectiva o general mediante `POST /api/internal/product-pages/replicate`.
 - Confirmacion explicita antes de publicar.
 - Resultado por sitio: generado, publicado o error.
+- Eliminar el boton y cualquier flujo visible de datos de prueba de Jenny Varela.
 
 ## Fuera de alcance
 

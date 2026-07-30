@@ -4,6 +4,8 @@
 
 La plantilla maestra sigue siendo el contenido versionado en GitHub dentro de `plantillas-de-pagina/producto`. `ganomaster.pro` funcionara como sitio de referencia y vista previa publicada; no sera el editor tecnico directo del servidor.
 
+El `siteId` reservado para el master es `ganomaster` y su dominio es `ganomaster.pro`. La replicacion general excluye este sitio para evitar sobrescribir la referencia maestra.
+
 Esto permite revisar visualmente una version antes de replicarla y conserva historial de cambios mediante Pull Requests.
 
 ## Publication targets
@@ -31,6 +33,12 @@ La configuracion guardada de cada sitio debe incluir `site.domain`. El sistema s
 
 ## Replication API
 
+Antes de replicar existe un paso separado para actualizar la vista maestra:
+
+`POST /api/internal/product-pages/master/preview`
+
+Este endpoint regenera y publica exclusivamente `ganomaster.pro`. El equipo puede revisar esa URL sin afectar las paginas de clientes.
+
 `POST /api/internal/product-pages/replicate`
 
 Body obligatorio:
@@ -50,7 +58,10 @@ La interfaz debe mostrar alcance, sitios afectados y pedir confirmacion antes de
 1. Modificar plantilla en GitHub.
 2. Abrir Pull Request y fusionar a `main`.
 3. Desplegar el backend/plantilla en EasyPanel.
-4. Generar y revisar `ganomaster.pro`.
-5. Usar replicacion selectiva para una pagina de prueba.
-6. Verificar el dominio publicado.
-7. Ejecutar replicacion general solo despues de aprobar la prueba.
+4. Ejecutar el preview de `ganomaster.pro`.
+5. Revisar la pagina con el equipo.
+6. Usar replicacion selectiva para una pagina de prueba.
+7. Verificar el dominio publicado.
+8. Ejecutar replicacion general solo despues de aprobar la prueba.
+
+Editar directamente el `public_html` de `ganomaster.pro` no actualiza GitHub ni convierte esos cambios en plantilla. Para un editor visual del master se requerira una fase posterior que escriba sobre la fuente versionada.

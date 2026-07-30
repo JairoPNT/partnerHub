@@ -6,6 +6,7 @@ import { resolve, sep } from "node:path";
 import { z } from "zod";
 
 import { productPageSourceService } from "@/server/services/productPageSourceService";
+import { activationLeadService } from "@/server/services/activationLeadService";
 
 const siteIdSchema = z
   .string()
@@ -197,6 +198,7 @@ export const productPageGenerationService = {
     );
 
     await productPageSourceService.save(configuration.site.id, configuration);
+    await activationLeadService.updatePublicationStateBySiteId(configuration.site.id, "GENERATED");
 
     return {
       siteId: configuration.site.id,
