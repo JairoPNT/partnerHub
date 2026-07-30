@@ -4,7 +4,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Current Ticket
 
-`PH-003D - Schema Review and Migration Plan`
+`PH-020 - Publicacion verificada`
 
 ## Current State
 
@@ -23,6 +23,8 @@ PH-003D has created schema planning documentation and has not modified `schema.p
 Claude reviewed PH-003D as `APPROVED WITH WARNINGS`.
 
 PH-003D closure has incorporated W-A, W-B, and W-C documentally and is ready for CTO quick check.
+
+PH-020 backend MVP was implemented on 2026-07-30. The internal product page publisher now runs public verification after SFTP upload. A manual verification endpoint exists at `POST /api/internal/product-pages/verify`. Verification stores the latest result in `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`, updates linked activation leads to `VERIFIED` or `VERIFY_FAILED`, and exposes `lastVerification` from `GET /api/internal/product-pages`.
 
 ## Path Integrity
 
@@ -58,8 +60,4 @@ PH-003D closure has incorporated W-A, W-B, and W-C documentally and is ready for
 
 ## Next Step
 
-PH-003D CTO quick check.
-
-Suggested next mission after CTO approval: PH-003E - Controlled Prisma Schema Implementation.
-
-PH-003E is not authorized yet.
+Antigravity should implement the PH-020 admin dashboard states: verified, published but not verified, verification failed, failed-check detail, and `Verificar ahora`.

@@ -34,13 +34,52 @@ HOSTINGER_SFTP_REMOTE_ROOT
 3. It uploads each file with a temporary remote filename.
 4. It renames the temporary file into place.
 5. It processes `index.html` last so that it only points to already uploaded assets.
+6. It requests the public `https://{domain}/` and `https://{domain}/config.js` URLs.
+7. It marks the linked activation lead as `VERIFIED` only when the public files match the saved source configuration.
 
 The publisher does not delete files outside the generated package and cannot be pointed at a different remote directory from the API request.
 
 ## Response
 
-On success, the endpoint returns the published `siteId`, timestamp, configured remote root, and the relative filenames published. It never returns credentials.
+On successful SFTP upload, the endpoint returns the published `siteId`, publication timestamp, verification timestamp, configured remote root, relative filenames published, `publicationState`, `verificationStatus`, and verification checks. It never returns credentials.
+
+If the upload succeeds but verification fails, the endpoint still returns `201` with:
+
+```json
+{
+  "publicationState": "VERIFY_FAILED",
+  "verificationStatus": "VERIFY_FAILED"
+}
+```
+
+The operator must treat that state as published but not ready for delivery.
+
+## Manual Verification
+
+Operators can verify a previously published page without re-uploading files:
+
+```http
+POST /api/internal/product-pages/verify
+Content-Type: application/json
+
+{
+  "siteId": "jairo-pinto-test"
+}
+```
+
+The verifier checks:
+
+- homepage reachability
+- `config.js` reachability and parseability
+- `site.id` and `site.domain`
+- distributor brand, full name, WhatsApp number, and purchase URL
+- desktop and mobile hero URLs
+- absence of `href="#comprar"` in the served HTML
+- presence of `.product-btn-buy`
+- presence of `config.js` and `app.js` script tags
+
+The latest verification result is stored under `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json` and is included as `lastVerification` in `GET /api/internal/product-pages`.
 
 ## Follow-up
 
-After the route is verified in production, Antigravity can add an explicit publishing control to the internal landing-builder interface.
+Antigravity can wire the admin dashboard to `verificationStatus`, show failed checks, and add the explicit `Verificar ahora` action.

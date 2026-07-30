@@ -70,7 +70,13 @@ export const activationLeadStatusSchema = z.enum([
 ]);
 
 export const activationLeadRecordStateSchema = z.enum(["ACTIVE", "ARCHIVED"]);
-export const publicationStateSchema = z.enum(["NOT_STARTED", "GENERATED", "PUBLISHED"]);
+export const publicationStateSchema = z.enum([
+  "NOT_STARTED",
+  "GENERATED",
+  "PUBLISHED",
+  "VERIFIED",
+  "VERIFY_FAILED"
+]);
 
 export const editableOnboardingDataSchema = onboardingDataSchema.omit({
   imageUseConsent: true,
