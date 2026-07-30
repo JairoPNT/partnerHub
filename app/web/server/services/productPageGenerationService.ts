@@ -98,6 +98,7 @@ export type ProductPageGenerationResult = {
   siteId: string;
   generatedAt: string;
   outputDirectory: string;
+  previewUrl: string;
   files: string[];
 };
 
@@ -241,6 +242,7 @@ export const productPageGenerationService = {
       siteId: configuration.site.id,
       generatedAt,
       outputDirectory,
+      previewUrl: `/api/internal/product-pages/preview/${configuration.site.id}/`,
       files: [...files, "manifest.json"]
     };
   },

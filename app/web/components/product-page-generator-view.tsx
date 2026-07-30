@@ -97,6 +97,7 @@ interface GenerationResult {
   siteId: string;
   generatedAt: string;
   outputDirectory: string;
+  previewUrl?: string;
   files: string[];
   requiresPublication?: boolean;
 }
@@ -372,7 +373,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     if (!form.siteId.trim()) {
       errors.siteId = ["El ID de sitio (slug) es requerido."];
     } else if (!slugRegex.test(form.siteId.trim())) {
-      errors.siteId = ["El ID de sitio debe ser un slug en minúsculas (ej. dorian-higuita)."];
+      errors.siteId = ["El ID de sitio debe ser un slug en minúsculas (ej. john-smith)."];
     }
 
     if (!form.brandName.trim()) {
@@ -863,6 +864,18 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 {copied ? "¡Copiado!" : "Copiar Resumen"}
               </Button>
 
+              {result.previewUrl && (
+                <a
+                  href={result.previewUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 text-xs font-bold text-cyan-700 transition hover:bg-cyan-100"
+                >
+                  <Globe className="h-4 w-4" />
+                  Abrir vista previa
+                </a>
+              )}
+
               {/* Botón de Publicación con estados de verificación */}
               <Button
                 variant={publishResult?.publicationState === "VERIFY_FAILED" ? "secondary" : "primary"}
@@ -989,7 +1002,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="siteId">ID de sitio / siteId (Slug) *</Label>
               <Input
                 id="siteId"
-                placeholder="ej. dorian-higuita"
+                placeholder="ej. john-smith"
                 value={form.siteId}
                 onChange={(e) => handleInputChange("siteId", e.target.value)}
                 disabled={Boolean(selectedLead?.siteId)}
@@ -1002,7 +1015,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                   {selectedLead?.siteId ? (
                     "ID tecnico bloqueado despues de vincular el sitio."
                   ) : (
-                    <>Slug minusculo sin espacios (ej. <code className="font-mono">dorian-higuita</code>).</>
+                    <>Slug minusculo sin espacios (ej. <code className="font-mono">john-smith</code>).</>
                   )}
                 </p>
               )}
@@ -1012,7 +1025,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="domain">Dominio de Publicación (Hostinger)</Label>
               <Input
                 id="domain"
-                placeholder="ej. dorianhiguita.pro"
+                placeholder="ej. johnsmith.pro"
                 value={form.domain}
                 onChange={(e) => handleInputChange("domain", e.target.value)}
                 className="font-mono"
@@ -1026,7 +1039,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="brandName">Nombre de Marca *</Label>
               <Input
                 id="brandName"
-                placeholder="ej. Dorian Higüita"
+                placeholder="ej. John Smith"
                 value={form.brandName}
                 onChange={(e) => handleInputChange("brandName", e.target.value)}
                 className={fieldErrors.brandName ? "border-rose-400 focus:border-rose-500" : ""}
@@ -1040,7 +1053,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="firstName">Nombre (Pila) *</Label>
               <Input
                 id="firstName"
-                placeholder="ej. Dorian"
+                placeholder="ej. John"
                 value={form.firstName}
                 onChange={(e) => handleInputChange("firstName", e.target.value)}
                 className={fieldErrors.firstName ? "border-rose-400 focus:border-rose-500" : ""}
@@ -1054,7 +1067,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="fullName">Nombre Completo *</Label>
               <Input
                 id="fullName"
-                placeholder="ej. Dorian Higüita"
+                placeholder="ej. John Smith"
                 value={form.fullName}
                 onChange={(e) => handleInputChange("fullName", e.target.value)}
                 className={fieldErrors.fullName ? "border-rose-400 focus:border-rose-500" : ""}
@@ -1096,7 +1109,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="whatsappNumber">WhatsApp Internacional *</Label>
               <Input
                 id="whatsappNumber"
-                placeholder="ej. 573188430283"
+                placeholder="ej. 573001112233"
                 value={form.whatsappNumber}
                 onChange={(e) => handleInputChange("whatsappNumber", e.target.value)}
                 className={fieldErrors.whatsappNumber ? "border-rose-400 focus:border-rose-500" : ""}
@@ -1104,7 +1117,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               {fieldErrors.whatsappNumber ? (
                 <p className="mt-1 text-xs text-rose-600">{fieldErrors.whatsappNumber[0]}</p>
               ) : (
-                <p className="mt-1 text-[11px] text-slate-400">Incluir código de país sin símbolos (ej. 573188430283).</p>
+                <p className="mt-1 text-[11px] text-slate-400">Incluir código de país sin símbolos (ej. 573001112233).</p>
               )}
             </div>
 
@@ -1112,7 +1125,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="displayPhone">Teléfono Visible / Llamada Directa</Label>
               <Input
                 id="displayPhone"
-                placeholder="ej. 3188430283"
+                placeholder="ej. 3001112233"
                 value={form.displayPhone}
                 onChange={(e) => handleInputChange("displayPhone", e.target.value)}
               />
@@ -1135,7 +1148,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Textarea
                 id="defaultMessage"
                 rows={2}
-                placeholder="ej. Hola Dorian, vengo de tu página web. Me gustaría tener más información..."
+                placeholder="ej. Hola John, vengo de tu página web. Me gustaría tener más información..."
                 value={form.defaultMessage}
                 onChange={(e) => handleInputChange("defaultMessage", e.target.value)}
               />
@@ -1163,7 +1176,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
               <Label htmlFor="siteTitle">Título SEO (&lt;title&gt;) *</Label>
               <Input
                 id="siteTitle"
-                placeholder="ej. Dorian Higüita — Bienestar y Vitalidad con Gano Excel"
+                placeholder="ej. John Smith — Bienestar y Vitalidad con Gano Excel"
                 value={form.siteTitle}
                 onChange={(e) => handleInputChange("siteTitle", e.target.value)}
                 className={fieldErrors.siteTitle ? "border-rose-400 focus:border-rose-500" : ""}
