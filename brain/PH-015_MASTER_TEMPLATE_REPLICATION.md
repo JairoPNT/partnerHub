@@ -66,6 +66,12 @@ La interfaz debe mostrar alcance, sitios afectados y pedir confirmacion antes de
 
 Editar directamente el `public_html` de `ganomaster.pro` no actualiza GitHub ni convierte esos cambios en plantilla. Los nuevos clientes se generan a partir del paquete publicado del master y reciben encima su `config.js` particular. Si se modifica la estructura HTML/CSS/JS, el cambio debe entrar por GitHub, publicarse primero en el master y luego replicarse.
 
+## Template structural changes
+
+Los cambios estructurales de la plantilla, como quitar secciones, botones externos, modales, scripts, estilos globales o componentes repetibles, se hacen en `plantillas-de-pagina/producto` y no desde el dashboard administrativo. El dashboard edita datos por empresario; la plantilla define la experiencia comun.
+
+Ejemplo aplicado: se elimino el boton externo de TikTok y su modal de advertencia de salida desde la plantilla base. Este cambio solo afectara a sitios existentes despues de publicar `ganomaster.pro` y ejecutar la replicacion correspondiente.
+
 ## Client conversion links
 
 La URL de compra de cada empresario vive en `distributor.purchaseUrl` dentro del `config.js` generado. Los botones `Comprar` de la plantilla no deben tener una tienda fija quemada en HTML; al cargar la pagina, `app.js` asigna esa URL a todos los enlaces `.product-btn-buy`.
