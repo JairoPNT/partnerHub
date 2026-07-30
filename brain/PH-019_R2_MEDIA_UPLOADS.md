@@ -4,14 +4,14 @@
 
 El operador selecciona la imagen desde el dashboard. PartnerHub valida y convierte el archivo a WebP, lo sube a R2 y devuelve la URL publica. El operador no escribe URLs ni navega manualmente por el bucket.
 
-## Rutas fijas
+## Rutas de heroes
 
-- `clientes/{siteId}/producto/v1/hero-desktop.webp`
-- `clientes/{siteId}/producto/v1/hero-mobile.webp`
+- `clientes/{siteId}/producto/v1/hero-desktop-{version}.webp`
+- `clientes/{siteId}/producto/v1/hero-mobile-{version}.webp`
 
 La ruta publica se construye con `R2_PUBLIC_BASE_URL`, actualmente `https://media.partnerhub.club`.
 
-La URL guardada en la configuracion incluye un parametro de version (`?v=...`) generado en cada reemplazo. El archivo fisico conserva el mismo nombre en R2, pero la URL versionada evita que navegadores, Cloudflare o Hostinger mantengan una imagen anterior por cache agresivo.
+Cada reemplazo genera un objeto fisico nuevo en R2. No se sobrescribe el mismo nombre de archivo, porque `media.partnerhub.club` usa cache agresivo y puede conservar versiones anteriores aun en navegadores nuevos. La configuracion del sitio guarda la URL exacta devuelta por el uploader.
 
 El endpoint S3/R2 configurado para el bucket es:
 `https://432a9c2d446773ce8cb3abe45f1f9d89.r2.cloudflarestorage.com`

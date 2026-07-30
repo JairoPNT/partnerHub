@@ -9,9 +9,9 @@ const variantSchema = z.enum(["hero-desktop", "hero-mobile"]);
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
 
-function buildVersionedPublicUrl(publicBaseUrl: string, key: string) {
+function buildHeroKey(siteId: string, variant: string) {
   const version = Date.now().toString(36);
-  return `${publicBaseUrl}/${key}?v=${version}`;
+  return `clientes/${siteId}/producto/v1/${variant}-${version}.webp`;
 }
 
 function getConfig() {
@@ -50,7 +50,7 @@ export const mediaUploadService = {
     }
 
     const { client, bucket, publicBaseUrl } = getConfig();
-    const key = `clientes/${siteId}/producto/v1/${variant}.webp`;
+    const key = buildHeroKey(siteId, variant);
     const body = await sharp(Buffer.from(await input.file.arrayBuffer()))
       .rotate()
       .webp({ quality: 82 })
@@ -66,6 +66,6 @@ export const mediaUploadService = {
       })
     );
 
-    return { siteId, variant, key, url: buildVersionedPublicUrl(publicBaseUrl, key), bytes: body.byteLength };
+    return { siteId, variant, key, url: `${publicBaseUrl}/${key}`, bytes: body.byteLength };
   }
 };
