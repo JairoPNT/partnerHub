@@ -29,6 +29,7 @@ type SftpConfiguration = {
   username: string;
   password: string;
   remoteRoot: string;
+  remoteRoots: Record<string, string>;
 };
 
 function getOutputRoot() {
@@ -58,13 +59,48 @@ function getSftpConfiguration(): SftpConfiguration {
     throw new Error("HOSTINGER_SFTP_REMOTE_ROOT must be an absolute non-root path.");
   }
 
+  let remoteRoots: Record<string, string> = {};
+  const configuredRoots = process.env.HOSTINGER_SFTP_REMOTE_ROOTS_JSON?.trim();
+
+  if (configuredRoots) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(configuredRoots);
+    } catch {
+      throw new Error("HOSTINGER_SFTP_REMOTE_ROOTS_JSON must contain valid JSON.");
+    }
+
+    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error("HOSTINGER_SFTP_REMOTE_ROOTS_JSON must be a JSON object.");
+    }
+
+    remoteRoots = Object.fromEntries(
+      Object.entries(parsed).map(([siteId, value]) => {
+        if (typeof value !== "string" || !value.trim().startsWith("/")) {
+          throw new Error(`Invalid remote root configured for siteId: ${siteId}.`);
+        }
+        return [siteId, posix.normalize(value.trim()).replace(/\/+$/, "")];
+      })
+    );
+  }
+
   return {
     host: requiredEnvironmentVariable("HOSTINGER_SFTP_HOST"),
     port,
     username: requiredEnvironmentVariable("HOSTINGER_SFTP_USERNAME"),
     password: requiredEnvironmentVariable("HOSTINGER_SFTP_PASSWORD"),
     remoteRoot,
+    remoteRoots,
   };
+}
+
+function getRemoteRoot(configuration: SftpConfiguration, siteId: string) {
+  const mappedRoot = configuration.remoteRoots[siteId];
+  if (Object.keys(configuration.remoteRoots).length > 0 && !mappedRoot) {
+    throw new Error(`No Hostinger remote root is configured for siteId: ${siteId}.`);
+  }
+
+  return mappedRoot ?? configuration.remoteRoot;
 }
 
 function resolveInsideDirectory(rootDirectory: string, childName: string) {
@@ -142,6 +178,7 @@ export const productPagePublicationService = {
   async publish(input: ProductPagePublicationInput): Promise<ProductPagePublicationResult> {
     const configuration = getSftpConfiguration();
     const localDirectory = resolveInsideDirectory(getOutputRoot(), input.siteId);
+    const remoteRoot = getRemoteRoot(configuration, input.siteId);
 
     try {
       await access(localDirectory);
@@ -178,7 +215,7 @@ export const productPagePublicationService = {
 
       for (const localFile of orderedFiles) {
         const relativePath = relative(localDirectory, localFile);
-        const remoteFile = remotePathInsideRoot(configuration.remoteRoot, relativePath);
+        const remoteFile = remotePathInsideRoot(remoteRoot, relativePath);
         const remoteDirectory = posix.dirname(remoteFile);
         const temporaryRemoteFile = posix.join(
           remoteDirectory,
@@ -208,7 +245,7 @@ export const productPagePublicationService = {
     return {
       siteId: input.siteId,
       publishedAt: new Date().toISOString(),
-      remoteRoot: configuration.remoteRoot,
+      remoteRoot,
       files: localFiles.map((localFile) => relative(localDirectory, localFile).split(sep).join("/"))
     };
   }
