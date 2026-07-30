@@ -1,5 +1,3 @@
-"use client";
-
 import React, { useState, useEffect } from "react";
 import {
   Users,
@@ -8,13 +6,11 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertCircle,
-  Clock,
   Building2,
   CreditCard,
   Link2,
   ExternalLink,
   MessageCircle,
-  Tag,
   X,
   Check,
   Edit3,
@@ -22,28 +18,23 @@ import {
   Phone,
   Mail,
   FileCheck,
-  Image as ImageIcon,
-  BarChart3,
-  ShieldCheck,
   AlertTriangle,
-  UserCheck,
   ChevronRight,
   Archive,
   Trash2,
   AlertOctagon,
   UserPlus,
   Copy,
-  Save,
-  Eye
+  Save
 } from "lucide-react";
 import { HeroImageUploader } from "@/components/ui/hero-image-uploader";
-import { Badge } from "@/components/ui/badge";
 import {
   VerificationBadge,
   VerifyNowButton,
   FailedChecksDetails,
   DeliveryGuardAlert,
-  ProductPageVerificationResult
+  ProductPageVerificationResult,
+  ProductPageSiteSummary
 } from "@/components/ui/verification-status-panel";
 
 export type ActivationLeadStatus = "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
@@ -102,7 +93,7 @@ export function EntrepreneurOperationsView() {
   const [selectedLead, setSelectedLead] = useState<ActivationLeadRecord | null>(null);
 
   // Edit action states inside modal
-  const [editingStatus, setEditingStatus] = useState<ActivationLeadStatus | "">("");
+  const [_editingStatus, setEditingStatus] = useState<ActivationLeadStatus | "">("");
   const [editingSiteId, setEditingSiteId] = useState<string>("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [isEditingFields, setIsEditingFields] = useState(false);
@@ -170,7 +161,7 @@ export function EntrepreneurOperationsView() {
       const data = await leadsRes.json();
       const leadList: ActivationLeadRecord[] = data.leads || [];
 
-      let pageSites: any[] = [];
+      let pageSites: ProductPageSiteSummary[] = [];
       if (pagesRes.ok) {
         const pData = await pagesRes.json();
         pageSites = pData.sites || [];
@@ -989,7 +980,7 @@ export function EntrepreneurOperationsView() {
                     </label>
                     <select
                       value={createForm.paymentMethod}
-                      onChange={(e) => setCreateForm({ ...createForm, paymentMethod: e.target.value as any })}
+                      onChange={(e) => setCreateForm({ ...createForm, paymentMethod: e.target.value as "wompi" | "direct" })}
                       className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900"
                     >
                       <option value="direct">Transferencia Directa</option>
@@ -1003,7 +994,7 @@ export function EntrepreneurOperationsView() {
                     </label>
                     <select
                       value={createForm.status}
-                      onChange={(e) => setCreateForm({ ...createForm, status: e.target.value as any })}
+                      onChange={(e) => setCreateForm({ ...createForm, status: e.target.value as ActivationLeadStatus })}
                       className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900"
                     >
                       <option value="PAID">PAGADO (Recomendado)</option>
@@ -1100,8 +1091,6 @@ export function EntrepreneurOperationsView() {
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {filteredLeads.map((lead) => {
-                  const missingInfo = getMissingFields(lead);
-
                   return (
                     <tr
                       key={lead.id}
@@ -1567,7 +1556,7 @@ export function EntrepreneurOperationsView() {
                           <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Método de Pago</label>
                           <select
                             value={editForm.paymentMethod}
-                            onChange={(e) => setEditForm({ ...editForm, paymentMethod: e.target.value as any })}
+                            onChange={(e) => setEditForm({ ...editForm, paymentMethod: e.target.value as "wompi" | "direct" })}
                             className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           >
                             <option value="direct">Transferencia Directa</option>
@@ -1690,7 +1679,7 @@ export function EntrepreneurOperationsView() {
                           <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Modo de Logo</label>
                           <select
                             value={editForm.logoMode}
-                            onChange={(e) => setEditForm({ ...editForm, logoMode: e.target.value as any })}
+                            onChange={(e) => setEditForm({ ...editForm, logoMode: e.target.value as "TYPOGRAPHY" | "IMAGE" })}
                             className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           >
                             <option value="TYPOGRAPHY">Tipografía (Nombre de marca)</option>

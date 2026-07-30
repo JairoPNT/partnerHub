@@ -2,38 +2,31 @@
 
 import { useState, FormEvent, useEffect } from "react";
 import {
-  Sparkles,
   CheckCircle2,
   AlertCircle,
   FileCode,
   User,
   Phone,
   Search,
-  Image as ImageIcon,
+  ImageIcon,
   Copy,
   Check,
   RotateCcw,
   ArrowRight,
   Folder,
   UploadCloud,
-  Edit3,
   BarChart3,
   RefreshCw,
   AlertTriangle,
   Globe,
   Link2,
-  CheckCircle,
-  Clock,
-  ExternalLink,
-  Users,
-  CreditCard,
-  Building2
+  Users
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Label, Input, Textarea, Select } from "@/components/ui/form";
+import { Label, Input, Textarea } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
 import { HeroImageUploader } from "@/components/ui/hero-image-uploader";
 import { ModuleRecord } from "@/modules/catalog";
@@ -43,7 +36,8 @@ import {
   FailedChecksDetails,
   DeliveryGuardAlert,
   ProductPageVerificationResult,
-  ProductPageVerificationCheck
+  ProductPageVerificationCheck,
+  ProductPageSiteSummary
 } from "@/components/ui/verification-status-panel";
 
 type ProductPageGeneratorViewProps = {
@@ -185,7 +179,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       ]);
 
       let leadList: ActivationLeadRecord[] = [];
-      let pageSites: any[] = [];
+      let pageSites: ProductPageSiteSummary[] = [];
 
       if (leadsRes.ok) {
         const data = await leadsRes.json();
@@ -517,8 +511,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         setSelectedLead(updated);
         setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
       }
-    } catch (err: any) {
-      setErrorMessage(err.message || "Ocurrió un error inesperado durante la generación.");
+    } catch (err: unknown) {
+      setErrorMessage(err instanceof Error ? err.message : "Ocurrió un error inesperado durante la generación.");
     } finally {
       setIsSubmitting(false);
     }
@@ -573,8 +567,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         setSelectedLead(updatedLead);
         setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
       }
-    } catch (err: any) {
-      setPublishError(err.message || "Ocurrió un error inesperado durante la publicación.");
+    } catch (err: unknown) {
+      setPublishError(err instanceof Error ? err.message : "Ocurrió un error inesperado durante la publicación.");
     } finally {
       clearTimeout(stepTimer);
       setIsPublishing(false);

@@ -30,6 +30,18 @@ export type ProductPageVerificationResult = {
   checks: ProductPageVerificationCheck[];
 };
 
+export interface ProductPageSiteSummary {
+  siteId: string;
+  configuration?: {
+    brandName?: string;
+    title?: string;
+    domain?: string;
+    site?: { domain?: string };
+    [key: string]: unknown;
+  } | null;
+  lastVerification?: ProductPageVerificationResult | null;
+}
+
 // Mapa de nombres de checks a descripciones legibles
 const CHECK_NAME_LABELS: Record<string, string> = {
   homepage_reachable: "Acceso al Dominio Principal",
@@ -142,8 +154,8 @@ export function VerifyNowButton({
       if (onVerified) {
         onVerified(data as ProductPageVerificationResult);
       }
-    } catch (err: any) {
-      const msg = err.message || "Error al conectar con la verificación.";
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error al conectar con la verificación.";
       if (onError) onError(msg);
     } finally {
       setIsVerifying(false);
