@@ -391,23 +391,23 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
     switch (pubState) {
       case "PUBLISHED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-1 text-xs font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
+          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800 border border-emerald-300">
+            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
             PUBLISHED
           </span>
         );
       case "GENERATED":
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 dark:bg-cyan-950/60 px-2.5 py-1 text-xs font-bold text-cyan-800 dark:text-cyan-300 border border-cyan-300 dark:border-cyan-800">
-            <RefreshCw className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+          <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-bold text-cyan-800 border border-cyan-300">
+            <RefreshCw className="h-3.5 w-3.5 text-cyan-600" />
             GENERATED
           </span>
         );
       case "NOT_STARTED":
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-950/60 px-2.5 py-1 text-xs font-bold text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800">
-            <Clock className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 border border-amber-300">
+            <Clock className="h-3.5 w-3.5 text-amber-600" />
             NOT_STARTED
           </span>
         );
@@ -415,15 +415,15 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
   };
 
   return (
-    <div className="space-y-8 animate-fade-in text-slate-900 dark:text-slate-100">
+    <div className="space-y-8 animate-fade-in text-slate-900">
       {/* HEADER DEL MÓDULO */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-8">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
-            <span className="rounded-full bg-cyan-100 dark:bg-cyan-950 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-900 dark:text-cyan-300">
+            <span className="rounded-full bg-cyan-100 px-3 py-1 text-xs font-bold uppercase tracking-wider text-cyan-900">
               {record?.group || "Operaciones"}
             </span>
-            <span className="rounded-full border border-slate-200 dark:border-slate-800 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+            <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600">
               Editor de Plantilla Maestra
             </span>
           </div>
@@ -440,24 +440,24 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           </a>
         </div>
 
-        <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-900 dark:text-white sm:text-4xl">
+        <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
           Editor de Plantilla Maestra (`ganomaster.pro`)
         </h1>
-        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600 dark:text-slate-400">
-          Edita la configuración de la plantilla maestra con identificador fijo <code className="font-mono font-bold text-cyan-600 dark:text-cyan-400">ganomaster</code> y dominio <code className="font-mono font-bold text-cyan-600 dark:text-cyan-400">ganomaster.pro</code>. Genera la vista previa y publícala antes de replicar a los clientes.
+        <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
+          Edita la configuración de la plantilla maestra con identificador fijo <code className="font-mono font-bold text-cyan-600">ganomaster</code> y dominio <code className="font-mono font-bold text-cyan-600">ganomaster.pro</code>. Genera la vista previa y publícala antes de replicar a los clientes.
         </p>
       </section>
 
       {/* DASHBOARD DE ESTADO DEL MASTER */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
           <div className="flex items-center gap-3">
-            <Globe className="h-6 w-6 text-cyan-600 dark:text-cyan-400" />
+            <Globe className="h-6 w-6 text-cyan-600" />
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              <h2 className="text-base font-bold text-slate-900">
                 Estado Actual de ganomaster.pro
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500">
                 Información técnica y fechas de actualización de la plantilla maestra
               </p>
             </div>
@@ -467,36 +467,36 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 text-xs">
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950 space-y-1">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
             <span className="text-slate-400 font-bold text-[10px] uppercase block">Dominio Fijo</span>
             <a
               href="https://ganomaster.pro"
               target="_blank"
               rel="noopener noreferrer"
-              className="font-extrabold font-mono text-cyan-600 dark:text-cyan-400 text-sm hover:underline inline-flex items-center gap-1"
+              className="font-extrabold font-mono text-cyan-600 text-sm hover:underline inline-flex items-center gap-1"
             >
               {MASTER_DOMAIN}
               <ExternalLink className="h-3 w-3" />
             </a>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950 space-y-1">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
             <span className="text-slate-400 font-bold text-[10px] uppercase block">siteId Fijo</span>
-            <span className="font-extrabold font-mono text-slate-900 dark:text-white text-sm">
+            <span className="font-extrabold font-mono text-slate-900 text-sm">
               {MASTER_SITE_ID}
             </span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950 space-y-1">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
             <span className="text-slate-400 font-bold text-[10px] uppercase block">Fecha de Generación</span>
-            <span className="font-bold text-slate-700 dark:text-slate-300 text-xs">
+            <span className="font-bold text-slate-700 text-xs">
               {generatedAt ? new Date(generatedAt).toLocaleString("es-CO") : "No generada aún"}
             </span>
           </div>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950 space-y-1">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
             <span className="text-slate-400 font-bold text-[10px] uppercase block">Última Publicación</span>
-            <span className="font-bold text-slate-700 dark:text-slate-300 text-xs">
+            <span className="font-bold text-slate-700 text-xs">
               {publishedAt ? new Date(publishedAt).toLocaleString("es-CO") : "Publicación inicial activa"}
             </span>
           </div>
@@ -505,12 +505,12 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
       {/* NOTIFICACIONES Y ALERTAS DEL MASTER */}
       {masterSuccessMessage && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
             <span>{masterSuccessMessage}</span>
           </div>
-          <button onClick={() => setMasterSuccessMessage(null)} className="text-emerald-800 dark:text-emerald-300">
+          <button onClick={() => setMasterSuccessMessage(null)} className="text-emerald-800">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -524,15 +524,15 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
       {/* RESUMEN DE ARCHIVOS GENERADOS */}
       {generationOutput && (
-        <Card className="border-cyan-200 bg-cyan-50/30 dark:border-cyan-800 dark:bg-cyan-950/20 p-5 space-y-4">
+        <Card className="border-cyan-200 bg-cyan-50/30 p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-1">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+              <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                <CheckCircle2 className="h-5 w-5 text-cyan-600" />
                 Paquete Local de ganomaster Generado
               </h3>
-              <p className="text-xs text-slate-600 dark:text-slate-400">
-                Directorio: <code className="font-mono bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded">{generationOutput.outputDirectory}</code>
+              <p className="text-xs text-slate-600">
+                Directorio: <code className="font-mono bg-slate-100 px-2 py-0.5 rounded">{generationOutput.outputDirectory}</code>
               </p>
             </div>
 
@@ -563,15 +563,15 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       {/* FORMULARIO EDITABLE DE CONFIGURACIÓN DEL MASTER */}
       <form onSubmit={handleGenerateMaster} className="space-y-6">
         {/* Bloque 1: Identificación y Marca */}
-        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <User className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+              <User className="h-5 w-5 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
                 1. Identificación y Datos de Marca (`ganomaster`)
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+            <CardDescription className="text-xs text-slate-500">
               Configuración de la marca maestra oficial y nombres de presentación.
             </CardDescription>
           </CardHeader>
@@ -623,15 +623,15 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         </Card>
 
         {/* Bloque 2: Contacto y Pasarela */}
-        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Phone className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+              <Phone className="h-5 w-5 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
                 2. Contacto, WhatsApp y URL de Compra
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+            <CardDescription className="text-xs text-slate-500">
               Datos de contacto oficial y pasarela de pago para la plantilla maestra.
             </CardDescription>
           </CardHeader>
@@ -682,15 +682,15 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         </Card>
 
         {/* Bloque 3: SEO y Favicon */}
-        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <Search className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+              <Search className="h-5 w-5 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
                 3. Configuración SEO y Favicon
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+            <CardDescription className="text-xs text-slate-500">
               Metadatos para la versión maestra ganomaster.pro.
             </CardDescription>
           </CardHeader>
@@ -731,15 +731,15 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         </Card>
 
         {/* Bloque 4: Multimedia y Héroes en R2 */}
-        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <ImageIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+              <ImageIcon className="h-5 w-5 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
                 4. Recursos Multimedia (Imágenes Hero en Cloudflare R2)
               </CardTitle>
             </div>
-            <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
+            <CardDescription className="text-xs text-slate-500">
               Selecciona los archivos de imagen para Hero Desktop y Hero Mobile. Se subirán y optimizarán automáticamente a R2.
             </CardDescription>
           </CardHeader>
@@ -766,11 +766,11 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         </Card>
 
         {/* Bloque 5: Analítica */}
-        <Card className="border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm">
+        <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader>
             <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-              <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
+              <BarChart3 className="h-5 w-5 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
                 5. Google Analytics
               </CardTitle>
             </div>
@@ -815,15 +815,15 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       </form>
 
       {/* SECCIÓN 5: APROBACIÓN DEL EQUIPO */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 space-y-4">
-        <div className="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 pb-3">
-          <ShieldCheck className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-          <h2 className="text-base font-bold text-slate-900 dark:text-white">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+        <div className="flex items-center gap-3 border-b border-slate-200 pb-3">
+          <ShieldCheck className="h-5 w-5 text-cyan-600" />
+          <h2 className="text-base font-bold text-slate-900">
             Aprobación del Equipo
           </h2>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 dark:border-slate-800 dark:bg-slate-950 space-y-3">
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/80 p-5 space-y-3">
           <label className="flex items-start gap-3 cursor-pointer">
             <input
               type="checkbox"
@@ -832,17 +832,17 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
               className="mt-0.5 h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
             />
             <div className="space-y-0.5">
-              <span className="text-xs font-bold text-slate-900 dark:text-white select-none">
+              <span className="text-xs font-bold text-slate-900 select-none">
                 He revisado y aprobado la versión actual de ganomaster.pro
               </span>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+              <p className="text-[11px] text-slate-500">
                 La replicación masiva en clientes estará habilitada únicamente cuando la versión publicada en <code className="font-mono">ganomaster.pro</code> esté totalmente aprobada.
               </p>
             </div>
           </label>
 
           {!isApproved && (
-            <div className="flex items-center gap-2 text-amber-700 dark:text-amber-400 text-xs font-semibold pt-1">
+            <div className="flex items-center gap-2 text-amber-700 text-xs font-semibold pt-1">
               <AlertTriangle className="h-4 w-4 shrink-0" />
               <span>La replicación masiva está deshabilitada hasta que apruebes la versión publicada en ganomaster.pro.</span>
             </div>
@@ -851,15 +851,15 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       </section>
 
       {/* SECCIÓN 6: REPLICAR CAMBIOS APROBADOS */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-6">
-        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-4">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-6">
+        <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-200 pb-4">
           <div className="flex items-center gap-3">
-            <Layers className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+            <Layers className="h-5 w-5 text-cyan-600" />
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white">
+              <h2 className="text-base font-bold text-slate-900">
                 Replicar Cambios Aprobados a Sitios Clientes
               </h2>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500">
                 Selecciona únicamente los sitios de clientes/empresarios receptores. El sitio ganomaster está excluido permanentemente.
               </p>
             </div>
@@ -870,10 +870,10 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
               type="button"
               onClick={handleToggleSelectAll}
               disabled={clientSites.length === 0}
-              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 dark:border-slate-800 dark:bg-slate-950 px-3.5 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 transition disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition disabled:opacity-50"
             >
               {selectedSiteIds.length === clientSites.length && clientSites.length > 0 ? (
-                <CheckSquare className="h-4 w-4 text-cyan-600 dark:text-cyan-400" />
+                <CheckSquare className="h-4 w-4 text-cyan-600" />
               ) : (
                 <Square className="h-4 w-4 text-slate-400" />
               )}
@@ -894,22 +894,22 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
         {/* DIÁLOGO DE CONFIRMACIÓN */}
         {confirmingReplication && (
-          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 dark:border-amber-700/60 dark:bg-amber-950/40 space-y-3 animate-in fade-in">
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-5 space-y-3 animate-in fade-in">
             <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
               <div className="space-y-1">
-                <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                <h4 className="text-sm font-bold text-amber-900">
                   Confirmación de Replicación Masiva en Clientes
                 </h4>
-                <p className="text-xs text-amber-800 dark:text-amber-300">
+                <p className="text-xs text-amber-800">
                   Estás a punto de replicar la plantilla maestra aprobada <strong>ganomaster.pro</strong> en{" "}
                   <strong>{selectedSiteIds.length} cliente(s) seleccionado(s)</strong>:
                 </p>
-                <div className="mt-2 flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 rounded-xl bg-white/80 dark:bg-slate-900/80 border border-amber-200 dark:border-amber-800">
+                <div className="mt-2 flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 rounded-xl bg-white/80 border border-amber-200">
                   {selectedSiteIds.map((id) => (
                     <span
                       key={id}
-                      className="font-mono text-[11px] font-bold text-slate-800 dark:text-slate-200 rounded bg-slate-100 dark:bg-slate-800 px-2 py-0.5"
+                      className="font-mono text-[11px] font-bold text-slate-800 rounded bg-slate-100 px-2 py-0.5"
                     >
                       {id}
                     </span>
@@ -933,7 +933,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
                 type="button"
                 onClick={() => setConfirmingReplication(false)}
                 disabled={isReplicating}
-                className="rounded-xl border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 transition"
+                className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition"
               >
                 Cancelar
               </button>
@@ -943,12 +943,12 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
         {/* ALERTA DE ERROR EN REPLICACIÓN */}
         {replicationErrorMessage && (
-          <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm font-semibold text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm font-semibold text-rose-900">
             <div className="flex items-center gap-2.5">
-              <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-400" />
+              <AlertCircle className="h-5 w-5 shrink-0 text-rose-600" />
               <span>{replicationErrorMessage}</span>
             </div>
-            <button onClick={() => setReplicationErrorMessage(null)} className="text-rose-800 dark:text-rose-300">
+            <button onClick={() => setReplicationErrorMessage(null)} className="text-rose-800">
               <X className="h-4 w-4" />
             </button>
           </div>
@@ -962,18 +962,18 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           </div>
         ) : clientSites.length === 0 ? (
           <div className="p-12 text-center space-y-3">
-            <FileCode2 className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600" />
-            <h3 className="text-base font-bold text-slate-900 dark:text-white">
+            <FileCode2 className="mx-auto h-12 w-12 text-slate-300" />
+            <h3 className="text-base font-bold text-slate-900">
               No hay sitios clientes disponibles
             </h3>
-            <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto">
+            <p className="text-xs text-slate-500 max-w-md mx-auto">
               Aún no existen configuraciones de páginas de clientes para recibir la replicación.
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto rounded-2xl border border-slate-200 dark:border-slate-800">
+          <div className="overflow-x-auto rounded-2xl border border-slate-200">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+              <thead className="border-b border-slate-200 bg-slate-50 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="py-3 px-4 w-10">Selección</th>
                   <th className="py-3 px-4">Site ID Cliente</th>
@@ -982,7 +982,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
                   <th className="py-3 px-4">Última Publicación</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+              <tbody className="divide-y divide-slate-100 font-medium">
                 {clientSites.map((site) => {
                   const isChecked = selectedSiteIds.includes(site.siteId);
 
@@ -992,8 +992,8 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
                       onClick={() => handleToggleSite(site.siteId)}
                       className={`cursor-pointer transition ${
                         isChecked
-                          ? "bg-cyan-50/40 dark:bg-cyan-950/20 hover:bg-cyan-50/70"
-                          : "hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                          ? "bg-cyan-50/50 hover:bg-cyan-50/80"
+                          : "hover:bg-slate-50"
                       }`}
                     >
                       <td className="py-3.5 px-4">
@@ -1005,7 +1005,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
                         />
                       </td>
 
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
+                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
                         {site.siteId}
                       </td>
 
@@ -1015,7 +1015,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
                             href={`https://${site.domain}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="text-cyan-600 dark:text-cyan-400 font-bold hover:underline inline-flex items-center gap-1"
+                            className="text-cyan-600 font-bold hover:underline inline-flex items-center gap-1"
                           >
                             <Globe className="h-3.5 w-3.5" />
                             {site.domain}
@@ -1030,7 +1030,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
                         {getPublicationBadge(site.publicationState)}
                       </td>
 
-                      <td className="py-3.5 px-4 text-slate-600 dark:text-slate-400 text-[11px]">
+                      <td className="py-3.5 px-4 text-slate-600 text-[11px]">
                         {site.lastPublishedAt
                           ? new Date(site.lastPublishedAt).toLocaleString("es-CO")
                           : "No disponible"}
@@ -1046,9 +1046,9 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
       {/* RESULTADO INDIVIDUAL DE REPLICACIÓN */}
       {replicationOutput && (
-        <section className="rounded-3xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-3">
-            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-emerald-500" />
               Resultado Individual de Replicación ({replicationOutput.count} clientes)
             </h3>
@@ -1061,38 +1061,38 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             {replicationOutput.results.map((resItem) => (
               <div
                 key={resItem.siteId}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950 flex flex-wrap items-center justify-between gap-3 text-xs"
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4 flex flex-wrap items-center justify-between gap-3 text-xs"
               >
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
-                    <span className="font-mono font-bold text-slate-900 dark:text-white text-sm">
+                    <span className="font-mono font-bold text-slate-900 text-sm">
                       {resItem.siteId}
                     </span>
                     {resItem.error ? (
-                      <span className="rounded bg-rose-100 dark:bg-rose-950/60 px-2 py-0.5 text-[11px] font-bold text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800">
+                      <span className="rounded bg-rose-100 px-2 py-0.5 text-[11px] font-bold text-rose-800 border border-rose-300">
                         Error en Replicación
                       </span>
                     ) : (
-                      <span className="rounded bg-emerald-100 dark:bg-emerald-950/60 px-2 py-0.5 text-[11px] font-bold text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800">
+                      <span className="rounded bg-emerald-100 px-2 py-0.5 text-[11px] font-bold text-emerald-800 border border-emerald-300">
                         Replicado Exitosamente
                       </span>
                     )}
                   </div>
-                  <p className="text-slate-500 dark:text-slate-400 text-[11px]">
+                  <p className="text-slate-500 text-[11px]">
                     Origen: <code className="font-mono font-bold">ganomaster.pro</code>
                   </p>
                 </div>
 
                 {resItem.error ? (
-                  <div className="text-rose-600 dark:text-rose-400 text-xs font-semibold">
+                  <div className="text-rose-600 text-xs font-semibold">
                     {resItem.error}
                   </div>
                 ) : (
-                  <div className="flex items-center gap-4 text-slate-600 dark:text-slate-400 text-[11px]">
-                    <span className="flex items-center gap-1 font-semibold text-emerald-600 dark:text-emerald-400">
+                  <div className="flex items-center gap-4 text-slate-600 text-[11px]">
+                    <span className="flex items-center gap-1 font-semibold text-emerald-600">
                       <Check className="h-3.5 w-3.5" /> HTML Generado
                     </span>
-                    <span className="flex items-center gap-1 font-semibold text-cyan-600 dark:text-cyan-400">
+                    <span className="flex items-center gap-1 font-semibold text-cyan-600">
                       <Check className="h-3.5 w-3.5" /> Sitio Publicado
                     </span>
                   </div>
