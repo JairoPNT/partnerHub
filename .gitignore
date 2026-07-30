@@ -9,3 +9,5 @@ app/web/node_modules/
 .DS_Store
 Thumbs.db
 
+# Local deployment credentials and machine-specific secrets
+.local-secrets/

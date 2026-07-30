@@ -11,6 +11,11 @@ El operador selecciona la imagen desde el dashboard. PartnerHub valida y convier
 
 La ruta publica se construye con `R2_PUBLIC_BASE_URL`, actualmente `https://media.partnerhub.club`.
 
+El endpoint S3/R2 configurado para el bucket es:
+`https://432a9c2d446773ce8cb3abe45f1f9d89.r2.cloudflarestorage.com`
+
+La referencia local de credenciales se encuentra en `.local-secrets/partnerhub-r2.md`; ese directorio esta excluido de Git.
+
 ## Endpoint interno
 
 `POST /api/internal/media/hero` como `multipart/form-data` con:
