@@ -52,6 +52,9 @@ export interface OnboardingData {
   logoMode?: "TYPOGRAPHY" | "IMAGE";
   logoUrl?: string;
   faviconUrl?: string;
+  seoTitle?: string;
+  metaDescription?: string;
+  defaultMessage?: string;
   analyticsMeasurementId?: string;
   imageUseConsent?: boolean;
   agreementAccepted?: boolean;
@@ -113,6 +116,9 @@ export function EntrepreneurOperationsView() {
     heroMobileUrl: "",
     logoMode: "TYPOGRAPHY" as "TYPOGRAPHY" | "IMAGE",
     logoUrl: "",
+    seoTitle: "",
+    metaDescription: "",
+    defaultMessage: "",
     analyticsMeasurementId: ""
   });
 
@@ -183,6 +189,9 @@ export function EntrepreneurOperationsView() {
         heroMobileUrl: selectedLead.onboardingData?.heroMobileUrl || "",
         logoMode: selectedLead.onboardingData?.logoMode || "TYPOGRAPHY",
         logoUrl: selectedLead.onboardingData?.logoUrl || "",
+        seoTitle: selectedLead.onboardingData?.seoTitle || "",
+        metaDescription: selectedLead.onboardingData?.metaDescription || "",
+        defaultMessage: selectedLead.onboardingData?.defaultMessage || "",
         analyticsMeasurementId: selectedLead.onboardingData?.analyticsMeasurementId || ""
       });
     }
@@ -212,6 +221,9 @@ export function EntrepreneurOperationsView() {
           heroMobileUrl: editForm.heroMobileUrl.trim() || undefined,
           logoMode: editForm.logoMode,
           logoUrl: editForm.logoMode === "IMAGE" ? (editForm.logoUrl.trim() || undefined) : undefined,
+          seoTitle: editForm.seoTitle.trim() || undefined,
+          metaDescription: editForm.metaDescription.trim() || undefined,
+          defaultMessage: editForm.defaultMessage.trim() || undefined,
           analyticsMeasurementId: editForm.analyticsMeasurementId.trim() || undefined,
         }
       };
@@ -1518,6 +1530,43 @@ export function EntrepreneurOperationsView() {
                             placeholder="Ej. +573188430283"
                             className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
                           />
+                        </div>
+
+                        <div className="sm:col-span-2 grid gap-4 rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-950/70">
+                          <p className="text-[11px] font-bold uppercase text-slate-500">SEO y Conversión</p>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Título SEO</label>
+                            <input
+                              type="text"
+                              value={editForm.seoTitle}
+                              onChange={(e) => setEditForm({ ...editForm, seoTitle: e.target.value })}
+                              placeholder="Ej. Dorian Higuita - Bienestar y Vitalidad con Gano Excel"
+                              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Meta descripción</label>
+                            <textarea
+                              rows={2}
+                              value={editForm.metaDescription}
+                              onChange={(e) => setEditForm({ ...editForm, metaDescription: e.target.value })}
+                              placeholder="Descripción breve para Google y previsualizaciones sociales."
+                              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            />
+                          </div>
+
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Mensaje inicial de WhatsApp</label>
+                            <textarea
+                              rows={2}
+                              value={editForm.defaultMessage}
+                              onChange={(e) => setEditForm({ ...editForm, defaultMessage: e.target.value })}
+                              placeholder="Mensaje prellenado al abrir WhatsApp desde la landing."
+                              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            />
+                          </div>
                         </div>
 
                         <div className="sm:col-span-2">

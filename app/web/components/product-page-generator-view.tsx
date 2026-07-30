@@ -63,6 +63,9 @@ export interface ActivationLeadRecord {
     logoMode?: "TYPOGRAPHY" | "IMAGE";
     logoUrl?: string;
     faviconUrl?: string;
+    seoTitle?: string;
+    metaDescription?: string;
+    defaultMessage?: string;
     analyticsMeasurementId?: string;
   };
   createdAt: string;
@@ -233,13 +236,13 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       whatsappNumber: lead.whatsapp || "",
       displayPhone: lead.onboardingData?.phone || lead.whatsapp || "",
       purchaseUrl: lead.onboardingData?.purchaseUrl || "",
-      siteTitle: lead.brandName ? `${lead.brandName} — Bienestar y Vitalidad con Gano Excel` : "",
-      metaDescription: lead.brandName
-        ? `Descubre cómo transformar tu día a día con café, cacao y suplementos enriquecidos con Ganoderma lucidum por ${lead.brandName}.`
-        : "",
+      siteTitle: lead.onboardingData?.seoTitle || (lead.brandName ? `${lead.brandName} — Bienestar y Vitalidad con Gano Excel` : ""),
+      metaDescription: lead.onboardingData?.metaDescription || (lead.brandName
+        ? `Descubre como transformar tu dia a dia con cafe, cacao y suplementos enriquecidos con Ganoderma lucidum por ${lead.brandName}.`
+        : ""),
       heroDesktop: lead.onboardingData?.heroDesktopUrl || "",
       heroMobile: lead.onboardingData?.heroMobileUrl || "",
-      defaultMessage: `Hola ${firstName}, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.`,
+      defaultMessage: lead.onboardingData?.defaultMessage || `Hola ${firstName}, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.`,
       measurementId: lead.onboardingData?.analyticsMeasurementId || "",
       faviconUrl: lead.onboardingData?.faviconUrl || ""
     });
@@ -862,13 +865,18 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 placeholder="ej. dorian-higuita"
                 value={form.siteId}
                 onChange={(e) => handleInputChange("siteId", e.target.value)}
+                disabled={Boolean(selectedLead?.siteId)}
                 className={fieldErrors.siteId ? "border-rose-400 focus:border-rose-500 font-mono" : "font-mono"}
               />
               {fieldErrors.siteId ? (
                 <p className="mt-1 text-xs text-rose-600">{fieldErrors.siteId[0]}</p>
               ) : (
                 <p className="mt-1 text-[11px] text-slate-400">
-                  Slug minúsculo sin espacios (ej. <code className="font-mono">dorian-higuita</code>).
+                  {selectedLead?.siteId ? (
+                    "ID tecnico bloqueado despues de vincular el sitio."
+                  ) : (
+                    <>Slug minusculo sin espacios (ej. <code className="font-mono">dorian-higuita</code>).</>
+                  )}
                 </p>
               )}
             </div>

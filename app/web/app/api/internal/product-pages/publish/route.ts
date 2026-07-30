@@ -5,6 +5,7 @@ import {
   productPagePublicationInputSchema,
   productPagePublicationService
 } from "@/server/services/productPagePublicationService";
+import { productPageGenerationService } from "@/server/services/productPageGenerationService";
 
 export const runtime = "nodejs";
 
@@ -12,6 +13,9 @@ export async function POST(request: Request) {
   try {
     const body = await request.json();
     const input = productPagePublicationInputSchema.parse(body);
+
+    await productPageGenerationService.regenerateFromSavedSource(input.siteId);
+
     const result = await productPagePublicationService.publish(input);
 
     return NextResponse.json(result, { status: 201 });
