@@ -18,7 +18,8 @@ import {
   HelpCircle,
   Check,
   X,
-  AlertTriangle
+  AlertTriangle,
+  Layers
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import { Alert } from "@/components/ui/alert";
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
 import { ModuleRecord } from "@/modules/catalog";
 import { EntrepreneurOperationsView } from "@/components/entrepreneur-operations-view";
+import { MasterTemplateReplicationView } from "@/components/master-template-replication-view";
 
 type PartnersReferralsViewProps = {
   record?: ModuleRecord;
@@ -73,7 +75,7 @@ interface StatusConfirmationState {
 }
 
 export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
-  const [activeTab, setActiveTab] = useState<"OPERATIONS" | "REFERRALS">("OPERATIONS");
+  const [activeTab, setActiveTab] = useState<"OPERATIONS" | "REPLICATION" | "REFERRALS">("OPERATIONS");
   const [data, setData] = useState<ReferralDataResponse>({
     codes: [],
     referrals: [],
@@ -308,10 +310,10 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
         </p>
 
         {/* Control de Pestañas */}
-        <div className="mt-6 flex border-b border-slate-200 gap-2">
+        <div className="mt-6 flex border-b border-slate-200 gap-2 overflow-x-auto">
           <button
             onClick={() => setActiveTab("OPERATIONS")}
-            className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition ${
+            className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition whitespace-nowrap ${
               activeTab === "OPERATIONS"
                 ? "border-cyan-600 text-cyan-950 font-extrabold"
                 : "border-transparent text-slate-500 hover:text-slate-900"
@@ -322,8 +324,20 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
           </button>
 
           <button
+            onClick={() => setActiveTab("REPLICATION")}
+            className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition whitespace-nowrap ${
+              activeTab === "REPLICATION"
+                ? "border-cyan-600 text-cyan-950 font-extrabold"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <Layers className="h-4 w-4 text-cyan-600" />
+            <span>Plantilla Maestra y Replicación</span>
+          </button>
+
+          <button
             onClick={() => setActiveTab("REFERRALS")}
-            className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition ${
+            className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition whitespace-nowrap ${
               activeTab === "REFERRALS"
                 ? "border-cyan-600 text-cyan-950 font-extrabold"
                 : "border-transparent text-slate-500 hover:text-slate-900"
@@ -338,6 +352,8 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
       {/* RENDERIZADO DE PESTAÑA ACTIVA */}
       {activeTab === "OPERATIONS" ? (
         <EntrepreneurOperationsView />
+      ) : activeTab === "REPLICATION" ? (
+        <MasterTemplateReplicationView />
       ) : (
         <div className="space-y-8">
           {/* Nota Interna Obligatoria */}
