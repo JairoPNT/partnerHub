@@ -502,35 +502,35 @@ export function EntrepreneurOperationsView() {
     switch (status) {
       case "NEW":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:border-amber-700/60 dark:bg-amber-950/40 dark:text-amber-300">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900">
             <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
             NUEVO
           </span>
         );
       case "CONTACTED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-300 bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-900 dark:border-blue-700/60 dark:bg-blue-950/40 dark:text-blue-300">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-300 bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-900">
             <span className="h-2 w-2 rounded-full bg-blue-500" />
             CONTACTADO
           </span>
         );
       case "PAID":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-900 dark:border-emerald-700/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-900">
             <span className="h-2 w-2 rounded-full bg-emerald-500" />
             PAGADO
           </span>
         );
       case "CONVERTED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-green-300 bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-900 dark:border-green-700/60 dark:bg-green-950/40 dark:text-green-300">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-green-300 bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-900">
             <span className="h-2 w-2 rounded-full bg-green-600" />
             CONVERTIDO
           </span>
         );
       case "CANCELLED":
         return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-900 dark:border-rose-700/60 dark:bg-rose-950/40 dark:text-rose-300">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-900">
             <span className="h-2 w-2 rounded-full bg-rose-500" />
             CANCELADO
           </span>
@@ -542,21 +542,21 @@ export function EntrepreneurOperationsView() {
     <div className="space-y-6">
       {/* Top Banner / Notification Toast */}
       {successMessage && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/10 dark:text-emerald-200">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-emerald-300 bg-emerald-50 p-4 text-sm font-semibold text-emerald-900">
           <div className="flex items-center gap-2.5">
-            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-500" />
+            <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-600" />
             <span>{successMessage}</span>
           </div>
-          <button onClick={() => setSuccessMessage(null)} className="text-emerald-800 dark:text-emerald-300 hover:opacity-80">
+          <button onClick={() => setSuccessMessage(null)} className="text-emerald-800 hover:opacity-80">
             <X className="h-4 w-4" />
           </button>
         </div>
       )}
 
       {errorMessage && (
-        <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm font-semibold text-rose-900 dark:border-rose-500/40 dark:bg-rose-500/10 dark:text-rose-200">
+        <div className="flex items-center justify-between gap-3 rounded-2xl border border-rose-300 bg-rose-50 p-4 text-sm font-semibold text-rose-900">
           <div className="flex items-center gap-2.5">
-            <AlertCircle className="h-5 w-5 shrink-0 text-rose-600 dark:text-rose-500" />
+            <AlertCircle className="h-5 w-5 shrink-0 text-rose-600" />
             <span>{errorMessage}</span>
           </div>
           <button onClick={fetchLeads} className="inline-flex items-center gap-1 text-xs font-bold underline">
@@ -571,14 +571,14 @@ export function EntrepreneurOperationsView() {
           onClick={() => setStatusFilter("ALL")}
           className={`cursor-pointer rounded-2xl border p-4 transition ${
             statusFilter === "ALL"
-              ? "border-cyan-500 bg-cyan-50 shadow-sm ring-1 ring-cyan-500 dark:bg-cyan-950/40"
-              : "border-slate-200 bg-white hover:border-slate-300 dark:border-slate-800 dark:bg-slate-900"
+              ? "border-cyan-500 bg-cyan-50 shadow-sm ring-1 ring-cyan-500"
+              : "border-slate-200 bg-white hover:border-slate-300"
           }`}
         >
-          <p className="text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-400">
+          <p className="text-xs font-bold uppercase tracking-wider text-slate-600">
             Total Registros
           </p>
-          <p className="mt-1 font-heading text-2xl font-extrabold text-slate-900 dark:text-white">
+          <p className="mt-1 font-heading text-2xl font-extrabold text-slate-900">
             {counts.total}
           </p>
         </div>
@@ -587,17 +587,17 @@ export function EntrepreneurOperationsView() {
           onClick={() => setStatusFilter("NEW")}
           className={`cursor-pointer rounded-2xl border p-4 transition ${
             statusFilter === "NEW"
-              ? "border-amber-500 bg-amber-100/80 shadow-sm ring-1 ring-amber-500 dark:bg-amber-950/50"
-              : "border-amber-200 bg-amber-50 hover:border-amber-300 dark:border-amber-900/50 dark:bg-amber-950/20"
+              ? "border-amber-500 bg-amber-100/80 shadow-sm ring-1 ring-amber-500"
+              : "border-amber-200 bg-amber-50 hover:border-amber-300"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">
+            <p className="text-xs font-bold uppercase tracking-wider text-amber-900">
               NUEVO
             </p>
             <span className="h-2.5 w-2.5 rounded-full bg-amber-500 animate-pulse" />
           </div>
-          <p className="mt-1 font-heading text-2xl font-extrabold text-amber-950 dark:text-amber-200">
+          <p className="mt-1 font-heading text-2xl font-extrabold text-amber-950">
             {counts.NEW}
           </p>
         </div>
@@ -606,17 +606,17 @@ export function EntrepreneurOperationsView() {
           onClick={() => setStatusFilter("CONTACTED")}
           className={`cursor-pointer rounded-2xl border p-4 transition ${
             statusFilter === "CONTACTED"
-              ? "border-blue-500 bg-blue-100/80 shadow-sm ring-1 ring-blue-500 dark:bg-blue-950/50"
-              : "border-blue-200 bg-blue-50 hover:border-blue-300 dark:border-blue-900/50 dark:bg-blue-950/20"
+              ? "border-blue-500 bg-blue-100/80 shadow-sm ring-1 ring-blue-500"
+              : "border-blue-200 bg-blue-50 hover:border-blue-300"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-blue-900 dark:text-blue-300">
+            <p className="text-xs font-bold uppercase tracking-wider text-blue-900">
               CONTACTADO
             </p>
             <span className="h-2.5 w-2.5 rounded-full bg-blue-500" />
           </div>
-          <p className="mt-1 font-heading text-2xl font-extrabold text-blue-950 dark:text-blue-200">
+          <p className="mt-1 font-heading text-2xl font-extrabold text-blue-950">
             {counts.CONTACTED}
           </p>
         </div>
@@ -625,17 +625,17 @@ export function EntrepreneurOperationsView() {
           onClick={() => setStatusFilter("PAID")}
           className={`cursor-pointer rounded-2xl border p-4 transition ${
             statusFilter === "PAID"
-              ? "border-emerald-500 bg-emerald-100/80 shadow-sm ring-1 ring-emerald-500 dark:bg-emerald-950/50"
-              : "border-emerald-200 bg-emerald-50 hover:border-emerald-300 dark:border-emerald-900/50 dark:bg-emerald-950/20"
+              ? "border-emerald-500 bg-emerald-100/80 shadow-sm ring-1 ring-emerald-500"
+              : "border-emerald-200 bg-emerald-50 hover:border-emerald-300"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-emerald-900 dark:text-emerald-300">
+            <p className="text-xs font-bold uppercase tracking-wider text-emerald-900">
               PAGADO
             </p>
             <span className="h-2.5 w-2.5 rounded-full bg-emerald-500" />
           </div>
-          <p className="mt-1 font-heading text-2xl font-extrabold text-emerald-950 dark:text-emerald-200">
+          <p className="mt-1 font-heading text-2xl font-extrabold text-emerald-950">
             {counts.PAID}
           </p>
         </div>
@@ -644,17 +644,17 @@ export function EntrepreneurOperationsView() {
           onClick={() => setStatusFilter("CONVERTED")}
           className={`cursor-pointer rounded-2xl border p-4 transition ${
             statusFilter === "CONVERTED"
-              ? "border-green-600 bg-green-100/80 shadow-sm ring-1 ring-green-600 dark:bg-green-950/50"
-              : "border-green-200 bg-green-50 hover:border-green-300 dark:border-green-900/50 dark:bg-green-950/20"
+              ? "border-green-600 bg-green-100/80 shadow-sm ring-1 ring-green-600"
+              : "border-green-200 bg-green-50 hover:border-green-300"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-green-900 dark:text-green-300">
+            <p className="text-xs font-bold uppercase tracking-wider text-green-900">
               CONVERTIDO
             </p>
             <span className="h-2.5 w-2.5 rounded-full bg-green-600" />
           </div>
-          <p className="mt-1 font-heading text-2xl font-extrabold text-green-950 dark:text-green-200">
+          <p className="mt-1 font-heading text-2xl font-extrabold text-green-950">
             {counts.CONVERTED}
           </p>
         </div>
@@ -663,24 +663,24 @@ export function EntrepreneurOperationsView() {
           onClick={() => setStatusFilter("CANCELLED")}
           className={`cursor-pointer rounded-2xl border p-4 transition ${
             statusFilter === "CANCELLED"
-              ? "border-rose-500 bg-rose-100/80 shadow-sm ring-1 ring-rose-500 dark:bg-rose-950/50"
-              : "border-rose-200 bg-rose-50 hover:border-rose-300 dark:border-rose-900/50 dark:bg-rose-950/20"
+              ? "border-rose-500 bg-rose-100/80 shadow-sm ring-1 ring-rose-500"
+              : "border-rose-200 bg-rose-50 hover:border-rose-300"
           }`}
         >
           <div className="flex items-center justify-between">
-            <p className="text-xs font-bold uppercase tracking-wider text-rose-900 dark:text-rose-300">
+            <p className="text-xs font-bold uppercase tracking-wider text-rose-900">
               CANCELADO
             </p>
             <span className="h-2.5 w-2.5 rounded-full bg-rose-500" />
           </div>
-          <p className="mt-1 font-heading text-2xl font-extrabold text-rose-950 dark:text-rose-200">
+          <p className="mt-1 font-heading text-2xl font-extrabold text-rose-950">
             {counts.CANCELLED}
           </p>
         </div>
       </div>
 
       {/* SEARCH AND FILTERS BAR */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4 md:space-y-0 md:flex md:items-center md:justify-between md:gap-4 dark:border-slate-800 dark:bg-slate-900">
+      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm space-y-4 md:space-y-0 md:flex md:items-center md:justify-between md:gap-4">
         {/* Search */}
         <div className="relative flex-1">
           <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
@@ -689,12 +689,12 @@ export function EntrepreneurOperationsView() {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por empresario, marca, correo, siteId o código de referido..."
-            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+            className="w-full rounded-xl border border-slate-200 bg-white py-2.5 pl-10 pr-4 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
           />
           {searchQuery && (
             <button
               onClick={() => setSearchQuery("")}
-              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+              className="absolute right-3 top-3 text-slate-400 hover:text-slate-600:text-slate-200"
             >
               <X className="h-4 w-4" />
             </button>
@@ -708,7 +708,7 @@ export function EntrepreneurOperationsView() {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-700 focus:border-cyan-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+              className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-700 focus:border-cyan-500 focus:outline-none"
             >
               <option value="ALL">Todos los Estados</option>
               <option value="NEW">NUEVO</option>
@@ -724,7 +724,7 @@ export function EntrepreneurOperationsView() {
             <select
               value={paymentFilter}
               onChange={(e) => setPaymentFilter(e.target.value)}
-              className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-700 focus:border-cyan-500 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+              className="rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-700 focus:border-cyan-500 focus:outline-none"
             >
               <option value="ALL">Todos los Métodos de Pago</option>
               <option value="wompi">Tarjeta (Wompi)</option>
@@ -735,7 +735,7 @@ export function EntrepreneurOperationsView() {
           <button
             onClick={fetchLeads}
             disabled={isLoading}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+            className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             title="Recargar datos"
           >
             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
@@ -761,17 +761,17 @@ export function EntrepreneurOperationsView() {
       {/* MODAL REGISTRAR EMPRESARIO PAGADO */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in">
-          <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 space-y-6">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+          <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-200 pb-4">
               <div className="flex items-center gap-2">
-                <UserPlus className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
-                <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">
+                <UserPlus className="h-5 w-5 text-cyan-600" />
+                <h3 className="font-heading text-lg font-bold text-slate-900">
                   Registrar Empresario Pagado
                 </h3>
               </div>
               <button
                 onClick={() => setShowCreateModal(false)}
-                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700:bg-slate-800:text-white"
               >
                 <X className="h-5 w-5" />
               </button>
@@ -779,21 +779,21 @@ export function EntrepreneurOperationsView() {
 
             {/* Success Result with Copyable Onboarding Link */}
             {createdLeadResult ? (
-              <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950/60 space-y-4">
-                <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200 text-sm font-bold">
+              <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-5 space-y-4">
+                <div className="flex items-center gap-2 text-emerald-900 text-sm font-bold">
                   <CheckCircle2 className="h-5 w-5 text-emerald-600" />
                   <span>¡Empresario Creado Exitosamente!</span>
                 </div>
 
-                <div className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
+                <div className="space-y-1 text-xs text-slate-700">
                   <p>Marca: <strong>{createdLeadResult.lead.brandName}</strong></p>
                   <p>Empresario: <strong>{createdLeadResult.lead.fullName}</strong></p>
                   <p>Estado: <span className="font-bold text-emerald-700 uppercase">{createdLeadResult.lead.status}</span></p>
                 </div>
 
-                <div className="rounded-xl border border-emerald-200 bg-white p-3 dark:border-emerald-800 dark:bg-slate-900 space-y-2">
+                <div className="rounded-xl border border-emerald-200 bg-white p-3 space-y-2">
                   <span className="text-[11px] font-bold uppercase text-slate-400 block">Ruta de Onboarding Generada</span>
-                  <code className="font-mono text-xs text-slate-900 dark:text-white block break-all font-bold">
+                  <code className="font-mono text-xs text-slate-900 block break-all font-bold">
                     {createdLeadResult.onboardingPath}
                   </code>
                   <button
@@ -812,7 +812,7 @@ export function EntrepreneurOperationsView() {
                     setCreatedLeadResult(null);
                     setShowCreateModal(false);
                   }}
-                  className="w-full rounded-xl border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900 py-2 text-xs font-bold text-slate-700 dark:text-slate-200"
+                  className="w-full rounded-xl border border-slate-300 bg-white py-2 text-xs font-bold text-slate-700"
                 >
                   Cerrar
                 </button>
@@ -827,7 +827,7 @@ export function EntrepreneurOperationsView() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                       Nombre Completo *
                     </label>
                     <input
@@ -836,12 +836,12 @@ export function EntrepreneurOperationsView() {
                       value={createForm.fullName}
                       onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
                       placeholder="Ej. Carlos Mendoza"
-                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                       Nombre Comercial / Marca *
                     </label>
                     <input
@@ -850,14 +850,14 @@ export function EntrepreneurOperationsView() {
                       value={createForm.brandName}
                       onChange={(e) => setCreateForm({ ...createForm, brandName: e.target.value })}
                       placeholder="Ej. Salud Vital"
-                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900"
                     />
                   </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                       WhatsApp *
                     </label>
                     <input
@@ -866,12 +866,12 @@ export function EntrepreneurOperationsView() {
                       value={createForm.whatsapp}
                       onChange={(e) => setCreateForm({ ...createForm, whatsapp: e.target.value })}
                       placeholder="Ej. +573001234567"
-                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                       Correo Electrónico
                     </label>
                     <input
@@ -879,14 +879,14 @@ export function EntrepreneurOperationsView() {
                       value={createForm.email}
                       onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
                       placeholder="carlos@ejemplo.com"
-                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900"
                     />
                   </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                       Identificador de Sitio / siteId (Slug)
                     </label>
                     <input
@@ -894,7 +894,7 @@ export function EntrepreneurOperationsView() {
                       value={createForm.siteId}
                       onChange={(e) => setCreateForm({ ...createForm, siteId: e.target.value })}
                       placeholder="Ej. dorian-higuita"
-                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold text-slate-900"
                     />
                     <p className="mt-1 text-[11px] text-slate-400">
                       Formato slug en minúsculas (ej. dorian-higuita)
@@ -902,7 +902,7 @@ export function EntrepreneurOperationsView() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                       Dominio de Publicación *
                     </label>
                     <input
@@ -911,7 +911,7 @@ export function EntrepreneurOperationsView() {
                       value={createForm.domain}
                       onChange={(e) => setCreateForm({ ...createForm, domain: e.target.value })}
                       placeholder="Ej. dorianhiguita.pro"
-                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold text-slate-900"
                     />
                     <p className="mt-1 text-[11px] text-slate-400">
                       Dominio independiente (ej. dorianhiguita.pro)
@@ -921,13 +921,13 @@ export function EntrepreneurOperationsView() {
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                       Método de Pago
                     </label>
                     <select
                       value={createForm.paymentMethod}
                       onChange={(e) => setCreateForm({ ...createForm, paymentMethod: e.target.value as any })}
-                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900"
                     >
                       <option value="direct">Transferencia Directa</option>
                       <option value="wompi">Wompi / Tarjeta</option>
@@ -935,13 +935,13 @@ export function EntrepreneurOperationsView() {
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                       Estado Inicial
                     </label>
                     <select
                       value={createForm.status}
                       onChange={(e) => setCreateForm({ ...createForm, status: e.target.value as any })}
-                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900"
                     >
                       <option value="PAID">PAGADO (Recomendado)</option>
                       <option value="NEW">NUEVO</option>
@@ -952,7 +952,7 @@ export function EntrepreneurOperationsView() {
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                  <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                     Código de Referido (Opcional)
                   </label>
                   <input
@@ -960,7 +960,7 @@ export function EntrepreneurOperationsView() {
                     value={createForm.referrerCode}
                     onChange={(e) => setCreateForm({ ...createForm, referrerCode: e.target.value })}
                     placeholder="Ej. JP94536693"
-                    className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold uppercase text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold uppercase text-slate-900"
                   />
                 </div>
 
@@ -968,7 +968,7 @@ export function EntrepreneurOperationsView() {
                   <button
                     type="button"
                     onClick={() => setShowCreateModal(false)}
-                    className="rounded-xl border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300"
+                    className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700"
                   >
                     Cancelar
                   </button>
@@ -987,7 +987,7 @@ export function EntrepreneurOperationsView() {
       )}
 
       {/* MAIN TABLE SECTION */}
-      <div className="rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm overflow-hidden">
+      <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 space-y-3">
             <RefreshCw className="h-8 w-8 animate-spin text-cyan-500" />
@@ -995,12 +995,12 @@ export function EntrepreneurOperationsView() {
           </div>
         ) : filteredLeads.length === 0 ? (
           <div className="p-12 text-center space-y-4">
-            <Users className="mx-auto h-12 w-12 text-slate-300 dark:text-slate-600" />
+            <Users className="mx-auto h-12 w-12 text-slate-300" />
             <div className="space-y-1">
-              <h3 className="text-base font-bold text-slate-900 dark:text-white">
+              <h3 className="text-base font-bold text-slate-900">
                 No se encontraron empresarios
               </h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">
+              <p className="text-xs text-slate-500">
                 {searchQuery || statusFilter !== "ALL" || paymentFilter !== "ALL"
                   ? "Intenta modificar los filtros de búsqueda o restablecer la selección."
                   : "Aún no se han registrado leads de activación en el sistema."}
@@ -1013,7 +1013,7 @@ export function EntrepreneurOperationsView() {
                   setStatusFilter("ALL");
                   setPaymentFilter("ALL");
                 }}
-                className="inline-flex items-center gap-2 rounded-xl bg-slate-100 dark:bg-slate-800 px-4 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-200"
+                className="inline-flex items-center gap-2 rounded-xl bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-200"
               >
                 Limpiar Filtros
               </button>
@@ -1022,7 +1022,7 @@ export function EntrepreneurOperationsView() {
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-400">
+              <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 <tr>
                   <th className="py-3.5 px-4">Estado Operativo</th>
                   <th className="py-3.5 px-4">Empresario / Marca</th>
@@ -1035,14 +1035,14 @@ export function EntrepreneurOperationsView() {
                   <th className="py-3.5 px-4 text-right">Acción</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+              <tbody className="divide-y divide-slate-100 font-medium">
                 {filteredLeads.map((lead) => {
                   const missingInfo = getMissingFields(lead);
 
                   return (
                     <tr
                       key={lead.id}
-                      className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition"
+                      className="hover:bg-slate-50/60:bg-slate-800/40 transition"
                     >
                       {/* Estado */}
                       <td className="py-4 px-4 whitespace-nowrap">
@@ -1052,10 +1052,10 @@ export function EntrepreneurOperationsView() {
                       {/* Empresario / Marca */}
                       <td className="py-4 px-4">
                         <div>
-                          <p className="font-bold text-slate-900 dark:text-white text-sm">
+                          <p className="font-bold text-slate-900 text-sm">
                             {lead.brandName}
                           </p>
-                          <p className="text-xs text-slate-500 dark:text-slate-400">
+                          <p className="text-xs text-slate-500">
                             {lead.fullName}
                           </p>
                         </div>
@@ -1068,12 +1068,12 @@ export function EntrepreneurOperationsView() {
                             href={`https://wa.me/${lead.whatsapp.replace(/[^0-9]/g, "")}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-semibold hover:underline"
+                            className="inline-flex items-center gap-1 text-emerald-600 font-semibold hover:underline"
                           >
                             <Phone className="h-3.5 w-3.5" />
                             {lead.whatsapp}
                           </a>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                          <p className="text-[11px] text-slate-500 flex items-center gap-1">
                             <Mail className="h-3 w-3" />
                             {lead.email}
                           </p>
@@ -1082,7 +1082,7 @@ export function EntrepreneurOperationsView() {
 
                       {/* Método de Pago */}
                       <td className="py-4 px-4 whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 font-semibold">
+                        <div className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700 font-semibold">
                           {lead.paymentMethod === "wompi" ? (
                             <>
                               <CreditCard className="h-3.5 w-3.5 text-cyan-600" />
@@ -1100,7 +1100,7 @@ export function EntrepreneurOperationsView() {
                       {/* Código de Referido */}
                       <td className="py-4 px-4 whitespace-nowrap">
                         {lead.referrerCode ? (
-                          <span className="font-mono font-bold text-cyan-600 dark:text-cyan-400 rounded bg-cyan-50 dark:bg-cyan-950/60 px-2 py-0.5 border border-cyan-200 dark:border-cyan-800">
+                          <span className="font-mono font-bold text-cyan-600 rounded bg-cyan-50 px-2 py-0.5 border border-cyan-200">
                             {lead.referrerCode}
                           </span>
                         ) : (
@@ -1112,13 +1112,13 @@ export function EntrepreneurOperationsView() {
                       <td className="py-4 px-4 whitespace-nowrap">
                         {lead.siteId ? (
                           <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-xs font-bold text-slate-900 dark:text-white rounded bg-slate-100 dark:bg-slate-800 px-2 py-1">
+                            <span className="font-mono text-xs font-bold text-slate-900 rounded bg-slate-100 px-2 py-1">
                               {lead.siteId}
                             </span>
                             <Link2 className="h-3.5 w-3.5 text-emerald-500" />
                           </div>
                         ) : (
-                          <span className="inline-flex items-center gap-1 rounded bg-amber-50 dark:bg-amber-950/40 px-2 py-0.5 text-[11px] font-bold text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                          <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 border border-amber-200">
                             Sin vincular
                           </span>
                         )}
@@ -1131,21 +1131,21 @@ export function EntrepreneurOperationsView() {
                             href={`https://${lead.onboardingData.domain}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-bold text-cyan-600 dark:text-cyan-400 hover:underline inline-flex items-center gap-1"
+                            className="font-bold text-cyan-600 hover:underline inline-flex items-center gap-1"
                           >
                             <Globe className="h-3.5 w-3.5" />
                             {lead.onboardingData.domain}
                             <ExternalLink className="h-3 w-3" />
                           </a>
                         ) : (
-                          <span className="text-amber-600 dark:text-amber-400 font-semibold text-[11px]">
+                          <span className="text-amber-600 font-semibold text-[11px]">
                             Pendiente
                           </span>
                         )}
                       </td>
 
                       {/* Fecha */}
-                      <td className="py-4 px-4 whitespace-nowrap text-slate-500 dark:text-slate-400 text-[11px]">
+                      <td className="py-4 px-4 whitespace-nowrap text-slate-500 text-[11px]">
                         {new Date(lead.createdAt).toLocaleDateString("es-CO", {
                           day: "2-digit",
                           month: "short",
@@ -1175,33 +1175,33 @@ export function EntrepreneurOperationsView() {
       {/* DETAIL AND MANAGEMENT MODAL / DRAWER */}
       {selectedLead && (
         <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
-          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-2xl">
+          <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl">
             {/* Modal Header */}
-            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white p-6 text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white rounded-t-3xl">
+            <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white p-6 text-slate-900 rounded-t-3xl">
               <div>
                 <div className="flex items-center gap-3">
-                  <h3 className="font-heading text-xl font-bold text-slate-900 dark:text-white">{selectedLead.brandName}</h3>
+                  <h3 className="font-heading text-xl font-bold text-slate-900">{selectedLead.brandName}</h3>
                   {getStatusBadge(selectedLead.status)}
                 </div>
-                <p className="mt-1 text-xs text-slate-600 dark:text-slate-400">
-                  Empresario: <strong className="text-slate-900 dark:text-white">{selectedLead.fullName}</strong> — Registrado el{" "}
+                <p className="mt-1 text-xs text-slate-600">
+                  Empresario: <strong className="text-slate-900">{selectedLead.fullName}</strong> — Registrado el{" "}
                   {new Date(selectedLead.createdAt).toLocaleString("es-CO")}
                 </p>
               </div>
 
               <button
                 onClick={() => setSelectedLead(null)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-white transition"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900:bg-slate-700:text-white transition"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-8 text-slate-800 dark:text-slate-200">
+            <div className="p-6 space-y-8 text-slate-800">
               {/* Action Error Banner */}
               {actionError && (
-                <div className="flex items-center gap-2 rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-xs font-semibold text-rose-700 dark:text-rose-300">
+                <div className="flex items-center gap-2 rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-xs font-semibold text-rose-700">
                   <AlertCircle className="h-4 w-4 shrink-0 text-rose-500" />
                   <span>{actionError}</span>
                 </div>
@@ -1210,8 +1210,8 @@ export function EntrepreneurOperationsView() {
               {/* OPERATIONAL QUICK ACTIONS */}
               <div className="grid gap-6 md:grid-cols-2">
                 {/* 1. Change Status */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-950 space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                     <Edit3 className="h-4 w-4 text-cyan-500" />
                     Cambiar Estado Operativo
                   </h4>
@@ -1224,8 +1224,8 @@ export function EntrepreneurOperationsView() {
                         disabled={isSubmittingPatch || selectedLead.status === st}
                         className={`rounded-xl py-2 px-3 text-xs font-bold transition flex items-center justify-between ${
                           selectedLead.status === st
-                            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900 ring-2 ring-cyan-500"
-                            : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100 dark:bg-slate-900 dark:border-slate-800 dark:text-slate-300"
+                            ? "bg-slate-900 text-white ring-2 ring-cyan-500"
+                            : "bg-white border border-slate-200 text-slate-700 hover:bg-slate-100"
                         }`}
                       >
                         <span>{st}</span>
@@ -1236,19 +1236,19 @@ export function EntrepreneurOperationsView() {
                 </div>
 
                 {/* 2. Link siteId */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-950 space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 space-y-3">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                     <Link2 className="h-4 w-4 text-cyan-500" />
                     {selectedLead.siteId ? "Sitio Vinculado" : "Vincular Sitio"}
                   </h4>
 
                   {selectedLead.siteId ? (
                     <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-1">
-                      <p className="text-xs font-bold text-emerald-700 dark:text-emerald-300 flex items-center gap-1.5">
+                      <p className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
                         <Check className="h-4 w-4 text-emerald-500" />
                         Sitio Vinculado: <span className="font-mono text-sm underline">{selectedLead.siteId}</span>
                       </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                      <p className="text-[11px] text-slate-500">
                         El backend actual asigna el <code className="font-mono font-bold">siteId</code> de forma única al activar.
                       </p>
                     </div>
@@ -1260,7 +1260,7 @@ export function EntrepreneurOperationsView() {
                           value={editingSiteId}
                           onChange={(e) => setEditingSiteId(e.target.value)}
                           placeholder="Ej. salud-vital"
-                          className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-mono font-bold text-slate-900 placeholder-slate-400 focus:border-cyan-500 focus:outline-none dark:border-slate-800 dark:bg-slate-900 dark:text-white"
+                          className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-mono font-bold text-slate-900 placeholder-slate-400 focus:border-cyan-500 focus:outline-none"
                         />
                         <p className="mt-1 text-[11px] text-slate-400">
                           Debe ser un slug en minúsculas (ej. yenny-garcia).
@@ -1279,8 +1279,8 @@ export function EntrepreneurOperationsView() {
                 </div>
 
                 {/* 3. Acciones Especiales de Registro (Archivar & Eliminar prueba) */}
-                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 dark:border-slate-800 dark:bg-slate-950 space-y-3 md:col-span-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 space-y-3 md:col-span-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                     <Archive className="h-4 w-4 text-cyan-500" />
                     Acciones Especiales de Registro
                   </h4>
@@ -1291,7 +1291,7 @@ export function EntrepreneurOperationsView() {
                       type="button"
                       onClick={handleArchiveLead}
                       disabled={isSubmittingPatch}
-                      className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition disabled:opacity-50"
+                      className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100:bg-slate-800 transition disabled:opacity-50"
                     >
                       <Archive className="h-4 w-4 text-slate-500" />
                       <span>Archivar Empresario</span>
@@ -1304,13 +1304,13 @@ export function EntrepreneurOperationsView() {
                           type="button"
                           onClick={() => setConfirmingDelete(true)}
                           disabled={isSubmittingPatch}
-                          className="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 dark:border-rose-900/60 dark:bg-rose-950/40 px-4 py-2 text-xs font-bold text-rose-700 dark:text-rose-300 hover:bg-rose-100 dark:hover:bg-rose-900/60 transition"
+                          className="inline-flex items-center gap-2 rounded-xl border border-rose-300 bg-rose-50 px-4 py-2 text-xs font-bold text-rose-700 hover:bg-rose-100:bg-rose-900/60 transition"
                         >
                           <Trash2 className="h-4 w-4 text-rose-500" />
                           <span>Eliminar prueba</span>
                         </button>
                       ) : (
-                        <div className="inline-flex flex-wrap items-center gap-2.5 rounded-xl border border-rose-500/50 bg-rose-500/10 p-2.5 text-xs font-semibold text-rose-700 dark:text-rose-300">
+                        <div className="inline-flex flex-wrap items-center gap-2.5 rounded-xl border border-rose-500/50 bg-rose-500/10 p-2.5 text-xs font-semibold text-rose-700">
                           <AlertOctagon className="h-4 w-4 text-rose-500 shrink-0" />
                           <span>¿Confirmas eliminar este registro de prueba de forma irreversible?</span>
                           <button
@@ -1324,7 +1324,7 @@ export function EntrepreneurOperationsView() {
                           <button
                             type="button"
                             onClick={() => setConfirmingDelete(false)}
-                            className="rounded-lg border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900 px-3 py-1 text-xs font-bold text-slate-700 dark:text-slate-300"
+                            className="rounded-lg border border-slate-300 bg-white px-3 py-1 text-xs font-bold text-slate-700"
                           >
                             Cancelar
                           </button>
@@ -1339,11 +1339,11 @@ export function EntrepreneurOperationsView() {
               {(() => {
                 const { missing, completedCount, totalFields, percentage } = getMissingFields(selectedLead);
                 return (
-                  <div className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-950 space-y-4">
+                  <div className="rounded-2xl border border-slate-200 bg-white p-5 space-y-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
                         <FileCheck className="h-5 w-5 text-cyan-500" />
-                        <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                        <h4 className="text-sm font-bold text-slate-900">
                           Completitud de Onboarding ({percentage}%)
                         </h4>
                       </div>
@@ -1353,7 +1353,7 @@ export function EntrepreneurOperationsView() {
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="h-2.5 w-full rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                    <div className="h-2.5 w-full rounded-full bg-slate-100 overflow-hidden">
                       <div
                         className={`h-full transition-all duration-300 ${
                           percentage === 100
@@ -1369,14 +1369,14 @@ export function EntrepreneurOperationsView() {
                     {/* Missing items checklist */}
                     {missing.length > 0 ? (
                       <div>
-                        <p className="text-xs font-bold text-amber-700 dark:text-amber-400 uppercase tracking-wider mb-2">
+                        <p className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-2">
                           Campos Faltantes por Suministrar ({missing.length}):
                         </p>
                         <div className="flex flex-wrap gap-2">
                           {missing.map((m) => (
                             <span
                               key={m.field}
-                              className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 dark:border-amber-800 dark:bg-amber-950/60 px-2.5 py-1 text-xs font-medium text-amber-800 dark:text-amber-300"
+                              className="inline-flex items-center gap-1 rounded-lg border border-amber-300 bg-amber-50 px-2.5 py-1 text-xs font-medium text-amber-800"
                             >
                               <AlertTriangle className="h-3 w-3 text-amber-500" />
                               {m.label}
@@ -1385,7 +1385,7 @@ export function EntrepreneurOperationsView() {
                         </div>
                       </div>
                     ) : (
-                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <div className="flex items-center gap-2 text-xs font-bold text-emerald-600">
                         <CheckCircle2 className="h-4 w-4" />
                         <span>¡Onboarding completo al 100%! Todos los datos requeridos fueron suministrados.</span>
                       </div>
@@ -1396,23 +1396,23 @@ export function EntrepreneurOperationsView() {
 
               {/* DETAILED DATA TABS / SECTIONS */}
               <div className="space-y-6">
-                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
                     Información del Empresario y Onboarding
                   </h4>
                   <button
                     type="button"
                     onClick={() => setIsEditingFields(!isEditingFields)}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-300 bg-cyan-50 dark:border-cyan-800 dark:bg-cyan-950/60 px-3 py-1.5 text-xs font-bold text-cyan-900 dark:text-cyan-200 hover:bg-cyan-100 transition"
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-300 bg-cyan-50 px-3 py-1.5 text-xs font-bold text-cyan-900 hover:bg-cyan-100 transition"
                   >
-                    <Edit3 className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+                    <Edit3 className="h-3.5 w-3.5 text-cyan-600" />
                     <span>{isEditingFields ? "Ver Vista Lectura" : "Editar Todos los Campos"}</span>
                   </button>
                 </div>
 
                 {isEditingFields ? (
-                  <form onSubmit={handleSaveEditableFields} className="rounded-2xl border border-cyan-200 bg-cyan-50/40 p-5 dark:border-cyan-900/60 dark:bg-cyan-950/20 space-y-5 text-xs">
-                    <h5 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                  <form onSubmit={handleSaveEditableFields} className="rounded-2xl border border-cyan-200 bg-cyan-50/40 p-5 space-y-5 text-xs">
+                    <h5 className="font-bold text-slate-900 text-sm flex items-center gap-2">
                       <Save className="h-4 w-4 text-cyan-600" />
                       Edición Integral de Registro y Onboarding
                     </h5>
@@ -1422,65 +1422,65 @@ export function EntrepreneurOperationsView() {
                       <p className="text-[11px] font-bold uppercase text-slate-500">Datos Base del Empresario</p>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Nombre Completo</label>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Nombre Completo</label>
                           <input
                             type="text"
                             required
                             value={editForm.fullName}
                             onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Nombre Comercial / Marca</label>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Nombre Comercial / Marca</label>
                           <input
                             type="text"
                             required
                             value={editForm.brandName}
                             onChange={(e) => setEditForm({ ...editForm, brandName: e.target.value })}
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">WhatsApp</label>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">WhatsApp</label>
                           <input
                             type="text"
                             required
                             value={editForm.whatsapp}
                             onChange={(e) => setEditForm({ ...editForm, whatsapp: e.target.value })}
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Correo Electrónico</label>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Correo Electrónico</label>
                           <input
                             type="email"
                             value={editForm.email}
                             onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Producto / Servicio</label>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Producto / Servicio</label>
                           <input
                             type="text"
                             value={editForm.mainProduct}
                             onChange={(e) => setEditForm({ ...editForm, mainProduct: e.target.value })}
                             placeholder="Ej. Landing Page PartnerHub"
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Método de Pago</label>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Método de Pago</label>
                           <select
                             value={editForm.paymentMethod}
                             onChange={(e) => setEditForm({ ...editForm, paymentMethod: e.target.value as any })}
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           >
                             <option value="direct">Transferencia Directa</option>
                             <option value="wompi">Tarjeta (Wompi)</option>
@@ -1490,11 +1490,11 @@ export function EntrepreneurOperationsView() {
                     </div>
 
                     {/* Datos de Onboarding */}
-                    <div className="space-y-3 pt-3 border-t border-cyan-200 dark:border-cyan-900/60">
+                    <div className="space-y-3 pt-3 border-t border-cyan-200">
                       <p className="text-[11px] font-bold uppercase text-slate-500">Campos de Onboarding Especificados</p>
                       <div className="grid gap-4 sm:grid-cols-2">
                         <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                             Dominio de Publicación *
                           </label>
                           <input
@@ -1503,7 +1503,7 @@ export function EntrepreneurOperationsView() {
                             value={editForm.domain}
                             onChange={(e) => setEditForm({ ...editForm, domain: e.target.value })}
                             placeholder="Ej. jairopinto.pro"
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-mono font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-mono font-bold text-slate-900"
                           />
                           <p className="mt-1 text-[11px] text-slate-400">
                             Ruta destino en Hostinger: <code className="font-mono">/home/u658137804/domains/&#123;domain&#125;/public_html</code>
@@ -1511,72 +1511,72 @@ export function EntrepreneurOperationsView() {
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">País de Operación</label>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">País de Operación</label>
                           <input
                             type="text"
                             value={editForm.country}
                             onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
                             placeholder="Ej. Colombia"
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           />
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Teléfono Directo</label>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Teléfono Directo</label>
                           <input
                             type="text"
                             value={editForm.phone}
                             onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
                             placeholder="Ej. +573188430283"
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           />
                         </div>
 
-                        <div className="sm:col-span-2 grid gap-4 rounded-2xl border border-slate-200 bg-white/70 p-4 dark:border-slate-800 dark:bg-slate-950/70">
+                        <div className="sm:col-span-2 grid gap-4 rounded-2xl border border-slate-200 bg-white/70 p-4">
                           <p className="text-[11px] font-bold uppercase text-slate-500">SEO y Conversión</p>
 
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Título SEO</label>
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Título SEO</label>
                             <input
                               type="text"
                               value={editForm.seoTitle}
                               onChange={(e) => setEditForm({ ...editForm, seoTitle: e.target.value })}
                               placeholder="Ej. Dorian Higuita - Bienestar y Vitalidad con Gano Excel"
-                              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Meta descripción</label>
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Meta descripción</label>
                             <textarea
                               rows={2}
                               value={editForm.metaDescription}
                               onChange={(e) => setEditForm({ ...editForm, metaDescription: e.target.value })}
                               placeholder="Descripción breve para Google y previsualizaciones sociales."
-                              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                             />
                           </div>
 
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Mensaje inicial de WhatsApp</label>
+                            <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Mensaje inicial de WhatsApp</label>
                             <textarea
                               rows={2}
                               value={editForm.defaultMessage}
                               onChange={(e) => setEditForm({ ...editForm, defaultMessage: e.target.value })}
                               placeholder="Mensaje prellenado al abrir WhatsApp desde la landing."
-                              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                              className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                             />
                           </div>
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">URL de Compra / Pasarela</label>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">URL de Compra / Pasarela</label>
                           <input
                             type="url"
                             value={editForm.purchaseUrl}
                             onChange={(e) => setEditForm({ ...editForm, purchaseUrl: e.target.value })}
                             placeholder="https://pasarela.com/checkout"
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           />
                         </div>
 
@@ -1599,11 +1599,11 @@ export function EntrepreneurOperationsView() {
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Modo de Logo</label>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">Modo de Logo</label>
                           <select
                             value={editForm.logoMode}
                             onChange={(e) => setEditForm({ ...editForm, logoMode: e.target.value as any })}
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           >
                             <option value="TYPOGRAPHY">Tipografía (Nombre de marca)</option>
                             <option value="IMAGE">Imagen de Logo</option>
@@ -1611,7 +1611,7 @@ export function EntrepreneurOperationsView() {
                         </div>
 
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
                             URL Imagen de Logo {editForm.logoMode === "TYPOGRAPHY" && "(Opcional)"}
                           </label>
                           <input
@@ -1619,18 +1619,18 @@ export function EntrepreneurOperationsView() {
                             value={editForm.logoUrl}
                             onChange={(e) => setEditForm({ ...editForm, logoUrl: e.target.value })}
                             placeholder="https://.../logo.png"
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900"
                           />
                         </div>
 
                         <div className="sm:col-span-2">
-                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">ID Medición GA4 (Analytics)</label>
+                          <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">ID Medición GA4 (Analytics)</label>
                           <input
                             type="text"
                             value={editForm.analyticsMeasurementId}
                             onChange={(e) => setEditForm({ ...editForm, analyticsMeasurementId: e.target.value })}
                             placeholder="G-XXXXXXXXXX"
-                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-mono font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-mono font-bold text-slate-900"
                           />
                         </div>
                       </div>
@@ -1640,7 +1640,7 @@ export function EntrepreneurOperationsView() {
                       <button
                         type="button"
                         onClick={() => setIsEditingFields(false)}
-                        className="rounded-xl border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300"
+                        className="rounded-xl border border-slate-300 bg-white px-4 py-2 text-xs font-bold text-slate-700"
                       >
                         Cancelar
                       </button>
@@ -1658,49 +1658,49 @@ export function EntrepreneurOperationsView() {
                   <>
                 {/* 1. Datos de Registro Base */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-2">
                     Datos de Registro Mínimo
                   </h4>
 
                   <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 text-xs">
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Nombre Completo</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{selectedLead.fullName}</span>
+                      <span className="font-bold text-slate-900">{selectedLead.fullName}</span>
                     </div>
 
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Marca / Comercial</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{selectedLead.brandName}</span>
+                      <span className="font-bold text-slate-900">{selectedLead.brandName}</span>
                     </div>
 
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Correo Electrónico</span>
-                      <span className="font-bold text-slate-900 dark:text-white">{selectedLead.email}</span>
+                      <span className="font-bold text-slate-900">{selectedLead.email}</span>
                     </div>
 
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">WhatsApp Registro</span>
                       <a
                         href={`https://wa.me/${selectedLead.whatsapp.replace(/[^0-9]/g, "")}`}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="font-bold text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1"
+                        className="font-bold text-emerald-600 hover:underline flex items-center gap-1"
                       >
                         <MessageCircle className="h-3 w-3" />
                         {selectedLead.whatsapp}
                       </a>
                     </div>
 
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Código Referido</span>
-                      <span className="font-bold text-cyan-600 dark:text-cyan-400 font-mono">
+                      <span className="font-bold text-cyan-600 font-mono">
                         {selectedLead.referrerCode || "Ninguno (Directo)"}
                       </span>
                     </div>
 
-                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                    <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Método Pago</span>
-                      <span className="font-bold text-slate-900 dark:text-white uppercase">
+                      <span className="font-bold text-slate-900 uppercase">
                         {selectedLead.paymentMethod}
                       </span>
                     </div>
@@ -1709,20 +1709,20 @@ export function EntrepreneurOperationsView() {
 
                 {/* 2. Datos de Onboarding Suministrados */}
                 <div className="space-y-3">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-2">
                     Información Detallada de Onboarding
                   </h4>
 
                   {selectedLead.onboardingData ? (
                     <div className="grid gap-4 sm:grid-cols-2 text-xs">
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900 sm:col-span-2">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Dominio de Publicación</span>
                         {selectedLead.onboardingData.domain ? (
                           <a
                             href={`https://${selectedLead.onboardingData.domain}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 font-mono text-sm"
+                            className="font-bold text-cyan-600 hover:underline flex items-center gap-1 font-mono text-sm"
                           >
                             <Globe className="h-4 w-4" />
                             {selectedLead.onboardingData.domain}
@@ -1733,28 +1733,28 @@ export function EntrepreneurOperationsView() {
                         )}
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">País de Operación</span>
-                        <span className="font-bold text-slate-900 dark:text-white">
+                        <span className="font-bold text-slate-900">
                           {selectedLead.onboardingData.country || "No especificado"}
                         </span>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">WhatsApp Visible / Teléfono</span>
-                        <span className="font-bold text-slate-900 dark:text-white">
+                        <span className="font-bold text-slate-900">
                           {selectedLead.onboardingData.whatsapp || "No especificado"} / {selectedLead.onboardingData.phone || "N/A"}
                         </span>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900 sm:col-span-2">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 sm:col-span-2">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">URL de Compra / Checkout</span>
                         {selectedLead.onboardingData.purchaseUrl ? (
                           <a
                             href={selectedLead.onboardingData.purchaseUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 truncate"
+                            className="font-bold text-cyan-600 hover:underline flex items-center gap-1 truncate"
                           >
                             {selectedLead.onboardingData.purchaseUrl}
                             <ExternalLink className="h-3 w-3 shrink-0" />
@@ -1764,14 +1764,14 @@ export function EntrepreneurOperationsView() {
                         )}
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Hero Desktop URL</span>
                         {selectedLead.onboardingData.heroDesktopUrl ? (
                           <a
                             href={selectedLead.onboardingData.heroDesktopUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 truncate"
+                            className="font-bold text-cyan-600 hover:underline flex items-center gap-1 truncate"
                           >
                             Ver Imagen Hero Desktop
                             <ExternalLink className="h-3 w-3 shrink-0" />
@@ -1781,14 +1781,14 @@ export function EntrepreneurOperationsView() {
                         )}
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Hero Mobile URL</span>
                         {selectedLead.onboardingData.heroMobileUrl ? (
                           <a
                             href={selectedLead.onboardingData.heroMobileUrl}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-bold text-cyan-600 dark:text-cyan-400 hover:underline flex items-center gap-1 truncate"
+                            className="font-bold text-cyan-600 hover:underline flex items-center gap-1 truncate"
                           >
                             Ver Imagen Hero Mobile
                             <ExternalLink className="h-3 w-3 shrink-0" />
@@ -1798,30 +1798,30 @@ export function EntrepreneurOperationsView() {
                         )}
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Modo de Logotipo</span>
-                        <span className="font-bold text-slate-900 dark:text-white uppercase">
+                        <span className="font-bold text-slate-900 uppercase">
                           {selectedLead.onboardingData.logoMode || "TYPOGRAPHY"}
                         </span>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">ID GA4</span>
-                        <span className="font-bold text-slate-900 dark:text-white font-mono">
+                        <span className="font-bold text-slate-900 font-mono">
                           {selectedLead.onboardingData.analyticsMeasurementId || "No suministrado"}
                         </span>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Consentimiento Imágenes</span>
-                        <span className="font-bold text-slate-900 dark:text-white">
+                        <span className="font-bold text-slate-900">
                           {selectedLead.onboardingData.imageUseConsent ? "Sí, Autorizado" : "No otorgado"}
                         </span>
                       </div>
 
-                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-900">
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">Aceptación Acuerdo</span>
-                        <span className="font-bold text-slate-900 dark:text-white">
+                        <span className="font-bold text-slate-900">
                           {selectedLead.onboardingData.agreementAccepted ? "Sí, Aceptado" : "No aceptado"}
                         </span>
                       </div>
@@ -1836,10 +1836,10 @@ export function EntrepreneurOperationsView() {
         </div>
 
             {/* Modal Footer */}
-            <div className="border-t border-slate-200 bg-slate-50 p-4 text-right dark:border-slate-800 dark:bg-slate-950">
+            <div className="border-t border-slate-200 bg-slate-50 p-4 text-right">
               <button
                 onClick={() => setSelectedLead(null)}
-                className="rounded-xl border border-slate-300 bg-white px-5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300"
+                className="rounded-xl border border-slate-300 bg-white px-5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100"
               >
                 Cerrar Detalle
               </button>
