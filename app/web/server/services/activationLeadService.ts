@@ -61,9 +61,21 @@ export const activationLeadStatusSchema = z.enum([
 
 export const activationLeadRecordStateSchema = z.enum(["ACTIVE", "ARCHIVED"]);
 
+export const editableOnboardingDataSchema = onboardingDataSchema.omit({
+  imageUseConsent: true,
+  agreementAccepted: true
+});
+
 export const updateActivationLeadSchema = z.object({
   status: activationLeadStatusSchema.optional(),
-  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()).nullable().optional()
+  fullName: z.string().trim().min(2).max(160).optional(),
+  whatsapp: z.string().trim().min(7).max(40).optional(),
+  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()).nullable().optional(),
+  brandName: z.string().trim().min(2).max(160).optional(),
+  mainProduct: z.string().trim().max(240).optional(),
+  referrerCode: referralCodeSchema.optional().nullable(),
+  paymentMethod: z.enum(["wompi", "direct"]).optional(),
+  onboardingData: editableOnboardingDataSchema.optional()
 });
 
 export const internalActivationLeadCreateSchema = activationLeadSchema.extend({
@@ -251,14 +263,25 @@ async function updateStatus(id: string, input: z.infer<typeof updateActivationLe
 
   if (!existing) throw new Error(`Activation lead ${id} was not found.`);
 
-  if (!parsed.status && parsed.email === undefined) {
+  const hasEditableField = Object.keys(parsed).some((key) => key !== "status");
+  if (!parsed.status && !hasEditableField) {
     throw new Error("At least one activation lead field must be provided.");
   }
 
   const next: ActivationLead = {
     ...existing,
     status: parsed.status ?? existing.status,
+    fullName: parsed.fullName ?? existing.fullName,
+    whatsapp: parsed.whatsapp ?? existing.whatsapp,
     email: parsed.email === undefined ? existing.email : parsed.email,
+    brandName: parsed.brandName ?? existing.brandName,
+    mainProduct: parsed.mainProduct ?? existing.mainProduct,
+    referrerCode: parsed.referrerCode === undefined ? existing.referrerCode : parsed.referrerCode,
+    paymentMethod: parsed.paymentMethod ?? existing.paymentMethod,
+    onboardingData: parsed.onboardingData
+      ? { ...existing.onboardingData, ...parsed.onboardingData }
+      : existing.onboardingData,
+    onboardingUpdatedAt: parsed.onboardingData ? new Date().toISOString() : existing.onboardingUpdatedAt,
     updatedAt: new Date().toISOString()
   };
 
