@@ -31,6 +31,9 @@ import {
   Archive,
   Trash2,
   AlertOctagon,
+  UserPlus,
+  Copy,
+  Save
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
@@ -87,8 +90,48 @@ export function EntrepreneurOperationsView() {
   const [editingStatus, setEditingStatus] = useState<ActivationLeadStatus | "">("");
   const [editingSiteId, setEditingSiteId] = useState<string>("");
   const [confirmingDelete, setConfirmingDelete] = useState(false);
+  const [isEditingFields, setIsEditingFields] = useState(false);
   const [isSubmittingPatch, setIsSubmittingPatch] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Editable fields form inside modal
+  const [editForm, setEditForm] = useState({
+    fullName: "",
+    whatsapp: "",
+    email: "",
+    brandName: "",
+    mainProduct: "",
+    paymentMethod: "direct" as "wompi" | "direct",
+    country: "",
+    phone: "",
+    purchaseUrl: "",
+    heroDesktopUrl: "",
+    heroMobileUrl: "",
+    logoMode: "TYPOGRAPHY" as "TYPOGRAPHY" | "IMAGE",
+    logoUrl: "",
+    analyticsMeasurementId: ""
+  });
+
+  // Create Paid Lead Modal State
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [isCreatingLead, setIsCreatingLead] = useState(false);
+  const [createdLeadResult, setCreatedLeadResult] = useState<{
+    lead: ActivationLeadRecord;
+    onboardingToken: string;
+    onboardingPath: string;
+  } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  const [createForm, setCreateForm] = useState({
+    fullName: "",
+    whatsapp: "",
+    email: "",
+    brandName: "",
+    mainProduct: "Landing Page PartnerHub",
+    referrerCode: "",
+    paymentMethod: "direct" as "wompi" | "direct",
+    status: "PAID" as ActivationLeadStatus
+  });
 
   const fetchLeads = async () => {
     setIsLoading(true);
@@ -117,9 +160,124 @@ export function EntrepreneurOperationsView() {
       setEditingStatus(selectedLead.status);
       setEditingSiteId(selectedLead.siteId || "");
       setConfirmingDelete(false);
+      setIsEditingFields(false);
       setActionError(null);
+      setEditForm({
+        fullName: selectedLead.fullName || "",
+        whatsapp: selectedLead.whatsapp || "",
+        email: selectedLead.email || "",
+        brandName: selectedLead.brandName || "",
+        mainProduct: selectedLead.mainProduct || "",
+        paymentMethod: selectedLead.paymentMethod || "direct",
+        country: selectedLead.onboardingData?.country || "",
+        phone: selectedLead.onboardingData?.phone || "",
+        purchaseUrl: selectedLead.onboardingData?.purchaseUrl || "",
+        heroDesktopUrl: selectedLead.onboardingData?.heroDesktopUrl || "",
+        heroMobileUrl: selectedLead.onboardingData?.heroMobileUrl || "",
+        logoMode: selectedLead.onboardingData?.logoMode || "TYPOGRAPHY",
+        logoUrl: selectedLead.onboardingData?.logoUrl || "",
+        analyticsMeasurementId: selectedLead.onboardingData?.analyticsMeasurementId || ""
+      });
     }
   }, [selectedLead]);
+
+  // Handle Save All Editable Fields via PATCH /api/internal/activation-leads/:id
+  const handleSaveEditableFields = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLead) return;
+    setIsSubmittingPatch(true);
+    setActionError(null);
+
+    try {
+      const patchBody = {
+        fullName: editForm.fullName.trim(),
+        whatsapp: editForm.whatsapp.trim(),
+        email: editForm.email.trim() || null,
+        brandName: editForm.brandName.trim(),
+        mainProduct: editForm.mainProduct.trim() || undefined,
+        paymentMethod: editForm.paymentMethod,
+        onboardingData: {
+          country: editForm.country.trim() || undefined,
+          phone: editForm.phone.trim() || undefined,
+          purchaseUrl: editForm.purchaseUrl.trim() || undefined,
+          heroDesktopUrl: editForm.heroDesktopUrl.trim() || undefined,
+          heroMobileUrl: editForm.heroMobileUrl.trim() || undefined,
+          logoMode: editForm.logoMode,
+          logoUrl: editForm.logoMode === "IMAGE" ? (editForm.logoUrl.trim() || undefined) : undefined,
+          analyticsMeasurementId: editForm.analyticsMeasurementId.trim() || undefined,
+        }
+      };
+
+      const res = await fetch(`/api/internal/activation-leads/${selectedLead.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patchBody),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "Error al actualizar los datos del empresario.");
+      }
+
+      const updatedLead = json.lead || json;
+      setLeads((prev) => prev.map((l) => (l.id === selectedLead.id ? updatedLead : l)));
+      setSelectedLead(updatedLead);
+      setIsEditingFields(false);
+      setSuccessMessage(`Datos de ${updatedLead.brandName} actualizados exitosamente.`);
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setIsSubmittingPatch(false);
+    }
+  };
+
+  // Handle Create Paid Lead via POST /api/internal/activation-leads
+  const handleCreatePaidLead = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreatingLead(true);
+    setActionError(null);
+
+    try {
+      const body = {
+        fullName: createForm.fullName.trim(),
+        whatsapp: createForm.whatsapp.trim(),
+        email: createForm.email.trim() || null,
+        brandName: createForm.brandName.trim(),
+        mainProduct: createForm.mainProduct.trim() || "Landing Page PartnerHub",
+        referrerCode: createForm.referrerCode.trim().toUpperCase() || undefined,
+        paymentMethod: createForm.paymentMethod,
+        status: createForm.status,
+        termsAccepted: true
+      };
+
+      const res = await fetch("/api/internal/activation-leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "No se pudo registrar el empresario pagado.");
+      }
+
+      setCreatedLeadResult(json);
+      setSuccessMessage(`Empresario pagado "${json.lead.brandName}" registrado exitosamente.`);
+      fetchLeads();
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setIsCreatingLead(false);
+    }
+  };
+
+  const handleCopyOnboardingLink = (path: string) => {
+    const fullUrl = `${window.location.origin}${path}`;
+    navigator.clipboard.writeText(fullUrl);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 3000);
+  };
 
   // Patch status handler
   const handleUpdateStatus = async (newStatus: ActivationLeadStatus) => {
@@ -553,8 +711,215 @@ export function EntrepreneurOperationsView() {
             <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} />
             <span>Actualizar</span>
           </button>
+
+          {/* Botón Registrar Empresario Pagado */}
+          <button
+            type="button"
+            onClick={() => {
+              setShowCreateModal(true);
+              setCreatedLeadResult(null);
+              setActionError(null);
+            }}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-3.5 py-2 text-xs font-bold text-white shadow transition"
+          >
+            <UserPlus className="h-4 w-4" />
+            <span>Registrar Empresario Pagado</span>
+          </button>
         </div>
       </div>
+
+      {/* MODAL REGISTRAR EMPRESARIO PAGADO */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in">
+          <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900 space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+              <div className="flex items-center gap-2">
+                <UserPlus className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
+                <h3 className="font-heading text-lg font-bold text-slate-900 dark:text-white">
+                  Registrar Empresario Pagado
+                </h3>
+              </div>
+              <button
+                onClick={() => setShowCreateModal(false)}
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-slate-800 dark:hover:text-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Success Result with Copyable Onboarding Link */}
+            {createdLeadResult ? (
+              <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-5 dark:border-emerald-800 dark:bg-emerald-950/60 space-y-4">
+                <div className="flex items-center gap-2 text-emerald-900 dark:text-emerald-200 text-sm font-bold">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  <span>¡Empresario Creado Exitosamente!</span>
+                </div>
+
+                <div className="space-y-1 text-xs text-slate-700 dark:text-slate-300">
+                  <p>Marca: <strong>{createdLeadResult.lead.brandName}</strong></p>
+                  <p>Empresario: <strong>{createdLeadResult.lead.fullName}</strong></p>
+                  <p>Estado: <span className="font-bold text-emerald-700 uppercase">{createdLeadResult.lead.status}</span></p>
+                </div>
+
+                <div className="rounded-xl border border-emerald-200 bg-white p-3 dark:border-emerald-800 dark:bg-slate-900 space-y-2">
+                  <span className="text-[11px] font-bold uppercase text-slate-400 block">Ruta de Onboarding Generada</span>
+                  <code className="font-mono text-xs text-slate-900 dark:text-white block break-all font-bold">
+                    {createdLeadResult.onboardingPath}
+                  </code>
+                  <button
+                    type="button"
+                    onClick={() => handleCopyOnboardingLink(createdLeadResult.onboardingPath)}
+                    className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-3.5 py-1.5 text-xs font-bold text-white shadow transition"
+                  >
+                    {copiedLink ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
+                    <span>{copiedLink ? "¡Enlace Copiado!" : "Copiar Enlace de Onboarding"}</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCreatedLeadResult(null);
+                    setShowCreateModal(false);
+                  }}
+                  className="w-full rounded-xl border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900 py-2 text-xs font-bold text-slate-700 dark:text-slate-200"
+                >
+                  Cerrar
+                </button>
+              </div>
+            ) : (
+              <form onSubmit={handleCreatePaidLead} className="space-y-4 text-xs">
+                {actionError && (
+                  <div className="rounded-xl border border-rose-300 bg-rose-50 p-3 text-rose-700 font-semibold">
+                    {actionError}
+                  </div>
+                )}
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Nombre Completo *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.fullName}
+                      onChange={(e) => setCreateForm({ ...createForm, fullName: e.target.value })}
+                      placeholder="Ej. Carlos Mendoza"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Nombre Comercial / Marca *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.brandName}
+                      onChange={(e) => setCreateForm({ ...createForm, brandName: e.target.value })}
+                      placeholder="Ej. Salud Vital"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      WhatsApp *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.whatsapp}
+                      onChange={(e) => setCreateForm({ ...createForm, whatsapp: e.target.value })}
+                      placeholder="Ej. +573001234567"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Correo Electrónico
+                    </label>
+                    <input
+                      type="email"
+                      value={createForm.email}
+                      onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
+                      placeholder="carlos@ejemplo.com"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Método de Pago
+                    </label>
+                    <select
+                      value={createForm.paymentMethod}
+                      onChange={(e) => setCreateForm({ ...createForm, paymentMethod: e.target.value as any })}
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    >
+                      <option value="direct">Transferencia Directa</option>
+                      <option value="wompi">Wompi / Tarjeta</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Estado Inicial
+                    </label>
+                    <select
+                      value={createForm.status}
+                      onChange={(e) => setCreateForm({ ...createForm, status: e.target.value as any })}
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    >
+                      <option value="PAID">PAGADO (Recomendado)</option>
+                      <option value="NEW">NUEVO</option>
+                      <option value="CONTACTED">CONTACTADO</option>
+                      <option value="CONVERTED">CONVERTIDO</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                    Código de Referido (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    value={createForm.referrerCode}
+                    onChange={(e) => setCreateForm({ ...createForm, referrerCode: e.target.value })}
+                    placeholder="Ej. JP94536693"
+                    className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold uppercase text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                  />
+                </div>
+
+                <div className="pt-2 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setShowCreateModal(false)}
+                    className="rounded-xl border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isCreatingLead}
+                    className="rounded-xl bg-cyan-600 hover:bg-cyan-500 px-5 py-2 text-xs font-bold text-white shadow transition disabled:opacity-50"
+                  >
+                    {isCreatingLead ? "Creando..." : "Crear Empresario Pagado"}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* MAIN TABLE SECTION */}
       <div className="rounded-3xl border border-slate-200 bg-white dark:border-slate-800 dark:bg-slate-900 shadow-sm overflow-hidden">
@@ -945,6 +1310,216 @@ export function EntrepreneurOperationsView() {
 
               {/* DETAILED DATA TABS / SECTIONS */}
               <div className="space-y-6">
+                <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                    Información del Empresario y Onboarding
+                  </h4>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingFields(!isEditingFields)}
+                    className="inline-flex items-center gap-1.5 rounded-xl border border-cyan-300 bg-cyan-50 dark:border-cyan-800 dark:bg-cyan-950/60 px-3 py-1.5 text-xs font-bold text-cyan-900 dark:text-cyan-200 hover:bg-cyan-100 transition"
+                  >
+                    <Edit3 className="h-3.5 w-3.5 text-cyan-600 dark:text-cyan-400" />
+                    <span>{isEditingFields ? "Ver Vista Lectura" : "Editar Todos los Campos"}</span>
+                  </button>
+                </div>
+
+                {isEditingFields ? (
+                  <form onSubmit={handleSaveEditableFields} className="rounded-2xl border border-cyan-200 bg-cyan-50/40 p-5 dark:border-cyan-900/60 dark:bg-cyan-950/20 space-y-5 text-xs">
+                    <h5 className="font-bold text-slate-900 dark:text-white text-sm flex items-center gap-2">
+                      <Save className="h-4 w-4 text-cyan-600" />
+                      Edición Integral de Registro y Onboarding
+                    </h5>
+
+                    {/* Datos Mínimos Base */}
+                    <div className="space-y-3">
+                      <p className="text-[11px] font-bold uppercase text-slate-500">Datos Base del Empresario</p>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Nombre Completo</label>
+                          <input
+                            type="text"
+                            required
+                            value={editForm.fullName}
+                            onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Nombre Comercial / Marca</label>
+                          <input
+                            type="text"
+                            required
+                            value={editForm.brandName}
+                            onChange={(e) => setEditForm({ ...editForm, brandName: e.target.value })}
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">WhatsApp</label>
+                          <input
+                            type="text"
+                            required
+                            value={editForm.whatsapp}
+                            onChange={(e) => setEditForm({ ...editForm, whatsapp: e.target.value })}
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Correo Electrónico</label>
+                          <input
+                            type="email"
+                            value={editForm.email}
+                            onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Producto / Servicio</label>
+                          <input
+                            type="text"
+                            value={editForm.mainProduct}
+                            onChange={(e) => setEditForm({ ...editForm, mainProduct: e.target.value })}
+                            placeholder="Ej. Landing Page PartnerHub"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Método de Pago</label>
+                          <select
+                            value={editForm.paymentMethod}
+                            onChange={(e) => setEditForm({ ...editForm, paymentMethod: e.target.value as any })}
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          >
+                            <option value="direct">Transferencia Directa</option>
+                            <option value="wompi">Tarjeta (Wompi)</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Datos de Onboarding */}
+                    <div className="space-y-3 pt-3 border-t border-cyan-200 dark:border-cyan-900/60">
+                      <p className="text-[11px] font-bold uppercase text-slate-500">Campos de Onboarding Especificados</p>
+                      <div className="grid gap-4 sm:grid-cols-2">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">País de Operación</label>
+                          <input
+                            type="text"
+                            value={editForm.country}
+                            onChange={(e) => setEditForm({ ...editForm, country: e.target.value })}
+                            placeholder="Ej. Colombia"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Teléfono Directo</label>
+                          <input
+                            type="text"
+                            value={editForm.phone}
+                            onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                            placeholder="Ej. +573188430283"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">URL de Compra / Pasarela</label>
+                          <input
+                            type="url"
+                            value={editForm.purchaseUrl}
+                            onChange={(e) => setEditForm({ ...editForm, purchaseUrl: e.target.value })}
+                            placeholder="https://pasarela.com/checkout"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Hero Desktop URL</label>
+                          <input
+                            type="url"
+                            value={editForm.heroDesktopUrl}
+                            onChange={(e) => setEditForm({ ...editForm, heroDesktopUrl: e.target.value })}
+                            placeholder="https://.../hero-desktop.jpg"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Hero Mobile URL</label>
+                          <input
+                            type="url"
+                            value={editForm.heroMobileUrl}
+                            onChange={(e) => setEditForm({ ...editForm, heroMobileUrl: e.target.value })}
+                            placeholder="https://.../hero-mobile.jpg"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">Modo de Logo</label>
+                          <select
+                            value={editForm.logoMode}
+                            onChange={(e) => setEditForm({ ...editForm, logoMode: e.target.value as any })}
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          >
+                            <option value="TYPOGRAPHY">Tipografía (Nombre de marca)</option>
+                            <option value="IMAGE">Imagen de Logo</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                            URL Imagen de Logo {editForm.logoMode === "TYPOGRAPHY" && "(Opcional)"}
+                          </label>
+                          <input
+                            type="url"
+                            value={editForm.logoUrl}
+                            onChange={(e) => setEditForm({ ...editForm, logoUrl: e.target.value })}
+                            placeholder="https://.../logo.png"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-semibold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">ID Medición GA4 (Analytics)</label>
+                          <input
+                            type="text"
+                            value={editForm.analyticsMeasurementId}
+                            onChange={(e) => setEditForm({ ...editForm, analyticsMeasurementId: e.target.value })}
+                            placeholder="G-XXXXXXXXXX"
+                            className="w-full rounded-xl border border-slate-200 bg-white p-2.5 font-mono font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="pt-2 flex items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setIsEditingFields(false)}
+                        className="rounded-xl border border-slate-300 bg-white dark:border-slate-800 dark:bg-slate-900 px-4 py-2 text-xs font-bold text-slate-700 dark:text-slate-300"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmittingPatch}
+                        className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-5 py-2 text-xs font-bold text-white shadow transition disabled:opacity-50"
+                      >
+                        <Save className="h-4 w-4" />
+                        <span>{isSubmittingPatch ? "Guardando..." : "Guardar Cambios de Empresario"}</span>
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
                 {/* 1. Datos de Registro Base */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 border-b border-slate-200 dark:border-slate-800 pb-2">
@@ -1101,8 +1676,10 @@ export function EntrepreneurOperationsView() {
                     <p className="text-xs text-slate-400 italic">El empresario aún no ha iniciado el formulario de onboarding.</p>
                   )}
                 </div>
-              </div>
-            </div>
+              </>
+            )}
+          </div>
+        </div>
 
             {/* Modal Footer */}
             <div className="border-t border-slate-200 bg-slate-50 p-4 text-right dark:border-slate-800 dark:bg-slate-950">
