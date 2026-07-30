@@ -22,7 +22,7 @@ const CONFIG = {
     whatsappNumber: '573188430283',
     phoneNumber: '3188430283',
     displayPhone: '3188430283',
-    purchaseUrl: 'https://colombia.ganoexcel.com/GanoMaster',
+    purchaseUrl: '',
     defaultMessage: 'Hola Jairo, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.'
   },
 
