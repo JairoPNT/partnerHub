@@ -65,6 +65,12 @@ export const updateActivationLeadSchema = z.object({
   status: activationLeadStatusSchema
 });
 
+export const internalActivationLeadCreateSchema = activationLeadSchema.extend({
+  status: activationLeadStatusSchema.default("NEW"),
+  siteId: siteIdSchema.nullable().optional(),
+  onboardingData: onboardingDataSchema.optional()
+});
+
 type ActivationLead = z.infer<typeof activationLeadSchema> & {
   id: string;
   status: z.infer<typeof activationLeadStatusSchema>;
@@ -132,6 +138,45 @@ async function create(input: z.infer<typeof activationLeadSchema>) {
 
   await writeLeads([...leads, lead]);
   return { lead: toPublicLead(lead), onboardingToken };
+}
+
+async function createInternal(input: z.infer<typeof internalActivationLeadCreateSchema>) {
+  const parsed = internalActivationLeadCreateSchema.parse(input);
+  const leads = await readLeads();
+  const now = new Date().toISOString();
+  const onboardingToken = randomUUID();
+  const lead: ActivationLead = {
+    fullName: parsed.fullName,
+    whatsapp: parsed.whatsapp,
+    email: parsed.email,
+    brandName: parsed.brandName,
+    mainProduct: parsed.mainProduct,
+    referrerCode: parsed.referrerCode,
+    paymentMethod: parsed.paymentMethod,
+    termsAccepted: parsed.termsAccepted,
+    id: randomUUID(),
+    status: parsed.status,
+    recordState: "ACTIVE",
+    siteId: parsed.siteId ?? null,
+    createdAt: now,
+    updatedAt: now,
+    onboardingTokenHash: hashOnboardingToken(onboardingToken),
+    onboardingData: parsed.onboardingData ?? {}
+  };
+
+  if (lead.referrerCode && lead.siteId) {
+    await manualReferralService.createReferral({
+      referredSiteId: lead.siteId,
+      referrerCode: lead.referrerCode
+    });
+  }
+
+  await writeLeads([...leads, lead]);
+  return {
+    lead: toPublicLead(lead),
+    onboardingToken,
+    onboardingPath: `/onboarding/${onboardingToken}`
+  };
 }
 
 async function list(options: { includeArchived?: boolean } = {}) {
@@ -248,6 +293,7 @@ async function deleteTest(id: string, confirmation: string) {
 
 export const activationLeadService = {
   create,
+  createInternal,
   list,
   getByOnboardingToken,
   updateOnboarding,
