@@ -51,7 +51,7 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-[285px] shrink-0 border-r border-slate-200/80 bg-white/80 px-4 py-6 backdrop-blur-md xl:flex xl:flex-col">
+    <aside className="sticky top-0 h-screen hidden w-[285px] shrink-0 border-r border-slate-200/80 bg-white/80 px-4 py-6 backdrop-blur-md xl:flex xl:flex-col overflow-y-auto">
       <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-cyan-50/40 to-slate-100/60 p-5 shadow-sm text-slate-900">
         <div className="flex items-center gap-2.5">
           <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-600 text-white shadow-sm">
