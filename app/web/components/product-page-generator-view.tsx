@@ -35,6 +35,7 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Label, Input, Textarea, Select } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
+import { HeroImageUploader } from "@/components/ui/hero-image-uploader";
 import { ModuleRecord } from "@/modules/catalog";
 
 type ProductPageGeneratorViewProps = {
@@ -1064,42 +1065,32 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             <div className="flex items-center gap-2">
               <ImageIcon className="h-5 w-5 text-cyan-600 dark:text-cyan-400" />
               <CardTitle className="text-base font-bold text-slate-900 dark:text-white">
-                Recursos Multimedia (Hero en Cloudflare R2)
+                Recursos Multimedia (Imágenes Hero en Cloudflare R2)
               </CardTitle>
             </div>
             <CardDescription className="text-xs text-slate-500 dark:text-slate-400">
-              URLs absolutas HTTPS a las imágenes de héroe alojadas en Cloudflare R2 / media.partnerhub.club.
+              Selecciona las imágenes de portada. Se subirán y optimizarán automáticamente a R2.
             </CardDescription>
           </CardHeader>
 
-          <CardContent className="space-y-5">
-            <div>
-              <Label htmlFor="heroDesktop">URL HTTPS Hero Desktop *</Label>
-              <Input
-                id="heroDesktop"
-                placeholder="https://media.partnerhub.club/clientes/dorian-higuita/producto/v1/hero-desktop.webp"
-                value={form.heroDesktop}
-                onChange={(e) => handleInputChange("heroDesktop", e.target.value)}
-                className={fieldErrors.heroDesktop ? "border-rose-400 focus:border-rose-500" : ""}
-              />
-              {fieldErrors.heroDesktop && (
-                <p className="mt-1 text-xs text-rose-600">{fieldErrors.heroDesktop[0]}</p>
-              )}
-            </div>
+          <CardContent className="space-y-6">
+            <HeroImageUploader
+              label="Hero Desktop (Pantallas Grandes)"
+              variant="hero-desktop"
+              siteId={form.siteId}
+              value={form.heroDesktop}
+              onChange={(url) => handleInputChange("heroDesktop", url)}
+              helpText="Imagen de portada optimizada para computadores y monitores de escritorio."
+            />
 
-            <div>
-              <Label htmlFor="heroMobile">URL HTTPS Hero Mobile *</Label>
-              <Input
-                id="heroMobile"
-                placeholder="https://media.partnerhub.club/clientes/dorian-higuita/producto/v1/hero-mobile.webp"
-                value={form.heroMobile}
-                onChange={(e) => handleInputChange("heroMobile", e.target.value)}
-                className={fieldErrors.heroMobile ? "border-rose-400 focus:border-rose-500" : ""}
-              />
-              {fieldErrors.heroMobile && (
-                <p className="mt-1 text-xs text-rose-600">{fieldErrors.heroMobile[0]}</p>
-              )}
-            </div>
+            <HeroImageUploader
+              label="Hero Mobile (Dispositivos Móviles)"
+              variant="hero-mobile"
+              siteId={form.siteId}
+              value={form.heroMobile}
+              onChange={(url) => handleInputChange("heroMobile", url)}
+              helpText="Imagen de portada optimizada para teléfonos móviles y tablets."
+            />
           </CardContent>
         </Card>
 
