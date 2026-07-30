@@ -62,16 +62,19 @@ export const activationLeadStatusSchema = z.enum([
 export const activationLeadRecordStateSchema = z.enum(["ACTIVE", "ARCHIVED"]);
 
 export const updateActivationLeadSchema = z.object({
-  status: activationLeadStatusSchema
+  status: activationLeadStatusSchema.optional(),
+  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()).nullable().optional()
 });
 
 export const internalActivationLeadCreateSchema = activationLeadSchema.extend({
+  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()).nullable().optional(),
   status: activationLeadStatusSchema.default("NEW"),
   siteId: siteIdSchema.nullable().optional(),
   onboardingData: onboardingDataSchema.optional()
 });
 
-type ActivationLead = z.infer<typeof activationLeadSchema> & {
+type ActivationLead = Omit<z.infer<typeof activationLeadSchema>, "email"> & {
+  email: string | null;
   id: string;
   status: z.infer<typeof activationLeadStatusSchema>;
   siteId: string | null;
@@ -148,7 +151,7 @@ async function createInternal(input: z.infer<typeof internalActivationLeadCreate
   const lead: ActivationLead = {
     fullName: parsed.fullName,
     whatsapp: parsed.whatsapp,
-    email: parsed.email,
+    email: parsed.email ?? null,
     brandName: parsed.brandName,
     mainProduct: parsed.mainProduct,
     referrerCode: parsed.referrerCode,
@@ -248,9 +251,14 @@ async function updateStatus(id: string, input: z.infer<typeof updateActivationLe
 
   if (!existing) throw new Error(`Activation lead ${id} was not found.`);
 
+  if (!parsed.status && parsed.email === undefined) {
+    throw new Error("At least one activation lead field must be provided.");
+  }
+
   const next: ActivationLead = {
     ...existing,
-    status: parsed.status,
+    status: parsed.status ?? existing.status,
+    email: parsed.email === undefined ? existing.email : parsed.email,
     updatedAt: new Date().toISOString()
   };
 

@@ -20,6 +20,7 @@ La respuesta incluye el lead, `onboardingToken` y `onboardingPath` para enviar e
 
 - El endpoint es interno y queda detrás del acceso administrativo existente.
 - El consentimiento legal sigue siendo obligatorio en el contrato (`termsAccepted: true`).
+- `email` puede omitirse durante el registro interno si el empresario todavía no lo ha compartido. Se almacena como `null` y puede completarse después mediante PATCH desde el detalle administrativo.
 - Si hay `referrerCode` y `siteId`, se crea el referido manual correspondiente.
 - El cliente no recibe acceso a `/partners`; solo recibe el enlace temporal de onboarding.
 
