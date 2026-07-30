@@ -115,6 +115,16 @@ export type ProductPageGenerationOptions = {
   templateSource?: "canonical" | "master";
 };
 
+async function parseSavedSource(siteId: string) {
+  const source = await productPageSourceService.get(siteId);
+
+  if (!source) {
+    throw new Error(`No saved product page configuration exists for siteId: ${siteId}.`);
+  }
+
+  return productPageGenerationInputSchema.parse(source);
+}
+
 async function resolveTemplateDirectory(siteId: string, options?: ProductPageGenerationOptions) {
   const source = options?.templateSource ?? (siteId === "ganomaster" ? "canonical" : "master");
   if (source === "canonical") {
@@ -233,5 +243,13 @@ export const productPageGenerationService = {
       outputDirectory,
       files: [...files, "manifest.json"]
     };
+  },
+
+  async regenerateFromSavedSource(
+    siteId: string,
+    options?: ProductPageGenerationOptions
+  ): Promise<ProductPageGenerationResult> {
+    const input = await parseSavedSource(siteId);
+    return this.generate(input, options);
   }
 };

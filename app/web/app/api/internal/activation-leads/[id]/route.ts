@@ -7,6 +7,7 @@ import {
   linkActivationLeadSchema,
   updateActivationLeadSchema
 } from "@/server/services/activationLeadService";
+import { productPageLeadSyncService } from "@/server/services/productPageLeadSyncService";
 
 export const runtime = "nodejs";
 
@@ -24,14 +25,14 @@ export async function PATCH(request: Request, context: RouteContext) {
     }
 
     if ("siteId" in body) {
-      return NextResponse.json(
-        await activationLeadService.linkSite(id, linkActivationLeadSchema.parse(body))
-      );
+      const result = await activationLeadService.linkSite(id, linkActivationLeadSchema.parse(body));
+      await productPageLeadSyncService.syncLeadToExistingSource(result.lead);
+      return NextResponse.json(result);
     }
 
-    return NextResponse.json(
-      await activationLeadService.updateStatus(id, updateActivationLeadSchema.parse(body))
-    );
+    const lead = await activationLeadService.updateStatus(id, updateActivationLeadSchema.parse(body));
+    await productPageLeadSyncService.syncLeadToExistingSource(lead);
+    return NextResponse.json(lead);
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(

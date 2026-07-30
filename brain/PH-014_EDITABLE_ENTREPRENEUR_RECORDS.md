@@ -25,7 +25,9 @@ Una pagina de empresario publicada sigue siendo editable desde el dashboard admi
 - Modo de logo, URL de logo, favicon opcional y Analytics GA4.
 - Dominio de publicacion, solo como operacion administrativa consciente porque cambia el destino SFTP.
 
-Despues de guardar cambios de contenido, el operador debe regenerar y publicar nuevamente la pagina para que el sitio publico refleje el cambio.
+Despues de guardar cambios de contenido, el operador debe publicar nuevamente la pagina para que el sitio publico refleje el cambio.
+
+El backend sincroniza los datos editados del empresario con la fuente JSON del sitio cuando existe un `siteId` vinculado. Adicionalmente, `POST /api/internal/product-pages/publish` regenera el paquete estatico desde la fuente guardada antes de subir por SFTP. Esto evita republicar un `config.js` antiguo cuando se corrigen telefonos, WhatsApp, URL de compra, SEO, Analytics o heroes.
 
 ## Campos bloqueados
 
@@ -38,4 +40,5 @@ El `siteId` es un identificador tecnico permanente. Una vez vinculado a un empre
 3. Generar la pagina usando el `siteId` elegido.
 4. Vincular ese `siteId` al lead.
 5. Publicar la pagina en el dominio correspondiente.
+6. Si se editan datos despues de publicar, guardar cambios y volver a publicar; la regeneracion previa se ejecuta automaticamente.
 
