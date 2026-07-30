@@ -36,6 +36,14 @@ import { Alert } from "@/components/ui/alert";
 import { ModuleRecord } from "@/modules/catalog";
 
 import { HeroImageUploader } from "@/components/ui/hero-image-uploader";
+import {
+  VerificationBadge,
+  VerifyNowButton,
+  FailedChecksDetails,
+  DeliveryGuardAlert,
+  ProductPageVerificationResult,
+  ProductPageVerificationCheck
+} from "@/components/ui/verification-status-panel";
 
 type MasterSiteManagementViewProps = {
   record?: ModuleRecord;
@@ -61,8 +69,9 @@ export interface MasterFormState {
 export interface ClientSiteItem {
   siteId: string;
   domain?: string;
-  publicationState?: "NOT_STARTED" | "GENERATED" | "PUBLISHED";
+  publicationState?: string;
   lastPublishedAt?: string;
+  lastVerification?: ProductPageVerificationResult | null;
   configuration?: any;
 }
 
@@ -106,13 +115,13 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
   const [isLoadingMasterConfig, setIsLoadingMasterConfig] = useState(true);
   const [isGeneratingMaster, setIsGeneratingMaster] = useState(false);
   const [isPublishingMaster, setIsPublishingMaster] = useState(false);
-
-  // Estados de generación y publicación del master
-  const [publicationState, setPublicationState] = useState<"NOT_STARTED" | "GENERATED" | "PUBLISHED">("PUBLISHED");
+  const [publicationState, setPublicationState] = useState<string>("PUBLISHED");
   const [generatedAt, setGeneratedAt] = useState<string | null>(null);
   const [publishedAt, setPublishedAt] = useState<string | null>(null);
   const [generationOutput, setGenerationOutput] = useState<any | null>(null);
   const [copiedManifest, setCopiedManifest] = useState(false);
+  const [masterVerification, setMasterVerification] = useState<ProductPageVerificationResult | null>(null);
+  const [isPublishStepMaster, setIsPublishStepMaster] = useState<"IDLE" | "SFTP" | "VERIFYING">("IDLE");
 
   // Mensajes y alertas
   const [masterSuccessMessage, setMasterSuccessMessage] = useState<string | null>(null);
@@ -134,7 +143,20 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
   const fetchMasterConfig = async () => {
     setIsLoadingMasterConfig(true);
     try {
-      const res = await fetch(`/api/internal/product-pages/${MASTER_SITE_ID}`);
+      const [res, pagesRes] = await Promise.all([
+        fetch(`/api/internal/product-pages/${MASTER_SITE_ID}`),
+        fetch("/api/internal/product-pages")
+      ]);
+
+      if (pagesRes.ok) {
+        const pData = await pagesRes.json();
+        const masterPage = (pData.sites || []).find((s: any) => s.siteId === MASTER_SITE_ID);
+        if (masterPage?.lastVerification) {
+          setMasterVerification(masterPage.lastVerification);
+          setPublicationState(masterPage.lastVerification.status);
+        }
+      }
+
       if (res.ok) {
         const data = await res.json();
         const cfg = data.configuration || {};
@@ -183,7 +205,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
     try {
       const pagesRes = await fetch("/api/internal/product-pages");
-      let pageSites: { siteId: string; configuration: any }[] = [];
+      let pageSites: { siteId: string; configuration: any; lastVerification?: ProductPageVerificationResult | null }[] = [];
       if (pagesRes.ok) {
         const data = await pagesRes.json();
         pageSites = data.sites || [];
@@ -206,14 +228,15 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         .map((item) => {
           const lead = leads.find((l) => l.siteId === item.siteId);
           const domain = item.configuration?.site?.domain || item.configuration?.domain || lead?.onboardingData?.domain;
-          const publicationState = lead?.publicationState || "PUBLISHED";
+          const pubState = item.lastVerification?.status || lead?.publicationState || "PUBLISHED";
           const lastPublishedAt = lead?.updatedAt || item.configuration?.updatedAt || lead?.createdAt;
 
           return {
             siteId: item.siteId,
             domain,
-            publicationState,
+            publicationState: pubState,
             lastPublishedAt,
+            lastVerification: item.lastVerification || null,
             configuration: item.configuration
           };
         });
@@ -225,6 +248,21 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
     } finally {
       setIsLoadingClientSites(false);
     }
+  };
+
+  const handleClientSiteVerified = (siteId: string, verifResult: ProductPageVerificationResult) => {
+    setClientSites((prev) =>
+      prev.map((item) => {
+        if (item.siteId === siteId) {
+          return {
+            ...item,
+            publicationState: verifResult.status,
+            lastVerification: verifResult
+          };
+        }
+        return item;
+      })
+    );
   };
 
   useEffect(() => {
@@ -249,20 +287,20 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         id: MASTER_SITE_ID,
         domain: MASTER_DOMAIN,
         title: form.siteTitle.trim(),
-        appName: "ganomaster",
+        appName: MASTER_SITE_ID,
         ogTitle: form.siteTitle.trim(),
-        ogDescription: form.metaDescription.trim() || undefined,
-        metaDescription: form.metaDescription.trim() || undefined,
+        ogDescription: form.metaDescription.trim(),
+        metaDescription: form.metaDescription.trim(),
         faviconUrl: form.faviconUrl.trim() || undefined
       },
       distributor: {
         brandName: form.brandName.trim(),
         firstName: form.firstName.trim(),
         fullName: form.fullName.trim(),
-        role: form.role.trim() || "Plantilla Maestra Oficial · Gano Excel",
+        role: form.role.trim(),
         whatsappNumber: form.whatsappNumber.replace(/\D/g, ""),
-        phoneNumber: form.displayPhone.trim() || form.whatsappNumber.replace(/\D/g, ""),
-        displayPhone: form.displayPhone.trim() || form.whatsappNumber.replace(/\D/g, ""),
+        phoneNumber: form.displayPhone.trim(),
+        displayPhone: form.displayPhone.trim(),
         purchaseUrl: form.purchaseUrl.trim() || undefined,
         defaultMessage: form.defaultMessage.trim() || undefined
       },
@@ -285,14 +323,14 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "No se pudo generar el paquete local de ganomaster.");
+        throw new Error(data.error || "No se pudo generar la plantilla maestra local.");
       }
 
-      setGenerationOutput(data);
       const now = new Date().toISOString();
       setGeneratedAt(now);
       setPublicationState("GENERATED");
-      setMasterSuccessMessage("Vista previa local generada. Haz clic en 'Publicar en ganomaster.pro' para desplegar los cambios en vivo.");
+      setGenerationOutput(data);
+      setMasterSuccessMessage("Paquete estático maestro generado localmente. Ahora puedes publicarlo en ganomaster.pro.");
     } catch (err: any) {
       setMasterErrorMessage(err.message || "Error al generar la plantilla maestra.");
     } finally {
@@ -303,8 +341,13 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
   // 2. Publicar en ganomaster.pro (POST /api/internal/product-pages/publish)
   const handlePublishMaster = async () => {
     setIsPublishingMaster(true);
+    setIsPublishStepMaster("SFTP");
     setMasterSuccessMessage(null);
     setMasterErrorMessage(null);
+
+    const timer = setTimeout(() => {
+      setIsPublishStepMaster("VERIFYING");
+    }, 1500);
 
     try {
       const response = await fetch("/api/internal/product-pages/publish", {
@@ -321,12 +364,30 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
       const now = new Date().toISOString();
       setPublishedAt(now);
-      setPublicationState("PUBLISHED");
-      setMasterSuccessMessage("Vista previa publicada. Revisa ganomaster.pro antes de replicar.");
+      const pubState = data.publicationState || (data.verificationStatus === "VERIFIED" ? "VERIFIED" : "VERIFY_FAILED");
+      setPublicationState(pubState);
+
+      if (data.checks) {
+        setMasterVerification({
+          siteId: MASTER_SITE_ID,
+          domain: MASTER_DOMAIN,
+          verifiedAt: data.verifiedAt || now,
+          status: data.verificationStatus || pubState,
+          checks: data.checks
+        });
+      }
+
+      if (pubState === "VERIFIED") {
+        setMasterSuccessMessage("Vista previa publicada y verificada en ganomaster.pro.");
+      } else {
+        setMasterErrorMessage("Vista previa publicada, pero la verificación en ganomaster.pro requiere revisión.");
+      }
     } catch (err: any) {
       setMasterErrorMessage(err.message || "Error al publicar en ganomaster.pro.");
     } finally {
+      clearTimeout(timer);
       setIsPublishingMaster(false);
+      setIsPublishStepMaster("IDLE");
     }
   };
 
@@ -387,31 +448,8 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
     setTimeout(() => setCopiedManifest(false), 2000);
   };
 
-  const getPublicationBadge = (pubState?: "NOT_STARTED" | "GENERATED" | "PUBLISHED") => {
-    switch (pubState) {
-      case "PUBLISHED":
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800 border border-emerald-300">
-            <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
-            PUBLISHED
-          </span>
-        );
-      case "GENERATED":
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-bold text-cyan-800 border border-cyan-300">
-            <RefreshCw className="h-3.5 w-3.5 text-cyan-600" />
-            GENERATED
-          </span>
-        );
-      case "NOT_STARTED":
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 border border-amber-300">
-            <Clock className="h-3.5 w-3.5 text-amber-600" />
-            NOT_STARTED
-          </span>
-        );
-    }
+  const getPublicationBadge = (pubState?: string | null) => {
+    return <VerificationBadge status={pubState} />;
   };
 
   return (
@@ -450,7 +488,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
       {/* DASHBOARD DE ESTADO DEL MASTER */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-        <div className="flex items-center justify-between border-b border-slate-200 pb-3">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
           <div className="flex items-center gap-3">
             <Globe className="h-6 w-6 text-cyan-600" />
             <div>
@@ -463,7 +501,13 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             </div>
           </div>
 
-          <div>{getPublicationBadge(publicationState)}</div>
+          <div className="flex items-center gap-2">
+            {getPublicationBadge(publicationState)}
+            <VerifyNowButton
+              siteId={MASTER_SITE_ID}
+              onVerified={(res) => setMasterVerification(res)}
+            />
+          </div>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 text-xs">
@@ -495,12 +539,21 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           </div>
 
           <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-            <span className="text-slate-400 font-bold text-[10px] uppercase block">Última Publicación</span>
+            <span className="text-slate-400 font-bold text-[10px] uppercase block">Última Publicación / Verificación</span>
             <span className="font-bold text-slate-700 text-xs">
-              {publishedAt ? new Date(publishedAt).toLocaleString("es-CO") : "Publicación inicial activa"}
+              {masterVerification?.verifiedAt
+                ? new Date(masterVerification.verifiedAt).toLocaleString("es-CO")
+                : publishedAt
+                ? new Date(publishedAt).toLocaleString("es-CO")
+                : "Publicación inicial activa"}
             </span>
           </div>
         </div>
+
+        <DeliveryGuardAlert status={publicationState} />
+        {masterVerification?.checks && (
+          <FailedChecksDetails checks={masterVerification.checks} />
+        )}
       </section>
 
       {/* NOTIFICACIONES Y ALERTAS DEL MASTER */}
@@ -979,63 +1032,87 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
                   <th className="py-3 px-4">Site ID Cliente</th>
                   <th className="py-3 px-4">Dominio</th>
                   <th className="py-3 px-4">Estado de Publicación</th>
-                  <th className="py-3 px-4">Última Publicación</th>
+                  <th className="py-3 px-4">Última Publicación / Verificación</th>
+                  <th className="py-3 px-4 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {clientSites.map((site) => {
                   const isChecked = selectedSiteIds.includes(site.siteId);
+                  const hasFailedChecks = site.lastVerification?.checks?.some((c) => c.status === "FAIL");
 
                   return (
-                    <tr
-                      key={site.siteId}
-                      onClick={() => handleToggleSite(site.siteId)}
-                      className={`cursor-pointer transition ${
-                        isChecked
-                          ? "bg-cyan-50/50 hover:bg-cyan-50/80"
-                          : "hover:bg-slate-50"
-                      }`}
-                    >
-                      <td className="py-3.5 px-4">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => handleToggleSite(site.siteId)}
-                          className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                        />
-                      </td>
+                    <React.Fragment key={site.siteId}>
+                      <tr
+                        onClick={() => handleToggleSite(site.siteId)}
+                        className={`cursor-pointer transition ${
+                          isChecked
+                            ? "bg-cyan-50/50 hover:bg-cyan-50/80"
+                            : "hover:bg-slate-50"
+                        }`}
+                      >
+                        <td className="py-3.5 px-4">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSite(site.siteId)}
+                            className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                          />
+                        </td>
 
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
-                        {site.siteId}
-                      </td>
+                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
+                          {site.siteId}
+                        </td>
 
-                      <td className="py-3.5 px-4 font-mono text-xs">
-                        {site.domain ? (
-                          <a
-                            href={`https://${site.domain}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-cyan-600 font-bold hover:underline inline-flex items-center gap-1"
-                          >
-                            <Globe className="h-3.5 w-3.5" />
-                            {site.domain}
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        ) : (
-                          <span className="text-slate-400 italic">Sin dominio</span>
-                        )}
-                      </td>
+                        <td className="py-3.5 px-4 font-mono text-xs">
+                          {site.domain ? (
+                            <a
+                              href={`https://${site.domain}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-cyan-600 font-bold hover:underline inline-flex items-center gap-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Globe className="h-3.5 w-3.5" />
+                              {site.domain}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 italic">Sin dominio</span>
+                          )}
+                        </td>
 
-                      <td className="py-3.5 px-4">
-                        {getPublicationBadge(site.publicationState)}
-                      </td>
+                        <td className="py-3.5 px-4">
+                          {getPublicationBadge(site.publicationState)}
+                        </td>
 
-                      <td className="py-3.5 px-4 text-slate-600 text-[11px]">
-                        {site.lastPublishedAt
-                          ? new Date(site.lastPublishedAt).toLocaleString("es-CO")
-                          : "No disponible"}
-                      </td>
-                    </tr>
+                        <td className="py-3.5 px-4 text-slate-600 text-[11px]">
+                          {site.lastVerification?.verifiedAt
+                            ? new Date(site.lastVerification.verifiedAt).toLocaleString("es-CO")
+                            : site.lastPublishedAt
+                            ? new Date(site.lastPublishedAt).toLocaleString("es-CO")
+                            : "No disponible"}
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <VerifyNowButton
+                            siteId={site.siteId}
+                            onVerified={(res) => handleClientSiteVerified(site.siteId, res)}
+                          />
+                        </td>
+                      </tr>
+
+                      {hasFailedChecks && site.lastVerification?.checks && (
+                        <tr className="bg-rose-50/40">
+                          <td colSpan={6} className="px-4 py-2">
+                            <div className="space-y-1.5">
+                              <DeliveryGuardAlert status={site.publicationState} />
+                              <FailedChecksDetails checks={site.lastVerification.checks} />
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

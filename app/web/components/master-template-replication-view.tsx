@@ -17,10 +17,18 @@ import {
   Check,
   X
 } from "lucide-react";
+import {
+  VerificationBadge,
+  VerifyNowButton,
+  FailedChecksDetails,
+  DeliveryGuardAlert,
+  ProductPageVerificationResult
+} from "@/components/ui/verification-status-panel";
 
 export interface ProductPageSite {
   siteId: string;
   configuration?: any;
+  lastVerification?: ProductPageVerificationResult | null;
 }
 
 export interface ReplicationResultItem {
@@ -71,6 +79,20 @@ export function MasterTemplateReplicationView() {
   useEffect(() => {
     fetchSites();
   }, []);
+
+  const handleSiteVerified = (siteId: string, verifResult: ProductPageVerificationResult) => {
+    setSites((prev) =>
+      prev.map((s) => {
+        if (s.siteId === siteId) {
+          return {
+            ...s,
+            lastVerification: verifResult
+          };
+        }
+        return s;
+      })
+    );
+  };
 
   const handleToggleSelectAll = () => {
     if (selectedSiteIds.length === sites.length) {
@@ -320,7 +342,8 @@ export function MasterTemplateReplicationView() {
                   <th className="py-3 px-4">Identificador del Sitio (siteId)</th>
                   <th className="py-3 px-4">Dominio de Publicación</th>
                   <th className="py-3 px-4">Plantilla / Título</th>
-                  <th className="py-3 px-4">Estado de Selección</th>
+                  <th className="py-3 px-4">Estado de Verificación</th>
+                  <th className="py-3 px-4 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
@@ -328,62 +351,76 @@ export function MasterTemplateReplicationView() {
                   const isChecked = selectedSiteIds.includes(site.siteId);
                   const title = site.configuration?.brandName || site.configuration?.title || site.siteId;
                   const domain = site.configuration?.site?.domain || site.configuration?.domain;
+                  const hasFailedChecks = site.lastVerification?.checks?.some((c) => c.status === "FAIL");
 
                   return (
-                    <tr
-                      key={site.siteId}
-                      onClick={() => handleToggleSite(site.siteId)}
-                      className={`cursor-pointer transition ${
-                        isChecked
-                          ? "bg-cyan-50/40 dark:bg-cyan-950/20 hover:bg-cyan-50/70"
-                          : "hover:bg-slate-50 dark:hover:bg-slate-800/40"
-                      }`}
-                    >
-                      <td className="py-3.5 px-4">
-                        <input
-                          type="checkbox"
-                          checked={isChecked}
-                          onChange={() => handleToggleSite(site.siteId)}
-                          className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
-                        />
-                      </td>
+                    <React.Fragment key={site.siteId}>
+                      <tr
+                        onClick={() => handleToggleSite(site.siteId)}
+                        className={`cursor-pointer transition ${
+                          isChecked
+                            ? "bg-cyan-50/40 dark:bg-cyan-950/20 hover:bg-cyan-50/70"
+                            : "hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                        }`}
+                      >
+                        <td className="py-3.5 px-4">
+                          <input
+                            type="checkbox"
+                            checked={isChecked}
+                            onChange={() => handleToggleSite(site.siteId)}
+                            className="h-4 w-4 rounded border-slate-300 text-cyan-600 focus:ring-cyan-500"
+                          />
+                        </td>
 
-                      <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
-                        {site.siteId}
-                      </td>
+                        <td className="py-3.5 px-4 font-mono font-bold text-slate-900 dark:text-white">
+                          {site.siteId}
+                        </td>
 
-                      <td className="py-3.5 px-4 font-mono text-xs font-semibold">
-                        {domain ? (
-                          <a
-                            href={`https://${domain}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-cyan-600 dark:text-cyan-400 hover:underline inline-flex items-center gap-1"
-                          >
-                            <Globe className="h-3.5 w-3.5" />
-                            {domain}
-                            <ExternalLink className="h-3 w-3" />
-                          </a>
-                        ) : (
-                          <span className="text-slate-400 italic">Sin dominio</span>
-                        )}
-                      </td>
+                        <td className="py-3.5 px-4 font-mono text-xs font-semibold">
+                          {domain ? (
+                            <a
+                              href={`https://${domain}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-cyan-600 dark:text-cyan-400 hover:underline inline-flex items-center gap-1"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              <Globe className="h-3.5 w-3.5" />
+                              {domain}
+                              <ExternalLink className="h-3 w-3" />
+                            </a>
+                          ) : (
+                            <span className="text-slate-400 italic">Sin dominio</span>
+                          )}
+                        </td>
 
-                      <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300">
-                        {title}
-                      </td>
+                        <td className="py-3.5 px-4 text-slate-700 dark:text-slate-300">
+                          {title}
+                        </td>
 
-                      <td className="py-3.5 px-4">
-                        {isChecked ? (
-                          <span className="inline-flex items-center gap-1 text-xs font-bold text-cyan-700 dark:text-cyan-300">
-                            <CheckCircle2 className="h-3.5 w-3.5 text-cyan-500" />
-                            Incluido en Replicación
-                          </span>
-                        ) : (
-                          <span className="text-xs text-slate-400">Excluido</span>
-                        )}
-                      </td>
-                    </tr>
+                        <td className="py-3.5 px-4">
+                          <VerificationBadge status={site.lastVerification?.status} />
+                        </td>
+
+                        <td className="py-3.5 px-4 text-right" onClick={(e) => e.stopPropagation()}>
+                          <VerifyNowButton
+                            siteId={site.siteId}
+                            onVerified={(res) => handleSiteVerified(site.siteId, res)}
+                          />
+                        </td>
+                      </tr>
+
+                      {hasFailedChecks && site.lastVerification?.checks && (
+                        <tr className="bg-rose-50/40 dark:bg-rose-950/20">
+                          <td colSpan={6} className="px-4 py-2">
+                            <div className="space-y-1.5">
+                              <DeliveryGuardAlert status={site.lastVerification.status} />
+                              <FailedChecksDetails checks={site.lastVerification.checks} />
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </React.Fragment>
                   );
                 })}
               </tbody>

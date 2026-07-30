@@ -37,6 +37,14 @@ import { Label, Input, Textarea, Select } from "@/components/ui/form";
 import { Alert } from "@/components/ui/alert";
 import { HeroImageUploader } from "@/components/ui/hero-image-uploader";
 import { ModuleRecord } from "@/modules/catalog";
+import {
+  VerificationBadge,
+  VerifyNowButton,
+  FailedChecksDetails,
+  DeliveryGuardAlert,
+  ProductPageVerificationResult,
+  ProductPageVerificationCheck
+} from "@/components/ui/verification-status-panel";
 
 type ProductPageGeneratorViewProps = {
   record?: ModuleRecord;
@@ -52,7 +60,8 @@ export interface ActivationLeadRecord {
   paymentMethod: "wompi" | "direct";
   status: "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
   siteId: string | null;
-  publicationState?: "NOT_STARTED" | "GENERATED" | "PUBLISHED";
+  publicationState?: "NOT_STARTED" | "GENERATED" | "PUBLISHED" | "VERIFIED" | "VERIFY_FAILED" | string;
+  lastVerification?: ProductPageVerificationResult | null;
   onboardingData?: {
     domain?: string;
     country?: string;
@@ -103,6 +112,11 @@ interface PublicationResult {
   publishedAt: string;
   remoteRoot: string;
   files: string[];
+  domain?: string;
+  verifiedAt?: string;
+  publicationState?: "VERIFIED" | "VERIFY_FAILED" | string;
+  verificationStatus?: "VERIFIED" | "VERIFY_FAILED" | string;
+  checks?: ProductPageVerificationCheck[];
 }
 
 const INITIAL_FORM: FormState = {
@@ -158,17 +172,46 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
   // Estados de publicación
   const [isPublishing, setIsPublishing] = useState(false);
+  const [publishStep, setPublishStep] = useState<"IDLE" | "SFTP" | "VERIFYING">("IDLE");
   const [publishResult, setPublishResult] = useState<PublicationResult | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
 
   const fetchLeads = async () => {
     setIsLoadingLeads(true);
     try {
-      const res = await fetch("/api/internal/activation-leads");
-      if (res.ok) {
-        const data = await res.json();
-        setLeads(data.leads || []);
+      const [leadsRes, pagesRes] = await Promise.all([
+        fetch("/api/internal/activation-leads"),
+        fetch("/api/internal/product-pages")
+      ]);
+
+      let leadList: ActivationLeadRecord[] = [];
+      let pageSites: any[] = [];
+
+      if (leadsRes.ok) {
+        const data = await leadsRes.json();
+        leadList = data.leads || [];
       }
+
+      if (pagesRes.ok) {
+        const pData = await pagesRes.json();
+        pageSites = pData.sites || [];
+      }
+
+      const merged = leadList.map((lead) => {
+        const matchedSite = pageSites.find((s) => s.siteId === lead.siteId);
+        const lastVerification = matchedSite?.lastVerification || null;
+        let effectiveState = lead.publicationState;
+        if (lastVerification?.status) {
+          effectiveState = lastVerification.status;
+        }
+        return {
+          ...lead,
+          publicationState: effectiveState,
+          lastVerification
+        };
+      });
+
+      setLeads(merged);
     } catch {
       // Ignorar fallos de red secundarios al listar
     } finally {
@@ -179,6 +222,33 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   useEffect(() => {
     fetchLeads();
   }, []);
+
+  const handleLeadVerificationUpdated = (siteId: string, verifResult: ProductPageVerificationResult) => {
+    setLeads((prev) =>
+      prev.map((l) => {
+        if (l.siteId === siteId) {
+          return {
+            ...l,
+            publicationState: verifResult.status,
+            lastVerification: verifResult
+          };
+        }
+        return l;
+      })
+    );
+
+    if (selectedLead && selectedLead.siteId === siteId) {
+      setSelectedLead((prev) =>
+        prev
+          ? {
+              ...prev,
+              publicationState: verifResult.status,
+              lastVerification: verifResult
+            }
+          : null
+      );
+    }
+  };
 
   // Filtrar exclusivamente empresarios/clientes (excluyendo ganomaster)
   const clientLeads = leads.filter(
@@ -459,8 +529,14 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     if (!targetSiteId) return;
 
     setIsPublishing(true);
+    setPublishStep("SFTP");
     setPublishError(null);
     setPublishResult(null);
+
+    // Cambiar estado visual de espera a "Verificando dominio..." tras 1.5s
+    const stepTimer = setTimeout(() => {
+      setPublishStep("VERIFYING");
+    }, 1500);
 
     try {
       const response = await fetch("/api/internal/product-pages/publish", {
@@ -479,16 +555,30 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
       setPublishResult(data as PublicationResult);
 
-      // Actualizar publicationState a PUBLISHED localmente
+      const finalState = data.publicationState || (data.verificationStatus === "VERIFIED" ? "VERIFIED" : "VERIFY_FAILED");
+
+      // Actualizar publicationState y lastVerification localmente
       if (selectedLead) {
-        const updated = { ...selectedLead, publicationState: "PUBLISHED" as const };
-        setSelectedLead(updated);
-        setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+        const updatedLead: ActivationLeadRecord = {
+          ...selectedLead,
+          publicationState: finalState,
+          lastVerification: {
+            siteId: targetSiteId,
+            domain: data.domain || selectedLead.onboardingData?.domain || null,
+            verifiedAt: data.verifiedAt || new Date().toISOString(),
+            status: data.verificationStatus || (finalState === "VERIFIED" ? "VERIFIED" : "VERIFY_FAILED"),
+            checks: data.checks || []
+          }
+        };
+        setSelectedLead(updatedLead);
+        setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
       }
     } catch (err: any) {
       setPublishError(err.message || "Ocurrió un error inesperado durante la publicación.");
     } finally {
+      clearTimeout(stepTimer);
       setIsPublishing(false);
+      setPublishStep("IDLE");
     }
   };
 
@@ -500,31 +590,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const getPublicationBadge = (pubState?: "NOT_STARTED" | "GENERATED" | "PUBLISHED") => {
-    switch (pubState) {
-      case "PUBLISHED":
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-bold text-emerald-800 border border-emerald-300">
-            <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />
-            Publicado
-          </span>
-        );
-      case "GENERATED":
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 px-2.5 py-1 text-xs font-bold text-cyan-800 border border-cyan-300">
-            <RefreshCw className="h-3.5 w-3.5 text-cyan-600" />
-            Generado
-          </span>
-        );
-      case "NOT_STARTED":
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-1 text-xs font-bold text-amber-800 border border-amber-300">
-            <Clock className="h-3.5 w-3.5 text-amber-600" />
-            Pendiente
-          </span>
-        );
-    }
+  const getPublicationBadge = (pubState?: string | null) => {
+    return <VerificationBadge status={pubState} />;
   };
 
   return (
@@ -648,13 +715,13 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                     <div className="flex flex-wrap items-center gap-3 font-mono text-[11px]">
                       {/* siteId */}
                       <div className="flex items-center gap-1">
-                        <span className="text-slate-400">siteId:</span>
+                        <span className="text-slate-400 font-sans">siteId:</span>
                         {lead.siteId ? (
                           <span className="font-bold text-slate-900 bg-slate-100 px-2 py-0.5 rounded">
                             {lead.siteId}
                           </span>
                         ) : (
-                          <span className="text-amber-600 font-semibold italic">Sin vincular</span>
+                          <span className="text-amber-600 font-semibold italic font-sans">Sin vincular</span>
                         )}
                       </div>
 
@@ -664,12 +731,20 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                         {domain ? (
                           <span className="font-bold text-cyan-600">{domain}</span>
                         ) : (
-                          <span className="text-slate-400 italic">Sin dominio</span>
+                          <span className="text-slate-400 italic font-sans">Sin dominio</span>
                         )}
                       </div>
 
-                      {/* Estado de Publicación */}
-                      <div>{getPublicationBadge(lead.publicationState)}</div>
+                      {/* Estado de Publicación y Verificación */}
+                      <div className="flex items-center gap-2">
+                        {getPublicationBadge(lead.publicationState)}
+                        {lead.siteId && (
+                          <VerifyNowButton
+                            siteId={lead.siteId}
+                            onVerified={(res) => handleLeadVerificationUpdated(lead.siteId!, res)}
+                          />
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -700,45 +775,66 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         <Card className="border-cyan-300 bg-cyan-50/30 p-5 space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div className="space-y-1">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <h3 className="text-lg font-bold text-slate-900">
                   {selectedLead.brandName} ({selectedLead.fullName})
                 </h3>
                 {getPublicationBadge(selectedLead.publicationState)}
               </div>
-              <p className="text-xs text-slate-600 flex items-center gap-2">
+              <p className="text-xs text-slate-600 flex flex-wrap items-center gap-2">
                 <span>Estado Comercial: <strong>{selectedLead.status}</strong></span>
                 <span>•</span>
                 <span>Dominio: <strong>{selectedLead.onboardingData?.domain || "No configurado"}</strong></span>
+                {selectedLead.lastVerification?.verifiedAt && (
+                  <>
+                    <span>•</span>
+                    <span>Verificado: <strong>{new Date(selectedLead.lastVerification.verifiedAt).toLocaleString("es-CO")}</strong></span>
+                  </>
+                )}
               </p>
             </div>
 
-            {/* Asignación/Vinculación de siteId si no existe */}
-            {!selectedLead.siteId ? (
-              <div className="flex items-center gap-2 rounded-xl bg-amber-100 p-2.5 border border-amber-300 text-xs">
-                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                <span className="text-amber-900 font-semibold">
-                  Sin siteId vinculado. Sugerido: <code className="font-mono font-bold">{form.siteId}</code>
-                </span>
-                <button
-                  type="button"
-                  onClick={handleLinkSiteIdToLead}
-                  disabled={isLinkingSiteId}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 px-3 py-1 text-xs font-bold text-white shadow transition disabled:opacity-50"
-                >
-                  <Link2 className="h-3.5 w-3.5" />
-                  <span>{isLinkingSiteId ? "Vinculando..." : "Confirmar Vinculación"}</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex items-center gap-2 rounded-xl bg-emerald-100 p-2.5 border border-emerald-300 text-xs">
-                <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                <span className="text-emerald-900 font-bold">
-                  Sitio Vinculado: <code className="font-mono">{selectedLead.siteId}</code>
-                </span>
-              </div>
-            )}
+            {/* Acciones de vinculación y verificación */}
+            <div className="flex flex-wrap items-center gap-2">
+              {selectedLead.siteId && (
+                <VerifyNowButton
+                  siteId={selectedLead.siteId}
+                  onVerified={(res) => handleLeadVerificationUpdated(selectedLead.siteId!, res)}
+                />
+              )}
+
+              {!selectedLead.siteId ? (
+                <div className="flex items-center gap-2 rounded-xl bg-amber-100 p-2 border border-amber-300 text-xs">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                  <span className="text-amber-900 font-semibold">
+                    Sin siteId vinculado. Sugerido: <code className="font-mono font-bold">{form.siteId}</code>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleLinkSiteIdToLead}
+                    disabled={isLinkingSiteId}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 px-3 py-1 text-xs font-bold text-white shadow transition disabled:opacity-50"
+                  >
+                    <Link2 className="h-3.5 w-3.5" />
+                    <span>{isLinkingSiteId ? "Vinculando..." : "Confirmar Vinculación"}</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 rounded-xl bg-emerald-100 p-2 border border-emerald-300 text-xs">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                  <span className="text-emerald-900 font-bold">
+                    Sitio Vinculado: <code className="font-mono">{selectedLead.siteId}</code>
+                  </span>
+                </div>
+              )}
+            </div>
           </div>
+
+          {/* Guarda de entrega y desglose de checks fallidos para el lead seleccionado */}
+          <DeliveryGuardAlert status={selectedLead.publicationState} />
+          {selectedLead.lastVerification?.checks && (
+            <FailedChecksDetails checks={selectedLead.lastVerification.checks} />
+          )}
         </Card>
       )}
 
@@ -773,15 +869,23 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 {copied ? "¡Copiado!" : "Copiar Resumen"}
               </Button>
 
-              {/* Botón de Publicación: ejecuta POST /api/internal/product-pages/publish */}
+              {/* Botón de Publicación con estados de verificación */}
               <Button
-                variant="primary"
+                variant={publishResult?.publicationState === "VERIFY_FAILED" ? "secondary" : "primary"}
                 size="sm"
                 onClick={handlePublish}
                 isLoading={isPublishing}
                 leftIcon={<UploadCloud className="h-4 w-4 text-cyan-300" />}
               >
-                Publicar página
+                {isPublishing
+                  ? publishStep === "VERIFYING"
+                    ? "Verificando dominio..."
+                    : "Publicando..."
+                  : publishResult
+                  ? publishResult.publicationState === "VERIFIED"
+                    ? "Publicado y verificado"
+                    : "Publicado, pero requiere revisión"
+                  : "Publicar página"}
               </Button>
             </div>
           </div>
@@ -820,23 +924,52 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             </Alert>
           )}
 
-          {/* Mensaje de Éxito de Publicación */}
+          {/* Mensaje de Resultado de Publicación y Verificación */}
           {publishResult && (
-            <Alert variant="success" title="¡Página Publicada Correctamente!" icon={<CheckCircle2 className="h-5 w-5 text-emerald-600" />}>
-              <div className="space-y-1">
-                <p className="font-medium text-slate-800">
-                  La página de producto para <strong className="text-emerald-950">{publishResult.siteId}</strong> ha sido publicada exitosamente.
-                </p>
-                <p className="text-xs text-slate-600">
-                  <strong>Publicada el:</strong> {new Date(publishResult.publishedAt).toLocaleString("es-CO")}
-                </p>
-                {publishResult.remoteRoot && (
-                  <p className="text-xs text-slate-500 font-mono">
-                    Ruta remota: {publishResult.remoteRoot}
+            <div className="space-y-4">
+              <Alert
+                variant={publishResult.publicationState === "VERIFIED" ? "success" : "warning"}
+                title={
+                  publishResult.publicationState === "VERIFIED"
+                    ? "¡Página Publicada y Verificada!"
+                    : "Página Publicada — Requiere Revisión"
+                }
+                icon={
+                  publishResult.publicationState === "VERIFIED" ? (
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                  ) : (
+                    <AlertTriangle className="h-5 w-5 text-amber-600" />
+                  )
+                }
+              >
+                <div className="space-y-1 text-xs">
+                  <p className="font-medium text-slate-800">
+                    La página de producto para <strong className="text-slate-950">{publishResult.siteId}</strong> fue procesada.
                   </p>
-                )}
-              </div>
-            </Alert>
+                  {publishResult.publishedAt && (
+                    <p className="text-slate-600">
+                      <strong>Publicada el:</strong> {new Date(publishResult.publishedAt).toLocaleString("es-CO")}
+                    </p>
+                  )}
+                  {publishResult.verifiedAt && (
+                    <p className="text-slate-600">
+                      <strong>Verificada el:</strong> {new Date(publishResult.verifiedAt).toLocaleString("es-CO")}
+                    </p>
+                  )}
+                  {publishResult.remoteRoot && (
+                    <p className="text-slate-500 font-mono">
+                      Ruta remota: {publishResult.remoteRoot}
+                    </p>
+                  )}
+                </div>
+              </Alert>
+
+              <DeliveryGuardAlert status={publishResult.publicationState} />
+
+              {publishResult.checks && (
+                <FailedChecksDetails checks={publishResult.checks} />
+              )}
+            </div>
           )}
         </Card>
       )}

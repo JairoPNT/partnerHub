@@ -38,6 +38,13 @@ import {
 } from "lucide-react";
 import { HeroImageUploader } from "@/components/ui/hero-image-uploader";
 import { Badge } from "@/components/ui/badge";
+import {
+  VerificationBadge,
+  VerifyNowButton,
+  FailedChecksDetails,
+  DeliveryGuardAlert,
+  ProductPageVerificationResult
+} from "@/components/ui/verification-status-panel";
 
 export type ActivationLeadStatus = "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
 
@@ -72,6 +79,8 @@ export interface ActivationLeadRecord {
   termsAccepted: boolean;
   status: ActivationLeadStatus;
   siteId: string | null;
+  publicationState?: string;
+  lastVerification?: ProductPageVerificationResult | null;
   createdAt: string;
   updatedAt: string;
   onboardingData?: OnboardingData;
@@ -149,16 +158,70 @@ export function EntrepreneurOperationsView() {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const res = await fetch("/api/internal/activation-leads");
-      if (!res.ok) {
+      const [leadsRes, pagesRes] = await Promise.all([
+        fetch("/api/internal/activation-leads"),
+        fetch("/api/internal/product-pages")
+      ]);
+
+      if (!leadsRes.ok) {
         throw new Error("No se pudo cargar el listado de empresarios.");
       }
-      const data = await res.json();
-      setLeads(data.leads || []);
+
+      const data = await leadsRes.json();
+      const leadList: ActivationLeadRecord[] = data.leads || [];
+
+      let pageSites: any[] = [];
+      if (pagesRes.ok) {
+        const pData = await pagesRes.json();
+        pageSites = pData.sites || [];
+      }
+
+      const merged = leadList.map((lead) => {
+        const matchedSite = pageSites.find((s) => s.siteId === lead.siteId);
+        const lastVerification = matchedSite?.lastVerification || null;
+        let effectiveState = lead.publicationState;
+        if (lastVerification?.status) {
+          effectiveState = lastVerification.status;
+        }
+        return {
+          ...lead,
+          publicationState: effectiveState,
+          lastVerification
+        };
+      });
+
+      setLeads(merged);
     } catch (err) {
       setErrorMessage((err as Error).message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleLeadVerified = (leadId: string, verifResult: ProductPageVerificationResult) => {
+    setLeads((prev) =>
+      prev.map((l) => {
+        if (l.id === leadId || (l.siteId && l.siteId === verifResult.siteId)) {
+          return {
+            ...l,
+            publicationState: verifResult.status,
+            lastVerification: verifResult
+          };
+        }
+        return l;
+      })
+    );
+
+    if (selectedLead && (selectedLead.id === leadId || selectedLead.siteId === verifResult.siteId)) {
+      setSelectedLead((prev) =>
+        prev
+          ? {
+              ...prev,
+              publicationState: verifResult.status,
+              lastVerification: verifResult
+            }
+          : null
+      );
     }
   };
 
@@ -1108,14 +1171,19 @@ export function EntrepreneurOperationsView() {
                         )}
                       </td>
 
-                      {/* Sitio Vinculado */}
+                      {/* Sitio Vinculado y Verificación */}
                       <td className="py-4 px-4 whitespace-nowrap">
                         {lead.siteId ? (
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-xs font-bold text-slate-900 rounded bg-slate-100 px-2 py-1">
-                              {lead.siteId}
-                            </span>
-                            <Link2 className="h-3.5 w-3.5 text-emerald-500" />
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-xs font-bold text-slate-900 rounded bg-slate-100 px-2 py-0.5">
+                                {lead.siteId}
+                              </span>
+                              <Link2 className="h-3.5 w-3.5 text-emerald-500" />
+                            </div>
+                            <div>
+                              <VerificationBadge status={lead.lastVerification?.status || lead.publicationState} />
+                            </div>
                           </div>
                         ) : (
                           <span className="inline-flex items-center gap-1 rounded bg-amber-50 px-2 py-0.5 text-[11px] font-bold text-amber-700 border border-amber-200">
@@ -1154,7 +1222,13 @@ export function EntrepreneurOperationsView() {
                       </td>
 
                       {/* Acciones */}
-                      <td className="py-4 px-4 whitespace-nowrap text-right">
+                      <td className="py-4 px-4 whitespace-nowrap text-right space-x-2">
+                        {lead.siteId && (
+                          <VerifyNowButton
+                            siteId={lead.siteId}
+                            onVerified={(res) => handleLeadVerified(lead.id, res)}
+                          />
+                        )}
                         <button
                           onClick={() => setSelectedLead(lead)}
                           className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
@@ -1179,9 +1253,10 @@ export function EntrepreneurOperationsView() {
             {/* Modal Header */}
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white p-6 text-slate-900 rounded-t-3xl">
               <div>
-                <div className="flex items-center gap-3">
+                <div className="flex flex-wrap items-center gap-2.5">
                   <h3 className="font-heading text-xl font-bold text-slate-900">{selectedLead.brandName}</h3>
                   {getStatusBadge(selectedLead.status)}
+                  <VerificationBadge status={selectedLead.lastVerification?.status || selectedLead.publicationState} />
                 </div>
                 <p className="mt-1 text-xs text-slate-600">
                   Empresario: <strong className="text-slate-900">{selectedLead.fullName}</strong> — Registrado el{" "}
@@ -1191,14 +1266,19 @@ export function EntrepreneurOperationsView() {
 
               <button
                 onClick={() => setSelectedLead(null)}
-                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900:bg-slate-700:text-white transition"
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-900 transition"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
             {/* Modal Content */}
-            <div className="p-6 space-y-8 text-slate-800">
+            <div className="p-6 space-y-6 text-slate-800">
+              <DeliveryGuardAlert status={selectedLead.lastVerification?.status || selectedLead.publicationState} />
+              {selectedLead.lastVerification?.checks && (
+                <FailedChecksDetails checks={selectedLead.lastVerification.checks} />
+              )}
+
               {/* Action Error Banner */}
               {actionError && (
                 <div className="flex items-center gap-2 rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-xs font-semibold text-rose-700">
@@ -1235,7 +1315,7 @@ export function EntrepreneurOperationsView() {
                   </div>
                 </div>
 
-                {/* 2. Link siteId */}
+                {/* 2. Link siteId & Verify */}
                 <div className="rounded-2xl border border-slate-200 bg-slate-50/60 p-5 space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 flex items-center gap-1.5">
                     <Link2 className="h-4 w-4 text-cyan-500" />
@@ -1243,14 +1323,22 @@ export function EntrepreneurOperationsView() {
                   </h4>
 
                   {selectedLead.siteId ? (
-                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-1">
-                      <p className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
-                        <Check className="h-4 w-4 text-emerald-500" />
-                        Sitio Vinculado: <span className="font-mono text-sm underline">{selectedLead.siteId}</span>
-                      </p>
-                      <p className="text-[11px] text-slate-500">
-                        El backend actual asigna el <code className="font-mono font-bold">siteId</code> de forma única al activar.
-                      </p>
+                    <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-3 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs font-bold text-emerald-700 flex items-center gap-1.5">
+                          <Check className="h-4 w-4 text-emerald-500" />
+                          Sitio: <span className="font-mono text-sm underline">{selectedLead.siteId}</span>
+                        </p>
+                        <VerifyNowButton
+                          siteId={selectedLead.siteId}
+                          onVerified={(res) => handleLeadVerified(selectedLead.id, res)}
+                        />
+                      </div>
+                      {selectedLead.lastVerification?.verifiedAt && (
+                        <p className="text-[11px] text-slate-500">
+                          Verificado: {new Date(selectedLead.lastVerification.verifiedAt).toLocaleString("es-CO")}
+                        </p>
+                      )}
                     </div>
                   ) : (
                     <form onSubmit={handleLinkSiteId} className="space-y-3">
