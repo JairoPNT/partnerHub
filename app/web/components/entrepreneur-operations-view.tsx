@@ -130,6 +130,7 @@ export function EntrepreneurOperationsView() {
     email: "",
     brandName: "",
     mainProduct: "Landing Page PartnerHub",
+    siteId: "",
     domain: "",
     referrerCode: "",
     paymentMethod: "direct" as "wompi" | "direct",
@@ -254,6 +255,7 @@ export function EntrepreneurOperationsView() {
         email: createForm.email.trim() || null,
         brandName: createForm.brandName.trim(),
         mainProduct: createForm.mainProduct.trim() || "Landing Page PartnerHub",
+        siteId: createForm.siteId.trim().toLowerCase() || undefined,
         referrerCode: createForm.referrerCode.trim().toUpperCase() || undefined,
         paymentMethod: createForm.paymentMethod,
         status: createForm.status,
@@ -868,21 +870,39 @@ export function EntrepreneurOperationsView() {
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
-                    Dominio de Publicación *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={createForm.domain}
-                    onChange={(e) => setCreateForm({ ...createForm, domain: e.target.value })}
-                    placeholder="Ej. jairopinto.pro"
-                    className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
-                  />
-                  <p className="mt-1 text-[11px] text-slate-400">
-                    Se publicará automáticamente en <code className="font-mono">/home/u658137804/domains/&#123;domain&#125;/public_html</code>
-                  </p>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Identificador de Sitio / siteId (Slug)
+                    </label>
+                    <input
+                      type="text"
+                      value={createForm.siteId}
+                      onChange={(e) => setCreateForm({ ...createForm, siteId: e.target.value })}
+                      placeholder="Ej. dorian-higuita"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    />
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Formato slug en minúsculas (ej. dorian-higuita)
+                    </p>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase mb-1">
+                      Dominio de Publicación *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={createForm.domain}
+                      onChange={(e) => setCreateForm({ ...createForm, domain: e.target.value })}
+                      placeholder="Ej. dorianhiguita.pro"
+                      className="w-full rounded-xl border border-slate-200 bg-white p-2.5 text-xs font-mono font-bold text-slate-900 dark:border-slate-800 dark:bg-slate-950 dark:text-white"
+                    />
+                    <p className="mt-1 text-[11px] text-slate-400">
+                      Dominio independiente (ej. dorianhiguita.pro)
+                    </p>
+                  </div>
                 </div>
 
                 <div className="grid gap-4 sm:grid-cols-2">
