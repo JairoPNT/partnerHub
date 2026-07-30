@@ -213,9 +213,11 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
 
   const homepageUrl = `https://${domain}/`;
   const configUrl = `https://${domain}/config.js`;
-  const [homepage, configResponse] = await Promise.all([
+  const appUrl = `https://${domain}/app.js`;
+  const [homepage, configResponse, appResponse] = await Promise.all([
     fetchText(homepageUrl, verifiedAt),
-    fetchText(configUrl, verifiedAt)
+    fetchText(configUrl, verifiedAt),
+    fetchText(appUrl, verifiedAt)
   ]);
 
   checks.push({
@@ -231,6 +233,13 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
     expected: 200,
     actual: configResponse.status,
     message: configResponse.error
+  });
+  checks.push({
+    name: "app_js_reachable",
+    status: appResponse.ok ? "PASS" : "FAIL",
+    expected: 200,
+    actual: appResponse.status,
+    message: appResponse.error
   });
 
   const publicConfig = configResponse.ok ? readConfig(configResponse.body) : null;
@@ -285,6 +294,25 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
       /<script\b[^>]+src=["']app\.js["'][^>]*>/i.test(homepage.body),
       '<script src="app.js">',
       "presence checked"
+    );
+  }
+
+  if (appResponse.ok) {
+    addPresenceCheck(
+      checks,
+      "app_uses_dynamic_purchase_links",
+      appResponse.body.includes("initPurchaseLinks") && appResponse.body.includes("product-btn-buy"),
+      "dynamic purchase link handler",
+      appResponse.body.includes("initPurchaseLinks") && appResponse.body.includes("product-btn-buy")
+        ? "present"
+        : "absent"
+    );
+    addPresenceCheck(
+      checks,
+      "app_has_no_legacy_purchase_url",
+      !appResponse.body.includes("colombia.ganoexcel.com"),
+      "no legacy purchase URL",
+      appResponse.body.includes("colombia.ganoexcel.com") ? "legacy URL present" : "absent"
     );
   }
 

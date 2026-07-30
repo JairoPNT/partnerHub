@@ -61,7 +61,7 @@ Despues de publicar, PartnerHub debe consultar:
 
 - `https://{domain}/`
 - `https://{domain}/config.js`
-- opcionalmente `https://{domain}/app.js`
+- `https://{domain}/app.js`
 
 La verificacion minima debe confirmar:
 
@@ -74,6 +74,8 @@ La verificacion minima debe confirmar:
 - ausencia de `href="#comprar"` en `index.html`.
 - presencia de `.product-btn-buy` en la plantilla.
 - presencia de `config.js` y `app.js` en el HTML publicado.
+- presencia del manejador dinamico `initPurchaseLinks` en `app.js`.
+- ausencia de URLs heredadas de prueba como `colombia.ganoexcel.com` en `app.js`.
 
 Para assets visuales:
 
@@ -243,6 +245,7 @@ Cambios realizados:
 - La ultima verificacion se guarda en `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`.
 - `GET /api/internal/product-pages` incluye `lastVerification` para consumo futuro del dashboard.
 - La plantilla base ya no define una `purchaseUrl` de prueba. Si el operador no configura `URL de Compra / Pasarela`, los botones de compra quedan deshabilitados en vez de apuntar a una URL heredada.
+- La verificacion tambien consulta `app.js` y falla si el sitio publicado conserva una version antigua sin enlaces de compra dinamicos o con URLs heredadas de prueba.
 
 Checks implementados:
 
@@ -261,6 +264,9 @@ Checks implementados:
 - `product_buy_button_present`
 - `config_script_present`
 - `app_script_present`
+- `app_js_reachable`
+- `app_uses_dynamic_purchase_links`
+- `app_has_no_legacy_purchase_url`
 
 Notas:
 
