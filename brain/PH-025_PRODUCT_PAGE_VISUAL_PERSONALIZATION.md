@@ -110,3 +110,22 @@ Antigravity debe crear selectores simples en `/landing-builder` y en el detalle 
 - Selector de tipografia con 6 opciones.
 - Selector de paleta con 10 opciones.
 - Vista previa breve antes de publicar.
+
+## Ajuste Codex 2026-07-31: Hidratacion desde pagina guardada
+
+Contexto:
+
+- `/landing-builder` podia seleccionar un empresario publicado y mostrar vacios los heroes o volver a presets por defecto porque leia principalmente `onboardingData`.
+- Las paginas ya generadas guardan su configuracion efectiva en la fuente JSON del sitio, no siempre en el lead administrativo.
+
+Decision:
+
+- Al seleccionar un empresario en `/landing-builder`, si existe una fuente de pagina para su `siteId`, esa configuracion tiene prioridad para precargar:
+  - heroes desktop/mobile;
+  - tema visual `theme.fontPreset` y `theme.palettePreset`;
+  - datos del distribuidor;
+  - SEO;
+  - Analytics;
+  - URL de compra.
+- El lead administrativo solo rellena campos faltantes.
+- Los errores de validacion del generador deben listar los campos pendientes en vez de mostrar un mensaje generico.

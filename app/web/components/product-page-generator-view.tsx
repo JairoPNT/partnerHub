@@ -62,6 +62,7 @@ export interface ActivationLeadRecord {
   onboardingData?: {
     domain?: string;
     country?: string;
+    whatsapp?: string;
     phone?: string;
     purchaseUrl?: string;
     heroDesktopUrl?: string;
@@ -142,6 +143,64 @@ const INITIAL_FORM: FormState = {
   palettePreset: "cobalt-cyan"
 };
 
+const FONT_PRESET_VALUES: FontPreset[] = ["executive", "modern", "editorial", "friendly", "premium", "minimal"];
+const PALETTE_PRESET_VALUES: PalettePreset[] = [
+  "cobalt-cyan",
+  "emerald-slate",
+  "coffee-gold",
+  "rose-graphite",
+  "indigo-lime",
+  "teal-navy",
+  "wine-blush",
+  "forest-mint",
+  "charcoal-amber",
+  "sky-stone"
+];
+
+function stringValue(value: unknown) {
+  return typeof value === "string" && value.trim() ? value : undefined;
+}
+
+function objectValue(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value) ? (value as Record<string, unknown>) : {};
+}
+
+function pickFirst(...values: Array<string | undefined | null>) {
+  return values.find((value) => typeof value === "string" && value.trim())?.trim() ?? "";
+}
+
+function fontPresetValue(value: unknown): FontPreset | undefined {
+  return typeof value === "string" && FONT_PRESET_VALUES.includes(value as FontPreset)
+    ? (value as FontPreset)
+    : undefined;
+}
+
+function palettePresetValue(value: unknown): PalettePreset | undefined {
+  return typeof value === "string" && PALETTE_PRESET_VALUES.includes(value as PalettePreset)
+    ? (value as PalettePreset)
+    : undefined;
+}
+
+function summarizeValidationErrors(errors: Record<string, string[]>) {
+  const labels: Record<string, string> = {
+    siteId: "ID de sitio",
+    domain: "Dominio",
+    brandName: "Nombre de marca",
+    firstName: "Nombre de pila",
+    fullName: "Nombre completo",
+    whatsappNumber: "WhatsApp",
+    siteTitle: "Titulo SEO",
+    heroDesktop: "Hero para computador",
+    heroMobile: "Hero para celular",
+    measurementId: "Google Analytics"
+  };
+
+  const summary = Object.keys(errors).map((field) => labels[field] || field);
+  return summary.length
+    ? `Por favor corrige estos campos antes de continuar: ${summary.join(", ")}.`
+    : "Por favor corrige los errores resaltados antes de continuar.";
+}
+
 function slugify(text: string): string {
   return text
     .toLowerCase()
@@ -169,6 +228,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
   // Estados de empresarios
   const [leads, setLeads] = useState<ActivationLeadRecord[]>([]);
+  const [productPages, setProductPages] = useState<ProductPageSiteSummary[]>([]);
   const [isLoadingLeads, setIsLoadingLeads] = useState(true);
   const [selectedLead, setSelectedLead] = useState<ActivationLeadRecord | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -200,6 +260,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         const pData = await pagesRes.json();
         pageSites = pData.sites || [];
       }
+
+      setProductPages(pageSites);
 
       const merged = leadList.map((lead) => {
         const matchedSite = pageSites.find((s) => s.siteId === lead.siteId);
@@ -297,30 +359,53 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
     const suggestedSlug = suggestSiteId(lead);
     const effectiveSiteId = lead.siteId || suggestedSlug;
-    const domain = lead.onboardingData?.domain || "";
-    const firstName = lead.fullName?.trim().split(" ")[0] || "";
+    const savedConfig = productPages.find((page) => page.siteId === effectiveSiteId)?.configuration ?? null;
+    const savedSite = objectValue(savedConfig?.site);
+    const savedDistributor = objectValue(savedConfig?.distributor);
+    const savedHero = objectValue(savedConfig?.hero);
+    const savedAnalytics = objectValue(savedConfig?.analytics);
+    const savedIntegrations = objectValue(savedConfig?.integrations);
+    const savedAnalyticsIntegration = objectValue(savedIntegrations.analytics);
+    const savedTheme = objectValue(savedConfig?.theme);
+    const domain = pickFirst(stringValue(savedSite.domain), lead.onboardingData?.domain);
+    const firstName = pickFirst(stringValue(savedDistributor.firstName), lead.fullName?.trim().split(" ")[0]);
+    const brandName = pickFirst(stringValue(savedDistributor.brandName), lead.brandName);
+    const fullName = pickFirst(stringValue(savedDistributor.fullName), lead.fullName);
 
     setForm({
       siteId: effectiveSiteId,
       domain: domain,
-      brandName: lead.brandName || "",
-      fullName: lead.fullName || "",
-      firstName: firstName,
+      brandName,
+      fullName,
+      firstName,
       role: "Distribuidor Autorizado · Gano Excel",
-      whatsappNumber: lead.whatsapp || "",
-      displayPhone: lead.onboardingData?.phone || lead.whatsapp || "",
-      purchaseUrl: lead.onboardingData?.purchaseUrl || "",
-      siteTitle: lead.onboardingData?.seoTitle || (lead.brandName ? `${lead.brandName} — Bienestar y Vitalidad con Gano Excel` : ""),
-      metaDescription: lead.onboardingData?.metaDescription || (lead.brandName
-        ? `Descubre como transformar tu dia a dia con cafe, cacao y suplementos enriquecidos con Ganoderma lucidum por ${lead.brandName}.`
+      whatsappNumber: pickFirst(stringValue(savedDistributor.whatsappNumber), lead.onboardingData?.whatsapp, lead.whatsapp),
+      displayPhone: pickFirst(
+        stringValue(savedDistributor.displayPhone),
+        stringValue(savedDistributor.phoneNumber),
+        lead.onboardingData?.phone,
+        lead.whatsapp
+      ),
+      purchaseUrl: pickFirst(stringValue(savedDistributor.purchaseUrl), lead.onboardingData?.purchaseUrl),
+      siteTitle: pickFirst(stringValue(savedSite.title), lead.onboardingData?.seoTitle, brandName ? `${brandName} - Bienestar y Vitalidad con Gano Excel` : ""),
+      metaDescription: pickFirst(stringValue(savedSite.metaDescription), stringValue(savedSite.ogDescription), lead.onboardingData?.metaDescription, brandName
+        ? `Descubre como transformar tu dia a dia con cafe, cacao y suplementos enriquecidos con Ganoderma lucidum por ${brandName}.`
         : ""),
-      heroDesktop: lead.onboardingData?.heroDesktopUrl || "",
-      heroMobile: lead.onboardingData?.heroMobileUrl || "",
-      defaultMessage: lead.onboardingData?.defaultMessage || `Hola ${firstName}, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.`,
-      measurementId: lead.onboardingData?.analyticsMeasurementId || "",
-      faviconUrl: lead.onboardingData?.faviconUrl || "",
-      fontPreset: lead.onboardingData?.fontPreset || "executive",
-      palettePreset: lead.onboardingData?.palettePreset || "cobalt-cyan"
+      heroDesktop: pickFirst(stringValue(savedHero.desktop), lead.onboardingData?.heroDesktopUrl),
+      heroMobile: pickFirst(stringValue(savedHero.mobile), lead.onboardingData?.heroMobileUrl),
+      defaultMessage: pickFirst(
+        stringValue(savedDistributor.defaultMessage),
+        lead.onboardingData?.defaultMessage,
+        firstName ? `Hola ${firstName}, vengo de tu pagina web. Me gustaria tener mas informacion sobre el Ganoderma de Gano Excel.` : ""
+      ),
+      measurementId: pickFirst(
+        stringValue(savedAnalytics.measurementId),
+        stringValue(savedAnalyticsIntegration.measurementId),
+        lead.onboardingData?.analyticsMeasurementId
+      ),
+      faviconUrl: pickFirst(stringValue(savedSite.faviconUrl), lead.onboardingData?.faviconUrl),
+      fontPreset: fontPresetValue(savedTheme.fontPreset) || lead.onboardingData?.fontPreset || "executive",
+      palettePreset: palettePresetValue(savedTheme.palettePreset) || lead.onboardingData?.palettePreset || "cobalt-cyan"
     });
   };
 
@@ -425,7 +510,11 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     }
 
     setFieldErrors(errors);
-    return Object.keys(errors).length === 0;
+    if (Object.keys(errors).length > 0) {
+      setErrorMessage(summarizeValidationErrors(errors));
+      return false;
+    }
+    return true;
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -436,10 +525,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     setPublishResult(null);
     setPublishError(null);
 
-    if (!validateFormClientSide()) {
-      setErrorMessage("Por favor corrige los errores resaltados antes de continuar.");
-      return;
-    }
+    if (!validateFormClientSide()) return;
 
     setIsSubmitting(true);
 
