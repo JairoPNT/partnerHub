@@ -1320,12 +1320,17 @@ p {
 
 /* Animaciones e Interacción */
 .fade-in-scroll {
-  opacity: 0;
-  transform: translateY(20px);
+  opacity: 1;
+  transform: translateY(0);
   transition: opacity 0.6s ease-out, transform 0.6s ease-out;
 }
 
-.fade-in-scroll.visible {
+body.js-animate .fade-in-scroll {
+  opacity: 0;
+  transform: translateY(20px);
+}
+
+body.js-animate .fade-in-scroll.visible {
   opacity: 1;
   transform: translateY(0);
 }
