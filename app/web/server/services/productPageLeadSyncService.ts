@@ -22,6 +22,10 @@ type LeadSnapshot = {
     metaDescription?: string;
     defaultMessage?: string;
     analyticsMeasurementId?: string;
+    fontPreset?: "executive" | "modern" | "editorial" | "friendly" | "premium" | "minimal";
+    palettePreset?: "cobalt-cyan" | "emerald-slate" | "coffee-gold" | "rose-graphite" | "indigo-lime" | "teal-navy" | "wine-blush" | "forest-mint" | "charcoal-amber" | "sky-stone";
+    metaPixelId?: string;
+    googleAdsConversionId?: string;
   };
 };
 
@@ -30,6 +34,15 @@ type ProductPageSource = {
   distributor?: Record<string, unknown>;
   hero?: Record<string, unknown>;
   analytics?: Record<string, unknown>;
+  integrations?: {
+    analytics?: { provider?: string; measurementId?: string };
+    meta?: { pixelId?: string };
+    googleAds?: { conversionId?: string };
+  };
+  theme?: {
+    fontPreset?: string;
+    palettePreset?: string;
+  };
   mediaBaseUrl?: unknown;
 };
 
@@ -91,7 +104,12 @@ export const productPageLeadSyncService = {
       typedString(existingSite.metaDescription) ??
       typedString(existingSite.ogDescription) ??
       `Pagina de ${lead.brandName}.`;
+
     const analyticsMeasurementId = optionalTrimmed(onboarding.analyticsMeasurementId);
+    const fontPreset = onboarding.fontPreset ?? existing.theme?.fontPreset ?? "executive";
+    const palettePreset = onboarding.palettePreset ?? existing.theme?.palettePreset ?? "cobalt-cyan";
+    const metaPixelId = optionalTrimmed(onboarding.metaPixelId) ?? existing.integrations?.meta?.pixelId;
+    const googleAdsConversionId = optionalTrimmed(onboarding.googleAdsConversionId) ?? existing.integrations?.googleAds?.conversionId;
 
     const nextSource = {
       ...existing,
@@ -136,6 +154,17 @@ export const productPageLeadSyncService = {
       analytics: analyticsMeasurementId
         ? { measurementId: analyticsMeasurementId.toUpperCase() }
         : existing.analytics,
+      integrations: {
+        analytics: analyticsMeasurementId
+          ? { provider: "GA4", measurementId: analyticsMeasurementId.toUpperCase() }
+          : existing.integrations?.analytics,
+        meta: metaPixelId ? { pixelId: metaPixelId } : existing.integrations?.meta,
+        googleAds: googleAdsConversionId ? { conversionId: googleAdsConversionId } : existing.integrations?.googleAds
+      },
+      theme: {
+        fontPreset,
+        palettePreset
+      },
       mediaBaseUrl: existing.mediaBaseUrl
     };
 

@@ -20,9 +20,12 @@ import {
   AlertTriangle,
   Globe,
   Link2,
-  Users
+  Users,
+  Sparkles
 } from "lucide-react";
 
+import { FontSelector, PaletteSelector } from "@/components/ui/theme-selectors";
+import { FontPreset, PalettePreset } from "@/lib/theme-presets";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +73,8 @@ export interface ActivationLeadRecord {
     metaDescription?: string;
     defaultMessage?: string;
     analyticsMeasurementId?: string;
+    fontPreset?: FontPreset;
+    palettePreset?: PalettePreset;
   };
   createdAt: string;
 }
@@ -91,6 +96,8 @@ interface FormState {
   defaultMessage: string;
   measurementId: string;
   faviconUrl: string;
+  fontPreset: FontPreset;
+  palettePreset: PalettePreset;
 }
 
 interface GenerationResult {
@@ -130,7 +137,9 @@ const INITIAL_FORM: FormState = {
   heroMobile: "",
   defaultMessage: "",
   measurementId: "",
-  faviconUrl: ""
+  faviconUrl: "",
+  fontPreset: "executive",
+  palettePreset: "cobalt-cyan"
 };
 
 function slugify(text: string): string {
@@ -309,7 +318,9 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       heroMobile: lead.onboardingData?.heroMobileUrl || "",
       defaultMessage: lead.onboardingData?.defaultMessage || `Hola ${firstName}, vengo de tu página web. Me gustaría tener más información sobre el Ganoderma de Gano Excel.`,
       measurementId: lead.onboardingData?.analyticsMeasurementId || "",
-      faviconUrl: lead.onboardingData?.faviconUrl || ""
+      faviconUrl: lead.onboardingData?.faviconUrl || "",
+      fontPreset: lead.onboardingData?.fontPreset || "executive",
+      palettePreset: lead.onboardingData?.palettePreset || "cobalt-cyan"
     });
   };
 
@@ -343,7 +354,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     }
   };
 
-  const handleInputChange = (field: keyof FormState, value: string) => {
+  const handleInputChange = (field: keyof FormState, value: unknown) => {
     setForm((prev) => ({ ...prev, [field]: value }));
     if (fieldErrors[field]) {
       setFieldErrors((prev) => {
@@ -460,7 +471,16 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       },
       analytics: form.measurementId.trim()
         ? { measurementId: form.measurementId.trim().toUpperCase() }
-        : undefined
+        : undefined,
+      integrations: {
+        analytics: form.measurementId.trim()
+          ? { provider: "GA4", measurementId: form.measurementId.trim().toUpperCase() }
+          : undefined
+      },
+      theme: {
+        fontPreset: form.fontPreset || "executive",
+        palettePreset: form.palettePreset || "cobalt-cyan"
+      }
     };
 
     try {
@@ -1209,6 +1229,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
           </CardContent>
         </Card>
 
+
         {/* Bloque 4: Multimedia y Heroes en R2 */}
         <Card className="border-slate-200 bg-white shadow-sm">
           <CardHeader>
@@ -1276,6 +1297,33 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 </p>
               )}
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Bloque 6: Personalización Visual y Tema (PH-025) */}
+        <Card className="border-slate-200 bg-white shadow-sm">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-cyan-600" />
+              <CardTitle className="text-base font-bold text-slate-900">
+                Personalización Visual y Tema (PH-025)
+              </CardTitle>
+            </div>
+            <CardDescription className="text-xs text-slate-500">
+              Selecciona el estilo tipográfico y la paleta de colores exclusiva para esta página de producto.
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent className="space-y-6">
+            <FontSelector
+              value={form.fontPreset}
+              onChange={(preset) => handleInputChange("fontPreset", preset)}
+            />
+
+            <PaletteSelector
+              value={form.palettePreset}
+              onChange={(preset) => handleInputChange("palettePreset", preset)}
+            />
           </CardContent>
         </Card>
 

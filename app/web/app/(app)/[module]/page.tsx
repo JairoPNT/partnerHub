@@ -5,6 +5,7 @@ import { AdminDashboardPrototype } from "@/components/dashboard-view";
 import { ProductPageGeneratorView } from "@/components/product-page-generator-view";
 import { PartnersReferralsView } from "@/components/partners-referrals-view";
 import { MasterSiteManagementView } from "@/components/master-site-management-view";
+import { AnalyticsAndMetricsView } from "@/components/analytics-and-metrics-view";
 import { getModule, moduleCatalog } from "@/modules/catalog";
 
 type ModuleRouteProps = {
@@ -41,6 +42,10 @@ export default async function ModuleRoute({ params }: ModuleRouteProps) {
 
   if (moduleSlug === "master-site") {
     return <MasterSiteManagementView record={record} />;
+  }
+
+  if (moduleSlug === "analytics") {
+    return <AnalyticsAndMetricsView record={record} />;
   }
 
   return <ModulePage module={record} />;

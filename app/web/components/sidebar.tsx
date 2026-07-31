@@ -15,7 +15,8 @@ import {
   PlaySquare,
   Link2,
   Workflow,
-  Sparkle
+  Sparkle,
+  BarChart3
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -30,6 +31,7 @@ const iconMap: Record<string, any> = {
   "/landing-builder": MousePointerClick,
   "/vsl-builder": PlaySquare,
   "/creative-assets": Sparkles,
+  "/analytics": BarChart3,
   "/campaigns": Flame,
   "/automations": Workflow,
   "/domains": Link2,

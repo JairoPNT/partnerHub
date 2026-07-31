@@ -25,8 +25,11 @@ import {
   AlertOctagon,
   UserPlus,
   Copy,
-  Save
+  Save,
+  Sparkles
 } from "lucide-react";
+import { FontSelector, PaletteSelector } from "@/components/ui/theme-selectors";
+import { FontPreset, PalettePreset } from "@/lib/theme-presets";
 import { HeroImageUploader } from "@/components/ui/hero-image-uploader";
 import {
   VerificationBadge,
@@ -54,6 +57,10 @@ export interface OnboardingData {
   metaDescription?: string;
   defaultMessage?: string;
   analyticsMeasurementId?: string;
+  fontPreset?: FontPreset;
+  palettePreset?: PalettePreset;
+  operatorNotes?: string;
+  analyticsVerified?: boolean;
   imageUseConsent?: boolean;
   agreementAccepted?: boolean;
 }
@@ -119,7 +126,9 @@ export function EntrepreneurOperationsView() {
     seoTitle: "",
     metaDescription: "",
     defaultMessage: "",
-    analyticsMeasurementId: ""
+    analyticsMeasurementId: "",
+    fontPreset: "executive" as FontPreset,
+    palettePreset: "cobalt-cyan" as PalettePreset
   });
 
   // Create Paid Lead Modal State
@@ -246,7 +255,9 @@ export function EntrepreneurOperationsView() {
         seoTitle: selectedLead.onboardingData?.seoTitle || "",
         metaDescription: selectedLead.onboardingData?.metaDescription || "",
         defaultMessage: selectedLead.onboardingData?.defaultMessage || "",
-        analyticsMeasurementId: selectedLead.onboardingData?.analyticsMeasurementId || ""
+        analyticsMeasurementId: selectedLead.onboardingData?.analyticsMeasurementId || "",
+        fontPreset: selectedLead.onboardingData?.fontPreset || "executive",
+        palettePreset: selectedLead.onboardingData?.palettePreset || "cobalt-cyan"
       });
     }
   }, [selectedLead]);
@@ -279,6 +290,8 @@ export function EntrepreneurOperationsView() {
           metaDescription: editForm.metaDescription.trim() || undefined,
           defaultMessage: editForm.defaultMessage.trim() || undefined,
           analyticsMeasurementId: editForm.analyticsMeasurementId.trim() || undefined,
+          fontPreset: editForm.fontPreset,
+          palettePreset: editForm.palettePreset
         }
       };
 
@@ -1711,6 +1724,26 @@ export function EntrepreneurOperationsView() {
                           />
                         </div>
                       </div>
+
+                      {/* Personalización Visual y Tema (PH-025) */}
+                      <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-4">
+                        <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                          <Sparkles className="h-4 w-4 text-cyan-600" />
+                          <h6 className="text-xs font-bold uppercase text-slate-900">
+                            Personalización Visual y Tema (PH-025)
+                          </h6>
+                        </div>
+
+                        <FontSelector
+                          value={editForm.fontPreset}
+                          onChange={(preset) => setEditForm({ ...editForm, fontPreset: preset })}
+                        />
+
+                        <PaletteSelector
+                          value={editForm.palettePreset}
+                          onChange={(preset) => setEditForm({ ...editForm, palettePreset: preset })}
+                        />
+                      </div>
                     </div>
 
                     <div className="pt-2 flex items-center justify-end gap-3">
@@ -1886,6 +1919,20 @@ export function EntrepreneurOperationsView() {
                         <span className="text-slate-400 block text-[10px] uppercase font-bold">ID GA4</span>
                         <span className="font-bold text-slate-900 font-mono">
                           {selectedLead.onboardingData.analyticsMeasurementId || "No suministrado"}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Preset Tipográfico</span>
+                        <span className="font-bold text-slate-900 capitalize">
+                          {selectedLead.onboardingData.fontPreset || "executive"}
+                        </span>
+                      </div>
+
+                      <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
+                        <span className="text-slate-400 block text-[10px] uppercase font-bold">Paleta de Color</span>
+                        <span className="font-bold text-slate-900 capitalize">
+                          {selectedLead.onboardingData.palettePreset || "cobalt-cyan"}
                         </span>
                       </div>
 

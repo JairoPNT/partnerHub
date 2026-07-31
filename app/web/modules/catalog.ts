@@ -7,6 +7,7 @@ export type ModuleSlug =
   | "landing-builder"
   | "vsl-builder"
   | "creative-assets"
+  | "analytics"
   | "campaigns"
   | "automations"
   | "domains"
@@ -25,6 +26,17 @@ export type ModuleRecord = {
 };
 
 export const moduleCatalog: ModuleRecord[] = [
+  {
+    slug: "analytics",
+    name: "Analítica y Métricas",
+    group: "Growth",
+    status: "Foundation",
+    description: "Configuración de medición de Google Analytics 4 e integraciones por empresario.",
+    intent: "Centralizar IDs de medición y verificar la correcta instalación de scripts.",
+    focus: ["Google Analytics 4", "Checklist de medición", "Notas de operador"],
+    outputs: ["Medición GA4", "Estado de integración", "Verificación operativa"],
+    notYet: ["Meta Pixel", "Google Ads", "ROI/ROAS final"]
+  },
   {
     slug: "dashboard",
     name: "Dashboard",
