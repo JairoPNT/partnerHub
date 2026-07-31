@@ -294,3 +294,22 @@ Notas:
 - No se modifico UI por limite de rol; el cableado visual queda para Antigravity.
 - No se crearon migraciones ni cambios Prisma; el MVP actual persiste auditoria operacional en JSON, consistente con los servicios de paginas existentes.
 - `npm run lint` global sigue fallando por deuda previa en frontend no relacionada. `npx tsc --noEmit` y ESLint dirigido a los archivos backend de PH-020 pasaron correctamente.
+
+## Ajuste Codex 2026-07-31: Precedencia de Landing Builder en publicacion
+
+Contexto:
+
+- Un empresario podia tener la URL correcta en Landing Builder, pero al publicar se ejecutaba una sincronizacion previa desde el lead administrativo.
+- Si el lead conservaba una URL de compra antigua, esa sincronizacion podia pisar la fuente JSON guardada antes de regenerar y subir el sitio.
+
+Decision:
+
+- La publicacion puede sincronizar datos del lead solo como respaldo para campos faltantes.
+- Los valores ya guardados en la fuente de la landing tienen prioridad durante `POST /api/internal/product-pages/publish`.
+- La URL `https://colombia.ganoexcel.com/...` queda bloqueada en el esquema de generacion porque no corresponde al formato operativo aprobado.
+
+Criterio operativo:
+
+- Cambios de plantilla estructural: `/master-site` y luego replicacion aprobada.
+- Cambios de datos de un empresario: `/landing-builder`, generar paquete y publicar.
+- Aunque el dato viva principalmente en `config.js`, se sigue subiendo `index.html` para renovar los `?v=` de `config.js`, `styles.css` y `app.js` y romper cache resistente.

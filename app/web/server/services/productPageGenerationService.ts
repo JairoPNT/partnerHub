@@ -22,6 +22,13 @@ const httpsUrlSchema = z.string().url().refine((value) => new URL(value).protoco
   message: "URL must use HTTPS"
 });
 
+const purchaseUrlSchema = httpsUrlSchema.refine(
+  (value) => new URL(value).hostname.toLowerCase() !== "colombia.ganoexcel.com",
+  {
+    message: "Usa la URL exacta de compra del empresario. No uses colombia.ganoexcel.com."
+  }
+);
+
 const measurementIdSchema = z
   .string()
   .trim()
@@ -76,7 +83,7 @@ export const productPageGenerationInputSchema = z.object({
     whatsappNumber: z.string().trim().min(10).max(20),
     phoneNumber: z.string().trim().min(1).optional(),
     displayPhone: z.string().trim().min(1).optional(),
-    purchaseUrl: httpsUrlSchema.optional(),
+    purchaseUrl: purchaseUrlSchema.optional(),
     defaultMessage: z.string().trim().min(1).optional()
   }),
   hero: z.object({
