@@ -8,6 +8,16 @@ const SCRIPT_DIR = dirname(fileURLToPath(import.meta.url));
 const PROJECT_ROOT = resolve(SCRIPT_DIR, "..");
 const DEFAULT_TEMPLATE_DIR = resolve(PROJECT_ROOT, "plantillas-de-pagina", "producto");
 const PUBLIC_TEMPLATE_ENTRIES = ["index.html", "styles.css", "app.js", "favicon.svg", "tipografia"];
+const NO_CACHE_HTACCESS_SOURCE = `DirectoryIndex index.html
+
+<IfModule mod_headers.c>
+  <FilesMatch "^(index\\.html|config\\.js|app\\.js|styles\\.css|manifest\\.json)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
+`;
 const REQUIRED_STRING_PATHS = [
   ["site", "id"],
   ["site", "title"],
@@ -169,6 +179,17 @@ async function copyTemplate(templateDir, outputDir) {
   }
 }
 
+async function applyAssetVersion(outputDir, assetVersion) {
+  const indexPath = resolve(outputDir, "index.html");
+  const html = await readFile(indexPath, "utf8");
+  const versionedHtml = html
+    .replace(/\bsrc=["']config\.js(?:\?v=[^"']*)?["']/g, `src="config.js?v=${assetVersion}"`)
+    .replace(/\bhref=["']styles\.css(?:\?v=[^"']*)?["']/g, `href="styles.css?v=${assetVersion}"`)
+    .replace(/\bsrc=["']app\.js(?:\?v=[^"']*)?["']/g, `src="app.js?v=${assetVersion}"`);
+
+  await writeFile(indexPath, versionedHtml, "utf8");
+}
+
 async function main() {
   const argumentsValue = readArguments(process.argv.slice(2));
   if (argumentsValue.help) {
@@ -206,6 +227,8 @@ async function main() {
     await writeFile(resolve(outputPath, "favicon.svg"), svgContent, "utf8");
   }
   await writeFile(resolve(outputPath, "config.js"), buildConfigFile(configuration), "utf8");
+  await writeFile(resolve(outputPath, ".htaccess"), NO_CACHE_HTACCESS_SOURCE, "utf8");
+  await applyAssetVersion(outputPath, Date.now().toString(36));
 
   console.log(`Paquete generado para ${configuration.site.id}.`);
   console.log(`Salida: ${outputPath}`);
