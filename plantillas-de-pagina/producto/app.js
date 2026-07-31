@@ -55,6 +55,7 @@ function initDynamicConfig(cfg) {
   if (!cfg) return;
 
   applyThemeConfig(cfg.theme);
+  initAnalyticsConfig(cfg);
 
   // 1. Configurar variables CSS para imágenes Hero
   if (cfg.hero) {
@@ -132,6 +133,36 @@ function initDynamicConfig(cfg) {
       el.innerHTML = `&copy; ${year} ${name}. ${role}. Todos los derechos reservados.`;
     }
   });
+}
+
+function initAnalyticsConfig(cfg) {
+  const measurementId =
+    cfg?.integrations?.analytics?.measurementId ||
+    cfg?.analytics?.measurementId;
+
+  if (!measurementId || !/^G-[A-Z0-9]+$/i.test(measurementId)) return;
+
+  const normalizedMeasurementId = measurementId.toUpperCase();
+  const existingTag = document.querySelector(
+    `script[src*="googletagmanager.com/gtag/js?id=${normalizedMeasurementId}"]`
+  );
+
+  window.dataLayer = window.dataLayer || [];
+  window.gtag =
+    window.gtag ||
+    function gtag() {
+      window.dataLayer.push(arguments);
+    };
+
+  if (!existingTag) {
+    const analyticsScript = document.createElement('script');
+    analyticsScript.async = true;
+    analyticsScript.src = `https://www.googletagmanager.com/gtag/js?id=${normalizedMeasurementId}`;
+    document.head.appendChild(analyticsScript);
+  }
+
+  window.gtag('js', new Date());
+  window.gtag('config', normalizedMeasurementId);
 }
 
 const THEME_FONT_PRESETS = {
