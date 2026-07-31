@@ -76,6 +76,10 @@ function withCacheBuster(url: string, verifiedAt: string) {
   return parsedUrl.toString();
 }
 
+function hasVersionedAssetReference(html: string, assetName: "config.js" | "app.js") {
+  return new RegExp(`<script\\b[^>]+src=["']${assetName}(?:\\?v=[^"']+)?["'][^>]*>`, "i").test(html);
+}
+
 async function fetchText(url: string, verifiedAt: string) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), fetchTimeoutMs);
@@ -278,15 +282,15 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
     addPresenceCheck(
       checks,
       "config_script_present",
-      /<script\b[^>]+src=["']config\.js["'][^>]*>/i.test(homepage.body),
-      '<script src="config.js">',
+      hasVersionedAssetReference(homepage.body, "config.js"),
+      '<script src="config.js?v=...">',
       "presence checked"
     );
     addPresenceCheck(
       checks,
       "app_script_present",
-      /<script\b[^>]+src=["']app\.js["'][^>]*>/i.test(homepage.body),
-      '<script src="app.js">',
+      hasVersionedAssetReference(homepage.body, "app.js"),
+      '<script src="app.js?v=...">',
       "presence checked"
     );
   }

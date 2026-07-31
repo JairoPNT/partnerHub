@@ -247,6 +247,27 @@ Cambios realizados:
 - La plantilla base ya no define una `purchaseUrl` de prueba. Si el operador no configura `URL de Compra / Pasarela`, los botones de compra quedan deshabilitados en vez de apuntar a una URL heredada.
 - La verificacion tambien consulta `app.js` y falla si el sitio publicado conserva una version antigua sin enlaces de compra dinamicos o con URLs heredadas de prueba.
 
+## Ajuste Codex 2026-07-31: Cache busting obligatorio
+
+Contexto:
+
+- `ganomaster.pro/config.js` podia contener la configuracion correcta, pero la pagina publica seguia renderizando recursos anteriores por cache de Hostinger/CDN.
+- El HTML base cargaba `config.js`, `styles.css` y `app.js` sin version, permitiendo que navegadores, CDN o capa de hosting conservaran archivos antiguos.
+
+Decision:
+
+- Cada paquete generado debe versionar sus recursos criticos en el HTML publicado:
+  - `config.js?v={assetVersion}`
+  - `styles.css?v={assetVersion}`
+  - `app.js?v={assetVersion}`
+- La plantilla incluye `.htaccess` para pedir no-cache/must-revalidate sobre `index.html`, `config.js`, `app.js`, `styles.css` y `manifest.json`.
+- La verificacion publica acepta referencias versionadas y sigue consultando con cache buster.
+
+Criterio operativo:
+
+- Si una publicacion no refleja cambios visibles, el primer diagnostico debe validar el `index.html` publico y confirmar que los tres recursos criticos tienen `?v=...`.
+- No se debe volver a corregir manualmente una pagina cliente por cache sin antes regenerar y republicar desde PartnerHub.
+
 Checks implementados:
 
 - `homepage_reachable`

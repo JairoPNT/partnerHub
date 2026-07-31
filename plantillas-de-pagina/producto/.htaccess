@@ -1,0 +1,9 @@
+DirectoryIndex index.html
+
+<IfModule mod_headers.c>
+  <FilesMatch "^(index\.html|config\.js|app\.js|styles\.css|manifest\.json)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
