@@ -35,13 +35,19 @@ const measurementIdSchema = z
   .regex(/^G-[A-Z0-9]+$/i, "Measurement ID must use the G-XXXXXXXX format")
   .transform((value) => value.toUpperCase());
 
+const DEFAULT_HERO_DESKTOP = "https://media.partnerhub.club/comunes/producto/v1/hero-desktop.webp";
+const DEFAULT_HERO_MOBILE = "https://media.partnerhub.club/comunes/producto/v1/hero-mobile.webp";
+
 const fontPresetSchema = z.enum([
   "executive",
   "modern",
   "editorial",
   "friendly",
   "premium",
-  "minimal"
+  "minimal",
+  "serif-chic",
+  "romantic-serif",
+  "luxury-serif"
 ]);
 
 const palettePresetSchema = z.enum([
@@ -109,8 +115,11 @@ export const productPageGenerationInputSchema = z.object({
     defaultMessage: z.string().trim().min(1).optional()
   }),
   hero: z.object({
-    desktop: httpsUrlSchema,
-    mobile: httpsUrlSchema
+    desktop: httpsUrlSchema.default(DEFAULT_HERO_DESKTOP),
+    mobile: httpsUrlSchema.default(DEFAULT_HERO_MOBILE)
+  }).default({
+    desktop: DEFAULT_HERO_DESKTOP,
+    mobile: DEFAULT_HERO_MOBILE
   }),
   analytics: z
     .object({

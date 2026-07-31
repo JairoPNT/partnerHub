@@ -493,15 +493,11 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       errors.siteTitle = ["El título SEO es requerido."];
     }
 
-    if (!form.heroDesktop.trim()) {
-      errors.heroDesktop = ["La URL de Hero Desktop es requerida."];
-    } else if (!form.heroDesktop.startsWith("https://")) {
+    if (form.heroDesktop.trim() && !form.heroDesktop.startsWith("https://")) {
       errors.heroDesktop = ["La URL de Hero Desktop debe usar HTTPS."];
     }
 
-    if (!form.heroMobile.trim()) {
-      errors.heroMobile = ["La URL de Hero Mobile es requerida."];
-    } else if (!form.heroMobile.startsWith("https://")) {
+    if (form.heroMobile.trim() && !form.heroMobile.startsWith("https://")) {
       errors.heroMobile = ["La URL de Hero Mobile debe usar HTTPS."];
     }
 
@@ -552,8 +548,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         defaultMessage: form.defaultMessage.trim() || undefined
       },
       hero: {
-        desktop: form.heroDesktop.trim(),
-        mobile: form.heroMobile.trim()
+        desktop: form.heroDesktop.trim() || "https://media.partnerhub.club/comunes/producto/v1/hero-desktop.webp",
+        mobile: form.heroMobile.trim() || "https://media.partnerhub.club/comunes/producto/v1/hero-mobile.webp"
       },
       analytics: form.measurementId.trim()
         ? { measurementId: form.measurementId.trim().toUpperCase() }
