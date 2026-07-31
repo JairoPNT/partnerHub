@@ -54,6 +54,8 @@ document.addEventListener('DOMContentLoaded', () => {
 function initDynamicConfig(cfg) {
   if (!cfg) return;
 
+  applyThemeConfig(cfg.theme);
+
   // 1. Configurar variables CSS para imágenes Hero
   if (cfg.hero) {
     if (cfg.hero.desktop) {
@@ -129,6 +131,226 @@ function initDynamicConfig(cfg) {
       const role = dist.role || 'Distribuidor Autorizado Gano Excel';
       el.innerHTML = `&copy; ${year} ${name}. ${role}. Todos los derechos reservados.`;
     }
+  });
+}
+
+const THEME_FONT_PRESETS = {
+  executive: {
+    title: "'Montserrat', sans-serif",
+    serif: "'Montserrat', sans-serif",
+    sans: "'Space Grotesk', sans-serif"
+  },
+  modern: {
+    title: "'Outfit', sans-serif",
+    serif: "'Inter', sans-serif",
+    sans: "'Inter', sans-serif"
+  },
+  editorial: {
+    title: "'Playfair Display', serif",
+    serif: "'Lora', serif",
+    sans: "'Inter', sans-serif"
+  },
+  friendly: {
+    title: "'Poppins', sans-serif",
+    serif: "'DM Sans', sans-serif",
+    sans: "'DM Sans', sans-serif"
+  },
+  premium: {
+    title: "'Manrope', sans-serif",
+    serif: "'Lora', serif",
+    sans: "'Manrope', sans-serif"
+  },
+  minimal: {
+    title: "'Inter', sans-serif",
+    serif: "'Inter', sans-serif",
+    sans: "'Inter', sans-serif"
+  }
+};
+
+const THEME_PALETTE_PRESETS = {
+  'cobalt-cyan': {
+    '--bg-primary': '#F8FAFC',
+    '--bg-secondary': '#F1F5F9',
+    '--bg-dark': '#0F172A',
+    '--bg-dark-secondary': '#1E293B',
+    '--text-primary': '#0F172A',
+    '--text-secondary': '#475569',
+    '--accent-blue': '#2563EB',
+    '--accent-blue-dark': '#1E40AF',
+    '--accent-cyan': '#06B6D4',
+    '--accent-cyan-light': '#E0F2FE',
+    '--accent-green': '#06B6D4',
+    '--accent-green-light': '#E0F2FE',
+    '--accent-gold': '#38BDF8',
+    '--border-glass': 'rgba(6, 182, 212, 0.2)',
+    '--bg-glass': 'rgba(15, 23, 42, 0.7)'
+  },
+  'emerald-slate': {
+    '--bg-primary': '#F7FAF8',
+    '--bg-secondary': '#ECFDF5',
+    '--bg-dark': '#0F1F1A',
+    '--bg-dark-secondary': '#19352B',
+    '--text-primary': '#10231C',
+    '--text-secondary': '#4B6358',
+    '--accent-blue': '#059669',
+    '--accent-blue-dark': '#047857',
+    '--accent-cyan': '#14B8A6',
+    '--accent-cyan-light': '#CCFBF1',
+    '--accent-green': '#10B981',
+    '--accent-green-light': '#D1FAE5',
+    '--accent-gold': '#A3E635',
+    '--border-glass': 'rgba(20, 184, 166, 0.24)',
+    '--bg-glass': 'rgba(15, 31, 26, 0.72)'
+  },
+  'coffee-gold': {
+    '--bg-primary': '#FBF8F3',
+    '--bg-secondary': '#F3EDE2',
+    '--bg-dark': '#211713',
+    '--bg-dark-secondary': '#3A2820',
+    '--text-primary': '#221814',
+    '--text-secondary': '#6B5A4C',
+    '--accent-blue': '#B7791F',
+    '--accent-blue-dark': '#8A5A16',
+    '--accent-cyan': '#D69E2E',
+    '--accent-cyan-light': '#FEF3C7',
+    '--accent-green': '#C084FC',
+    '--accent-green-light': '#F3E8FF',
+    '--accent-gold': '#F59E0B',
+    '--border-glass': 'rgba(214, 158, 46, 0.26)',
+    '--bg-glass': 'rgba(33, 23, 19, 0.72)'
+  },
+  'rose-graphite': {
+    '--bg-primary': '#FAF7F8',
+    '--bg-secondary': '#FCE7F3',
+    '--bg-dark': '#1F1720',
+    '--bg-dark-secondary': '#352435',
+    '--text-primary': '#1F1720',
+    '--text-secondary': '#675160',
+    '--accent-blue': '#BE185D',
+    '--accent-blue-dark': '#9D174D',
+    '--accent-cyan': '#F43F5E',
+    '--accent-cyan-light': '#FFE4E6',
+    '--accent-green': '#FB7185',
+    '--accent-green-light': '#FFE4E6',
+    '--accent-gold': '#FDA4AF',
+    '--border-glass': 'rgba(244, 63, 94, 0.24)',
+    '--bg-glass': 'rgba(31, 23, 32, 0.72)'
+  },
+  'indigo-lime': {
+    '--bg-primary': '#F8FAFC',
+    '--bg-secondary': '#EEF2FF',
+    '--bg-dark': '#111827',
+    '--bg-dark-secondary': '#1E1B4B',
+    '--text-primary': '#111827',
+    '--text-secondary': '#4B5563',
+    '--accent-blue': '#4F46E5',
+    '--accent-blue-dark': '#3730A3',
+    '--accent-cyan': '#84CC16',
+    '--accent-cyan-light': '#ECFCCB',
+    '--accent-green': '#65A30D',
+    '--accent-green-light': '#D9F99D',
+    '--accent-gold': '#A3E635',
+    '--border-glass': 'rgba(132, 204, 22, 0.24)',
+    '--bg-glass': 'rgba(17, 24, 39, 0.72)'
+  },
+  'teal-navy': {
+    '--bg-primary': '#F7FBFC',
+    '--bg-secondary': '#E6FFFA',
+    '--bg-dark': '#071923',
+    '--bg-dark-secondary': '#0E2C3A',
+    '--text-primary': '#071923',
+    '--text-secondary': '#3F6270',
+    '--accent-blue': '#0E7490',
+    '--accent-blue-dark': '#155E75',
+    '--accent-cyan': '#2DD4BF',
+    '--accent-cyan-light': '#CCFBF1',
+    '--accent-green': '#14B8A6',
+    '--accent-green-light': '#CCFBF1',
+    '--accent-gold': '#67E8F9',
+    '--border-glass': 'rgba(45, 212, 191, 0.24)',
+    '--bg-glass': 'rgba(7, 25, 35, 0.72)'
+  },
+  'wine-blush': {
+    '--bg-primary': '#FFFBFB',
+    '--bg-secondary': '#FFF1F2',
+    '--bg-dark': '#2A1018',
+    '--bg-dark-secondary': '#4A1D2B',
+    '--text-primary': '#2A1018',
+    '--text-secondary': '#76515D',
+    '--accent-blue': '#BE123C',
+    '--accent-blue-dark': '#9F1239',
+    '--accent-cyan': '#FB7185',
+    '--accent-cyan-light': '#FFE4E6',
+    '--accent-green': '#E11D48',
+    '--accent-green-light': '#FFE4E6',
+    '--accent-gold': '#FDA4AF',
+    '--border-glass': 'rgba(251, 113, 133, 0.24)',
+    '--bg-glass': 'rgba(42, 16, 24, 0.72)'
+  },
+  'forest-mint': {
+    '--bg-primary': '#F6FBF7',
+    '--bg-secondary': '#DCFCE7',
+    '--bg-dark': '#0B2015',
+    '--bg-dark-secondary': '#163A26',
+    '--text-primary': '#0B2015',
+    '--text-secondary': '#456451',
+    '--accent-blue': '#15803D',
+    '--accent-blue-dark': '#166534',
+    '--accent-cyan': '#34D399',
+    '--accent-cyan-light': '#D1FAE5',
+    '--accent-green': '#22C55E',
+    '--accent-green-light': '#DCFCE7',
+    '--accent-gold': '#86EFAC',
+    '--border-glass': 'rgba(52, 211, 153, 0.24)',
+    '--bg-glass': 'rgba(11, 32, 21, 0.72)'
+  },
+  'charcoal-amber': {
+    '--bg-primary': '#FAFAF9',
+    '--bg-secondary': '#F5F5F4',
+    '--bg-dark': '#1C1917',
+    '--bg-dark-secondary': '#292524',
+    '--text-primary': '#1C1917',
+    '--text-secondary': '#57534E',
+    '--accent-blue': '#D97706',
+    '--accent-blue-dark': '#B45309',
+    '--accent-cyan': '#F59E0B',
+    '--accent-cyan-light': '#FEF3C7',
+    '--accent-green': '#FBBF24',
+    '--accent-green-light': '#FEF3C7',
+    '--accent-gold': '#FDE68A',
+    '--border-glass': 'rgba(245, 158, 11, 0.24)',
+    '--bg-glass': 'rgba(28, 25, 23, 0.72)'
+  },
+  'sky-stone': {
+    '--bg-primary': '#F8FAFC',
+    '--bg-secondary': '#F1F5F9',
+    '--bg-dark': '#1E293B',
+    '--bg-dark-secondary': '#334155',
+    '--text-primary': '#1E293B',
+    '--text-secondary': '#64748B',
+    '--accent-blue': '#0284C7',
+    '--accent-blue-dark': '#0369A1',
+    '--accent-cyan': '#38BDF8',
+    '--accent-cyan-light': '#E0F2FE',
+    '--accent-green': '#0EA5E9',
+    '--accent-green-light': '#E0F2FE',
+    '--accent-gold': '#7DD3FC',
+    '--border-glass': 'rgba(56, 189, 248, 0.24)',
+    '--bg-glass': 'rgba(30, 41, 59, 0.72)'
+  }
+};
+
+function applyThemeConfig(theme) {
+  const root = document.documentElement;
+  const fontPreset = THEME_FONT_PRESETS[theme?.fontPreset] || THEME_FONT_PRESETS.executive;
+  const palettePreset = THEME_PALETTE_PRESETS[theme?.palettePreset] || THEME_PALETTE_PRESETS['cobalt-cyan'];
+
+  root.style.setProperty('--font-title', fontPreset.title);
+  root.style.setProperty('--font-serif', fontPreset.serif);
+  root.style.setProperty('--font-sans', fontPreset.sans);
+
+  Object.entries(palettePreset).forEach(([property, value]) => {
+    root.style.setProperty(property, value);
   });
 }
 

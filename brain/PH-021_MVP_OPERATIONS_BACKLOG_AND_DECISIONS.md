@@ -181,6 +181,7 @@ Critica.
 Relacion:
 
 PH-020.
+PH-024.
 
 Avance 2026-07-30:
 
@@ -232,6 +233,12 @@ Prioridad:
 
 Media-alta.
 
+Avance 2026-07-30:
+
+- Se documento PH-024 como menu administrativo separado.
+- El contrato de generacion ya acepta `integrations.analytics.measurementId`.
+- El contrato queda preparado para Meta Pixel y Google Ads, aunque el MVP solo usa GA4.
+
 ### D2. No calcular ROAS todavia
 
 Decision MVP:
@@ -243,6 +250,37 @@ ROI / ROAS quedan fuera hasta que exista modulo de campanas publicitarias o cone
 Prioridad:
 
 Media.
+
+## Categoria G - Personalizacion visual controlada
+
+### G1. Tres grados de personalizacion
+
+Decision MVP:
+
+La personalizacion de paginas se divide en tres niveles:
+
+- Cambios master: contenido comun, estructura, productos, imagenes comunes y videos. Se gestionan desde `/master-site` y se revisan primero en `ganomaster.pro`.
+- Datos personales y enlaces: nombre, WhatsApp, telefono, URL de compra, heroes, logo, SEO y Analytics. Se gestionan por empresario.
+- Estilo propio: paleta y tipografia por empresario, sin cambiar estructura.
+
+Relacion:
+
+PH-025.
+
+Prioridad:
+
+Media-alta.
+
+### G2. Presets visuales por empresario
+
+Decision MVP:
+
+El generador debe soportar 6 presets tipograficos y 10 paletas de color. La UI debe permitir seleccionarlos en `/landing-builder` y en el detalle del empresario.
+
+Avance 2026-07-30:
+
+- El contrato de generacion ya acepta `theme.fontPreset` y `theme.palettePreset`.
+- La plantilla de producto ya aplica estos presets como variables CSS.
 
 ## Categoria E - Pagos e ingresos esperados
 
@@ -307,13 +345,15 @@ Media.
 8. Separar ingresos esperados vs pagos confirmados.
 9. Mejorar estados y lenguaje operativo (`CONVERTED` explicado o renombrado en UI).
 10. Identidad visual/favicons de PartnerHub.
+11. Menu `Analitica y metricas` con GA4 primero.
+12. Selector de estilos por empresario con presets de color y tipografia.
 
 ### Escalabilidad
 
-11. Verificacion automatica obligatoria despues de cada publicacion.
-12. Logs de publicacion y verificacion por sitio.
-13. Replicacion selectiva despues de aprobar `ganomaster.pro`.
-14. Automatizacion futura de GA4 si Google APIs lo permiten de forma segura.
+13. Verificacion automatica obligatoria despues de cada publicacion.
+14. Logs de publicacion y verificacion por sitio.
+15. Replicacion selectiva despues de aprobar `ganomaster.pro`.
+16. Automatizacion futura de GA4 si Google APIs lo permiten de forma segura.
 
 ## Prueba 0 a 100: `jairopinto.pro`
 

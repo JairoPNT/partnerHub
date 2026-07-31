@@ -27,7 +27,13 @@ Una pagina de empresario publicada sigue siendo editable desde el dashboard admi
 
 Despues de guardar cambios de contenido, el operador debe publicar nuevamente la pagina para que el sitio publico refleje el cambio.
 
-El backend sincroniza los datos editados del empresario con la fuente JSON del sitio cuando existe un `siteId` vinculado. Adicionalmente, `POST /api/internal/product-pages/publish` consulta el lead vigente por `siteId`, vuelve a sincronizar la fuente y regenera el paquete estatico antes de subir por SFTP. Esto evita republicar un `config.js` antiguo cuando se corrigen telefonos, WhatsApp, URL de compra, SEO, Analytics o heroes.
+El backend sincroniza los datos editados del empresario con la fuente JSON del sitio cuando existe un `siteId` vinculado.
+
+Regla importante de precedencia:
+
+- Cuando el cambio viene desde `/partners`, los datos del lead administrativo pueden sobrescribir la fuente JSON porque esa vista es la ficha operativa del empresario.
+- Cuando el cambio viene desde `/landing-builder`, la fuente JSON editada de la landing tiene prioridad.
+- `POST /api/internal/product-pages/publish` puede rellenar campos faltantes desde el lead vinculado, pero no debe sobrescribir valores ya presentes en la fuente JSON. Esto evita que una URL de compra, telefono, marca o hero corregidos en Landing Builder vuelvan a un dato anterior del lead durante la publicacion.
 
 ## Campos bloqueados
 

@@ -33,6 +33,10 @@ type ProductPageSource = {
   mediaBaseUrl?: unknown;
 };
 
+type LeadSyncOptions = {
+  overwriteExistingValues?: boolean;
+};
+
 function cleanDigits(value?: string | null) {
   return (value ?? "").replace(/\D/g, "");
 }
@@ -50,13 +54,18 @@ function typedString(value: unknown) {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+function pickValue(leadValue: string | undefined, existingValue: string | undefined, overwriteExistingValues: boolean) {
+  return overwriteExistingValues ? leadValue ?? existingValue : existingValue ?? leadValue;
+}
+
 export const productPageLeadSyncService = {
-  async syncLeadToExistingSource(lead: LeadSnapshot) {
+  async syncLeadToExistingSource(lead: LeadSnapshot, options: LeadSyncOptions = {}) {
     if (!lead.siteId) return null;
 
     const existing = (await productPageSourceService.get(lead.siteId)) as ProductPageSource | null;
     if (!existing) return null;
 
+    const overwriteExistingValues = options.overwriteExistingValues ?? true;
     const onboarding = lead.onboardingData ?? {};
     const existingSite = existing.site ?? {};
     const existingDistributor = existing.distributor ?? {};
@@ -89,30 +98,40 @@ export const productPageLeadSyncService = {
       site: {
         ...existingSite,
         id: lead.siteId,
-        domain: optionalTrimmed(onboarding.domain) ?? typedString(existingSite.domain),
-        title,
+        domain: pickValue(optionalTrimmed(onboarding.domain), typedString(existingSite.domain), overwriteExistingValues),
+        title: pickValue(title, typedString(existingSite.title), overwriteExistingValues) ?? title,
         appName: typedString(existingSite.appName) ?? lead.siteId.replaceAll("-", "_"),
-        ogTitle: title,
-        ogDescription: metaDescription,
-        metaDescription,
-        faviconUrl: optionalTrimmed(onboarding.faviconUrl) ?? typedString(existingSite.faviconUrl)
+        ogTitle: pickValue(title, typedString(existingSite.ogTitle), overwriteExistingValues) ?? title,
+        ogDescription: pickValue(metaDescription, typedString(existingSite.ogDescription), overwriteExistingValues) ?? metaDescription,
+        metaDescription: pickValue(metaDescription, typedString(existingSite.metaDescription), overwriteExistingValues) ?? metaDescription,
+        faviconUrl: pickValue(optionalTrimmed(onboarding.faviconUrl), typedString(existingSite.faviconUrl), overwriteExistingValues)
       },
       distributor: {
         ...existingDistributor,
-        brandName: lead.brandName,
-        firstName: firstNameFrom(lead.fullName),
-        fullName: lead.fullName,
-        whatsappNumber,
-        phoneNumber,
-        displayPhone: phoneNumber,
-        purchaseUrl: optionalTrimmed(onboarding.purchaseUrl) ?? typedString(existingDistributor.purchaseUrl),
+        brandName: pickValue(lead.brandName, typedString(existingDistributor.brandName), overwriteExistingValues) ?? lead.brandName,
+        firstName:
+          pickValue(firstNameFrom(lead.fullName), typedString(existingDistributor.firstName), overwriteExistingValues) ??
+          firstNameFrom(lead.fullName),
+        fullName: pickValue(lead.fullName, typedString(existingDistributor.fullName), overwriteExistingValues) ?? lead.fullName,
+        whatsappNumber:
+          pickValue(whatsappNumber, typedString(existingDistributor.whatsappNumber), overwriteExistingValues) ?? whatsappNumber,
+        phoneNumber: pickValue(phoneNumber, typedString(existingDistributor.phoneNumber), overwriteExistingValues) ?? phoneNumber,
+        displayPhone: pickValue(phoneNumber, typedString(existingDistributor.displayPhone), overwriteExistingValues) ?? phoneNumber,
+        purchaseUrl: pickValue(
+          optionalTrimmed(onboarding.purchaseUrl),
+          typedString(existingDistributor.purchaseUrl),
+          overwriteExistingValues
+        ),
         defaultMessage:
-          optionalTrimmed(onboarding.defaultMessage) ??
-          typedString(existingDistributor.defaultMessage)
+          pickValue(
+            optionalTrimmed(onboarding.defaultMessage),
+            typedString(existingDistributor.defaultMessage),
+            overwriteExistingValues
+          )
       },
       hero: {
-        desktop: optionalTrimmed(onboarding.heroDesktopUrl) ?? typedString(existingHero.desktop),
-        mobile: optionalTrimmed(onboarding.heroMobileUrl) ?? typedString(existingHero.mobile)
+        desktop: pickValue(optionalTrimmed(onboarding.heroDesktopUrl), typedString(existingHero.desktop), overwriteExistingValues),
+        mobile: pickValue(optionalTrimmed(onboarding.heroMobileUrl), typedString(existingHero.mobile), overwriteExistingValues)
       },
       analytics: analyticsMeasurementId
         ? { measurementId: analyticsMeasurementId.toUpperCase() }

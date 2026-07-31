@@ -22,11 +22,40 @@ const httpsUrlSchema = z.string().url().refine((value) => new URL(value).protoco
   message: "URL must use HTTPS"
 });
 
+const purchaseUrlSchema = httpsUrlSchema.refine(
+  (value) => new URL(value).hostname.toLowerCase() !== "colombia.ganoexcel.com",
+  {
+    message: "Usa la URL exacta de compra del empresario. No uses colombia.ganoexcel.com."
+  }
+);
+
 const measurementIdSchema = z
   .string()
   .trim()
   .regex(/^G-[A-Z0-9]+$/i, "Measurement ID must use the G-XXXXXXXX format")
   .transform((value) => value.toUpperCase());
+
+const fontPresetSchema = z.enum([
+  "executive",
+  "modern",
+  "editorial",
+  "friendly",
+  "premium",
+  "minimal"
+]);
+
+const palettePresetSchema = z.enum([
+  "cobalt-cyan",
+  "emerald-slate",
+  "coffee-gold",
+  "rose-graphite",
+  "indigo-lime",
+  "teal-navy",
+  "wine-blush",
+  "forest-mint",
+  "charcoal-amber",
+  "sky-stone"
+]);
 
 export function getFaviconInitial(brandName?: string, fullName?: string): string {
   const brandChar = brandName?.trim()?.[0];
@@ -76,7 +105,7 @@ export const productPageGenerationInputSchema = z.object({
     whatsappNumber: z.string().trim().min(10).max(20),
     phoneNumber: z.string().trim().min(1).optional(),
     displayPhone: z.string().trim().min(1).optional(),
-    purchaseUrl: httpsUrlSchema.optional(),
+    purchaseUrl: purchaseUrlSchema.optional(),
     defaultMessage: z.string().trim().min(1).optional()
   }),
   hero: z.object({
@@ -86,6 +115,32 @@ export const productPageGenerationInputSchema = z.object({
   analytics: z
     .object({
       measurementId: measurementIdSchema
+    })
+    .optional(),
+  integrations: z
+    .object({
+      analytics: z
+        .object({
+          provider: z.literal("GA4").default("GA4"),
+          measurementId: measurementIdSchema.optional()
+        })
+        .optional(),
+      meta: z
+        .object({
+          pixelId: z.string().trim().min(1).optional()
+        })
+        .optional(),
+      googleAds: z
+        .object({
+          conversionId: z.string().trim().min(1).optional()
+        })
+        .optional()
+    })
+    .optional(),
+  theme: z
+    .object({
+      fontPreset: fontPresetSchema.default("executive"),
+      palettePreset: palettePresetSchema.default("cobalt-cyan")
     })
     .optional(),
   mediaBaseUrl: httpsUrlSchema.optional(),
@@ -174,6 +229,9 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
 
   const faviconUrl = input.site.faviconUrl ?? input.faviconUrl;
 
+  const analyticsMeasurementId =
+    input.analytics?.measurementId ?? input.integrations?.analytics?.measurementId;
+
   return {
     site: {
       id: input.site.id,
@@ -199,8 +257,15 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
         `Hola ${input.distributor.firstName}, vengo de tu página web y me gustaría recibir más información.`
     },
     hero: input.hero,
-    analytics: input.analytics?.measurementId
-      ? { measurementId: input.analytics.measurementId }
+    analytics: analyticsMeasurementId
+      ? { measurementId: analyticsMeasurementId }
+      : undefined,
+    integrations: input.integrations,
+    theme: input.theme
+      ? {
+          fontPreset: input.theme.fontPreset,
+          palettePreset: input.theme.palettePreset
+        }
       : undefined,
     mediaBaseUrl: input.mediaBaseUrl ?? "https://media.partnerhub.club/comunes/producto/v1/"
   };

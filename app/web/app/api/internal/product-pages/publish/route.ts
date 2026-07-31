@@ -18,7 +18,9 @@ export async function POST(request: Request) {
     const linkedLead = await activationLeadService.getBySiteId(input.siteId);
 
     if (linkedLead) {
-      await productPageLeadSyncService.syncLeadToExistingSource(linkedLead);
+      await productPageLeadSyncService.syncLeadToExistingSource(linkedLead, {
+        overwriteExistingValues: false
+      });
     }
 
     await productPageGenerationService.regenerateFromSavedSource(input.siteId);
