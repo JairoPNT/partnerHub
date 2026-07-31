@@ -134,8 +134,8 @@ const INITIAL_FORM: FormState = {
   purchaseUrl: "",
   siteTitle: "",
   metaDescription: "",
-  heroDesktop: "",
-  heroMobile: "",
+  heroDesktop: "https://media.partnerhub.club/comunes/producto/v1/hero-desktop.webp",
+  heroMobile: "https://media.partnerhub.club/comunes/producto/v1/hero-mobile.webp",
   defaultMessage: "",
   measurementId: "",
   faviconUrl: "",
@@ -391,8 +391,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       metaDescription: pickFirst(stringValue(savedSite.metaDescription), stringValue(savedSite.ogDescription), lead.onboardingData?.metaDescription, brandName
         ? `Descubre como transformar tu dia a dia con cafe, cacao y suplementos enriquecidos con Ganoderma lucidum por ${brandName}.`
         : ""),
-      heroDesktop: pickFirst(stringValue(savedHero.desktop), lead.onboardingData?.heroDesktopUrl),
-      heroMobile: pickFirst(stringValue(savedHero.mobile), lead.onboardingData?.heroMobileUrl),
+      heroDesktop: pickFirst(stringValue(savedHero.desktop), lead.onboardingData?.heroDesktopUrl, "https://media.partnerhub.club/comunes/producto/v1/hero-desktop.webp"),
+      heroMobile: pickFirst(stringValue(savedHero.mobile), lead.onboardingData?.heroMobileUrl, "https://media.partnerhub.club/comunes/producto/v1/hero-mobile.webp"),
       defaultMessage: pickFirst(
         stringValue(savedDistributor.defaultMessage),
         lead.onboardingData?.defaultMessage,
