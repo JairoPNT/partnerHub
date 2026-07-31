@@ -76,13 +76,11 @@ export const productPageLeadSyncService = {
     if (!lead.siteId) return null;
 
     const existing = (await productPageSourceService.get(lead.siteId)) as ProductPageSource | null;
-    if (!existing) return null;
-
     const overwriteExistingValues = options.overwriteExistingValues ?? true;
     const onboarding = lead.onboardingData ?? {};
-    const existingSite = existing.site ?? {};
-    const existingDistributor = existing.distributor ?? {};
-    const existingHero = existing.hero ?? {};
+    const existingSite = existing?.site ?? {};
+    const existingDistributor = existing?.distributor ?? {};
+    const existingHero = existing?.hero ?? {};
 
     const whatsappNumber =
       cleanDigits(onboarding.whatsapp) ||
@@ -106,10 +104,10 @@ export const productPageLeadSyncService = {
       `Pagina de ${lead.brandName}.`;
 
     const analyticsMeasurementId = optionalTrimmed(onboarding.analyticsMeasurementId);
-    const fontPreset = onboarding.fontPreset ?? existing.theme?.fontPreset ?? "executive";
-    const palettePreset = onboarding.palettePreset ?? existing.theme?.palettePreset ?? "cobalt-cyan";
-    const metaPixelId = optionalTrimmed(onboarding.metaPixelId) ?? existing.integrations?.meta?.pixelId;
-    const googleAdsConversionId = optionalTrimmed(onboarding.googleAdsConversionId) ?? existing.integrations?.googleAds?.conversionId;
+    const fontPreset = onboarding.fontPreset ?? existing?.theme?.fontPreset ?? "executive";
+    const palettePreset = onboarding.palettePreset ?? existing?.theme?.palettePreset ?? "cobalt-cyan";
+    const metaPixelId = optionalTrimmed(onboarding.metaPixelId) ?? existing?.integrations?.meta?.pixelId;
+    const googleAdsConversionId = optionalTrimmed(onboarding.googleAdsConversionId) ?? existing?.integrations?.googleAds?.conversionId;
 
     const nextSource = {
       ...existing,
@@ -153,19 +151,19 @@ export const productPageLeadSyncService = {
       },
       analytics: analyticsMeasurementId
         ? { measurementId: analyticsMeasurementId.toUpperCase() }
-        : existing.analytics,
+        : existing?.analytics,
       integrations: {
         analytics: analyticsMeasurementId
           ? { provider: "GA4", measurementId: analyticsMeasurementId.toUpperCase() }
-          : existing.integrations?.analytics,
-        meta: metaPixelId ? { pixelId: metaPixelId } : existing.integrations?.meta,
-        googleAds: googleAdsConversionId ? { conversionId: googleAdsConversionId } : existing.integrations?.googleAds
+          : existing?.integrations?.analytics,
+        meta: metaPixelId ? { pixelId: metaPixelId } : existing?.integrations?.meta,
+        googleAds: googleAdsConversionId ? { conversionId: googleAdsConversionId } : existing?.integrations?.googleAds
       },
       theme: {
         fontPreset,
         palettePreset
       },
-      mediaBaseUrl: existing.mediaBaseUrl
+      mediaBaseUrl: existing?.mediaBaseUrl
     };
 
     const parsed = productPageGenerationInputSchema.parse(nextSource);
