@@ -48,13 +48,14 @@ export function HeroImageUploader({
 
       const res = await fetch("/api/internal/media/hero", {
         method: "POST",
-        body: formData
+        body: formData,
+        credentials: "same-origin"
       });
 
       const json = await res.json();
 
       if (!res.ok) {
-        throw new Error(json.error || "No se pudo subir la imagen del héroe.");
+        throw new Error(json.error || "No se pudo subir la imagen del hero.");
       }
 
       if (json.url) {
@@ -62,7 +63,7 @@ export function HeroImageUploader({
         setSuccess("Imagen subida y optimizada a WebP correctamente en Cloudflare R2.");
         setTimeout(() => setSuccess(null), 4000);
       } else {
-        throw new Error("No se recibió la URL de la imagen subida.");
+        throw new Error("No se recibio la URL de la imagen subida.");
       }
     } catch (err) {
       setError((err as Error).message);
@@ -166,10 +167,10 @@ export function HeroImageUploader({
               </div>
               <div>
                 <span className="text-xs font-bold text-slate-900 dark:text-white block">
-                  Haz clic para seleccionar imagen {variant === "hero-desktop" ? "Desktop" : "Mobile"}
+                  Haz clic para seleccionar imagen {variant === "hero-desktop" ? "para computador" : "para celular"}
                 </span>
                 <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
-                  Archivos JPG, PNG, WebP (máx. 12 MB). Se convertirá automáticamente a WebP en R2.
+                  Archivos JPG, PNG o WebP, maximo 12 MB. Se convertira automaticamente a WebP en R2.
                 </span>
               </div>
             </>

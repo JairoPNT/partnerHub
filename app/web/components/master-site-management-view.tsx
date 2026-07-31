@@ -172,7 +172,9 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         const sanitizeHeroUrl = (url: string | undefined): string => {
           if (!url || typeof url !== "string") return "";
           if (url.toLowerCase().includes("jenny")) return "";
-          return url.trim();
+          const trimmed = url.trim();
+          if (/\/hero-(?:desktop|mobile)\.webp(?:\?|$)/i.test(trimmed)) return "";
+          return trimmed;
         };
 
         setForm({
