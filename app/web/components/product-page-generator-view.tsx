@@ -618,6 +618,11 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         setSelectedLead(updated);
         setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
       }
+
+      // Desplazamiento automático hacia arriba para enfocar el botón de publicación
+      if (typeof window !== "undefined") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Ocurrió un error inesperado durante la generación.");
     } finally {

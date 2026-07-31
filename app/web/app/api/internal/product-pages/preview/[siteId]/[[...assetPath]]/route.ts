@@ -47,6 +47,14 @@ function resolvePreviewFile(siteId: string, assetPath?: string[]) {
 export async function GET(_request: Request, context: RouteContext) {
   try {
     const { siteId, assetPath } = await context.params;
+    const url = new URL(_request.url);
+
+    // Si se accede a la raíz del sitio de vista previa sin la barra final (ej. /preview/jairo-pinto),
+    // se redirige a /preview/jairo-pinto/ para que las rutas relativas de CSS/JS/Imágenes funcionen adecuadamente.
+    if ((!assetPath || assetPath.length === 0) && !url.pathname.endsWith("/")) {
+      return NextResponse.redirect(new URL(`${url.pathname}/${url.search}`, _request.url), 308);
+    }
+
     const filePath = resolvePreviewFile(siteId, assetPath);
     const body = await readFile(filePath);
     const extension = extname(filePath).toLowerCase();

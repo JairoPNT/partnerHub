@@ -20,13 +20,19 @@ export function FontSelector({ value, onChange, disabled }: FontSelectorProps) {
 
   return (
     <div className="space-y-3">
+      {/* Importación de Google Fonts para la previsualización real en el Dashboard */}
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=DM+Sans:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,600;1,400&family=Manrope:wght@400;600;700&family=Montserrat:ital,wght@0,400;0,600;0,700;1,400;1,600&family=Outfit:wght@400;600;700&family=Playfair+Display:ital,wght@0,600;0,700;1,600&family=Poppins:wght@400;600;700&family=Space+Grotesk:wght@400;600&display=swap"
+      />
+
       <div className="flex items-center justify-between">
         <label className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-slate-700">
           <Type className="h-4 w-4 text-cyan-600" />
           Preset Tipográfico
         </label>
         <span className="text-[11px] font-medium text-slate-500">
-          Estilo visual del sitio
+          Vista previa interactiva en vivo
         </span>
       </div>
 
@@ -40,7 +46,7 @@ export function FontSelector({ value, onChange, disabled }: FontSelectorProps) {
               disabled={disabled}
               onClick={() => onChange(preset.id)}
               className={cn(
-                "relative flex flex-col text-left p-3.5 rounded-2xl border transition-all duration-200 focus:outline-none",
+                "relative flex flex-col text-left p-3.5 rounded-2xl border transition-all duration-200 focus:outline-none group",
                 isSelected
                   ? "border-cyan-500 bg-cyan-50/60 ring-2 ring-cyan-500/20 shadow-sm"
                   : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50/50",
@@ -48,11 +54,14 @@ export function FontSelector({ value, onChange, disabled }: FontSelectorProps) {
               )}
             >
               <div className="flex items-center justify-between w-full mb-1">
-                <span className="text-xs font-bold text-slate-900">
+                <span
+                  className="text-xs font-bold text-slate-900 group-hover:text-cyan-900 transition-colors"
+                  style={{ fontFamily: preset.fontFamilyTitle }}
+                >
                   {preset.name}
                 </span>
                 {isSelected && (
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-cyan-600 text-white">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-cyan-600 text-white shrink-0">
                     <Check className="h-3 w-3" />
                   </div>
                 )}
@@ -62,11 +71,18 @@ export function FontSelector({ value, onChange, disabled }: FontSelectorProps) {
                 {preset.fonts}
               </p>
 
-              <div className="mt-auto pt-2 border-t border-slate-100/80">
-                <p className="text-xs font-medium text-slate-800 truncate">
+              <div className="mt-auto pt-2 border-t border-slate-100/80 w-full">
+                {/* Muestra Tipográfica Real con las fuentes del preset */}
+                <p
+                  className="text-sm font-semibold text-slate-900 truncate leading-snug"
+                  style={{ fontFamily: preset.fontFamilyTitle }}
+                >
                   &ldquo;{preset.sampleText}&rdquo;
                 </p>
-                <p className="text-[10px] text-slate-500 mt-0.5 line-clamp-1">
+                <p
+                  className="text-[11px] text-slate-600 mt-1 line-clamp-1"
+                  style={{ fontFamily: preset.fontFamilyBody }}
+                >
                   {preset.description}
                 </p>
               </div>

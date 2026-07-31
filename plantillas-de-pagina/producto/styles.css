@@ -1,151 +1,3 @@
-/* styles.css - PartnerHub Product Landing Page */
-
-/* Importación de Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Manrope:wght@400;500;600;700;800&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Outfit:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600;1,700&family=Poppins:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
-
-/* Fuente Tipográfica Local para Logotipo */
-@font-face {
-  font-family: 'Barbie SomeOne';
-  src: url('tipografia/Barbie SomeOne.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
-
-/* Variables de Diseño CSS - Paleta Ejecutivo Tech (Gris Grafito + Azul Cobalto + Cyan Eléctrico) */
-:root {
-  --bg-primary: #F8FAFC;
-  --bg-secondary: #F1F5F9;
-  --bg-dark: #0F172A;
-  --bg-dark-secondary: #1E293B;
-  --bg-dark-gradient: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
-  
-  --text-primary: #0F172A;
-  --text-secondary: #475569;
-  --text-light: #FFFFFF;
-  --text-light-secondary: #94A3B8;
-  
-  --accent-blue: #2563EB;
-  --accent-blue-dark: #1E40AF;
-  --accent-cyan: #06B6D4;
-  --accent-cyan-light: #E0F2FE;
-  
-  --accent-green: #06B6D4;
-  --accent-green-light: #E0F2FE;
-  --accent-gold: #38BDF8;
-  
-  --border-color: rgba(15, 23, 42, 0.08);
-  --border-glass: rgba(6, 182, 212, 0.2);
-  --bg-glass: rgba(15, 23, 42, 0.7);
-  
-  --font-title: 'Montserrat', sans-serif;
-  --font-serif: 'Montserrat', sans-serif;
-  --font-sans: 'Space Grotesk', sans-serif;
-  
-  --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-  --transition-fast: all 0.15s ease-in-out;
-  
-  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
-  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
-  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12);
-  
-  --radius-sm: 4px;
-  --radius-md: 12px;
-  --radius-lg: 24px;
-  --radius-full: 9999px;
-  
-  --container-width: 1140px;
-}
-
-/* Reset y Estilos Globales */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html {
-  scroll-behavior: smooth;
-  -webkit-text-size-adjust: 100%;
-}
-
-body {
-  font-family: var(--font-sans);
-  background-color: var(--bg-primary);
-  color: var(--text-primary);
-  line-height: 1.6;
-  font-size: 16px;
-  overflow-x: hidden;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-/* Tipografías */
-h1, h2, h3, h4, h5, h6 {
-  font-family: var(--font-title);
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-h1 {
-  font-size: clamp(2.5rem, 5vw, 4.75rem);
-  letter-spacing: -0.02em;
-}
-
-h2 {
-  font-size: clamp(2rem, 4vw, 2.75rem);
-  letter-spacing: -0.01em;
-}
-
-h3 {
-  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
-}
-
-p {
-  color: var(--text-secondary);
-}
-
-.font-serif {
-  font-family: var(--font-title);
-}
-
-.italic {
-  font-style: italic;
-}
-
-/* Botones y CTAs (Sin Emojis Unicode) */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 14px 28px;
-  font-family: var(--font-sans);
-  font-size: 0.9375rem;
-  font-weight: 500;
-  text-decoration: none;
-  border-radius: var(--radius-full);
-  border: 1px solid transparent;
-  cursor: pointer;
-  transition: var(--transition-smooth);
-}
-
-.btn-primary {
-  background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%);
-  color: #FFFFFF;
-  border: 1px solid rgba(6, 182, 212, 0.3);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
-}
-
-.btn-primary:hover {
-  background: linear-gradient(135deg, #1D4ED8 0%, #06B6D4 100%);
-  color: #FFFFFF;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
-}
-
-.btn-secondary {
-  background-color: var(--bg-secondary);
-  color: var(--text-primary);
   border: 1px solid rgba(15, 23, 42, 0.12);
 }
 
@@ -798,17 +650,17 @@ p {
 }
 
 .product-btn-buy {
-  background: linear-gradient(135deg, #1E40AF 0%, #2563EB 100%);
+  background: linear-gradient(135deg, var(--accent-blue-dark) 0%, var(--accent-blue) 100%);
   color: #FFFFFF;
-  border: 1px solid rgba(6, 182, 212, 0.3);
-  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 4px 14px var(--border-glass);
 }
 
 .product-btn-buy:hover {
-  background: linear-gradient(135deg, #1D4ED8 0%, #06B6D4 100%);
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
   color: #FFFFFF;
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.4);
+  box-shadow: 0 6px 20px var(--border-glass);
 }
 
 @media (max-width: 991px) {
@@ -2157,3 +2009,146 @@ body.non-colombia .product-buttons-flex {
   }
 }
 
+/* Selector de Estilos Flotante para la Plantilla Master (Exclusivo Master) */
+.master-style-switcher {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.master-style-switcher-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 20px;
+  background: #0F172A;
+  color: #FFFFFF;
+  border: 1px solid rgba(6, 182, 212, 0.4);
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.25);
+  transition: all 0.25s ease;
+}
+
+.master-style-switcher-toggle:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 14px 36px rgba(6, 182, 212, 0.35);
+  border-color: #06B6D4;
+}
+
+.master-style-panel {
+  display: none;
+  position: absolute;
+  bottom: 60px;
+  right: 0;
+  width: 340px;
+  max-height: 520px;
+  background: rgba(15, 23, 42, 0.95);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 20px;
+  padding: 20px;
+  color: #F8FAFC;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+  overflow-y: auto;
+  z-index: 10000;
+}
+
+.master-style-panel.active {
+  display: block;
+  animation: masterPanelSlideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes masterPanelSlideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.master-style-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.master-style-title {
+  font-size: 0.9375rem;
+  font-weight: 800;
+  color: #38BDF8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.master-style-close {
+  background: transparent;
+  border: none;
+  color: #94A3B8;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+}
+
+.master-style-section-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94A3B8;
+  margin-top: 14px;
+  margin-bottom: 8px;
+}
+
+.master-style-grid {
+  display: grid;
+  grid-template-cols: 1fr;
+  gap: 8px;
+}
+
+.master-style-option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #E2E8F0;
+  font-size: 0.8125rem;
+  text-align: left;
+}
+
+.master-style-option:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.master-style-option.selected {
+  background: rgba(6, 182, 212, 0.18);
+  border-color: #06B6D4;
+  color: #FFFFFF;
+  font-weight: 700;
+}
+
+.master-style-swatch {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.master-style-swatch-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
