@@ -4,7 +4,10 @@ export type FontPreset =
   | "editorial"
   | "friendly"
   | "premium"
-  | "minimal";
+  | "minimal"
+  | "serif-chic"
+  | "romantic-serif"
+  | "luxury-serif";
 
 export type PalettePreset =
   | "cobalt-cyan"
@@ -24,6 +27,8 @@ export interface FontPresetMeta {
   fonts: string;
   description: string;
   sampleText: string;
+  fontFamilyTitle: string;
+  fontFamilyBody: string;
 }
 
 export interface PalettePresetMeta {
@@ -41,42 +46,81 @@ export const FONT_PRESETS: FontPresetMeta[] = [
     name: "Ejecutivo",
     fonts: "Montserrat + Space Grotesk",
     description: "Estructurado, autoritario y enfocado en negocios.",
-    sampleText: "Visión y Liderazgo Comercial"
+    sampleText: "Visión y Liderazgo Comercial",
+    fontFamilyTitle: "'Montserrat', sans-serif",
+    fontFamilyBody: "'Space Grotesk', sans-serif"
   },
   {
     id: "modern",
     name: "Moderno",
     fonts: "Outfit + Inter",
     description: "Limpio, dinámico y con estética digital contemporánea.",
-    sampleText: "Innovación y Claridad Digital"
+    sampleText: "Innovación y Claridad Digital",
+    fontFamilyTitle: "'Outfit', sans-serif",
+    fontFamilyBody: "'Inter', sans-serif"
   },
   {
     id: "editorial",
     name: "Editorial",
     fonts: "Playfair Display + Lora",
     description: "Elegante, narrativo y con presencia sofisticada.",
-    sampleText: "Elegancia y Tradición de Marca"
+    sampleText: "Elegancia y Tradición de Marca",
+    fontFamilyTitle: "'Playfair Display', serif",
+    fontFamilyBody: "'Lora', serif"
   },
   {
     id: "friendly",
     name: "Cercano",
     fonts: "Poppins + DM Sans",
     description: "Cálido, accesible y enfocado en la comunidad.",
-    sampleText: "Bienestar y Confianza Directa"
+    sampleText: "Bienestar y Confianza Directa",
+    fontFamilyTitle: "'Poppins', sans-serif",
+    fontFamilyBody: "'DM Sans', sans-serif"
   },
   {
     id: "premium",
     name: "Premium",
     fonts: "Manrope + Lora",
     description: "Lujoso, distintivo y de alto valor percibido.",
-    sampleText: "Exclusividad y Calidad Superior"
+    sampleText: "Exclusividad y Calidad Superior",
+    fontFamilyTitle: "'Manrope', sans-serif",
+    fontFamilyBody: "'Lora', serif"
   },
   {
     id: "minimal",
     name: "Minimalista",
     fonts: "Inter",
     description: "Directo, funcional, enfocado 100% en el producto.",
-    sampleText: "Simplicidad y Enfoque Directo"
+    sampleText: "Simplicidad y Enfoque Directo",
+    fontFamilyTitle: "'Inter', sans-serif",
+    fontFamilyBody: "'Inter', sans-serif"
+  },
+  {
+    id: "serif-chic",
+    name: "Serif Chic",
+    fonts: "Cormorant Garamond + Montserrat",
+    description: "Estilizado, refinado y con toques de alta gama.",
+    sampleText: "Elegancia Distinguida & Ritual",
+    fontFamilyTitle: "'Cormorant Garamond', serif",
+    fontFamilyBody: "'Montserrat', sans-serif"
+  },
+  {
+    id: "romantic-serif",
+    name: "Femenino & Romántico",
+    fonts: "Cormorant Garamond + Lora",
+    description: "Delicado, estilizado y sutilmente cursivo para marcas de bienestar.",
+    sampleText: "Belleza Natural & Armonía",
+    fontFamilyTitle: "'Cormorant Garamond', serif",
+    fontFamilyBody: "'Lora', serif"
+  },
+  {
+    id: "luxury-serif",
+    name: "Luxurious Serif",
+    fonts: "Bodoni Moda + Montserrat",
+    description: "Alta costura, trazos contrastados y elegancia femenina premium.",
+    sampleText: "Esencia & Lujo Atemporal",
+    fontFamilyTitle: "'Bodoni Moda', serif",
+    fontFamilyBody: "'Montserrat', sans-serif"
   }
 ];
 

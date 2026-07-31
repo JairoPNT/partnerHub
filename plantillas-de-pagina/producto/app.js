@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initVideoCarousel();
   initModals();
   initCountryTargeting();
+  initMasterStyleSwitcher(cfg);
 });
 
 /**
@@ -195,6 +196,21 @@ const THEME_FONT_PRESETS = {
     title: "'Inter', sans-serif",
     serif: "'Inter', sans-serif",
     sans: "'Inter', sans-serif"
+  },
+  'serif-chic': {
+    title: "'Cormorant Garamond', serif",
+    serif: "'Cormorant Garamond', serif",
+    sans: "'Montserrat', sans-serif"
+  },
+  'romantic-serif': {
+    title: "'Cormorant Garamond', serif",
+    serif: "'Cormorant Garamond', serif",
+    sans: "'Lora', serif"
+  },
+  'luxury-serif': {
+    title: "'Bodoni Moda', serif",
+    serif: "'Bodoni Moda', serif",
+    sans: "'Montserrat', sans-serif"
   }
 };
 
@@ -911,6 +927,23 @@ async function initCountryTargeting() {
         const responseFallback = await fetch('https://freeipapi.com/api/json');
         if (!responseFallback.ok) throw new Error('freeipapi error');
         const dataFallback = await responseFallback.json();
+
+/**
+ * Detección dinámica de país para segmentación de contenido
+ */
+async function initCountryTargeting() {
+  const detectCountry = async () => {
+    try {
+      const response = await fetch('https://ipapi.co/json/');
+      if (!response.ok) throw new Error('ipapi.co error');
+      const data = await response.json();
+      return data.country_code;
+    } catch (e) {
+      console.warn("ipapi.co failed, trying freeipapi.com:", e);
+      try {
+        const responseFallback = await fetch('https://freeipapi.com/api/json');
+        if (!responseFallback.ok) throw new Error('freeipapi error');
+        const dataFallback = await responseFallback.json();
         return dataFallback.countryCode;
       } catch (e2) {
         console.warn("freeipapi.com failed, trying browser timezone check:", e2);
@@ -938,4 +971,138 @@ async function initCountryTargeting() {
     document.body.classList.add('non-colombia');
     console.log("Navegación externa detectada. Ocultando botones de compra directa.");
   }
+}
+
+/**
+ * Selector de Estilos Flotante para la Plantilla Master
+ * EXCLUSIVO: Solo se activa en la Plantilla Master / ganomaster.pro.
+ * En las páginas generadas para los clientes finales NUNCA se renderiza.
+ */
+function initMasterStyleSwitcher(cfg) {
+  const isMaster = cfg?.isMasterTemplate === true ||
+                   cfg?.site?.id === 'ganomaster' ||
+                   (typeof window !== 'undefined' && (
+                     window.location.hostname.includes('ganomaster') ||
+                     window.location.pathname.includes('/preview/ganomaster')
+                   ));
+
+  if (!isMaster) return;
+
+  const switcherContainer = document.createElement('div');
+  switcherContainer.className = 'master-style-switcher';
+  switcherContainer.id = 'masterStyleSwitcherWidget';
+
+  switcherContainer.innerHTML = `
+    <button type="button" class="master-style-switcher-toggle" id="masterStyleToggleBtn">
+      <svg class="icon" viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;">
+        <path d="M12 2.69l5.66 5.66a8 8 0 1 1-11.31 0z"></path>
+      </svg>
+      <span>Estilos Master</span>
+    </button>
+
+    <div class="master-style-panel" id="masterStylePanel">
+      <div class="master-style-header">
+        <div class="master-style-title">
+          <svg class="icon" viewBox="0 0 24 24" style="width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;">
+            <circle cx="12" cy="12" r="10"></circle>
+            <path d="M12 2a7 7 0 1 0 10 10"></path>
+          </svg>
+          Personalizar Estilos Master
+        </div>
+        <button type="button" class="master-style-close" id="masterStyleCloseBtn">&times;</button>
+      </div>
+
+      <div class="master-style-section-title">Presets Tipográficos</div>
+      <div class="master-style-grid" id="masterFontGrid"></div>
+
+      <div class="master-style-section-title" style="margin-top:16px;">Paletas de Color</div>
+      <div class="master-style-grid" id="masterPaletteGrid"></div>
+    </div>
+  `;
+
+  document.body.appendChild(switcherContainer);
+
+  const toggleBtn = document.getElementById('masterStyleToggleBtn');
+  const panel = document.getElementById('masterStylePanel');
+  const closeBtn = document.getElementById('masterStyleCloseBtn');
+
+  if (toggleBtn && panel) {
+    toggleBtn.addEventListener('click', () => panel.classList.toggle('active'));
+  }
+  if (closeBtn && panel) {
+    closeBtn.addEventListener('click', () => panel.classList.remove('active'));
+  }
+
+  const fontGrid = document.getElementById('masterFontGrid');
+  const fontOptions = [
+    { id: 'executive', name: 'Ejecutivo (Montserrat)' },
+    { id: 'modern', name: 'Moderno (Outfit)' },
+    { id: 'editorial', name: 'Editorial (Playfair)' },
+    { id: 'friendly', name: 'Cercano (Poppins)' },
+    { id: 'premium', name: 'Premium (Manrope)' },
+    { id: 'minimal', name: 'Minimalista (Inter)' },
+    { id: 'serif-chic', name: 'Serif Chic (Cormorant)' },
+    { id: 'romantic-serif', name: 'Femenino & Romántico' },
+    { id: 'luxury-serif', name: 'Luxurious Serif (Bodoni)' }
+  ];
+
+  let activeFont = cfg?.theme?.fontPreset || 'executive';
+  let activePalette = cfg?.theme?.palettePreset || 'cobalt-cyan';
+
+  function renderFontOptions() {
+    if (!fontGrid) return;
+    fontGrid.innerHTML = '';
+    fontOptions.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `master-style-option ${opt.id === activeFont ? 'selected' : ''}`;
+      btn.textContent = opt.name;
+      btn.addEventListener('click', () => {
+        activeFont = opt.id;
+        applyThemeConfig({ fontPreset: activeFont, palettePreset: activePalette });
+        renderFontOptions();
+      });
+      fontGrid.appendChild(btn);
+    });
+  }
+
+  const paletteGrid = document.getElementById('masterPaletteGrid');
+  const paletteOptions = [
+    { id: 'cobalt-cyan', name: 'Cobalto & Cian', base: '#0F172A', accent: '#06B6D4' },
+    { id: 'emerald-slate', name: 'Esmeralda & Pizarra', base: '#022C22', accent: '#10B981' },
+    { id: 'coffee-gold', name: 'Café & Oro', base: '#271C19', accent: '#D97706' },
+    { id: 'rose-graphite', name: 'Rosa & Grafito', base: '#18181B', accent: '#F43F5E' },
+    { id: 'indigo-lime', name: 'Índigo & Lima', base: '#1E1B4B', accent: '#84CC16' },
+    { id: 'teal-navy', name: 'Azul Verdoso & Marino', base: '#0A192F', accent: '#14B8A6' },
+    { id: 'wine-blush', name: 'Vino & Rubor', base: '#2A0813', accent: '#FB7185' },
+    { id: 'forest-mint', name: 'Bosque & Menta', base: '#052E16', accent: '#34D399' },
+    { id: 'charcoal-amber', name: 'Carbón & Ámbar', base: '#171717', accent: '#F59E0B' },
+    { id: 'sky-stone', name: 'Cielo & Piedra', base: '#0C4A6E', accent: '#38BDF8' }
+  ];
+
+  function renderPaletteOptions() {
+    if (!paletteGrid) return;
+    paletteGrid.innerHTML = '';
+    paletteOptions.forEach(opt => {
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = `master-style-option ${opt.id === activePalette ? 'selected' : ''}`;
+      btn.innerHTML = `
+        <span>${opt.name}</span>
+        <div class="master-style-swatch">
+          <div class="master-style-swatch-dot" style="background:${opt.base}"></div>
+          <div class="master-style-swatch-dot" style="background:${opt.accent}"></div>
+        </div>
+      `;
+      btn.addEventListener('click', () => {
+        activePalette = opt.id;
+        applyThemeConfig({ fontPreset: activeFont, palettePreset: activePalette });
+        renderPaletteOptions();
+      });
+      paletteGrid.appendChild(btn);
+    });
+  }
+
+  renderFontOptions();
+  renderPaletteOptions();
 }
