@@ -97,5 +97,45 @@ export const mediaUploadService = {
     }
 
     return { siteId, variant, key, url: `${publicBaseUrl}/${key}`, bytes: body.byteLength };
+  },
+
+  async uploadSourcePhoto(input: { token: string; file: File }) {
+    if (!input.file || input.file.size === 0) {
+      throw new Error("El archivo de imagen está vacío.");
+    }
+
+    if (input.file.size > MAX_IMAGE_BYTES) {
+      throw new Error("Las fotos deben ser de 12 MB o más pequeñas.");
+    }
+
+    if (!input.file.type.startsWith("image/")) {
+      throw new Error("Solo se aceptan archivos de imagen para las fotos de negocio.");
+    }
+
+    const { client, bucket, publicBaseUrl } = getConfig();
+    const safeToken = input.token.replace(/[^a-z0-9]/gi, "").slice(0, 16);
+    const version = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    const key = `onboarding/${safeToken}/fotos/negocio-${version}.webp`;
+
+    const body = await sharp(Buffer.from(await input.file.arrayBuffer()))
+      .rotate()
+      .webp({ quality: 84 })
+      .toBuffer();
+
+    try {
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: body,
+          ContentType: "image/webp",
+          CacheControl: HERO_CACHE_CONTROL
+        })
+      );
+    } catch (error) {
+      throw normalizeR2UploadError(error);
+    }
+
+    return { token: input.token, key, url: `${publicBaseUrl}/${key}`, bytes: body.byteLength };
   }
 };

@@ -46,6 +46,7 @@ export const onboardingDataSchema = z.object({
   purchaseUrl: z.string().trim().url().max(2048).optional(),
   heroDesktopUrl: z.string().trim().url().max(2048).optional(),
   heroMobileUrl: z.string().trim().url().max(2048).optional(),
+  sourcePhotos: z.array(z.string().trim().url().max(2048)).optional(),
   logoMode: z.enum(["TYPOGRAPHY", "IMAGE"]).optional(),
   logoUrl: z.string().trim().url().max(2048).optional(),
   faviconUrl: z.string().trim().url().max(2048).optional(),
