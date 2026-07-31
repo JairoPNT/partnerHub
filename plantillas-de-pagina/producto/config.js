@@ -28,8 +28,8 @@ const CONFIG = {
 
   // Imágenes del Hero (Específicas del cliente)
   hero: {
-    desktop: 'https://media.partnerhub.club/clientes/ganomaster/producto/v1/hero-desktop.webp',
-    mobile: 'https://media.partnerhub.club/clientes/ganomaster/producto/v1/hero-mobile.webp'
+    desktop: '',
+    mobile: ''
   },
 
   // Base URL para Recursos Comunes (Imágenes de productos y Videos)

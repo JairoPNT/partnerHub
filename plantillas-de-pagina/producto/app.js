@@ -26,8 +26,8 @@ const getSiteConfig = () => {
       defaultMessage: 'Hola, vengo de tu pagina web. Me gustaria tener mas informacion sobre el Ganoderma de Gano Excel.'
     },
     hero: {
-      desktop: 'https://media.partnerhub.club/clientes/ganomaster/producto/v1/hero-desktop.webp',
-      mobile: 'https://media.partnerhub.club/clientes/ganomaster/producto/v1/hero-mobile.webp'
+      desktop: '',
+      mobile: ''
     },
     mediaBaseUrl: 'https://media.partnerhub.club/comunes/producto/v1/'
   };

@@ -8,7 +8,7 @@ const siteIdSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const variantSchema = z.enum(["hero-desktop", "hero-mobile"]);
 
 const MAX_IMAGE_BYTES = 12 * 1024 * 1024;
-const HERO_CACHE_CONTROL = "public, max-age=300, must-revalidate";
+const HERO_CACHE_CONTROL = "public, max-age=60, must-revalidate";
 
 function buildHeroKey(siteId: string, variant: string) {
   const version = Date.now().toString(36);
@@ -16,21 +16,46 @@ function buildHeroKey(siteId: string, variant: string) {
 }
 
 function getConfig() {
-  const endpoint = process.env.R2_ENDPOINT;
+  const configuredEndpoint = process.env.R2_ENDPOINT?.trim().replace(/\/$/, "");
   const accessKeyId = process.env.R2_ACCESS_KEY_ID;
   const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY;
   const bucket = process.env.R2_BUCKET ?? "partnerhub-media-prod";
   const publicBaseUrl = (process.env.R2_PUBLIC_BASE_URL ?? "https://media.partnerhub.club").replace(/\/$/, "");
 
-  if (!endpoint || !accessKeyId || !secretAccessKey) {
+  if (!configuredEndpoint || !accessKeyId || !secretAccessKey) {
     throw new Error("R2 is not configured. Set R2_ENDPOINT, R2_ACCESS_KEY_ID and R2_SECRET_ACCESS_KEY.");
   }
+
+  const endpoint = configuredEndpoint.endsWith(`/${bucket}`)
+    ? configuredEndpoint.slice(0, -bucket.length - 1)
+    : configuredEndpoint;
 
   return {
     client: new S3Client({ endpoint, region: "auto", credentials: { accessKeyId, secretAccessKey } }),
     bucket,
     publicBaseUrl
   };
+}
+
+function normalizeR2UploadError(error: unknown) {
+  const err = error as Error & { $metadata?: { httpStatusCode?: number }; Code?: string; code?: string };
+  const statusCode = err.$metadata?.httpStatusCode;
+  const code = err.Code ?? err.code;
+  const message = err.message || "R2 upload failed.";
+
+  if (statusCode === 401 || statusCode === 403 || /unauthorized|forbidden|access denied/i.test(message)) {
+    return new Error(
+      "Cloudflare R2 rechazo la carga. Revisa en EasyPanel que R2_ENDPOINT, R2_BUCKET, R2_ACCESS_KEY_ID y R2_SECRET_ACCESS_KEY sean las credenciales S3 vigentes del bucket, guarda e implementa nuevamente el servicio."
+    );
+  }
+
+  if (/signature/i.test(message) || code === "SignatureDoesNotMatch") {
+    return new Error(
+      "Cloudflare R2 rechazo la firma de la solicitud. Verifica que R2_ENDPOINT no tenga espacios y que corresponda al endpoint S3 de la cuenta; el bucket debe ir solo en R2_BUCKET."
+    );
+  }
+
+  return error instanceof Error ? error : new Error(message);
 }
 
 export const mediaUploadService = {
@@ -57,15 +82,19 @@ export const mediaUploadService = {
       .webp({ quality: 82 })
       .toBuffer();
 
-    await client.send(
-      new PutObjectCommand({
-        Bucket: bucket,
-        Key: key,
-        Body: body,
-        ContentType: "image/webp",
-        CacheControl: HERO_CACHE_CONTROL
-      })
-    );
+    try {
+      await client.send(
+        new PutObjectCommand({
+          Bucket: bucket,
+          Key: key,
+          Body: body,
+          ContentType: "image/webp",
+          CacheControl: HERO_CACHE_CONTROL
+        })
+      );
+    } catch (error) {
+      throw normalizeR2UploadError(error);
+    }
 
     return { siteId, variant, key, url: `${publicBaseUrl}/${key}`, bytes: body.byteLength };
   }
