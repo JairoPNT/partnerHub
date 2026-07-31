@@ -26,10 +26,10 @@ const CONFIG = {
     defaultMessage: 'Hola, vengo de tu pagina web. Me gustaria tener mas informacion sobre el Ganoderma de Gano Excel.'
   },
 
-  // Imágenes del Hero (Específicas del cliente)
+  // Imágenes del Hero (Específicas del cliente o máster)
   hero: {
-    desktop: '',
-    mobile: ''
+    desktop: 'https://media.partnerhub.club/comunes/producto/v1/hero-desktop.webp',
+    mobile: 'https://media.partnerhub.club/comunes/producto/v1/hero-mobile.webp'
   },
 
   // Base URL para Recursos Comunes (Imágenes de productos y Videos)
