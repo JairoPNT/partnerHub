@@ -1,3 +1,151 @@
+/* styles.css - PartnerHub Product Landing Page */
+
+/* Importación de Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..900;1,6..96,400..900&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500;1,600;1,700&family=DM+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700;800;900&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=Manrope:wght@400;500;600;700;800&family=Montserrat:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Outfit:wght@400;500;600;700;800;900&family=Playfair+Display:ital,wght@0,600;0,700;0,800;1,600;1,700&family=Poppins:wght@400;500;600;700;800;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+/* Fuente Tipográfica Local para Logotipo */
+@font-face {
+  font-family: 'Barbie SomeOne';
+  src: url('tipografia/Barbie SomeOne.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+/* Variables de Diseño CSS - Paleta Ejecutivo Tech (Gris Grafito + Azul Cobalto + Cyan Eléctrico) */
+:root {
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #F1F5F9;
+  --bg-dark: #0F172A;
+  --bg-dark-secondary: #1E293B;
+  --bg-dark-gradient: linear-gradient(135deg, #0F172A 0%, #1E293B 100%);
+  
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-light: #FFFFFF;
+  --text-light-secondary: #94A3B8;
+  
+  --accent-blue: #2563EB;
+  --accent-blue-dark: #1E40AF;
+  --accent-cyan: #06B6D4;
+  --accent-cyan-light: #E0F2FE;
+  
+  --accent-green: #06B6D4;
+  --accent-green-light: #E0F2FE;
+  --accent-gold: #38BDF8;
+  
+  --border-color: rgba(15, 23, 42, 0.08);
+  --border-glass: rgba(6, 182, 212, 0.2);
+  --bg-glass: rgba(15, 23, 42, 0.7);
+  
+  --font-title: 'Montserrat', sans-serif;
+  --font-serif: 'Montserrat', sans-serif;
+  --font-sans: 'Space Grotesk', sans-serif;
+  
+  --transition-smooth: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  --transition-fast: all 0.15s ease-in-out;
+  
+  --shadow-sm: 0 2px 8px rgba(15, 23, 42, 0.04);
+  --shadow-md: 0 8px 24px rgba(15, 23, 42, 0.08);
+  --shadow-lg: 0 16px 40px rgba(15, 23, 42, 0.12);
+  
+  --radius-sm: 4px;
+  --radius-md: 12px;
+  --radius-lg: 24px;
+  --radius-full: 9999px;
+  
+  --container-width: 1140px;
+}
+
+/* Reset y Estilos Globales */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-primary);
+  color: var(--text-primary);
+  line-height: 1.6;
+  font-size: 16px;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Tipografías */
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-title);
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+h1 {
+  font-size: clamp(2.5rem, 5vw, 4.75rem);
+  letter-spacing: -0.02em;
+}
+
+h2 {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+  letter-spacing: -0.01em;
+}
+
+h3 {
+  font-size: clamp(1.25rem, 2.5vw, 1.5rem);
+}
+
+p {
+  color: var(--text-secondary);
+}
+
+.font-serif {
+  font-family: var(--font-title);
+}
+
+.italic {
+  font-style: italic;
+}
+
+/* Botones y CTAs (Sin Emojis Unicode) */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 28px;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  font-weight: 500;
+  text-decoration: none;
+  border-radius: var(--radius-full);
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--accent-blue-dark) 0%, var(--accent-blue) 100%);
+  color: #FFFFFF;
+  border: 1px solid var(--border-glass);
+  box-shadow: 0 4px 14px var(--border-glass);
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, var(--accent-blue) 0%, var(--accent-cyan) 100%);
+  color: #FFFFFF;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--border-glass);
+}
+
+.btn-secondary {
+  background-color: var(--bg-secondary);
+  color: var(--text-primary);
   border: 1px solid rgba(15, 23, 42, 0.12);
 }
 
@@ -2152,3 +2300,5 @@ body.non-colombia .product-buttons-flex {
   border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.2);
 }
+
+
