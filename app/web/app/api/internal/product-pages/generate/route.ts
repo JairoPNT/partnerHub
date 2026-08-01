@@ -57,8 +57,15 @@ export async function POST(request: Request) {
     return NextResponse.json({ ...result, previewUrl }, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {
+      const firstIssue = error.issues[0];
+      const field = firstIssue?.path.join(".");
+      const detail = firstIssue ? `${field ? `${field}: ` : ""}${firstIssue.message}` : "Invalid fields.";
+
       return NextResponse.json(
-        { error: "Invalid product page generation request", issues: error.flatten() },
+        {
+          error: `Invalid product page generation request: ${detail}`,
+          issues: { ...error.flatten(), details: error.issues }
+        },
         { status: 400 }
       );
     }

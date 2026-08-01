@@ -76,6 +76,24 @@ function typedString(value: unknown) {
   return typeof value === "string" && value.trim() ? value : undefined;
 }
 
+function validHttpsUrl(value: string | undefined) {
+  if (!value) return undefined;
+
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" ? url.toString() : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function validPurchaseUrl(value: string | undefined) {
+  const url = validHttpsUrl(value);
+  if (!url) return undefined;
+
+  return new URL(url).hostname.toLowerCase() === "colombia.ganoexcel.com" ? undefined : url;
+}
+
 function pickValue(leadValue: string | undefined, existingValue: string | undefined, overwriteExistingValues: boolean) {
   return overwriteExistingValues ? leadValue ?? existingValue : existingValue ?? leadValue;
 }
@@ -90,6 +108,27 @@ export const productPageLeadSyncService = {
     const existingSite = existing?.site ?? {};
     const existingDistributor = existing?.distributor ?? {};
     const existingHero = existing?.hero ?? {};
+    const purchaseUrl = pickValue(
+      validPurchaseUrl(optionalTrimmed(onboarding.purchaseUrl)),
+      validPurchaseUrl(typedString(existingDistributor.purchaseUrl)),
+      overwriteExistingValues
+    );
+    const faviconUrl = pickValue(
+      validHttpsUrl(optionalTrimmed(onboarding.faviconUrl)),
+      validHttpsUrl(typedString(existingSite.faviconUrl)),
+      overwriteExistingValues
+    );
+    const heroDesktop = pickValue(
+      validHttpsUrl(optionalTrimmed(onboarding.heroDesktopUrl)),
+      validHttpsUrl(typedString(existingHero.desktop)),
+      overwriteExistingValues
+    );
+    const heroMobile = pickValue(
+      validHttpsUrl(optionalTrimmed(onboarding.heroMobileUrl)),
+      validHttpsUrl(typedString(existingHero.mobile)),
+      overwriteExistingValues
+    );
+    const mediaBaseUrl = validHttpsUrl(typedString(existing?.mediaBaseUrl));
 
     const whatsappNumber =
       cleanDigits(onboarding.whatsapp) ||
@@ -129,7 +168,7 @@ export const productPageLeadSyncService = {
         ogTitle: pickValue(title, typedString(existingSite.ogTitle), overwriteExistingValues) ?? title,
         ogDescription: pickValue(metaDescription, typedString(existingSite.ogDescription), overwriteExistingValues) ?? metaDescription,
         metaDescription: pickValue(metaDescription, typedString(existingSite.metaDescription), overwriteExistingValues) ?? metaDescription,
-        faviconUrl: pickValue(optionalTrimmed(onboarding.faviconUrl), typedString(existingSite.faviconUrl), overwriteExistingValues)
+        faviconUrl
       },
       distributor: {
         ...existingDistributor,
@@ -142,11 +181,7 @@ export const productPageLeadSyncService = {
           pickValue(whatsappNumber, typedString(existingDistributor.whatsappNumber), overwriteExistingValues) ?? whatsappNumber,
         phoneNumber: pickValue(phoneNumber, typedString(existingDistributor.phoneNumber), overwriteExistingValues) ?? phoneNumber,
         displayPhone: pickValue(phoneNumber, typedString(existingDistributor.displayPhone), overwriteExistingValues) ?? phoneNumber,
-        purchaseUrl: pickValue(
-          optionalTrimmed(onboarding.purchaseUrl),
-          typedString(existingDistributor.purchaseUrl),
-          overwriteExistingValues
-        ),
+        purchaseUrl,
         defaultMessage:
           pickValue(
             optionalTrimmed(onboarding.defaultMessage),
@@ -155,8 +190,8 @@ export const productPageLeadSyncService = {
           )
       },
       hero: {
-        desktop: pickValue(optionalTrimmed(onboarding.heroDesktopUrl), typedString(existingHero.desktop), overwriteExistingValues),
-        mobile: pickValue(optionalTrimmed(onboarding.heroMobileUrl), typedString(existingHero.mobile), overwriteExistingValues)
+        desktop: heroDesktop,
+        mobile: heroMobile
       },
       analytics: analyticsMeasurementId
         ? { measurementId: analyticsMeasurementId.toUpperCase() }
@@ -172,7 +207,7 @@ export const productPageLeadSyncService = {
         fontPreset,
         palettePreset
       },
-      mediaBaseUrl: existing?.mediaBaseUrl
+      mediaBaseUrl
     };
 
     const parsed = productPageGenerationInputSchema.parse(nextSource);

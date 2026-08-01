@@ -13,6 +13,15 @@ export const runtime = "nodejs";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
+async function trySyncLeadToProductPageSource(lead: Parameters<typeof productPageLeadSyncService.syncLeadToExistingSource>[0]) {
+  try {
+    await productPageLeadSyncService.syncLeadToExistingSource(lead);
+    return null;
+  } catch (error) {
+    return error instanceof Error ? error.message : "Product page source sync failed.";
+  }
+}
+
 export async function PATCH(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
@@ -26,13 +35,13 @@ export async function PATCH(request: Request, context: RouteContext) {
 
     if ("siteId" in body) {
       const result = await activationLeadService.linkSite(id, linkActivationLeadSchema.parse(body));
-      await productPageLeadSyncService.syncLeadToExistingSource(result.lead);
-      return NextResponse.json(result);
+      const syncWarning = await trySyncLeadToProductPageSource(result.lead);
+      return NextResponse.json(syncWarning ? { ...result, syncWarning } : result);
     }
 
     const lead = await activationLeadService.updateStatus(id, updateActivationLeadSchema.parse(body));
-    await productPageLeadSyncService.syncLeadToExistingSource(lead);
-    return NextResponse.json(lead);
+    const syncWarning = await trySyncLeadToProductPageSource(lead);
+    return NextResponse.json(syncWarning ? { ...lead, syncWarning } : lead);
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(

@@ -539,6 +539,20 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       errors.measurementId = ["El Measurement ID debe tener el formato G-XXXXXXXX (ej. G-7F24PBZPDM)."];
     }
 
+    if (form.purchaseUrl.trim()) {
+      try {
+        const purchaseUrl = new URL(form.purchaseUrl.trim());
+
+        if (purchaseUrl.protocol !== "https:") {
+          errors.purchaseUrl = ["La URL de compra debe usar HTTPS."];
+        } else if (purchaseUrl.hostname.toLowerCase() === "colombia.ganoexcel.com") {
+          errors.purchaseUrl = ["Usa la URL exacta de compra del empresario. No uses colombia.ganoexcel.com."];
+        }
+      } catch {
+        errors.purchaseUrl = ["La URL de compra debe ser una URL valida."];
+      }
+    }
+
     setFieldErrors(errors);
     if (Object.keys(errors).length > 0) {
       setErrorMessage(summarizeValidationErrors(errors));
@@ -634,6 +648,17 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             const mappedKey = fieldMap[path] || path;
             parsedErrors[mappedKey] = msgs as string[];
           });
+
+          if (Array.isArray(data.issues.details)) {
+            data.issues.details.forEach((issue: { path?: Array<string | number>; message?: string }) => {
+              const path = issue.path?.join(".");
+              const mappedKey = path ? fieldMap[path] || path : null;
+
+              if (mappedKey && issue.message) {
+                parsedErrors[mappedKey] = [issue.message];
+              }
+            });
+          }
 
           setFieldErrors(parsedErrors);
         }
@@ -1282,8 +1307,13 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 placeholder="ej. https://wompi.co/l/o-123456"
                 value={form.purchaseUrl}
                 onChange={(e) => handleInputChange("purchaseUrl", e.target.value)}
+                className={fieldErrors.purchaseUrl ? "border-rose-400 focus:border-rose-500" : ""}
               />
-              <p className="mt-1 text-[11px] text-slate-400">Enlace directo a pasarela Wompi o checkout de pago.</p>
+              {fieldErrors.purchaseUrl ? (
+                <p className="mt-1 text-xs text-rose-600">{fieldErrors.purchaseUrl[0]}</p>
+              ) : (
+                <p className="mt-1 text-[11px] text-slate-400">Enlace directo a pasarela Wompi o checkout de pago.</p>
+              )}
             </div>
 
             <div className="md:col-span-2">
