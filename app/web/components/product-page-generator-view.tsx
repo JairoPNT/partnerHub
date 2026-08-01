@@ -620,7 +620,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
       // Actualizar publicationState a GENERATED localmente
       if (selectedLead) {
-        const updated = { ...selectedLead, publicationState: "GENERATED" as const };
+        const updated = { ...selectedLead, publicationState: "GENERATED" as const, lastVerification: null };
         setSelectedLead(updated);
         setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
       }

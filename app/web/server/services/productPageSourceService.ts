@@ -1,6 +1,6 @@
 import "server-only";
 
-import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import { resolve, sep } from "node:path";
 
 import { z } from "zod";
@@ -25,6 +25,18 @@ function sourcePath(siteId: string) {
   return target;
 }
 
+function verificationPath(siteId: string) {
+  const safeSiteId = siteIdSchema.parse(siteId);
+  const root = resolve(getSourceDirectory(), ".verifications");
+  const target = resolve(root, `${safeSiteId}.json`);
+
+  if (!target.startsWith(`${root}${sep}`)) {
+    throw new Error("Product page verification path escaped the configured verification directory.");
+  }
+
+  return target;
+}
+
 async function save(siteId: string, configuration: unknown) {
   const target = sourcePath(siteId);
   const directory = resolve(getSourceDirectory());
@@ -33,6 +45,10 @@ async function save(siteId: string, configuration: unknown) {
   await mkdir(directory, { recursive: true });
   await writeFile(temporary, `${JSON.stringify(configuration, null, 2)}\n`, "utf8");
   await rename(temporary, target);
+}
+
+async function clearLastVerification(siteId: string) {
+  await rm(verificationPath(siteId), { force: true });
 }
 
 async function get(siteId: string) {
@@ -67,4 +83,4 @@ async function list() {
   }
 }
 
-export const productPageSourceService = { get, list, save };
+export const productPageSourceService = { clearLastVerification, get, list, save };
