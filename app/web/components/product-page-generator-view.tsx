@@ -47,6 +47,29 @@ type ProductPageGeneratorViewProps = {
   record?: ModuleRecord;
 };
 
+const ADMIN_APP_ORIGIN = "https://app.partnerhub.club";
+const GENERATION_RESULT_ID = "product-page-generation-result";
+const INTERNAL_PREVIEW_HOSTS = new Set(["0.0.0.0", "127.0.0.1", "::", "localhost"]);
+
+function getSafePreviewUrl(previewUrl?: string) {
+  if (!previewUrl) return undefined;
+
+  const currentOrigin = typeof window !== "undefined" ? window.location.origin : ADMIN_APP_ORIGIN;
+  const fallbackOrigin = currentOrigin.includes("0.0.0.0") ? ADMIN_APP_ORIGIN : currentOrigin;
+
+  try {
+    const url = new URL(previewUrl, fallbackOrigin);
+
+    if (INTERNAL_PREVIEW_HOSTS.has(url.hostname.toLowerCase())) {
+      return `${ADMIN_APP_ORIGIN}${url.pathname}${url.search}${url.hash}`;
+    }
+
+    return url.toString();
+  } catch {
+    return undefined;
+  }
+}
+
 export interface ActivationLeadRecord {
   id: string;
   fullName: string;
@@ -249,6 +272,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   const [publishStep, setPublishStep] = useState<"IDLE" | "SFTP" | "VERIFYING">("IDLE");
   const [publishResult, setPublishResult] = useState<PublicationResult | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
+  const safePreviewUrl = getSafePreviewUrl(result?.previewUrl);
 
   const fetchLeads = async () => {
     setIsLoadingLeads(true);
@@ -625,9 +649,11 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
       }
 
-      // Desplazamiento automático hacia arriba para enfocar el botón de publicación
+      // Desplazamiento automático al resultado para abrir preview o publicar sin perder contexto.
       if (typeof window !== "undefined") {
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        window.setTimeout(() => {
+          document.getElementById(GENERATION_RESULT_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 0);
       }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Ocurrió un error inesperado durante la generación.");
@@ -952,7 +978,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
       {/* PANTALLA DE ÉXITO DE GENERACIÓN / PUBLICACIÓN */}
       {result && (
-        <Card className="border-emerald-200 bg-emerald-50/30 p-6 sm:p-8 space-y-6">
+        <Card id={GENERATION_RESULT_ID} className="border-emerald-200 bg-emerald-50/30 p-6 sm:p-8 space-y-6">
           <div className="flex flex-wrap items-start justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-emerald-600 text-white shadow-sm">
@@ -981,9 +1007,9 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                 {copied ? "¡Copiado!" : "Copiar Resumen"}
               </Button>
 
-              {result.previewUrl && (
+              {safePreviewUrl && (
                 <a
-                  href={result.previewUrl}
+                  href={safePreviewUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="inline-flex h-9 items-center justify-center gap-2 rounded-xl border border-cyan-200 bg-cyan-50 px-3 text-xs font-bold text-cyan-700 transition hover:bg-cyan-100"

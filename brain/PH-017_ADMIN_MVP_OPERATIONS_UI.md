@@ -7,6 +7,7 @@ Exponer en el dashboard las capacidades que ya existen en backend, sin incluir t
 ## Entregables de interfaz
 
 - Modal de empresarios con edicion de datos base y onboarding.
+- Navegacion lateral priorizada por uso operativo: Core, Operations y Growth al final.
 - Accion `Registrar empresario pagado` conectada a `POST /api/internal/activation-leads`.
 - Mostrar y copiar el enlace temporal de onboarding.
 - Seccion `Plantilla maestra y replicacion`.

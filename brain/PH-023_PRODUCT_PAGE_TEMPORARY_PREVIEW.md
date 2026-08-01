@@ -49,6 +49,8 @@ El MVP debe separar tres etapas:
 - Los ejemplos del dashboard deben usar datos genericos (`John Smith`, `john-smith`, `johnsmith.pro`) y no nombres de clientes reales.
 - La vista previa temporal debe tener `Cache-Control: no-store`.
 - La verificacion debe ser de solo lectura. No debe re-sincronizar ni sobreescribir la fuente guardada del sitio durante la auditoria.
+- La URL de vista previa temporal debe construirse con un origin publico de administracion; nunca debe exponer hosts internos como `0.0.0.0:80`.
+- Al generar el paquete, la interfaz debe llevar al operador al bloque de resultado/preview, no al inicio de la pantalla.
 
 ## Estado UI Inicial
 
