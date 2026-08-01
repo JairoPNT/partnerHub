@@ -22,7 +22,16 @@ type LeadSnapshot = {
     metaDescription?: string;
     defaultMessage?: string;
     analyticsMeasurementId?: string;
-    fontPreset?: "executive" | "modern" | "editorial" | "friendly" | "premium" | "minimal";
+    fontPreset?:
+      | "executive"
+      | "modern"
+      | "editorial"
+      | "friendly"
+      | "premium"
+      | "minimal"
+      | "serif-chic"
+      | "romantic-serif"
+      | "luxury-serif";
     palettePreset?: "cobalt-cyan" | "emerald-slate" | "coffee-gold" | "rose-graphite" | "indigo-lime" | "teal-navy" | "wine-blush" | "forest-mint" | "charcoal-amber" | "sky-stone";
     metaPixelId?: string;
     googleAdsConversionId?: string;

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { mediaUploadService } from "@/server/services/mediaUploadService";
+import { activationLeadService } from "@/server/services/activationLeadService";
 
 export const runtime = "nodejs";
 
@@ -17,10 +18,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No se recibió un archivo de imagen válido." }, { status: 400 });
     }
 
+    await activationLeadService.getByOnboardingToken(token);
+
     const uploaded = await mediaUploadService.uploadSourcePhoto({ token, file });
     return NextResponse.json(uploaded, { status: 201 });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Error al subir la fotografía de negocio.";
-    return NextResponse.json({ error: message }, { status: 500 });
+    const status = /not found|expired|no es v[aá]lido|expirado/i.test(message) ? 404 : 500;
+    return NextResponse.json({ error: message }, { status });
   }
 }

@@ -143,7 +143,17 @@ const INITIAL_FORM: FormState = {
   palettePreset: "cobalt-cyan"
 };
 
-const FONT_PRESET_VALUES: FontPreset[] = ["executive", "modern", "editorial", "friendly", "premium", "minimal"];
+const FONT_PRESET_VALUES: FontPreset[] = [
+  "executive",
+  "modern",
+  "editorial",
+  "friendly",
+  "premium",
+  "minimal",
+  "serif-chic",
+  "romantic-serif",
+  "luxury-serif"
+];
 const PALETTE_PRESET_VALUES: PalettePreset[] = [
   "cobalt-cyan",
   "emerald-slate",

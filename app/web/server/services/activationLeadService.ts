@@ -54,7 +54,17 @@ export const onboardingDataSchema = z.object({
   metaDescription: z.string().trim().max(320).optional(),
   defaultMessage: z.string().trim().max(500).optional(),
   analyticsMeasurementId: z.string().trim().regex(/^G-[A-Z0-9]+$/i).optional(),
-  fontPreset: z.enum(["executive", "modern", "editorial", "friendly", "premium", "minimal"]).optional(),
+  fontPreset: z.enum([
+    "executive",
+    "modern",
+    "editorial",
+    "friendly",
+    "premium",
+    "minimal",
+    "serif-chic",
+    "romantic-serif",
+    "luxury-serif"
+  ]).optional(),
   palettePreset: z.enum(["cobalt-cyan", "emerald-slate", "coffee-gold", "rose-graphite", "indigo-lime", "teal-navy", "wine-blush", "forest-mint", "charcoal-amber", "sky-stone"]).optional(),
   operatorNotes: z.string().trim().max(2000).optional(),
   analyticsVerified: z.boolean().optional(),

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, ChangeEvent } from "react";
-import { UploadCloud, Image as ImageIcon, Trash2, CheckCircle2, AlertCircle, RefreshCw, Plus } from "lucide-react";
+import { UploadCloud, Trash2, CheckCircle2, AlertCircle, RefreshCw, Plus } from "lucide-react";
 
 interface EntrepreneurPhotoUploaderProps {
   token: string;
@@ -185,7 +185,6 @@ export function EntrepreneurPhotoUploader({
               key={index}
               className="relative group aspect-square rounded-2xl border border-slate-800 bg-slate-900 overflow-hidden shadow-md"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={url}
                 alt={`Foto de negocio ${index + 1}`}

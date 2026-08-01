@@ -23,7 +23,7 @@ function isPublicOfferRoute(pathname: string): boolean {
 }
 
 export function proxy(request: NextRequest) {
-  const rawHost = request.headers.get("x-forwarded-host") || request.headers.get("host") || "";
+  const rawHost = request.headers.get("host") || request.headers.get("x-forwarded-host") || "";
   const hostname = rawHost.split(":")[0].toLowerCase();
   const pathname = request.nextUrl.pathname;
 
