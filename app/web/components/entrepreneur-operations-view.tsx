@@ -31,14 +31,14 @@ import {
 import { FontSelector, PaletteSelector } from "@/components/ui/theme-selectors";
 import { FontPreset, PalettePreset } from "@/lib/theme-presets";
 import { HeroImageUploader } from "@/components/ui/hero-image-uploader";
-import {
-  VerificationBadge,
+import { VerificationBadge,
   VerifyNowButton,
   FailedChecksDetails,
   DeliveryGuardAlert,
   ProductPageVerificationResult,
   ProductPageSiteSummary
 } from "@/components/ui/verification-status-panel";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 export type ActivationLeadStatus = "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
 
@@ -827,7 +827,7 @@ export function EntrepreneurOperationsView() {
 
       {/* MODAL REGISTRAR EMPRESARIO PAGADO */}
       {showCreateModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in">
+        <ModalPortal>
           <div className="relative w-full max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-6">
             <div className="flex items-center justify-between border-b border-slate-200 pb-4">
               <div className="flex items-center gap-2">
@@ -1050,7 +1050,7 @@ export function EntrepreneurOperationsView() {
               </form>
             )}
           </div>
-        </div>
+        </ModalPortal>
       )}
 
       {/* MAIN TABLE SECTION */}
@@ -1250,7 +1250,7 @@ export function EntrepreneurOperationsView() {
 
       {/* DETAIL AND MANAGEMENT MODAL / DRAWER */}
       {selectedLead && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm animate-in fade-in duration-150">
+        <ModalPortal>
           <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl">
             {/* Modal Header */}
             <div className="sticky top-0 z-10 flex items-center justify-between border-b border-slate-200 bg-white p-6 text-slate-900 rounded-t-3xl">
@@ -1969,7 +1969,7 @@ export function EntrepreneurOperationsView() {
               </button>
             </div>
           </div>
-        </div>
+        </ModalPortal>
       )}
     </div>
   );
