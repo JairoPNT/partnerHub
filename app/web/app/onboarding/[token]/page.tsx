@@ -5,11 +5,7 @@ import Link from "next/link";
 import {
   Check,
   Copy,
-  ExternalLink,
   ShieldCheck,
-  Building2,
-  CreditCard,
-  MessageCircle,
   Save,
   Clock,
   Globe,
@@ -27,7 +23,6 @@ import {
   Camera,
   Sparkles
 } from "lucide-react";
-import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 import { EntrepreneurPhotoUploader } from "@/components/ui/entrepreneur-photo-uploader";
 
 interface LeadData {
@@ -86,7 +81,6 @@ export default function PublicOnboardingPage({ params }: PageProps) {
   // Status / Feedback & Thank You Page State
   const [isSaving, setIsSaving] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
-  const [saveSuccess, setSaveSuccess] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
 
@@ -132,7 +126,6 @@ export default function PublicOnboardingPage({ params }: PageProps) {
   const handleSave = async (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setIsSaving(true);
-    setSaveSuccess(null);
     setSaveError(null);
 
     if (sourcePhotos.length < 2) {
@@ -319,7 +312,6 @@ export default function PublicOnboardingPage({ params }: PageProps) {
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
                   {sourcePhotos.map((url, idx) => (
                     <div key={idx} className="aspect-square rounded-2xl border border-slate-800 bg-slate-950 overflow-hidden">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={url} alt={`Foto cargada ${idx + 1}`} className="h-full w-full object-cover" />
                     </div>
                   ))}

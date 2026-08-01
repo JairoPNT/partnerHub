@@ -40,6 +40,8 @@ PH-004B Product Ecosystem Beta Sales Campaign: CEO direction saved in `brain/bus
 
 PH-020 Publicacion verificada was implemented in backend MVP on 2026-07-30. Publishing now performs SFTP upload followed by public-domain verification against the saved product page source. Manual verification is available at `POST /api/internal/product-pages/verify`. Verification results are stored under `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`, and `GET /api/internal/product-pages` returns `lastVerification`.
 
+On 2026-08-01 Codex audited and stabilized the 2026-07-31 Antigravity change set. Verification was restored to read-only behavior, public onboarding photo uploads now validate the onboarding token before uploading to R2, proxy host handling was hardened to prefer `Host`, and PH-025 font preset contracts were unified across UI, onboarding schema, lead sync, and generation. Handoff: `brain/session-handoffs/2026-08-01_ANTIGRAVITY_AUDIT_STABILIZATION.md`.
+
 ## Path Integrity
 
 - Official project root: `D:\Proyectos multi agentes\PartnerHub`.
@@ -82,4 +84,4 @@ PH-020 Publicacion verificada was implemented in backend MVP on 2026-07-30. Publ
 
 ## Next Step
 
-Antigravity should wire PH-020 dashboard states and the `Verificar ahora` control without changing backend contracts.
+Run one 0-to-100 operational test with `jairopinto.pro` before adding new features or loading more clients.
