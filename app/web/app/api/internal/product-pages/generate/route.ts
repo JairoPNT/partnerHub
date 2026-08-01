@@ -17,7 +17,8 @@ function getConfiguredOrigin() {
   if (!configuredOrigin) return null;
 
   try {
-    return new URL(configuredOrigin).origin;
+    const url = new URL(configuredOrigin);
+    return INTERNAL_HOSTS.has(url.hostname.toLowerCase()) ? null : url.origin;
   } catch {
     return null;
   }
