@@ -51,11 +51,22 @@ const ADMIN_APP_ORIGIN = "https://app.partnerhub.club";
 const GENERATION_RESULT_ID = "product-page-generation-result";
 const INTERNAL_PREVIEW_HOSTS = new Set(["0.0.0.0", "127.0.0.1", "::", "localhost"]);
 
-function getSafePreviewUrl(previewUrl?: string) {
+function getPublicBrowserOrigin() {
+  if (typeof window === "undefined") return ADMIN_APP_ORIGIN;
+
+  return INTERNAL_PREVIEW_HOSTS.has(window.location.hostname.toLowerCase())
+    ? ADMIN_APP_ORIGIN
+    : window.location.origin;
+}
+
+function getSafePreviewUrl(siteId?: string, previewUrl?: string) {
+  if (siteId) {
+    return new URL(`/api/internal/product-pages/preview/${siteId}/`, getPublicBrowserOrigin()).toString();
+  }
+
   if (!previewUrl) return undefined;
 
-  const currentOrigin = typeof window !== "undefined" ? window.location.origin : ADMIN_APP_ORIGIN;
-  const fallbackOrigin = currentOrigin.includes("0.0.0.0") ? ADMIN_APP_ORIGIN : currentOrigin;
+  const fallbackOrigin = getPublicBrowserOrigin();
 
   try {
     const url = new URL(previewUrl, fallbackOrigin);
@@ -272,7 +283,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   const [publishStep, setPublishStep] = useState<"IDLE" | "SFTP" | "VERIFYING">("IDLE");
   const [publishResult, setPublishResult] = useState<PublicationResult | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
-  const safePreviewUrl = getSafePreviewUrl(result?.previewUrl);
+  const safePreviewUrl = getSafePreviewUrl(result?.siteId, result?.previewUrl);
 
   const fetchLeads = async () => {
     setIsLoadingLeads(true);
