@@ -29,6 +29,8 @@ Despues de guardar cambios de contenido, el operador debe publicar nuevamente la
 
 El backend sincroniza los datos editados del empresario con la fuente JSON del sitio cuando existe un `siteId` vinculado.
 
+Si la sincronizacion secundaria de la fuente JSON encuentra datos heredados invalidos, el guardado del empresario no debe fallar. La operacion administrativa debe persistir el cambio y la sincronizacion debe omitir URLs opcionales invalidas cuando sea posible.
+
 Regla importante de precedencia:
 
 - Cuando el cambio viene desde `/partners`, los datos del lead administrativo pueden sobrescribir la fuente JSON porque esa vista es la ficha operativa del empresario.
