@@ -334,6 +334,7 @@ export const productPageGenerationService = {
     );
 
     await productPageSourceService.save(configuration.site.id, configuration);
+    await productPageSourceService.clearLastVerification(configuration.site.id);
     await activationLeadService.updatePublicationStateBySiteId(configuration.site.id, "GENERATED");
 
     return {
