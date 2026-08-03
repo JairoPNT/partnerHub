@@ -48,12 +48,21 @@ function getPublicOrigin(request: Request) {
   return `${protocol}://${publicHost}`;
 }
 
+function normalizePreviewPath(path: string) {
+  const suffixIndex = path.search(/[?#]/);
+  const pathname = suffixIndex >= 0 ? path.slice(0, suffixIndex) : path;
+  const suffix = suffixIndex >= 0 ? path.slice(suffixIndex) : "";
+
+  return pathname.endsWith("/") ? `${pathname}index.html${suffix}` : path;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const input = productPageGenerationInputSchema.parse(body);
     const result = await productPageGenerationService.generate(input);
-    const previewPath = result.previewUrl.startsWith("/") ? result.previewUrl : new URL(result.previewUrl).pathname;
+    const rawPreviewPath = result.previewUrl.startsWith("/") ? result.previewUrl : new URL(result.previewUrl).pathname;
+    const previewPath = normalizePreviewPath(rawPreviewPath);
     const previewUrl = new URL(previewPath, getPublicOrigin(request)).toString();
 
     return NextResponse.json({ ...result, previewPath, previewUrl }, { status: 201 });

@@ -59,13 +59,21 @@ function getPublicBrowserOrigin() {
     : window.location.origin;
 }
 
+function normalizePreviewPath(path: string) {
+  const suffixIndex = path.search(/[?#]/);
+  const pathname = suffixIndex >= 0 ? path.slice(0, suffixIndex) : path;
+  const suffix = suffixIndex >= 0 ? path.slice(suffixIndex) : "";
+
+  return pathname.endsWith("/") ? `${pathname}index.html${suffix}` : path;
+}
+
 function getSafePreviewUrl(siteId?: string, previewUrl?: string, previewPath?: string) {
   if (previewPath) {
-    return new URL(previewPath, getPublicBrowserOrigin()).toString();
+    return new URL(normalizePreviewPath(previewPath), getPublicBrowserOrigin()).toString();
   }
 
   if (siteId) {
-    return new URL(`/api/internal/product-pages/preview/${siteId}/`, getPublicBrowserOrigin()).toString();
+    return new URL(`/api/internal/product-pages/preview/${siteId}/index.html`, getPublicBrowserOrigin()).toString();
   }
 
   if (!previewUrl) return undefined;
@@ -74,11 +82,13 @@ function getSafePreviewUrl(siteId?: string, previewUrl?: string, previewPath?: s
 
   try {
     const url = new URL(previewUrl, fallbackOrigin);
+    const normalizedPath = normalizePreviewPath(url.pathname);
 
     if (INTERNAL_PREVIEW_HOSTS.has(url.hostname.toLowerCase())) {
-      return `${ADMIN_APP_ORIGIN}${url.pathname}${url.search}${url.hash}`;
+      return `${ADMIN_APP_ORIGIN}${normalizedPath}${url.search}${url.hash}`;
     }
 
+    url.pathname = normalizedPath;
     return url.toString();
   } catch {
     return undefined;
@@ -281,6 +291,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   const [isLoadingLeads, setIsLoadingLeads] = useState(true);
   const [selectedLead, setSelectedLead] = useState<ActivationLeadRecord | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState<"ALL" | "PENDING" | "GENERATED" | "PUBLISHED" | "VERIFIED" | "ERROR">("ALL");
   const [isLinkingSiteId, setIsLinkingSiteId] = useState(false);
 
   // Estados de publicación
@@ -387,6 +398,21 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   });
 
   const filteredLeads = sortedLeads.filter((lead) => {
+    // 1. Filtrar por estado operativo de publicación
+    if (selectedFilter === "PENDING") {
+      const state = lead.publicationState;
+      if (state && state !== "NOT_STARTED") return false;
+    } else if (selectedFilter === "GENERATED") {
+      if (lead.publicationState !== "GENERATED") return false;
+    } else if (selectedFilter === "PUBLISHED") {
+      if (lead.publicationState !== "PUBLISHED") return false;
+    } else if (selectedFilter === "VERIFIED") {
+      if (lead.publicationState !== "VERIFIED") return false;
+    } else if (selectedFilter === "ERROR") {
+      if (lead.publicationState !== "VERIFY_FAILED") return false;
+    }
+
+    // 2. Combinar con buscador de texto
     if (!searchQuery.trim()) return true;
     const q = searchQuery.toLowerCase().trim();
     return (
@@ -397,6 +423,15 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       (lead.onboardingData?.domain && lead.onboardingData.domain.toLowerCase().includes(q))
     );
   });
+
+  const counts = {
+    ALL: sortedLeads.length,
+    PENDING: sortedLeads.filter((l) => !l.publicationState || l.publicationState === "NOT_STARTED").length,
+    GENERATED: sortedLeads.filter((l) => l.publicationState === "GENERATED").length,
+    PUBLISHED: sortedLeads.filter((l) => l.publicationState === "PUBLISHED").length,
+    VERIFIED: sortedLeads.filter((l) => l.publicationState === "VERIFIED").length,
+    ERROR: sortedLeads.filter((l) => l.publicationState === "VERIFY_FAILED").length
+  };
 
   const handleSelectLead = (lead: ActivationLeadRecord) => {
     setSelectedLead(lead);
@@ -417,10 +452,10 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     const savedIntegrations = objectValue(savedConfig?.integrations);
     const savedAnalyticsIntegration = objectValue(savedIntegrations.analytics);
     const savedTheme = objectValue(savedConfig?.theme);
-    const domain = pickFirst(stringValue(savedSite.domain), lead.onboardingData?.domain);
-    const firstName = pickFirst(stringValue(savedDistributor.firstName), lead.fullName?.trim().split(" ")[0]);
-    const brandName = pickFirst(stringValue(savedDistributor.brandName), lead.brandName);
-    const fullName = pickFirst(stringValue(savedDistributor.fullName), lead.fullName);
+    const domain = pickFirst(lead.onboardingData?.domain, stringValue(savedSite.domain));
+    const firstName = pickFirst(lead.fullName?.trim().split(" ")[0], stringValue(savedDistributor.firstName));
+    const brandName = pickFirst(lead.brandName, stringValue(savedDistributor.brandName));
+    const fullName = pickFirst(lead.fullName, stringValue(savedDistributor.fullName));
 
     setForm({
       siteId: effectiveSiteId,
@@ -429,33 +464,33 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       fullName,
       firstName,
       role: "Distribuidor Autorizado · Gano Excel",
-      whatsappNumber: pickFirst(stringValue(savedDistributor.whatsappNumber), lead.onboardingData?.whatsapp, lead.whatsapp),
+      whatsappNumber: pickFirst(lead.onboardingData?.whatsapp, lead.whatsapp, stringValue(savedDistributor.whatsappNumber)),
       displayPhone: pickFirst(
-        stringValue(savedDistributor.displayPhone),
-        stringValue(savedDistributor.phoneNumber),
         lead.onboardingData?.phone,
-        lead.whatsapp
+        lead.whatsapp,
+        stringValue(savedDistributor.displayPhone),
+        stringValue(savedDistributor.phoneNumber)
       ),
-      purchaseUrl: pickFirst(stringValue(savedDistributor.purchaseUrl), lead.onboardingData?.purchaseUrl),
-      siteTitle: pickFirst(stringValue(savedSite.title), lead.onboardingData?.seoTitle, brandName ? `${brandName} - Bienestar y Vitalidad con Gano Excel` : ""),
-      metaDescription: pickFirst(stringValue(savedSite.metaDescription), stringValue(savedSite.ogDescription), lead.onboardingData?.metaDescription, brandName
+      purchaseUrl: pickFirst(lead.onboardingData?.purchaseUrl, stringValue(savedDistributor.purchaseUrl)),
+      siteTitle: pickFirst(lead.onboardingData?.seoTitle, stringValue(savedSite.title), brandName ? `${brandName} - Bienestar y Vitalidad con Gano Excel` : ""),
+      metaDescription: pickFirst(lead.onboardingData?.metaDescription, stringValue(savedSite.metaDescription), stringValue(savedSite.ogDescription), brandName
         ? `Descubre como transformar tu dia a dia con cafe, cacao y suplementos enriquecidos con Ganoderma lucidum por ${brandName}.`
         : ""),
-      heroDesktop: pickFirst(stringValue(savedHero.desktop), lead.onboardingData?.heroDesktopUrl, "https://media.partnerhub.club/comunes/producto/v1/hero-desktop.webp"),
-      heroMobile: pickFirst(stringValue(savedHero.mobile), lead.onboardingData?.heroMobileUrl, "https://media.partnerhub.club/comunes/producto/v1/hero-mobile.webp"),
+      heroDesktop: pickFirst(lead.onboardingData?.heroDesktopUrl, stringValue(savedHero.desktop), "https://media.partnerhub.club/comunes/producto/v1/hero-desktop.webp"),
+      heroMobile: pickFirst(lead.onboardingData?.heroMobileUrl, stringValue(savedHero.mobile), "https://media.partnerhub.club/comunes/producto/v1/hero-mobile.webp"),
       defaultMessage: pickFirst(
-        stringValue(savedDistributor.defaultMessage),
         lead.onboardingData?.defaultMessage,
+        stringValue(savedDistributor.defaultMessage),
         firstName ? `Hola ${firstName}, vengo de tu pagina web. Me gustaria tener mas informacion sobre el Ganoderma de Gano Excel.` : ""
       ),
       measurementId: pickFirst(
+        lead.onboardingData?.analyticsMeasurementId,
         stringValue(savedAnalytics.measurementId),
-        stringValue(savedAnalyticsIntegration.measurementId),
-        lead.onboardingData?.analyticsMeasurementId
+        stringValue(savedAnalyticsIntegration.measurementId)
       ),
-      faviconUrl: pickFirst(stringValue(savedSite.faviconUrl), lead.onboardingData?.faviconUrl),
-      fontPreset: fontPresetValue(savedTheme.fontPreset) || lead.onboardingData?.fontPreset || "executive",
-      palettePreset: palettePresetValue(savedTheme.palettePreset) || lead.onboardingData?.palettePreset || "cobalt-cyan"
+      faviconUrl: pickFirst(lead.onboardingData?.faviconUrl, stringValue(savedSite.faviconUrl)),
+      fontPreset: lead.onboardingData?.fontPreset || fontPresetValue(savedTheme.fontPreset) || "executive",
+      palettePreset: lead.onboardingData?.palettePreset || palettePresetValue(savedTheme.palettePreset) || "cobalt-cyan"
     });
   };
 
@@ -692,9 +727,11 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
       // Desplazamiento automático al resultado para abrir preview o publicar sin perder contexto.
       if (typeof window !== "undefined") {
-        window.setTimeout(() => {
-          document.getElementById(GENERATION_RESULT_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 0);
+        window.requestAnimationFrame(() => {
+          window.requestAnimationFrame(() => {
+            document.getElementById(GENERATION_RESULT_ID)?.scrollIntoView({ behavior: "smooth", block: "start" });
+          });
+        });
       }
     } catch (err: unknown) {
       setErrorMessage(err instanceof Error ? err.message : "Ocurrió un error inesperado durante la generación.");
@@ -831,7 +868,6 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         </CardHeader>
 
         <CardContent className="p-4 space-y-4">
-          {/* Barra de Búsqueda */}
           <div className="relative">
             <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400" />
             <input
@@ -843,7 +879,30 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             />
           </div>
 
-          {/* Lista de Empresarios */}
+          <div className="flex flex-wrap gap-2">
+            {[
+              ["ALL", "Todos"],
+              ["PENDING", "Pendientes"],
+              ["GENERATED", "Generados"],
+              ["PUBLISHED", "Publicados"],
+              ["VERIFIED", "Verificados"],
+              ["ERROR", "Con error"]
+            ].map(([value, label]) => (
+              <button
+                key={value}
+                type="button"
+                onClick={() => setSelectedFilter(value as typeof selectedFilter)}
+                className={`rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-wider transition ${
+                  selectedFilter === value
+                    ? "border-cyan-500 bg-cyan-50 text-cyan-800"
+                    : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
+                }`}
+              >
+                {label} ({counts[value as keyof typeof counts]})
+              </button>
+            ))}
+          </div>
+
           {isLoadingLeads ? (
             <div className="flex items-center justify-center p-8 text-slate-400 space-y-2">
               <RefreshCw className="h-6 w-6 animate-spin text-cyan-500" />
@@ -866,7 +925,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
                     className={`cursor-pointer rounded-2xl border p-3.5 transition flex flex-wrap items-center justify-between gap-3 text-xs ${
                       isSelected
                         ? "border-cyan-500 bg-cyan-50/50 ring-1 ring-cyan-500"
-                        : "border-slate-200 bg-white hover:bg-slate-50:bg-slate-900"
+                        : "border-slate-200 bg-white hover:bg-slate-50"
                     }`}
                   >
                     <div className="space-y-1 min-w-[200px]">
