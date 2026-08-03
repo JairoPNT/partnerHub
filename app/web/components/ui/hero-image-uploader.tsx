@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { UploadCloud, ImageIcon, RefreshCw, CheckCircle2, AlertCircle, Trash2 } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { UploadCloud, ImageIcon, RefreshCw, CheckCircle2, AlertCircle, Trash2, ExternalLink } from "lucide-react";
 
 interface HeroImageUploaderProps {
   label: string;
@@ -25,7 +25,12 @@ export function HeroImageUploader({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [imageLoadError, setImageLoadError] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setImageLoadError(false);
+  }, [value]);
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -100,23 +105,39 @@ export function HeroImageUploader({
 
       {/* Previsualización o Zona de Carga */}
       {value ? (
-        <div className="relative group rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 flex flex-col sm:flex-row items-center gap-4">
+        <div className="relative group rounded-2xl border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-950 p-3 flex flex-col sm:flex-row items-center gap-4 w-full">
           <div className="relative h-28 w-full sm:w-44 shrink-0 overflow-hidden rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-900">
             <img
+              key={value}
               src={value}
               alt={label}
               className="h-full w-full object-cover transition duration-300 group-hover:scale-105"
-              onError={(e) => {
-                (e.target as HTMLImageElement).style.display = "none";
+              onError={() => {
+                setImageLoadError(true);
               }}
             />
           </div>
 
-          <div className="space-y-1.5 flex-1 min-w-0 text-xs">
-            <div className="flex items-center gap-2">
+          <div className="space-y-1.5 flex-1 min-w-0 text-xs w-full">
+            <div className="flex flex-col gap-1">
               <span className="font-mono text-[11px] text-slate-500 dark:text-slate-400 truncate block">
                 {value}
               </span>
+              {imageLoadError && (
+                <div className="flex flex-wrap items-center gap-1.5 text-rose-600 dark:text-rose-400 font-semibold mt-0.5">
+                  <AlertCircle className="h-3.5 w-3.5 shrink-0 text-rose-500" />
+                  <span>No se pudo cargar la previsualización.</span>
+                  <a
+                    href={value}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-cyan-600 dark:text-cyan-400 hover:underline font-bold"
+                  >
+                    <span>Abrir imagen</span>
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                </div>
+              )}
             </div>
 
             <div className="flex items-center gap-2 pt-1">
