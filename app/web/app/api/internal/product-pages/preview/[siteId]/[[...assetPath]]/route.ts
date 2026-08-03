@@ -27,25 +27,6 @@ const contentTypes: Record<string, string> = {
   ".txt": "text/plain; charset=utf-8"
 };
 
-const ADMIN_APP_ORIGIN = "https://app.partnerhub.club";
-const INTERNAL_HOSTS = new Set(["0.0.0.0", "127.0.0.1", "::", "localhost"]);
-
-function getPublicOrigin(request: Request) {
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host");
-
-  if (host) {
-    const hostname = host.split(":")[0].toLowerCase();
-
-    if (!INTERNAL_HOSTS.has(hostname)) {
-      const forwardedProto = request.headers.get("x-forwarded-proto");
-      const protocol = forwardedProto === "http" ? "http" : "https";
-      return `${protocol}://${host}`;
-    }
-  }
-
-  return ADMIN_APP_ORIGIN;
-}
-
 function getOutputRoot() {
   return process.env.PRODUCT_PAGE_OUTPUT_DIR ?? "/data/generated-sites";
 }
@@ -66,19 +47,18 @@ function resolvePreviewFile(siteId: string, assetPath?: string[]) {
 export async function GET(_request: Request, context: RouteContext) {
   try {
     const { siteId, assetPath } = await context.params;
-    const url = new URL(_request.url);
-
-    // Si se accede a la raíz del sitio de vista previa sin la barra final (ej. /preview/jairo-pinto),
-    // se redirige a /preview/jairo-pinto/ para que las rutas relativas de CSS/JS/Imágenes funcionen adecuadamente.
-    if ((!assetPath || assetPath.length === 0) && !url.pathname.endsWith("/")) {
-      return NextResponse.redirect(new URL(`${url.pathname}/${url.search}`, getPublicOrigin(_request)), 308);
-    }
-
+    const isRootPreview = !assetPath || assetPath.length === 0;
     const filePath = resolvePreviewFile(siteId, assetPath);
     const body = await readFile(filePath);
     const extension = extname(filePath).toLowerCase();
+    const responseBody =
+      isRootPreview && extension === ".html"
+        ? body
+            .toString("utf8")
+            .replace(/<head>/i, `<head>\n<base href="/api/internal/product-pages/preview/${siteId}/">`)
+        : body;
 
-    return new Response(body, {
+    return new Response(responseBody, {
       status: 200,
       headers: {
         "Content-Type": contentTypes[extension] ?? "application/octet-stream",

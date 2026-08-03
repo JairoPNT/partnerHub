@@ -195,6 +195,21 @@ const THEME_FONT_PRESETS = {
     title: "'Inter', sans-serif",
     serif: "'Inter', sans-serif",
     sans: "'Inter', sans-serif"
+  },
+  'serif-chic': {
+    title: "'Cormorant Garamond', serif",
+    serif: "'Cormorant Garamond', serif",
+    sans: "'Montserrat', sans-serif"
+  },
+  'romantic-serif': {
+    title: "'Cormorant Garamond', serif",
+    serif: "'Lora', serif",
+    sans: "'Lora', serif"
+  },
+  'luxury-serif': {
+    title: "'Bodoni Moda', serif",
+    serif: "'Bodoni Moda', serif",
+    sans: "'Montserrat', sans-serif"
   }
 };
 

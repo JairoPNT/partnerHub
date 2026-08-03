@@ -341,7 +341,7 @@ export const productPageGenerationService = {
       siteId: configuration.site.id,
       generatedAt,
       outputDirectory,
-      previewUrl: `/api/internal/product-pages/preview/${configuration.site.id}/`,
+      previewUrl: `/api/internal/product-pages/preview/${configuration.site.id}/index.html`,
       files: [...files, "manifest.json"]
     };
   },
