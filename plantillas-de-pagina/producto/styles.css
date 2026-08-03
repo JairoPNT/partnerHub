@@ -88,12 +88,12 @@ h1, h2, h3, h4, h5, h6 {
 
 h1 {
   font-size: clamp(2.5rem, 5vw, 4.75rem);
-  letter-spacing: -0.02em;
+  letter-spacing: 0;
 }
 
 h2 {
   font-size: clamp(2rem, 4vw, 2.75rem);
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
 }
 
 h3 {
@@ -105,11 +105,57 @@ p {
 }
 
 .font-serif {
-  font-family: var(--font-title);
+  font-family: var(--font-serif);
 }
 
 .italic {
   font-style: italic;
+}
+
+/* Contrato de tema tipografico aplicado por PartnerHub */
+.hero-title,
+.section-title,
+.product-name,
+.feature-title,
+.timeline-title,
+.kit-title,
+.contact-card-title,
+.modal-title,
+.modal-subtitle {
+  font-family: var(--font-title);
+}
+
+.hero-subtitle,
+.section-desc,
+.product-desc,
+.benefit-desc,
+.kit-desc,
+.contact-role,
+.footer-text {
+  font-family: var(--font-serif);
+}
+
+.nav-link,
+.btn,
+.product-btn-wa,
+.product-btn-buy,
+.kit-btn,
+.faq-question {
+  font-family: var(--font-sans);
+}
+
+html[data-font-preset="editorial"] .hero-title,
+html[data-font-preset="serif-chic"] .hero-title,
+html[data-font-preset="romantic-serif"] .hero-title,
+html[data-font-preset="luxury-serif"] .hero-title {
+  font-weight: 600;
+}
+
+html[data-font-preset="romantic-serif"] .hero-title,
+html[data-font-preset="romantic-serif"] .section-title,
+html[data-font-preset="luxury-serif"] .hero-title,
+html[data-font-preset="luxury-serif"] .section-title {
+  letter-spacing: 0;
 }
 
 /* Botones y CTAs (Sin Emojis Unicode) */

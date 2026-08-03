@@ -388,8 +388,23 @@ const THEME_PALETTE_PRESETS = {
 
 function applyThemeConfig(theme) {
   const root = document.documentElement;
-  const fontPreset = THEME_FONT_PRESETS[theme?.fontPreset] || THEME_FONT_PRESETS.executive;
-  const palettePreset = THEME_PALETTE_PRESETS[theme?.palettePreset] || THEME_PALETTE_PRESETS['cobalt-cyan'];
+  const currentFontPresetKey = root.dataset.fontPreset;
+  const currentPalettePresetKey = root.dataset.palettePreset;
+  const fontPresetKey = theme?.fontPreset && THEME_FONT_PRESETS[theme.fontPreset]
+    ? theme.fontPreset
+    : currentFontPresetKey && THEME_FONT_PRESETS[currentFontPresetKey]
+      ? currentFontPresetKey
+    : 'executive';
+  const palettePresetKey = theme?.palettePreset && THEME_PALETTE_PRESETS[theme.palettePreset]
+    ? theme.palettePreset
+    : currentPalettePresetKey && THEME_PALETTE_PRESETS[currentPalettePresetKey]
+      ? currentPalettePresetKey
+    : 'cobalt-cyan';
+  const fontPreset = THEME_FONT_PRESETS[fontPresetKey];
+  const palettePreset = THEME_PALETTE_PRESETS[palettePresetKey];
+
+  root.dataset.fontPreset = fontPresetKey;
+  root.dataset.palettePreset = palettePresetKey;
 
   root.style.setProperty('--font-title', fontPreset.title);
   root.style.setProperty('--font-serif', fontPreset.serif);
