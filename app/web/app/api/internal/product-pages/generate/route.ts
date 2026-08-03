@@ -53,9 +53,10 @@ export async function POST(request: Request) {
     const body = await request.json();
     const input = productPageGenerationInputSchema.parse(body);
     const result = await productPageGenerationService.generate(input);
-    const previewUrl = new URL(result.previewUrl, getPublicOrigin(request)).toString();
+    const previewPath = result.previewUrl.startsWith("/") ? result.previewUrl : new URL(result.previewUrl).pathname;
+    const previewUrl = new URL(previewPath, getPublicOrigin(request)).toString();
 
-    return NextResponse.json({ ...result, previewUrl }, { status: 201 });
+    return NextResponse.json({ ...result, previewPath, previewUrl }, { status: 201 });
   } catch (error) {
     if (error instanceof ZodError) {
       const firstIssue = error.issues[0];

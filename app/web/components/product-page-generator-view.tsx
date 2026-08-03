@@ -59,7 +59,11 @@ function getPublicBrowserOrigin() {
     : window.location.origin;
 }
 
-function getSafePreviewUrl(siteId?: string, previewUrl?: string) {
+function getSafePreviewUrl(siteId?: string, previewUrl?: string, previewPath?: string) {
+  if (previewPath) {
+    return new URL(previewPath, getPublicBrowserOrigin()).toString();
+  }
+
   if (siteId) {
     return new URL(`/api/internal/product-pages/preview/${siteId}/`, getPublicBrowserOrigin()).toString();
   }
@@ -140,6 +144,7 @@ interface GenerationResult {
   generatedAt: string;
   outputDirectory: string;
   previewUrl?: string;
+  previewPath?: string;
   files: string[];
   requiresPublication?: boolean;
 }
@@ -283,7 +288,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   const [publishStep, setPublishStep] = useState<"IDLE" | "SFTP" | "VERIFYING">("IDLE");
   const [publishResult, setPublishResult] = useState<PublicationResult | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
-  const safePreviewUrl = getSafePreviewUrl(result?.siteId, result?.previewUrl);
+  const safePreviewUrl = getSafePreviewUrl(result?.siteId, result?.previewUrl, result?.previewPath);
 
   const fetchLeads = async () => {
     setIsLoadingLeads(true);
