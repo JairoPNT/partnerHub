@@ -2,7 +2,9 @@
 
 ## Estado
 
-Definido para MVP. Pendiente implementacion visual por Antigravity.
+Funcional para MVP con configuracion manual de GA4.
+
+Actualizado el 2026-08-04: el flujo manual fue validado con sitios reales. El operador crea el Measurement ID en Google Analytics, lo guarda en PartnerHub, regenera/publica la pagina y confirma trafico en GA4.
 
 ## Objetivo
 
@@ -82,3 +84,15 @@ Por compatibilidad con lo ya construido, `analytics.measurementId` sigue siendo 
 El operador de PartnerHub crea y administra las propiedades GA4 durante el MVP.
 
 Los empresarios no reciben acceso directo todavia. La visualizacion para empresarios queda para una fase posterior.
+
+## Validacion MVP 2026-08-04
+
+Se confirmo que el flujo operativo manual funciona:
+
+- `claudia-calero`: trafico confirmado en GA4.
+- `blanca-ruiz`: Measurement ID creado y conectado.
+- `dorian-higuita`: Measurement ID creado y conectado.
+- `jairo-pinto`: Measurement ID creado y conectado.
+- `yenny-garcia`: Measurement ID creado y conectado.
+
+La automatizacion de creacion de propiedades y flujos GA4 queda separada en `PH-028_GA4_AUTOMATION_FUTURE.md`.
