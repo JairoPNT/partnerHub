@@ -6,6 +6,7 @@ import { resolve, sep } from "node:path";
 import { z } from "zod";
 
 import { activationLeadService } from "@/server/services/activationLeadService";
+import { productPageHistoryService } from "@/server/services/productPageHistoryService";
 import { productPageGenerationInputSchema } from "@/server/services/productPageGenerationService";
 import { productPageSourceService } from "@/server/services/productPageSourceService";
 
@@ -150,6 +151,21 @@ async function saveVerification(result: ProductPageVerificationResult) {
   await rename(temporary, target);
 }
 
+async function recordVerificationHistory(result: ProductPageVerificationResult) {
+  await productPageHistoryService.append({
+    siteId: result.siteId,
+    type: result.status,
+    occurredAt: result.verifiedAt,
+    domain: result.domain,
+    verificationStatus: result.status,
+    failedChecks: result.checks.filter((check) => check.status === "FAIL"),
+    message:
+      result.status === "VERIFIED"
+        ? "Public product page verified successfully."
+        : "Public product page verification failed."
+  });
+}
+
 async function getLastVerification(siteId: string) {
   try {
     return JSON.parse(await readFile(verificationPath(siteId), "utf8")) as ProductPageVerificationResult;
@@ -182,6 +198,7 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
       ]
     };
     await saveVerification(result);
+    await recordVerificationHistory(result);
     await activationLeadService.updatePublicationStateBySiteId(parsed.siteId, "VERIFY_FAILED");
     return result;
   }
@@ -205,6 +222,7 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
       ]
     };
     await saveVerification(result);
+    await recordVerificationHistory(result);
     await activationLeadService.updatePublicationStateBySiteId(parsed.siteId, "VERIFY_FAILED");
     return result;
   }
@@ -324,6 +342,7 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
   };
 
   await saveVerification(result);
+  await recordVerificationHistory(result);
   await activationLeadService.updatePublicationStateBySiteId(parsed.siteId, status);
   return result;
 }

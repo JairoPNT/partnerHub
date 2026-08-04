@@ -12,6 +12,7 @@ import {
   productPageVerificationService,
   type ProductPageVerificationCheck
 } from "@/server/services/productPageVerificationService";
+import { productPageHistoryService } from "@/server/services/productPageHistoryService";
 
 const siteIdSchema = z
   .string()
@@ -268,10 +269,25 @@ export const productPagePublicationService = {
     await activationLeadService.updatePublicationStateBySiteId(input.siteId, "PUBLISHED");
 
     const verification = await productPageVerificationService.verify(input);
+    const publishedAt = new Date().toISOString();
+    await productPageHistoryService.append({
+      siteId: input.siteId,
+      type: "PUBLISHED",
+      occurredAt: publishedAt,
+      domain: verification.domain,
+      remoteRoot,
+      fileCount: localFiles.length,
+      verificationStatus: verification.status,
+      failedChecks: verification.checks.filter((check) => check.status === "FAIL"),
+      message:
+        verification.status === "VERIFIED"
+          ? "Product page published and verified."
+          : "Product page published, but verification failed."
+    });
 
     return {
       siteId: input.siteId,
-      publishedAt: new Date().toISOString(),
+      publishedAt,
       verifiedAt: verification.verifiedAt,
       publicationState: verification.status,
       verificationStatus: verification.status,

@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import { productPageSourceService } from "@/server/services/productPageSourceService";
 import { activationLeadService } from "@/server/services/activationLeadService";
+import { productPageHistoryService } from "@/server/services/productPageHistoryService";
 
 const siteIdSchema = z
   .string()
@@ -336,6 +337,15 @@ export const productPageGenerationService = {
     await productPageSourceService.save(configuration.site.id, configuration);
     await productPageSourceService.clearLastVerification(configuration.site.id);
     await activationLeadService.updatePublicationStateBySiteId(configuration.site.id, "GENERATED");
+    await productPageHistoryService.append({
+      siteId: configuration.site.id,
+      type: "GENERATED",
+      occurredAt: generatedAt,
+      domain: configuration.site.domain,
+      outputDirectory,
+      fileCount: files.length + 1,
+      message: "Product page package generated."
+    });
 
     return {
       siteId: configuration.site.id,
