@@ -257,6 +257,12 @@ async function getBySiteId(siteId: string) {
   return existing ? toPublicLead(existing) : null;
 }
 
+async function getById(id: string) {
+  const leads = await readLeads();
+  const existing = leads.find((lead) => lead.id === id);
+  return existing ? toPublicLead(existing) : null;
+}
+
 async function updateOnboarding(token: string, input: z.infer<typeof onboardingDataSchema>) {
   const parsed = onboardingDataSchema.parse(input);
   const leads = await readLeads();
@@ -392,6 +398,7 @@ export const activationLeadService = {
   create,
   createInternal,
   list,
+  getById,
   getBySiteId,
   getByOnboardingToken,
   updateOnboarding,
