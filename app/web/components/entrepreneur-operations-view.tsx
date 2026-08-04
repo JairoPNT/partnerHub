@@ -69,7 +69,7 @@ export interface ActivationLeadRecord {
   id: string;
   fullName: string;
   whatsapp: string;
-  email: string;
+  email: string | null;
   brandName: string;
   mainProduct?: string;
   referrerCode: string | null;
@@ -85,6 +85,22 @@ export interface ActivationLeadRecord {
   onboardingUpdatedAt?: string;
 }
 
+interface DeliveryDraft {
+  subject: string;
+  emailText: string;
+  whatsappMessage: string;
+  recipientEmail: string | null;
+  siteUrl: string | null;
+  whatsappUrl: string | null;
+  mailtoUrl: string | null;
+  emailDelivery: {
+    attempted: boolean;
+    status: "NOT_REQUESTED" | "NO_EMAIL" | "SMTP_NOT_CONFIGURED" | "SENT" | "FAILED";
+    message: string;
+    sentAt?: string;
+  };
+}
+
 export function EntrepreneurOperationsView() {
   const [leads, setLeads] = useState<ActivationLeadRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -98,6 +114,8 @@ export function EntrepreneurOperationsView() {
 
   // Selected lead for detail modal/drawer
   const [selectedLead, setSelectedLead] = useState<ActivationLeadRecord | null>(null);
+  const [deliveryDraft, setDeliveryDraft] = useState<DeliveryDraft | null>(null);
+  const [isPreparingDelivery, setIsPreparingDelivery] = useState(false);
 
   // Edit action states inside modal
   const [_editingStatus, setEditingStatus] = useState<ActivationLeadStatus | "">("");
@@ -237,6 +255,7 @@ export function EntrepreneurOperationsView() {
       setConfirmingDelete(false);
       setIsEditingFields(false);
       setActionError(null);
+      setDeliveryDraft(null);
       setEditForm({
         fullName: selectedLead.fullName || "",
         whatsapp: selectedLead.whatsapp || "",
@@ -372,6 +391,43 @@ export function EntrepreneurOperationsView() {
     navigator.clipboard.writeText(fullUrl);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 3000);
+  };
+
+  const copyToClipboard = async (value: string, label: string) => {
+    await navigator.clipboard.writeText(value);
+    setSuccessMessage(`${label} copiado al portapapeles.`);
+    setTimeout(() => setSuccessMessage(null), 3000);
+  };
+
+  const handlePrepareDelivery = async (sendEmail: boolean) => {
+    if (!selectedLead) return;
+    setIsPreparingDelivery(true);
+    setActionError(null);
+
+    try {
+      const res = await fetch(`/api/internal/activation-leads/${selectedLead.id}/delivery`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sendEmail })
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "No se pudo preparar la entrega.");
+      }
+
+      setDeliveryDraft(json);
+      setSuccessMessage(
+        sendEmail
+          ? json.emailDelivery?.message || "Entrega preparada."
+          : "Mensaje de entrega preparado."
+      );
+      setTimeout(() => setSuccessMessage(null), 4000);
+    } catch (err) {
+      setActionError((err as Error).message);
+    } finally {
+      setIsPreparingDelivery(false);
+    }
   };
 
   // Patch status handler
@@ -523,7 +579,7 @@ export function EntrepreneurOperationsView() {
       const q = searchQuery.toLowerCase().trim();
       const matchName = lead.fullName.toLowerCase().includes(q);
       const matchBrand = lead.brandName.toLowerCase().includes(q);
-      const matchEmail = lead.email.toLowerCase().includes(q);
+      const matchEmail = lead.email?.toLowerCase().includes(q) || false;
       const matchSite = lead.siteId?.toLowerCase().includes(q) || false;
       const matchRef = lead.referrerCode?.toLowerCase().includes(q) || false;
       const matchPhone = lead.whatsapp.toLowerCase().includes(q);
@@ -1140,7 +1196,7 @@ export function EntrepreneurOperationsView() {
                           </a>
                           <p className="text-[11px] text-slate-500 flex items-center gap-1">
                             <Mail className="h-3 w-3" />
-                            {lead.email}
+                            {lead.email || "Sin correo registrado"}
                           </p>
                         </div>
                       </td>
@@ -1288,6 +1344,127 @@ export function EntrepreneurOperationsView() {
                   <span>{actionError}</span>
                 </div>
               )}
+
+              {/* DELIVERY NOTIFICATION */}
+              <div className="rounded-2xl border border-cyan-200 bg-cyan-50/60 p-5 space-y-4">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Mail className="h-4 w-4 text-cyan-600" />
+                      Entrega al empresario
+                    </h4>
+                    <p className="mt-1 text-xs text-slate-600">
+                      Prepara el mensaje final con URL publica, datos de contacto, enlace de compra y proximos pasos. Si SMTP esta configurado, tambien envia el correo.
+                    </p>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handlePrepareDelivery(false)}
+                      disabled={isPreparingDelivery}
+                      className="inline-flex items-center gap-2 rounded-xl border border-cyan-300 bg-white px-3 py-2 text-xs font-bold text-cyan-900 hover:bg-cyan-100 transition disabled:opacity-50"
+                    >
+                      <Copy className="h-4 w-4 text-cyan-600" />
+                      {isPreparingDelivery ? "Preparando..." : "Preparar mensaje"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handlePrepareDelivery(true)}
+                      disabled={isPreparingDelivery}
+                      className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-xs font-bold text-white hover:bg-slate-800 transition disabled:opacity-50"
+                    >
+                      <Mail className="h-4 w-4 text-cyan-300" />
+                      {isPreparingDelivery ? "Enviando..." : "Enviar correo"}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 sm:grid-cols-3 text-xs">
+                  <div className="rounded-xl border border-cyan-100 bg-white p-3">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Correo destino</span>
+                    <span className="font-bold text-slate-900">{selectedLead.email || "Pendiente por registrar"}</span>
+                  </div>
+                  <div className="rounded-xl border border-cyan-100 bg-white p-3">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Dominio</span>
+                    <span className="font-mono font-bold text-slate-900">{selectedLead.onboardingData?.domain || "Pendiente"}</span>
+                  </div>
+                  <div className="rounded-xl border border-cyan-100 bg-white p-3">
+                    <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Estado recomendado</span>
+                    <span className="font-bold text-slate-900">
+                      {(selectedLead.lastVerification?.status || selectedLead.publicationState) === "VERIFIED"
+                        ? "Lista para entrega"
+                        : "Verificar antes de entregar"}
+                    </span>
+                  </div>
+                </div>
+
+                {deliveryDraft && (
+                  <div className="space-y-3">
+                    <div
+                      className={`rounded-xl border p-3 text-xs font-semibold ${
+                        deliveryDraft.emailDelivery.status === "SENT"
+                          ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+                          : deliveryDraft.emailDelivery.status === "FAILED"
+                          ? "border-rose-200 bg-rose-50 text-rose-800"
+                          : "border-amber-200 bg-amber-50 text-amber-800"
+                      }`}
+                    >
+                      {deliveryDraft.emailDelivery.message}
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-4">
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <h5 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                          Mensaje preparado
+                        </h5>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(deliveryDraft.whatsappMessage, "Mensaje de WhatsApp")}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            Copiar WhatsApp
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => copyToClipboard(deliveryDraft.emailText, "Correo de entrega")}
+                            className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-100"
+                          >
+                            <Copy className="h-3.5 w-3.5" />
+                            Copiar correo
+                          </button>
+                          {deliveryDraft.whatsappUrl && (
+                            <a
+                              href={deliveryDraft.whatsappUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-emerald-500"
+                            >
+                              <MessageCircle className="h-3.5 w-3.5" />
+                              Abrir WhatsApp
+                            </a>
+                          )}
+                          {deliveryDraft.mailtoUrl && (
+                            <a
+                              href={deliveryDraft.mailtoUrl}
+                              className="inline-flex items-center gap-1.5 rounded-lg bg-cyan-600 px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-cyan-500"
+                            >
+                              <Mail className="h-3.5 w-3.5" />
+                              Abrir correo
+                            </a>
+                          )}
+                        </div>
+                      </div>
+
+                      <pre className="mt-3 max-h-56 overflow-auto whitespace-pre-wrap rounded-xl bg-slate-950 p-3 text-[11px] leading-relaxed text-slate-100">
+                        {deliveryDraft.emailText}
+                      </pre>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               {/* OPERATIONAL QUICK ACTIONS */}
               <div className="grid gap-6 md:grid-cols-2">
@@ -1785,7 +1962,7 @@ export function EntrepreneurOperationsView() {
 
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
                       <span className="text-slate-400 block text-[10px] uppercase font-bold">Correo Electrónico</span>
-                      <span className="font-bold text-slate-900">{selectedLead.email}</span>
+                      <span className="font-bold text-slate-900">{selectedLead.email || "Pendiente por registrar"}</span>
                     </div>
 
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
