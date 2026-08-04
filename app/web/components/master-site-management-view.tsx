@@ -39,6 +39,7 @@ import {
   ProductPageVerificationResult,
   ProductPageSiteSummary
 } from "@/components/ui/verification-status-panel";
+import { ProductPageHistoryPanel } from "@/components/product-page-history-panel";
 
 type MasterSiteManagementViewProps = {
   record?: ModuleRecord;
@@ -126,6 +127,11 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
   const [copiedManifest, setCopiedManifest] = useState(false);
   const [masterVerification, setMasterVerification] = useState<ProductPageVerificationResult | null>(null);
   const [isPublishStepMaster, setIsPublishStepMaster] = useState<"IDLE" | "SFTP" | "VERIFYING">("IDLE");
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+
+  const triggerHistoryRefresh = () => {
+    setHistoryRefreshKey((prev) => prev + 1);
+  };
 
   // Mensajes y alertas
   const [masterSuccessMessage, setMasterSuccessMessage] = useState<string | null>(null);
@@ -336,6 +342,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       setGeneratedAt(now);
       setPublicationState("GENERATED");
       setGenerationOutput(data);
+      triggerHistoryRefresh();
       setMasterSuccessMessage("Paquete estático maestro generado localmente. Ahora puedes publicarlo en ganomaster.pro.");
     } catch (err: unknown) {
       setMasterErrorMessage(err instanceof Error ? err.message : "Error al generar la plantilla maestra.");
@@ -372,6 +379,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       setPublishedAt(now);
       const pubState = data.publicationState || (data.verificationStatus === "VERIFIED" ? "VERIFIED" : "VERIFY_FAILED");
       setPublicationState(pubState);
+      triggerHistoryRefresh();
 
       if (data.checks) {
         setMasterVerification({
@@ -575,6 +583,11 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           <FailedChecksDetails checks={masterVerification.checks} />
         )}
       </section>
+
+      <ProductPageHistoryPanel
+        key={`history-ganomaster-${historyRefreshKey}`}
+        siteId={MASTER_SITE_ID}
+      />
 
       {/* NOTIFICACIONES Y ALERTAS DEL MASTER */}
       {masterSuccessMessage && (
