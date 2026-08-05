@@ -41,6 +41,25 @@ import { ModalPortal } from "@/components/ui/modal-portal";
 
 export type ActivationLeadStatus = "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
 
+export interface ReferralCodeRecord {
+  siteId: string;
+  code: string;
+  displayName: string;
+  assignedAt: string;
+}
+
+export interface ReferralRecord {
+  id: string;
+  referredSiteId: string;
+  referrerCode: string;
+  referrerSiteId: string | null;
+  status: "PENDING" | "VALIDATED" | "QUALIFIED" | "REJECTED" | "CANCELLED";
+  createdAt: string;
+  validatedAt?: string;
+  qualifiedAt?: string;
+  referrerName?: string;
+}
+
 export interface OnboardingData {
   domain?: string;
   country?: string;
@@ -102,6 +121,8 @@ interface DeliveryDraft {
 
 export function EntrepreneurOperationsView() {
   const [leads, setLeads] = useState<ActivationLeadRecord[]>([]);
+  const [referralCodes, setReferralCodes] = useState<ReferralCodeRecord[]>([]);
+  const [referralsList, setReferralsList] = useState<ReferralRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -123,6 +144,14 @@ export function EntrepreneurOperationsView() {
   const [isEditingFields, setIsEditingFields] = useState(false);
   const [isSubmittingPatch, setIsSubmittingPatch] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+
+  // Referral code operations inside modal
+  const [isAssigningCode, setIsAssigningCode] = useState(false);
+  const [codeAssignInput, setCodeAssignInput] = useState("");
+  const [codeAssignError, setCodeAssignError] = useState<string | null>(null);
+  const [codeAssignSuccess, setCodeAssignSuccess] = useState<string | null>(null);
+  const [isEditingCode, setIsEditingCode] = useState(false);
+  const [copiedOwnCode, setCopiedOwnCode] = useState(false);
 
   // Editable fields form inside modal
   const [editForm, setEditForm] = useState({
@@ -171,13 +200,27 @@ export function EntrepreneurOperationsView() {
     status: "PAID" as ActivationLeadStatus
   });
 
+  const fetchReferrals = async () => {
+    try {
+      const res = await fetch("/api/internal/referrals");
+      if (res.ok) {
+        const json = await res.json();
+        setReferralCodes(json.codes || []);
+        setReferralsList(json.referrals || []);
+      }
+    } catch {
+      // Non-blocking
+    }
+  };
+
   const fetchLeads = async () => {
     setIsLoading(true);
     setErrorMessage(null);
     try {
-      const [leadsRes, pagesRes] = await Promise.all([
+      const [leadsRes, pagesRes, referralsRes] = await Promise.all([
         fetch("/api/internal/activation-leads"),
-        fetch("/api/internal/product-pages")
+        fetch("/api/internal/product-pages"),
+        fetch("/api/internal/referrals")
       ]);
 
       if (!leadsRes.ok) {
@@ -191,6 +234,12 @@ export function EntrepreneurOperationsView() {
       if (pagesRes.ok) {
         const pData = await pagesRes.json();
         pageSites = pData.sites || [];
+      }
+
+      if (referralsRes.ok) {
+        const refData = await referralsRes.json();
+        setReferralCodes(refData.codes || []);
+        setReferralsList(refData.referrals || []);
       }
 
       const merged = leadList.map((lead) => {
@@ -212,6 +261,41 @@ export function EntrepreneurOperationsView() {
       setErrorMessage((err as Error).message);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleAssignEntrepreneurCode = async (targetSiteId: string, leadDisplayName: string) => {
+    if (!codeAssignInput.trim()) {
+      setCodeAssignError("Por favor ingresa un código de invitación.");
+      return;
+    }
+    setIsAssigningCode(true);
+    setCodeAssignError(null);
+    setCodeAssignSuccess(null);
+
+    try {
+      const res = await fetch("/api/internal/referrals", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          siteId: targetSiteId.trim().toLowerCase(),
+          code: codeAssignInput.trim().toUpperCase(),
+          displayName: leadDisplayName.trim()
+        })
+      });
+
+      const json = await res.json();
+      if (!res.ok) {
+        throw new Error(json.error || "No se pudo asignar el código.");
+      }
+
+      setCodeAssignSuccess(`Código "${json.code}" asignado exitosamente.`);
+      setIsEditingCode(false);
+      await fetchReferrals();
+    } catch (err: any) {
+      setCodeAssignError(err.message || "Error al asignar código.");
+    } finally {
+      setIsAssigningCode(false);
     }
   };
 
@@ -277,8 +361,22 @@ export function EntrepreneurOperationsView() {
         fontPreset: selectedLead.onboardingData?.fontPreset || "executive",
         palettePreset: selectedLead.onboardingData?.palettePreset || "cobalt-cyan"
       });
+
+      // Initialize referral code assignment states
+      setCodeAssignError(null);
+      setCodeAssignSuccess(null);
+      setIsEditingCode(false);
+      setCopiedOwnCode(false);
+      const existing = referralCodes.find((c) => c.siteId === selectedLead.siteId);
+      if (existing) {
+        setCodeAssignInput(existing.code);
+      } else if (selectedLead.siteId) {
+        setCodeAssignInput(selectedLead.siteId.toUpperCase().replace(/[^A-Z0-9]/g, ""));
+      } else {
+        setCodeAssignInput("");
+      }
     }
-  }, [selectedLead]);
+  }, [selectedLead, referralCodes]);
 
   // Handle Save All Editable Fields via PATCH /api/internal/activation-leads/:id
   const handleSaveEditableFields = async (e: React.FormEvent) => {
@@ -1942,7 +2040,7 @@ export function EntrepreneurOperationsView() {
                     </div>
 
                     <div className="rounded-xl border border-slate-200 bg-slate-50 p-3">
-                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Código Referido</span>
+                      <span className="text-slate-400 block text-[10px] uppercase font-bold">Código Referido (Origen)</span>
                       <span className="font-bold text-cyan-600 font-mono">
                         {selectedLead.referrerCode || "Ninguno (Directo)"}
                       </span>
@@ -1957,7 +2055,200 @@ export function EntrepreneurOperationsView() {
                   </div>
                 </div>
 
-                {/* 2. Datos de Onboarding Suministrados */}
+                {/* 2. Programa de Referidos & Código Propio */}
+                {(() => {
+                  const ownCodeRecord = selectedLead.siteId ? referralCodes.find((c) => c.siteId === selectedLead.siteId) : null;
+                  const attractedReferrals = selectedLead.siteId
+                    ? referralsList.filter((r) => r.referrerSiteId === selectedLead.siteId || (ownCodeRecord && r.referrerCode === ownCodeRecord.code))
+                    : [];
+                  const qualifiedAttracted = attractedReferrals.filter((r) => r.status === "QUALIFIED").length;
+                  const pendingAttracted = attractedReferrals.filter((r) => r.status === "PENDING").length;
+
+                  const inviterCodeRecord = selectedLead.referrerCode
+                    ? referralCodes.find((c) => c.code.toUpperCase() === selectedLead.referrerCode?.toUpperCase())
+                    : null;
+                  const inviterReferralRecord = selectedLead.siteId
+                    ? referralsList.find((r) => r.referredSiteId === selectedLead.siteId)
+                    : null;
+                  const inviterDisplayName = inviterCodeRecord?.displayName || (selectedLead.referrerCode ? "Código registrado en lead" : "Ninguno");
+
+                  return (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-2 flex items-center justify-between">
+                        <span>Programa de Referidos & Códigos de Invitación</span>
+                        {selectedLead.siteId && (
+                          <span className="text-[10px] font-mono text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-200">
+                            {selectedLead.siteId}
+                          </span>
+                        )}
+                      </h4>
+
+                      <div className="grid gap-4 sm:grid-cols-2 text-xs">
+                        {/* Código Propio */}
+                        <div className="rounded-2xl border border-cyan-100 bg-gradient-to-br from-cyan-50/40 via-white to-slate-50 p-4 space-y-3 shadow-sm">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">
+                              Código Propio para Compartir
+                            </span>
+                            {ownCodeRecord ? (
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                ownCodeRecord.siteId.startsWith("ref-")
+                                  ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                  : "bg-emerald-100 text-emerald-800 border border-emerald-200"
+                              }`}>
+                                {ownCodeRecord.siteId.startsWith("ref-") ? "Provisional" : "Activo"}
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                                Sin código
+                              </span>
+                            )}
+                          </div>
+
+                          {ownCodeRecord && !isEditingCode ? (
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1 rounded-xl border border-cyan-200 bg-white px-3 py-2 font-mono text-base font-bold text-cyan-950 tracking-wider">
+                                  {ownCodeRecord.code}
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    navigator.clipboard.writeText(ownCodeRecord.code);
+                                    setCopiedOwnCode(true);
+                                    setTimeout(() => setCopiedOwnCode(false), 2000);
+                                  }}
+                                  className="rounded-xl border border-cyan-300 bg-white p-2.5 text-cyan-700 hover:bg-cyan-50 transition shadow-sm"
+                                  title="Copiar código"
+                                >
+                                  {copiedOwnCode ? (
+                                    <Check className="h-4 w-4 text-emerald-600" />
+                                  ) : (
+                                    <Copy className="h-4 w-4" />
+                                  )}
+                                </button>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-1">
+                                <span className="text-[11px] text-slate-500">
+                                  {attractedReferrals.length} {attractedReferrals.length === 1 ? "referido atraído" : "referidos atraídos"} ({qualifiedAttracted} calificados, {pendingAttracted} pendientes)
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setIsEditingCode(true);
+                                    setCodeAssignInput(ownCodeRecord.code);
+                                  }}
+                                  className="text-[11px] font-bold text-cyan-700 hover:underline"
+                                >
+                                  Modificar
+                                </button>
+                              </div>
+                            </div>
+                          ) : selectedLead.siteId ? (
+                            <div className="space-y-2">
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={codeAssignInput}
+                                  onChange={(e) => setCodeAssignInput(e.target.value.toUpperCase())}
+                                  placeholder="Ej. JP94536693"
+                                  className="flex-1 rounded-xl border border-slate-300 bg-white px-3 py-1.5 font-mono text-xs uppercase font-bold text-slate-900 focus:border-cyan-500 focus:outline-none"
+                                />
+                                <button
+                                  type="button"
+                                  disabled={isAssigningCode}
+                                  onClick={() => handleAssignEntrepreneurCode(selectedLead.siteId!, selectedLead.brandName || selectedLead.fullName)}
+                                  className="rounded-xl bg-cyan-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-cyan-500 transition disabled:opacity-50"
+                                >
+                                  {isAssigningCode ? "Guardando..." : ownCodeRecord ? "Actualizar" : "Asignar"}
+                                </button>
+                                {isEditingCode && (
+                                  <button
+                                    type="button"
+                                    onClick={() => setIsEditingCode(false)}
+                                    className="rounded-xl border border-slate-300 bg-white px-2 py-1.5 text-xs text-slate-600 hover:bg-slate-100"
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </button>
+                                )}
+                              </div>
+                              {codeAssignError && (
+                                <p className="text-[11px] text-rose-600">{codeAssignError}</p>
+                              )}
+                              {codeAssignSuccess && (
+                                <p className="text-[11px] text-emerald-600">{codeAssignSuccess}</p>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="rounded-xl border border-dashed border-slate-300 bg-slate-50/50 p-2.5 text-center text-slate-500 text-[11px]">
+                              Para asignar un código de invitación propio, primero vincula un <strong>ID de Sitio (siteId)</strong> al empresario en la sección superior.
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Invitador / Referente */}
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-500 block text-[10px] uppercase font-bold tracking-wider">
+                              Invitado Por (Referente)
+                            </span>
+                            {selectedLead.referrerCode ? (
+                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                inviterCodeRecord?.siteId.startsWith("ref-")
+                                  ? "bg-amber-100 text-amber-800 border border-amber-200"
+                                  : "bg-cyan-100 text-cyan-800 border border-cyan-200"
+                              }`}>
+                                {inviterCodeRecord?.siteId.startsWith("ref-") ? "Invitador Provisional" : "Registrado"}
+                              </span>
+                            ) : (
+                              <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
+                                Directo
+                              </span>
+                            )}
+                          </div>
+
+                          {selectedLead.referrerCode ? (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-sm font-bold text-slate-900">
+                                  {selectedLead.referrerCode}
+                                </span>
+                                {inviterReferralRecord && (
+                                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
+                                    inviterReferralRecord.status === "QUALIFIED"
+                                      ? "bg-emerald-100 text-emerald-800"
+                                      : inviterReferralRecord.status === "VALIDATED"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : inviterReferralRecord.status === "PENDING"
+                                      ? "bg-amber-100 text-amber-800"
+                                      : "bg-slate-200 text-slate-700"
+                                  }`}>
+                                    {inviterReferralRecord.status === "QUALIFIED" ? "Calificado" : inviterReferralRecord.status === "VALIDATED" ? "Validado" : inviterReferralRecord.status === "PENDING" ? "Pendiente" : inviterReferralRecord.status}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[11px] text-slate-600">
+                                <strong>Invitador:</strong> {inviterDisplayName}
+                              </p>
+                              {inviterCodeRecord?.siteId.startsWith("ref-") && (
+                                <p className="text-[10px] text-amber-700 bg-amber-50 rounded p-1 border border-amber-200">
+                                  Este código fue creado provisionalmente desde el registro. Puede vincularse a un empresario oficial en la pestaña &quot;Programa de Referidos&quot;.
+                                </p>
+                              )}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-500 italic">
+                              Este empresario se registró directamente sin código de invitación.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* 3. Datos de Onboarding Suministrados */}
                 <div className="space-y-3">
                   <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200 pb-2">
                     Información Detallada de Onboarding
