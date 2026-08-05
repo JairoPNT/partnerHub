@@ -70,7 +70,10 @@ export function MasterTemplateReplicationView() {
         throw new Error("No se pudo cargar la lista de páginas de producto.");
       }
       const data = await res.json();
-      const siteList: ProductPageSite[] = data.sites || [];
+      const siteList: ProductPageSite[] = (data.sites || []).filter((site: ProductPageSite) => {
+        const domain = site.configuration?.site?.domain || site.configuration?.domain;
+        return site.siteId !== "ganomaster" && domain !== "ganomaster.pro";
+      });
       setSites(siteList);
       // Default: select all loaded sites
       setSelectedSiteIds(siteList.map((s) => s.siteId));

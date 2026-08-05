@@ -1,5 +1,7 @@
 # PH-004B - Campana beta Ecosistema de Producto
 
+> Actualizacion aprobada el 2026-08-03: esta campana conserva valor historico. Los precios MVP vigentes, la renovacion anual, la gestion mensual y el alcance comercial quedan definidos en `brain/business/PH-004C_APPROVED_MVP_PRICING_RENEWAL_AND_GROWTH_MODEL.md`.
+
 ## Estado
 
 Definicion comercial aprobada por CEO Jairo para uso en reuniones de venta en fase inicial.

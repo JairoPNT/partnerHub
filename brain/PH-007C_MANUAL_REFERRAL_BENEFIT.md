@@ -29,10 +29,12 @@ The operator controls the final qualification in the manual MVP. No credit is cr
 ## Credit application
 
 - One available credit covers one support billing cycle at the beneficiary's active plan price.
+- Under the approved 2026-08-03 MVP pricing model, this means one credit covers $40.000 COP for a beneficiary with 1 ecosystem or $60.000 COP for a beneficiary with 2 ecosystems / all-in-one.
 - Credits are applied on the next due date and recorded in an immutable ledger.
 - A plan change affects the value of future applied credits, not the number of credits already earned.
 - If a referred customer cancels, refunds, or becomes invalid before qualification, the referral does not generate a credit.
 - The benefit is a commercial PartnerHub incentive and must remain separate from GanoExcel's own compensation plan.
+- Credits cannot pay activations, annual renewal/reactivation, advertising campaigns, ad spend, personalization, video production, AI generation, or other extras.
 
 ## Manual dashboard data
 
