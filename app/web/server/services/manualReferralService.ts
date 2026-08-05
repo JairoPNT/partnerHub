@@ -35,11 +35,18 @@ export const assignReferralCodeSchema = z.object({
 
 export const createReferralSchema = z.object({
   referredSiteId: siteIdSchema,
-  referrerCode: referralCodeSchema
+  referrerCode: referralCodeSchema,
+  referrerName: z.string().trim().min(2).max(120).optional().nullable()
 });
 
 export const updateReferralSchema = z.object({
   status: manualReferralStatusSchema
+});
+
+const qualifyReferralSchema = z.object({
+  referredSiteId: siteIdSchema,
+  referrerCode: referralCodeSchema,
+  referrerName: z.string().trim().min(2).max(120).optional().nullable()
 });
 
 type ReferralCodeRecord = z.infer<typeof assignReferralCodeSchema> & {
@@ -54,6 +61,16 @@ type ReferralRecord = z.infer<typeof createReferralSchema> & {
   validatedAt?: string;
   qualifiedAt?: string;
 };
+
+function getPlaceholderSiteId(code: string) {
+  const normalized = code
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+
+  return `ref-${normalized || "pendiente"}`;
+}
 
 function getStorageDirectory() {
   return process.env.PRODUCT_PAGE_REFERRAL_DIR ?? "/data/generated-sites/.referrals";
@@ -86,8 +103,9 @@ async function assignCode(input: z.infer<typeof assignReferralCodeSchema>) {
   const parsed = assignReferralCodeSchema.parse(input);
   const records = await readJson<ReferralCodeRecord[]>("codes", []);
   const existing = records.find((record) => record.code === parsed.code);
+  const canReplacePlaceholder = existing?.siteId.startsWith("ref-") ?? false;
 
-  if (existing && existing.siteId !== parsed.siteId) {
+  if (existing && existing.siteId !== parsed.siteId && !canReplacePlaceholder) {
     throw new Error(`Referral code ${parsed.code} is already assigned to another site.`);
   }
 
@@ -97,17 +115,42 @@ async function assignCode(input: z.infer<typeof assignReferralCodeSchema>) {
   };
 
   await writeJson("codes", [...records.filter((record) => record.code !== parsed.code), next]);
+
+  if (existing && existing.siteId !== parsed.siteId && canReplacePlaceholder) {
+    const referrals = await readJson<ReferralRecord[]>("referrals", []);
+    await writeJson(
+      "referrals",
+      referrals.map((record) =>
+        record.referrerSiteId === existing.siteId
+          ? { ...record, referrerSiteId: parsed.siteId }
+          : record
+      )
+    );
+  }
+
   return next;
 }
 
 async function createReferral(input: z.infer<typeof createReferralSchema>) {
   const parsed = createReferralSchema.parse(input);
   const codes = await readJson<ReferralCodeRecord[]>("codes", []);
-  const code = codes.find((record) => record.code === parsed.referrerCode);
+  const now = new Date().toISOString();
+  let code = codes.find((record) => record.code === parsed.referrerCode);
+  const codeExisted = Boolean(code);
   const referrals = await readJson<ReferralRecord[]>("referrals", []);
 
   if (referrals.some((record) => record.referredSiteId === parsed.referredSiteId)) {
     throw new Error(`A referral already exists for ${parsed.referredSiteId}.`);
+  }
+
+  if (!code && parsed.referrerName) {
+    code = {
+      siteId: getPlaceholderSiteId(parsed.referrerCode),
+      code: parsed.referrerCode,
+      displayName: parsed.referrerName,
+      assignedAt: now
+    };
+    await writeJson("codes", [...codes, code]);
   }
 
   const record: ReferralRecord = {
@@ -115,11 +158,28 @@ async function createReferral(input: z.infer<typeof createReferralSchema>) {
     id: randomUUID(),
     referrerSiteId: code?.siteId ?? null,
     status: "PENDING",
-    createdAt: new Date().toISOString()
+    createdAt: now
   };
 
   await writeJson("referrals", [...referrals, record]);
-  return { ...record, codeFound: Boolean(code) };
+  return { ...record, codeFound: codeExisted, referrerProfileCreated: !codeExisted && Boolean(code) };
+}
+
+async function qualifyByReferredSite(input: z.infer<typeof qualifyReferralSchema>) {
+  const parsed = qualifyReferralSchema.parse(input);
+  let referrals = await readJson<ReferralRecord[]>("referrals", []);
+  let existing = referrals.find((record) => record.referredSiteId === parsed.referredSiteId);
+
+  if (!existing) {
+    existing = await createReferral(parsed);
+    referrals = await readJson<ReferralRecord[]>("referrals", []);
+  }
+
+  const current = referrals.find((record) => record.id === existing?.id);
+  if (!current) throw new Error(`Referral for ${parsed.referredSiteId} was not found.`);
+  if (current.status === "QUALIFIED") return current;
+
+  return updateStatus(current.id, "QUALIFIED");
 }
 
 async function list() {
@@ -164,4 +224,4 @@ async function updateStatus(id: string, status: z.infer<typeof manualReferralSta
   return next;
 }
 
-export const manualReferralService = { assignCode, createReferral, list, updateStatus };
+export const manualReferralService = { assignCode, createReferral, qualifyByReferredSite, list, updateStatus };

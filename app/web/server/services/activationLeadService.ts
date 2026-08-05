@@ -28,6 +28,7 @@ export const activationLeadSchema = z.object({
   brandName: z.string().trim().min(2).max(160),
   mainProduct: z.string().trim().max(240).optional().default(""),
   referrerCode: referralCodeSchema.optional().nullable(),
+  referrerName: z.string().trim().min(2).max(120).optional().nullable(),
   paymentMethod: z.enum(["wompi", "direct"]),
   termsAccepted: z.literal(true)
 });
@@ -108,6 +109,7 @@ export const updateActivationLeadSchema = z.object({
   brandName: z.string().trim().min(2).max(160).optional(),
   mainProduct: z.string().trim().max(240).optional(),
   referrerCode: referralCodeSchema.optional().nullable(),
+  referrerName: z.string().trim().min(2).max(120).nullable().optional(),
   paymentMethod: z.enum(["wompi", "direct"]).optional(),
   onboardingData: editableOnboardingDataSchema.optional()
 });
@@ -207,6 +209,7 @@ async function createInternal(input: z.infer<typeof internalActivationLeadCreate
     brandName: parsed.brandName,
     mainProduct: parsed.mainProduct,
     referrerCode: parsed.referrerCode,
+    referrerName: parsed.referrerName ?? null,
     paymentMethod: parsed.paymentMethod,
     termsAccepted: parsed.termsAccepted,
     id: randomUUID(),
@@ -223,8 +226,17 @@ async function createInternal(input: z.infer<typeof internalActivationLeadCreate
   if (lead.referrerCode && lead.siteId) {
     await manualReferralService.createReferral({
       referredSiteId: lead.siteId,
-      referrerCode: lead.referrerCode
+      referrerCode: lead.referrerCode,
+      referrerName: lead.referrerName
     });
+
+    if (lead.status === "PAID") {
+      await manualReferralService.qualifyByReferredSite({
+        referredSiteId: lead.siteId,
+        referrerCode: lead.referrerCode,
+        referrerName: lead.referrerName
+      });
+    }
   }
 
   await writeLeads([...leads, lead]);
@@ -295,8 +307,17 @@ async function linkSite(id: string, input: z.infer<typeof linkActivationLeadSche
   if (existing.referrerCode && !existing.siteId) {
     referral = await manualReferralService.createReferral({
       referredSiteId: parsed.siteId,
-      referrerCode: existing.referrerCode
+      referrerCode: existing.referrerCode,
+      referrerName: existing.referrerName
     });
+
+    if (existing.status === "PAID") {
+      referral = await manualReferralService.qualifyByReferredSite({
+        referredSiteId: parsed.siteId,
+        referrerCode: existing.referrerCode,
+        referrerName: existing.referrerName
+      });
+    }
   }
 
   const next: ActivationLead = {
@@ -331,6 +352,7 @@ async function updateStatus(id: string, input: z.infer<typeof updateActivationLe
     brandName: parsed.brandName ?? existing.brandName,
     mainProduct: parsed.mainProduct ?? existing.mainProduct,
     referrerCode: parsed.referrerCode === undefined ? existing.referrerCode : parsed.referrerCode,
+    referrerName: parsed.referrerName === undefined ? existing.referrerName : parsed.referrerName,
     paymentMethod: parsed.paymentMethod ?? existing.paymentMethod,
     onboardingData: parsed.onboardingData
       ? { ...existing.onboardingData, ...parsed.onboardingData }
@@ -340,6 +362,15 @@ async function updateStatus(id: string, input: z.infer<typeof updateActivationLe
   };
 
   await writeLeads(leads.map((lead) => (lead.id === id ? next : lead)));
+
+  if (next.siteId && next.referrerCode && next.status === "PAID") {
+    await manualReferralService.qualifyByReferredSite({
+      referredSiteId: next.siteId,
+      referrerCode: next.referrerCode,
+      referrerName: next.referrerName
+    });
+  }
+
   return toPublicLead(next);
 }
 
