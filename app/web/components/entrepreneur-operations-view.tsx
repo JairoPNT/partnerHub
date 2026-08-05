@@ -19,7 +19,6 @@ import {
   Mail,
   FileCheck,
   AlertTriangle,
-  ChevronRight,
   Archive,
   Trash2,
   AlertOctagon,
@@ -620,45 +619,56 @@ export function EntrepreneurOperationsView() {
     return { missing, completedCount, totalFields, percentage };
   };
 
-  // Helper for status badge styling
-  const getStatusBadge = (status: ActivationLeadStatus) => {
-    switch (status) {
-      case "NEW":
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-900">
-            <span className="h-2 w-2 rounded-full bg-amber-500 animate-pulse" />
-            NUEVO
-          </span>
-        );
-      case "CONTACTED":
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-blue-300 bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-900">
-            <span className="h-2 w-2 rounded-full bg-blue-500" />
-            CONTACTADO
-          </span>
-        );
-      case "PAID":
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-300 bg-emerald-100 px-2.5 py-1 text-xs font-semibold text-emerald-900">
-            <span className="h-2 w-2 rounded-full bg-emerald-500" />
-            PAGADO
-          </span>
-        );
-      case "CONVERTED":
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-green-300 bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-900">
-            <span className="h-2 w-2 rounded-full bg-green-600" />
-            CONVERTIDO
-          </span>
-        );
-      case "CANCELLED":
-        return (
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-rose-300 bg-rose-100 px-2.5 py-1 text-xs font-semibold text-rose-900">
-            <span className="h-2 w-2 rounded-full bg-rose-500" />
-            CANCELADO
-          </span>
-        );
+  const statusMeta: Record<ActivationLeadStatus, { label: string; dot: string; badge: string; pulse?: boolean }> = {
+    NEW: {
+      label: "Nuevo",
+      dot: "bg-amber-500",
+      badge: "border-amber-300 bg-amber-100 text-amber-900",
+      pulse: true
+    },
+    CONTACTED: {
+      label: "Contactado",
+      dot: "bg-blue-500",
+      badge: "border-blue-300 bg-blue-100 text-blue-900"
+    },
+    PAID: {
+      label: "Pagado",
+      dot: "bg-emerald-500",
+      badge: "border-emerald-300 bg-emerald-100 text-emerald-900"
+    },
+    CONVERTED: {
+      label: "Convertido",
+      dot: "bg-green-600",
+      badge: "border-green-300 bg-green-100 text-green-900"
+    },
+    CANCELLED: {
+      label: "Cancelado",
+      dot: "bg-rose-500",
+      badge: "border-rose-300 bg-rose-100 text-rose-900"
     }
+  };
+
+  const getStatusBadge = (status: ActivationLeadStatus, compact = false) => {
+    const meta = statusMeta[status];
+
+    if (compact) {
+      return (
+        <span
+          className={`inline-flex h-8 w-8 items-center justify-center rounded-full border ${meta.badge}`}
+          title={meta.label}
+          aria-label={meta.label}
+        >
+          <span className={`h-2.5 w-2.5 rounded-full ${meta.dot} ${meta.pulse ? "animate-pulse" : ""}`} />
+        </span>
+      );
+    }
+
+    return (
+      <span className={`inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}`}>
+        <span className={`h-2 w-2 rounded-full ${meta.dot} ${meta.pulse ? "animate-pulse" : ""}`} />
+        {meta.label}
+      </span>
+    );
   };
 
   return (
@@ -1147,15 +1157,12 @@ export function EntrepreneurOperationsView() {
             <table className="w-full text-left text-xs">
               <thead className="border-b border-slate-200 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
                 <tr>
-                  <th className="py-3.5 px-4">Estado Operativo</th>
+                  <th className="w-16 py-3.5 px-4 text-center">Estado</th>
                   <th className="py-3.5 px-4">Empresario / Marca</th>
-                  <th className="py-3.5 px-4">Contacto</th>
-                  <th className="py-3.5 px-4">Método de Pago</th>
-                  <th className="py-3.5 px-4">Referido por</th>
-                  <th className="py-3.5 px-4">Sitio Vinculado (siteId)</th>
+                  <th className="py-3.5 px-4">Sitio Vinculado</th>
                   <th className="py-3.5 px-4">Dominio de Publicación</th>
-                  <th className="py-3.5 px-4">Fecha Registro</th>
-                  <th className="py-3.5 px-4 text-right">Acción</th>
+                  <th className="w-28 py-3.5 px-4">Registro</th>
+                  <th className="w-24 py-3.5 px-4 text-right">Acciones</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
@@ -1163,81 +1170,34 @@ export function EntrepreneurOperationsView() {
                   return (
                     <tr
                       key={lead.id}
-                      className="hover:bg-slate-50/60:bg-slate-800/40 transition"
+                      className="hover:bg-slate-50/60 transition"
                     >
                       {/* Estado */}
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        {getStatusBadge(lead.status)}
+                      <td className="py-3.5 px-4 text-center">
+                        {getStatusBadge(lead.status, true)}
                       </td>
 
                       {/* Empresario / Marca */}
-                      <td className="py-4 px-4">
-                        <div>
-                          <p className="font-bold text-slate-900 text-sm">
+                      <td className="py-3.5 px-4">
+                        <div className="min-w-0">
+                          <p className="font-bold text-slate-900 text-sm truncate">
                             {lead.brandName}
                           </p>
-                          <p className="text-xs text-slate-500">
+                          <p className="text-xs text-slate-500 truncate">
                             {lead.fullName}
                           </p>
                         </div>
                       </td>
 
-                      {/* Contacto */}
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <div className="space-y-0.5">
-                          <a
-                            href={`https://wa.me/${lead.whatsapp.replace(/[^0-9]/g, "")}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-emerald-600 font-semibold hover:underline"
-                          >
-                            <Phone className="h-3.5 w-3.5" />
-                            {lead.whatsapp}
-                          </a>
-                          <p className="text-[11px] text-slate-500 flex items-center gap-1">
-                            <Mail className="h-3 w-3" />
-                            {lead.email || "Sin correo registrado"}
-                          </p>
-                        </div>
-                      </td>
-
-                      {/* Método de Pago */}
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        <div className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 text-xs text-slate-700 font-semibold">
-                          {lead.paymentMethod === "wompi" ? (
-                            <>
-                              <CreditCard className="h-3.5 w-3.5 text-cyan-600" />
-                              Tarjeta Wompi
-                            </>
-                          ) : (
-                            <>
-                              <Building2 className="h-3.5 w-3.5 text-cyan-600" />
-                              Directo / Transferencia
-                            </>
-                          )}
-                        </div>
-                      </td>
-
-                      {/* Código de Referido */}
-                      <td className="py-4 px-4 whitespace-nowrap">
-                        {lead.referrerCode ? (
-                          <span className="font-mono font-bold text-cyan-600 rounded bg-cyan-50 px-2 py-0.5 border border-cyan-200">
-                            {lead.referrerCode}
-                          </span>
-                        ) : (
-                          <span className="text-slate-400 text-[11px]">Directo</span>
-                        )}
-                      </td>
-
                       {/* Sitio Vinculado y Verificación */}
-                      <td className="py-4 px-4 whitespace-nowrap">
+                      <td className="py-3.5 px-4">
                         {lead.siteId ? (
                           <div className="space-y-1">
                             <div className="flex items-center gap-1.5">
                               <span className="font-mono text-xs font-bold text-slate-900 rounded bg-slate-100 px-2 py-0.5">
                                 {lead.siteId}
                               </span>
-                              <Link2 className="h-3.5 w-3.5 text-emerald-500" />
+                              <Link2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
                             </div>
                             <div>
                               <VerificationBadge status={lead.lastVerification?.status || lead.publicationState} />
@@ -1251,17 +1211,17 @@ export function EntrepreneurOperationsView() {
                       </td>
 
                       {/* Dominio de Publicación */}
-                      <td className="py-4 px-4 whitespace-nowrap font-mono text-xs">
+                      <td className="py-3.5 px-4 font-mono text-xs">
                         {lead.onboardingData?.domain ? (
                           <a
                             href={`https://${lead.onboardingData.domain}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-bold text-cyan-600 hover:underline inline-flex items-center gap-1"
+                            className="font-bold text-cyan-600 hover:underline inline-flex min-w-0 items-center gap-1"
                           >
-                            <Globe className="h-3.5 w-3.5" />
-                            {lead.onboardingData.domain}
-                            <ExternalLink className="h-3 w-3" />
+                            <Globe className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{lead.onboardingData.domain}</span>
+                            <ExternalLink className="h-3 w-3 shrink-0" />
                           </a>
                         ) : (
                           <span className="text-amber-600 font-semibold text-[11px]">
@@ -1271,7 +1231,7 @@ export function EntrepreneurOperationsView() {
                       </td>
 
                       {/* Fecha */}
-                      <td className="py-4 px-4 whitespace-nowrap text-slate-500 text-[11px]">
+                      <td className="py-3.5 px-4 text-slate-500 text-[11px]">
                         {new Date(lead.createdAt).toLocaleDateString("es-CO", {
                           day: "2-digit",
                           month: "short",
@@ -1280,20 +1240,24 @@ export function EntrepreneurOperationsView() {
                       </td>
 
                       {/* Acciones */}
-                      <td className="py-4 px-4 whitespace-nowrap text-right space-x-2">
-                        {lead.siteId && (
-                          <VerifyNowButton
-                            siteId={lead.siteId}
-                            onVerified={(res) => handleLeadVerified(lead.id, res)}
-                          />
-                        )}
-                        <button
-                          onClick={() => setSelectedLead(lead)}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition"
-                        >
-                          <span>Detalle y Gestión</span>
-                          <ChevronRight className="h-3.5 w-3.5" />
-                        </button>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          {lead.siteId && (
+                            <VerifyNowButton
+                              siteId={lead.siteId}
+                              onVerified={(res) => handleLeadVerified(lead.id, res)}
+                            />
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLead(lead)}
+                            aria-label={`Gestionar ${lead.brandName}`}
+                            title="Detalle y gestion"
+                            className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-600 text-white shadow-sm transition hover:bg-cyan-500"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -1304,7 +1268,6 @@ export function EntrepreneurOperationsView() {
         )}
       </div>
 
-      {/* DETAIL AND MANAGEMENT MODAL / DRAWER */}
       {selectedLead && (
         <ModalPortal>
           <div className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-slate-200 bg-white shadow-2xl">
