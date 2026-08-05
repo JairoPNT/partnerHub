@@ -255,7 +255,7 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
                 />
               </div>
               <p className="mt-1.5 text-xs text-slate-400">
-                Este código será revisado manualmente por PartnerHub. No garantiza automáticamente un beneficio.
+                Si alguien te invitó, escribe su código para asociar correctamente el referido.
               </p>
             </div>
 

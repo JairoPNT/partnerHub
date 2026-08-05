@@ -12,6 +12,7 @@ import { ActivationForm, FormDataState } from "@/components/beta-landing/Activat
 import { PaymentSection } from "@/components/beta-landing/PaymentSection";
 import { PaymentModal } from "@/components/beta-landing/PaymentModal";
 import { FaqSection } from "@/components/beta-landing/FaqSection";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FinalCtaSection } from "@/components/beta-landing/FinalCtaSection";
 import { Sparkles, ShieldCheck } from "lucide-react";
@@ -78,6 +79,12 @@ export default function OfertaBetaPage() {
             >
               Muestras Activas
             </button>
+            <Link
+              href="/activar"
+              className="hidden text-xs font-semibold text-slate-600 hover:text-slate-900 sm:block"
+            >
+              Formulario Directo
+            </Link>
             <button
               onClick={() => scrollToSection("registro")}
               className="rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:from-cyan-500 hover:to-blue-500 transition"

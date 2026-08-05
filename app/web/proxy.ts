@@ -5,7 +5,7 @@ const ADMIN_HOST = "app.partnerhub.club";
 
 // Rutas permitidas públicamente en oferta.partnerhub.club
 function isPublicOfferRoute(pathname: string): boolean {
-  if (pathname === "/" || pathname === "" || pathname === "/oferta-beta") {
+  if (pathname === "/" || pathname === "" || pathname === "/oferta-beta" || pathname === "/activar") {
     return true;
   }
   if (pathname.startsWith("/onboarding") || pathname.startsWith("/api/public")) {
