@@ -79,6 +79,15 @@ export function BetaOfferSection({ onActivateClick }: BetaOfferSectionProps) {
                     <strong className="text-white">Flexibilidad de pago:</strong> Opción de diferir hasta en 3 cuotas si pagas con tarjeta de crédito por Wompi.
                   </p>
                 </div>
+
+                <div className="flex items-start gap-3">
+                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-emerald-500/20 text-emerald-400 mt-0.5">
+                    <Check className="h-3.5 w-3.5" />
+                  </div>
+                  <p className="text-sm text-slate-200">
+                    <strong className="text-white">Bono por referidos:</strong> 1 mes de gestión por cada 2 referidos efectivos, pagados, validados y activos.
+                  </p>
+                </div>
               </div>
             </div>
 
