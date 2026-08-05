@@ -344,7 +344,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
             }`}
           >
             <Gift className="h-4 w-4 text-cyan-600" />
-            <span>Programa de Referidos Manual</span>
+            <span>Programa de Referidos</span>
           </button>
         </div>
       </section>

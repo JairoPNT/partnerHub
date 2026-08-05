@@ -126,3 +126,15 @@ Implication:
 - the main visitor flow ends when the visitor is routed to an external channel controlled by the entrepreneur
 - TrafficCampaign means generating traffic toward assets or destinations, not managing lead relationships
 - BusinessEvent can record terminal routing events without becoming a CRM activity log
+
+## Decision 13: MVP Pricing, Renewal, And Growth Model
+
+PartnerHub's approved MVP commercial model is documented in `brain/business/PH-004C_APPROVED_MVP_PRICING_RENEWAL_AND_GROWTH_MODEL.md`.
+
+Implication:
+
+- the active MVP prices are $180.000 COP for 1 ecosystem, $300.000 COP for 2 ecosystems, and $350.000 COP for all-in-one
+- monthly management is $40.000 COP for 1 ecosystem and $60.000 COP for 2 ecosystems or all-in-one
+- annual domain and hosting renewal is not included in monthly management and must be charged separately as a renewal/reactivation fee
+- personalization, AI video, video editing, advertising campaigns, and social media publishing are separate services
+- referral credits remain valid as monthly management credits and apply to the referrer's active plan price

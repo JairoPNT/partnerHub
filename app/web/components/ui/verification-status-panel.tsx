@@ -123,6 +123,7 @@ export interface VerifyNowButtonProps {
   size?: "sm" | "md";
   variant?: "outline" | "ghost" | "primary" | "secondary";
   className?: string;
+  iconOnly?: boolean;
 }
 
 export function VerifyNowButton({
@@ -131,7 +132,8 @@ export function VerifyNowButton({
   onError,
   size = "sm",
   variant = "outline",
-  className = ""
+  className = "",
+  iconOnly = false
 }: VerifyNowButtonProps) {
   const [isVerifying, setIsVerifying] = useState(false);
 
@@ -169,9 +171,11 @@ export function VerifyNowButton({
       onClick={handleVerify}
       isLoading={isVerifying}
       leftIcon={<RefreshCw className={`h-3.5 w-3.5 ${isVerifying ? "animate-spin" : ""}`} />}
-      className={`font-semibold ${className}`}
+      className={`font-semibold ${iconOnly ? "h-9 w-9 justify-center px-0" : ""} ${className}`}
+      title="Verificar sitio"
+      aria-label="Verificar sitio"
     >
-      {isVerifying ? "Verificando..." : "Verificar ahora"}
+      {iconOnly ? "" : isVerifying ? "Verificando..." : "Verificar ahora"}
     </Button>
   );
 }

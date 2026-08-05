@@ -354,6 +354,7 @@ Media.
 14. Logs de publicacion y verificacion por sitio.
 15. Replicacion selectiva despues de aprobar `ganomaster.pro`.
 16. Automatizacion futura de GA4 si Google APIs lo permiten de forma segura.
+17. PH-026 Content Engine MVP: perfil de contenido, generador de ideas, banco de contenido, calendario simple, metricas manuales y reciclaje asistido. No bloquea el MVP actual de paginas.
 
 ## Prueba 0 a 100: `jairopinto.pro`
 

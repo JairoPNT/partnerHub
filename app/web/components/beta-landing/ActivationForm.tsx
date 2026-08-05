@@ -12,6 +12,7 @@ export interface FormDataState {
   brandName: string;
   mainProduct?: string;
   referrerCode: string;
+  referrerName: string;
   paymentMethod: "wompi" | "direct";
   termsAccepted: boolean;
 }
@@ -28,6 +29,7 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
     email: "",
     brandName: "",
     referrerCode: "",
+    referrerName: "",
     paymentMethod: "wompi",
     termsAccepted: false,
   });
@@ -66,6 +68,10 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
       email: formData.email.trim(),
       brandName: formData.brandName.trim(),
       referrerCode: formData.referrerCode.trim() ? formData.referrerCode.trim().toUpperCase() : null,
+      referrerName:
+        formData.referrerCode.trim() && formData.referrerName.trim()
+          ? formData.referrerName.trim()
+          : null,
       paymentMethod: formData.paymentMethod,
       termsAccepted: formData.termsAccepted
     };
@@ -258,6 +264,30 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
                 Si alguien te invitó, escribe su código para asociar correctamente el referido.
               </p>
             </div>
+
+            {formData.referrerCode.trim() && (
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                  Nombre del empresario que te invito (Opcional)
+                </label>
+                <div className="relative mt-2">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-500">
+                    <User className="h-4 w-4" />
+                  </div>
+                  <input
+                    type="text"
+                    disabled={isSubmitting}
+                    value={formData.referrerName}
+                    onChange={(e) => setFormData({ ...formData, referrerName: e.target.value })}
+                    placeholder="Ej. Laura Martinez"
+                    className="w-full rounded-xl border border-slate-800 bg-slate-900/80 py-3 pl-10 pr-4 text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                  />
+                </div>
+                <p className="mt-1.5 text-xs text-slate-400">
+                  Si el codigo todavia no existe en PartnerHub, este nombre permite crear el invitador provisional sin detener tu registro.
+                </p>
+              </div>
+            )}
 
             {/* Payment Method Selection */}
             <div>
