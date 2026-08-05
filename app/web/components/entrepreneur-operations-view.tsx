@@ -1343,6 +1343,7 @@ export function EntrepreneurOperationsView() {
                           {lead.siteId && (
                             <VerifyNowButton
                               siteId={lead.siteId}
+                              iconOnly={true}
                               onVerified={(res) => handleLeadVerified(lead.id, res)}
                             />
                           )}
@@ -1350,7 +1351,7 @@ export function EntrepreneurOperationsView() {
                             type="button"
                             onClick={() => setSelectedLead(lead)}
                             aria-label={`Gestionar ${lead.brandName}`}
-                            title="Detalle y gestion"
+                            title={`Gestionar ${lead.brandName}`}
                             className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-cyan-600 text-white shadow-sm transition hover:bg-cyan-500"
                           >
                             <Edit3 className="h-4 w-4" />
