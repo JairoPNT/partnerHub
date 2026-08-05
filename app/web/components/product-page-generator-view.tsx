@@ -42,6 +42,7 @@ import {
   ProductPageVerificationCheck,
   ProductPageSiteSummary
 } from "@/components/ui/verification-status-panel";
+import { ProductPageHistoryPanel } from "@/components/product-page-history-panel";
 
 type ProductPageGeneratorViewProps = {
   record?: ModuleRecord;
@@ -300,6 +301,11 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   const [publishResult, setPublishResult] = useState<PublicationResult | null>(null);
   const [publishError, setPublishError] = useState<string | null>(null);
   const safePreviewUrl = getSafePreviewUrl(result?.siteId, result?.previewUrl, result?.previewPath);
+  const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+
+  const triggerHistoryRefresh = () => {
+    setHistoryRefreshKey((prev) => prev + 1);
+  };
 
   const fetchLeads = async () => {
     setIsLoadingLeads(true);
@@ -363,6 +369,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         return l;
       })
     );
+
+    triggerHistoryRefresh();
 
     if (selectedLead && selectedLead.siteId === siteId) {
       setSelectedLead((prev) =>
@@ -717,6 +725,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       }
 
       setResult(data as GenerationResult);
+      triggerHistoryRefresh();
 
       // Actualizar publicationState a GENERATED localmente
       if (selectedLead) {
@@ -770,6 +779,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       }
 
       setPublishResult(data as PublicationResult);
+      triggerHistoryRefresh();
 
       const finalState = data.publicationState || (data.verificationStatus === "VERIFIED" ? "VERIFIED" : "VERIFY_FAILED");
 
@@ -1074,6 +1084,13 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
             <FailedChecksDetails checks={selectedLead.lastVerification.checks} />
           )}
         </Card>
+      )}
+
+      {selectedLead && selectedLead.siteId && (
+        <ProductPageHistoryPanel
+          key={`history-${selectedLead.siteId}-${historyRefreshKey}`}
+          siteId={selectedLead.siteId}
+        />
       )}
 
       {/* PANTALLA DE ÉXITO DE GENERACIÓN / PUBLICACIÓN */}
