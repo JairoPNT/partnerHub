@@ -288,7 +288,7 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
                       Tarjeta de Crédito / Débito (Wompi)
                     </div>
                     <p className="mt-1 text-xs text-slate-400">
-                      Pago en línea seguro. Permite diferir la implementación hasta en 3 cuotas.
+                      Pago en línea seguro. Permite diferir la activación hasta en 3 cuotas.
                     </p>
                   </div>
                 </label>
@@ -334,7 +334,7 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
                   className="mt-1 h-4 w-4 rounded border-slate-700 text-cyan-500 focus:ring-cyan-500"
                 />
                 <span className="text-xs text-slate-300 leading-relaxed">
-                  Entiendo que accedo a una <strong className="text-white">oferta beta fundadora</strong> de implementación ({PAYMENT_CONFIG.amount}), que incluye 2 meses de gestión bonificados, y que la gestión mensual regular ({PAYMENT_CONFIG.monthlyFee}) aplica a partir del mes 3. Reconozco que este servicio no garantiza ventas ni ingresos y no incluye VSL ni CRM.
+                  Entiendo que accedo a una <strong className="text-white">oferta beta fundadora</strong> de activación ({PAYMENT_CONFIG.amount}) para mi Ecosistema de Producto. La gestión mensual regular ({PAYMENT_CONFIG.monthlyFee}) es necesaria para mantener el sitio publicado, con soporte y cambios menores dentro del alcance. Reconozco que este servicio no garantiza ventas ni ingresos y no incluye VSL, CRM ni pauta publicitaria.
                 </span>
               </label>
               {errors.termsAccepted && (

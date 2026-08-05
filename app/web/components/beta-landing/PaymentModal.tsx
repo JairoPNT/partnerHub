@@ -73,10 +73,10 @@ export function PaymentModal({
 
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
             <span className="rounded-md bg-white/10 px-2.5 py-1">
-              Incluye 1.er mes de puesta en marcha
+              Entrega estimada: {PAYMENT_CONFIG.deliveryWindow}
             </span>
             <span className="rounded-md bg-cyan-500/20 text-cyan-200 px-2.5 py-1 font-medium">
-              + 2 meses bonificados de gestión
+              Gestión mensual: {PAYMENT_CONFIG.monthlyFee}
             </span>
           </div>
         </div>
@@ -121,7 +121,7 @@ export function PaymentModal({
                       Pago seguro en línea con Wompi
                     </h4>
                     <p className="mt-1 text-sm text-slate-600">
-                      Acepta tarjetas de crédito y débito. Puedes diferir tu implementación{" "}
+                      Acepta tarjetas de crédito y débito. Puedes diferir tu activación{" "}
                       <span className="font-semibold text-cyan-800">hasta en 3 cuotas</span> según las condiciones de tu banco.
                     </p>
                   </div>
@@ -169,7 +169,7 @@ export function PaymentModal({
               </div>
 
               <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900">
-                <span className="font-semibold">Nota sobre cuotas:</span> Con tarjeta de crédito por Wompi puedes seleccionar las cuotas directamente en la pasarela de tu banco. La bonificación de 2 meses aplica inmediatamente tras confirmar la transacción.
+                <span className="font-semibold">Nota sobre cuotas:</span> Con tarjeta de crédito por Wompi puedes seleccionar las cuotas directamente en la pasarela de tu banco. La activación inicia después de confirmar el pago.
               </div>
             </div>
           ) : (
@@ -253,7 +253,7 @@ export function PaymentModal({
               </div>
 
               <div className="rounded-xl bg-slate-100 p-4 text-xs text-slate-600">
-                <span className="font-semibold text-slate-800">Siguiente paso:</span> Una vez realizada la transferencia de {PAYMENT_CONFIG.amount}, envía el comprobante por WhatsApp al equipo de PartnerHub para iniciar tu configuración en 24 horas.
+                <span className="font-semibold text-slate-800">Siguiente paso:</span> Una vez realizada la transferencia de {PAYMENT_CONFIG.amount}, envía el comprobante por WhatsApp al equipo de PartnerHub para iniciar tu configuración en {PAYMENT_CONFIG.deliveryWindow}.
               </div>
             </div>
           )}

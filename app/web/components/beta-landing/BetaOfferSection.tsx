@@ -40,7 +40,7 @@ export function BetaOfferSection({ onActivateClick }: BetaOfferSectionProps) {
 
               <div className="mt-6">
                 <span className="text-xs uppercase tracking-wider text-slate-400 font-semibold">
-                  Implementación Beta Fundadora
+                  Inversión Inicial Promocional
                 </span>
                 <div className="mt-1 flex items-baseline gap-3">
                   <span className="font-heading text-4xl font-extrabold text-white sm:text-5xl">
@@ -48,7 +48,7 @@ export function BetaOfferSection({ onActivateClick }: BetaOfferSectionProps) {
                   </span>
                 </div>
                 <p className="mt-1 text-xs text-slate-400">
-                  Pago único de implementación. Incluye el primer mes de administración.
+                  Pago único de activación para el primer Ecosistema de Producto.
                 </p>
               </div>
 
@@ -58,7 +58,7 @@ export function BetaOfferSection({ onActivateClick }: BetaOfferSectionProps) {
                     <Check className="h-3.5 w-3.5" />
                   </div>
                   <p className="text-sm text-slate-200">
-                    <strong className="text-white">Beneficio Beta Fundador:</strong> 2 meses de gestión mensual bonificados (<span className="text-fuchsia-400 font-semibold">{PAYMENT_CONFIG.bonusSavings} de ahorro</span>).
+                    <strong className="text-white">Entrega guiada:</strong> configuración, generación y publicación inicial después de validar el pago.
                   </p>
                 </div>
 
@@ -67,7 +67,7 @@ export function BetaOfferSection({ onActivateClick }: BetaOfferSectionProps) {
                     <Check className="h-3.5 w-3.5" />
                   </div>
                   <p className="text-sm text-slate-200">
-                    <strong className="text-white">Mensualidad efectiva:</strong> La gestión regular de {PAYMENT_CONFIG.monthlyFee} se reanuda a partir del mes 3.
+                    <strong className="text-white">Gestión mensual:</strong> {PAYMENT_CONFIG.monthlyFee} para mantener publicación, soporte y cambios menores dentro del alcance.
                   </p>
                 </div>
 
@@ -85,11 +85,11 @@ export function BetaOfferSection({ onActivateClick }: BetaOfferSectionProps) {
             {/* Right Summary Card & CTA */}
             <div className="rounded-2xl border border-cyan-500/30 bg-gradient-to-b from-cyan-950/60 to-slate-900 p-6 text-center lg:col-span-5">
               <div className="inline-block rounded-full bg-fuchsia-500/20 px-3 py-1 text-xs font-bold uppercase tracking-wider text-fuchsia-300">
-                Ahorro Especial: {PAYMENT_CONFIG.bonusSavings}
+                Entrada MVP
               </div>
 
               <p className="mt-4 text-xs text-slate-300">
-                Al activar hoy aseguras el precio de entrada fundador y los 2 meses bonificados.
+                Al activar hoy aseguras el precio de entrada fundador durante la etapa de validación del MVP.
               </p>
 
               <button

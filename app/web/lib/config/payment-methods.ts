@@ -1,9 +1,9 @@
 export const PAYMENT_CONFIG = {
-  amount: "$247.000 COP",
-  amountNumber: 247000,
-  monthlyFee: "$59.900 COP / mes",
-  bonusSavings: "$119.800 COP",
-  bonusMonths: 2,
+  amount: "$180.000 COP",
+  amountNumber: 180000,
+  monthlyFee: "$40.000 COP / mes",
+  deliveryWindow: "24 a 48 horas",
+  referralCredit: "1 mes de gestión por cada 2 referidos calificados",
   bancolombia: {
     bank: "Bancolombia",
     accountType: "Ahorros",
@@ -16,7 +16,7 @@ export const PAYMENT_CONFIG = {
   ],
   wompi: {
     checkoutUrl: "https://checkout.wompi.co/l/y3r4Vi",
-    sku: "PH-ECOPROD-BETA-247K",
+    sku: "PH-ECOPROD-BETA-180K",
     maxInstallments: 3,
   },
 };

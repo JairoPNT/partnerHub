@@ -42,13 +42,13 @@ export function HeroSection({ onActivateClick, onDemosClick }: HeroSectionProps)
         <div className="mx-auto mt-10 max-w-2xl rounded-3xl border border-slate-200/80 bg-white/90 p-6 shadow-xl backdrop-blur-md sm:p-8">
           <div className="rounded-2xl border border-sky-100 bg-gradient-to-br from-sky-50/80 to-cyan-50/40 p-6 text-center">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-              Inversión de Implementación Beta
+              Inversión Inicial Beta
             </span>
             <p className="mt-2 font-heading text-4xl font-extrabold text-slate-900 sm:text-5xl">
               {PAYMENT_CONFIG.amount}
             </p>
             <p className="mt-2 text-xs font-medium text-slate-600">
-              Incluye el 1.er mes de administración técnica durante la puesta en marcha.
+              Activa tu Ecosistema de Producto en etapa MVP con configuración inicial guiada.
             </p>
           </div>
 
@@ -56,11 +56,11 @@ export function HeroSection({ onActivateClick, onDemosClick }: HeroSectionProps)
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-4 text-xs font-medium text-slate-600 border-t border-slate-100 pt-4">
             <span className="flex items-center gap-1.5">
               <CheckCircle2 className="h-4 w-4 text-cyan-600 shrink-0" />
-              Gestión regular de {PAYMENT_CONFIG.monthlyFee} a partir del mes 2
+              Gestión regular de {PAYMENT_CONFIG.monthlyFee}
             </span>
             <span className="flex items-center gap-1.5 text-fuchsia-700 font-semibold">
               <Gift className="h-4 w-4 text-fuchsia-600 shrink-0" />
-              Recibe meses bonificados al referir empresarios
+              {PAYMENT_CONFIG.referralCredit}
             </span>
           </div>
         </div>

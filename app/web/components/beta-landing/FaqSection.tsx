@@ -17,11 +17,11 @@ export function FaqSection() {
       a: "No. Esta oferta beta aplica exclusivamente al Ecosistema de Producto. No incluye sistema CRM, secuencias automáticas de correo, embudos de video VSL ni herramientas de prospección automatizada.",
     },
     {
-      q: "¿Cuándo empieza a cobrarse la mensualidad regular de " + PAYMENT_CONFIG.monthlyFee + "?",
-      a: "La inversión de implementación (" + PAYMENT_CONFIG.amount + ") incluye el primer mes de administración durante la puesta en marcha. Como parte del lanzamiento beta fundador, recibes 2 meses adicionales de gestión mensual bonificados. Por lo tanto, tu mensualidad regular se reanuda a partir del tercer mes.",
+      q: "¿Cuándo empieza a cobrarse la gestión mensual de " + PAYMENT_CONFIG.monthlyFee + "?",
+      a: "La inversión inicial (" + PAYMENT_CONFIG.amount + ") activa la configuración y publicación del Ecosistema de Producto. La gestión mensual de " + PAYMENT_CONFIG.monthlyFee + " se paga de forma anticipada para mantener el sitio publicado, con soporte y cambios menores dentro del alcance.",
     },
     {
-      q: "¿Es obligatoria la gestión mensual después del periodo bonificado?",
+      q: "¿Es obligatoria la gestión mensual después de la activación?",
       a: "Sí, la gestión mensual de " + PAYMENT_CONFIG.monthlyFee + " es requerida para mantener tu ecosistema publicado, hospedado en la nube y con soporte técnico activo.",
     },
     {
@@ -30,7 +30,7 @@ export function FaqSection() {
     },
     {
       q: "¿Cómo funciona el pago con tarjeta a cuotas?",
-      a: "Al pagar con tarjeta de crédito mediante Wompi, puedes seleccionar diferir el valor de la implementación hasta en 3 cuotas según las políticas y condiciones de tu entidad bancaria.",
+      a: "Al pagar con tarjeta de crédito mediante Wompi, puedes seleccionar diferir el valor de la activación hasta en 3 cuotas según las políticas y condiciones de tu entidad bancaria.",
     },
   ];
 

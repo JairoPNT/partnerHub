@@ -23,7 +23,7 @@ export function FinalCtaSection({ onActivateClick }: FinalCtaSectionProps) {
         </h2>
 
         <p className="mx-auto mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
-          Aprovecha el precio de entrada de <strong className="text-white">{PAYMENT_CONFIG.amount}</strong> y los <strong className="text-cyan-300 font-semibold">{PAYMENT_CONFIG.bonusSavings} de beneficio</strong> en gestión bonificada por sumarte hoy.
+          Aprovecha la inversión inicial promocional de <strong className="text-white">{PAYMENT_CONFIG.amount}</strong> para activar tu Ecosistema de Producto en etapa MVP. La gestión mensual regular es de <strong className="text-cyan-300 font-semibold">{PAYMENT_CONFIG.monthlyFee}</strong>.
         </p>
 
         <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
@@ -44,7 +44,7 @@ export function FinalCtaSection({ onActivateClick }: FinalCtaSectionProps) {
           <span>•</span>
           <span>Pago seguro con Bancolombia, Bre-b o Wompi</span>
           <span>•</span>
-          <span>Mensualidad regular de {PAYMENT_CONFIG.monthlyFee} desde el mes 3</span>
+          <span>Entrega estimada de {PAYMENT_CONFIG.deliveryWindow} después de validar el pago</span>
         </div>
 
       </div>

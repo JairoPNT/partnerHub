@@ -15,6 +15,7 @@ import { FaqSection } from "@/components/beta-landing/FaqSection";
 import { useRouter } from "next/navigation";
 import { FinalCtaSection } from "@/components/beta-landing/FinalCtaSection";
 import { Sparkles, ShieldCheck } from "lucide-react";
+import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 
 export default function OfertaBetaPage() {
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function OfertaBetaPage() {
         <div className="mx-auto flex max-w-6xl items-center justify-center gap-2">
           <Sparkles className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
           <span>
-            <strong>Oferta Beta Fundadora:</strong> $247.000 COP Implementación + 2 meses de gestión mensual bonificados ($119.800 COP de ahorro) para nuevos empresarios.
+            <strong>Oferta Beta Fundadora:</strong> activación inicial por {PAYMENT_CONFIG.amount} + gestión mensual de {PAYMENT_CONFIG.monthlyFee}.
           </span>
         </div>
       </div>
