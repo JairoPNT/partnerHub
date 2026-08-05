@@ -27,8 +27,8 @@ export function IncludesSection() {
     },
     {
       icon: ShieldCheck,
-      title: "1.er Mes de Administración Incluido",
-      desc: "Gestión técnica y puesta en marcha cubierta durante todo tu primer mes de implementación.",
+      title: "Configuración y Puesta en Marcha",
+      desc: "Generación, publicación inicial y configuración operativa del Ecosistema de Producto dentro del alcance MVP.",
     },
     {
       icon: Headphones,

@@ -59,7 +59,7 @@ export function PaymentSection() {
                     Nota de financiamiento
                   </span>
                   <p className="mt-1 text-xs text-cyan-950 leading-relaxed">
-                    Si pagas con tarjeta de crédito por Wompi, puedes diferir la implementación <strong className="font-semibold">hasta en 3 cuotas</strong> según las condiciones de tu banco.
+                    Si pagas con tarjeta de crédito por Wompi, puedes diferir la activación <strong className="font-semibold">hasta en 3 cuotas</strong> según las condiciones de tu banco.
                   </p>
                 </div>
               </div>
