@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Líder de Bienestar & Mentor Comercial — Hub Oficial</title>
+  <meta name="description" content="Espacio profesional de mentoría, proyectos de bienestar y conexión directa con empresarios.">
+  
+  <!-- Open Graph -->
+  <meta property="og:type" content="profile">
+  <meta property="og:title" content="Líder de Bienestar & Mentor Comercial — Hub Oficial">
+  <meta property="og:description" content="Espacio profesional de mentoría, proyectos de bienestar y conexión directa con empresarios.">
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="favicon.svg">
+  
+  <!-- Stylesheet -->
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <div class="hub-wrapper">
+    
+    <!-- 1. Profile Block -->
+    <section class="profile-card" id="block-profile">
+      <div class="profile-cover" id="profile-cover">
+        <div class="profile-cover-overlay"></div>
+      </div>
+      <div class="profile-details">
+        <div class="avatar-wrapper">
+          <img id="profile-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80" alt="Avatar" class="avatar-img">
+        </div>
+        
+        <div class="profile-badge-pill" id="profile-badge">
+          Mentor Verificado
+        </div>
+
+        <h1 class="profile-name" id="profile-name">Nombre del Profesional</h1>
+        <p class="profile-headline" id="profile-headline">Emprendedor & Mentor de Negocios</p>
+        <p class="profile-bio" id="profile-bio">
+          Ayudo a personas y equipos a desbloquear su potencial combinando salud integral, hábitos conscientes y desarrollo de negocios escalables.
+        </p>
+        
+        <div class="profile-location" id="profile-location">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          <span>Colombia & Internacional</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 2. Bio / Quote Block -->
+    <section class="block-section" id="block-bio">
+      <div class="bio-quote-card">
+        <p class="bio-quote-text" id="bio-quote-text">
+          "El verdadero liderazgo no consiste en crear seguidores, sino en inspirar a nuevos líderes a transformar su entorno."
+        </p>
+        <p class="bio-experience-text" id="bio-exp-text">
+          +8 años liderando organizaciones comerciales y proyectos de salud adaptógena.
+        </p>
+      </div>
+    </section>
+
+    <!-- 3. Services / Business Projects Block (Max 4) -->
+    <section class="block-section" id="block-services">
+      <div class="block-header">
+        <h2 id="services-title">Proyectos & Mentorías</h2>
+        <p id="services-subtitle">Áreas en las que colaboro activamente</p>
+      </div>
+      <div class="services-grid" id="services-grid">
+        <!-- Renderizado dinámico desde config.js -->
+      </div>
+    </section>
+
+    <!-- 4. Links / Resources Block (Max 8) -->
+    <section class="block-section" id="block-links">
+      <div class="block-header">
+        <h2 id="links-title">Enlaces & Canales Oficiales</h2>
+        <p id="links-subtitle">Conéctate conmigo en mis diferentes plataformas</p>
+      </div>
+      <div class="links-stack" id="links-stack">
+        <!-- Renderizado dinámico desde config.js -->
+      </div>
+    </section>
+
+    <!-- 5. Events / Agenda Block (Max 6) -->
+    <section class="block-section" id="block-events">
+      <div class="block-header">
+        <h2 id="events-title">Próximos Eventos & Webinars</h2>
+        <p id="events-subtitle">Sesiones en vivo y encuentros presenciales</p>
+      </div>
+      <div class="events-stack" id="events-stack">
+        <!-- Renderizado dinámico desde config.js -->
+      </div>
+    </section>
+
+    <!-- 6. Contact Block -->
+    <section class="block-section" id="block-contact">
+      <div class="contact-card">
+        <h2 id="contact-title">¿Listo para conectar?</h2>
+        <a href="#" id="btn-contact-main" class="btn-contact-main">
+          <span>Conversar Directamente por WhatsApp</span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5 12h14M12 5l7 7-7 7"/>
+          </svg>
+        </a>
+        <a href="#" id="contact-email" class="contact-email-link">contacto@dominio.com</a>
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="hub-footer">
+      <p>© <span id="footer-year">2026</span> <span id="footer-brand-name">Hub Oficial</span> · Todos los derechos reservados</p>
+    </footer>
+
+  </div>
+
+  <!-- Configuration and Logic -->
+  <script src="config.js"></script>
+  <script src="app.js"></script>
+  <script>
+    document.getElementById('footer-year').textContent = new Date().getFullYear();
+  </script>
+</body>
+</html>

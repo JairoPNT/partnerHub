@@ -24,12 +24,16 @@ import {
   ProductPageVerificationResult
 } from "@/components/ui/verification-status-panel";
 
+export type EcosystemType = "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND";
+
 export interface ProductPageSite {
   siteId: string;
+  ecosystemType?: EcosystemType;
   configuration?: {
     brandName?: string;
     title?: string;
     domain?: string;
+    ecosystemType?: EcosystemType;
     site?: { domain?: string };
     [key: string]: unknown;
   } | null;
@@ -49,11 +53,21 @@ export interface ReplicationResponse {
   results: ReplicationResultItem[];
 }
 
+const EXCLUDED_MASTER_SITE_IDS = [
+  "ganomaster",
+  "ganomaster-business",
+  "ganomaster-personal-brand",
+  "ganomaster.pro"
+];
+
 export function MasterTemplateReplicationView() {
   const [sites, setSites] = useState<ProductPageSite[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Subpestañas por ecosistema (PH-032 / PH-033)
+  const [ecosystemTab, setEcosystemTab] = useState<"ALL" | EcosystemType>("ALL");
 
   // Selected siteIds for replication
   const [selectedSiteIds, setSelectedSiteIds] = useState<string[]>([]);
@@ -70,17 +84,27 @@ export function MasterTemplateReplicationView() {
         throw new Error("No se pudo cargar la lista de páginas de producto.");
       }
       const data = await res.json();
-      // Filtrar ganomaster y ganomaster.pro para que solo aparezcan como origen maestro, nunca como destino
-      const siteList: ProductPageSite[] = (data.sites || []).filter((site: ProductPageSite) => {
-        const domain = site.configuration?.site?.domain || site.configuration?.domain;
-        const normalizedSiteId = (site.siteId || "").toLowerCase();
-        const normalizedDomain = (domain || "").toLowerCase();
-        return (
-          normalizedSiteId !== "ganomaster" &&
-          normalizedSiteId !== "ganomaster.pro" &&
-          normalizedDomain !== "ganomaster.pro"
-        );
-      });
+      // Filtrar todos los sitios maestros para que solo aparezcan como origen, nunca como destino receptor
+      const siteList: ProductPageSite[] = (data.sites || [])
+        .filter((site: ProductPageSite) => {
+          const domain = site.configuration?.site?.domain || site.configuration?.domain;
+          const normalizedSiteId = (site.siteId || "").toLowerCase();
+          const normalizedDomain = (domain || "").toLowerCase();
+          return (
+            !EXCLUDED_MASTER_SITE_IDS.includes(normalizedSiteId) &&
+            !EXCLUDED_MASTER_SITE_IDS.includes(normalizedDomain)
+          );
+        })
+        .map((site: ProductPageSite) => {
+          const rawEco = site.ecosystemType || site.configuration?.ecosystemType;
+          const ecosystemType: EcosystemType =
+            rawEco === "BUSINESS" || rawEco === "PERSONAL_BRAND" ? rawEco : "PRODUCT";
+          return {
+            ...site,
+            ecosystemType
+          };
+        });
+
       setSites(siteList);
       // Default: select all loaded sites
       setSelectedSiteIds(siteList.map((s) => s.siteId));
@@ -109,11 +133,27 @@ export function MasterTemplateReplicationView() {
     );
   };
 
+  const productSitesCount = sites.filter((s) => s.ecosystemType === "PRODUCT").length;
+  const businessSitesCount = sites.filter((s) => s.ecosystemType === "BUSINESS").length;
+  const personalSitesCount = sites.filter((s) => s.ecosystemType === "PERSONAL_BRAND").length;
+
+  const filteredSites =
+    ecosystemTab === "ALL"
+      ? sites
+      : sites.filter((site) => site.ecosystemType === ecosystemTab);
+
+  const selectedInViewCount = filteredSites.filter((s) => selectedSiteIds.includes(s.siteId)).length;
+
   const handleToggleSelectAll = () => {
-    if (selectedSiteIds.length === sites.length) {
-      setSelectedSiteIds([]);
+    const currentViewIds = filteredSites.map((s) => s.siteId);
+    const allInViewSelected = currentViewIds.every((id) => selectedSiteIds.includes(id));
+
+    if (allInViewSelected) {
+      // Unselect all in current view
+      setSelectedSiteIds((prev) => prev.filter((id) => !currentViewIds.includes(id)));
     } else {
-      setSelectedSiteIds(sites.map((s) => s.siteId));
+      // Select all in current view
+      setSelectedSiteIds((prev) => Array.from(new Set([...prev, ...currentViewIds])));
     }
   };
 
@@ -156,6 +196,30 @@ export function MasterTemplateReplicationView() {
       setErrorMessage((err as Error).message);
     } finally {
       setIsReplicating(false);
+    }
+  };
+
+  const getEcosystemBadge = (eco?: EcosystemType) => {
+    switch (eco) {
+      case "BUSINESS":
+        return (
+          <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-bold text-indigo-800 border border-indigo-200">
+            Negocio (VSL)
+          </span>
+        );
+      case "PERSONAL_BRAND":
+        return (
+          <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
+            Marca Personal
+          </span>
+        );
+      case "PRODUCT":
+      default:
+        return (
+          <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-[10px] font-bold text-cyan-800 border border-cyan-200">
+            Producto
+          </span>
+        );
     }
   };
 
@@ -250,7 +314,7 @@ export function MasterTemplateReplicationView() {
                 Selección de Alcance para Replicación
               </h3>
               <p className="text-xs text-slate-500">
-                Selecciona individualmente los sitios o activa &quot;Todos los sitios&quot; ({sites.length} disponibles).
+                Filtra por ecosistema o selecciona los destinos ({filteredSites.length} visibles / {sites.length} totales).
               </p>
             </div>
           </div>
@@ -260,15 +324,15 @@ export function MasterTemplateReplicationView() {
             <button
               type="button"
               onClick={handleToggleSelectAll}
-              disabled={sites.length === 0}
+              disabled={filteredSites.length === 0}
               className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2 text-xs font-bold text-slate-700 hover:bg-slate-100 transition disabled:opacity-50"
             >
-              {selectedSiteIds.length === sites.length && sites.length > 0 ? (
+              {selectedInViewCount === filteredSites.length && filteredSites.length > 0 ? (
                 <CheckSquare className="h-4 w-4 text-cyan-600" />
               ) : (
                 <Square className="h-4 w-4 text-slate-400" />
               )}
-              <span>Todos los sitios ({sites.length})</span>
+              <span>Seleccionar visibles ({selectedInViewCount}/{filteredSites.length})</span>
             </button>
 
             <button
@@ -281,6 +345,77 @@ export function MasterTemplateReplicationView() {
               <span>Replicar Plantilla ({selectedSiteIds.length})</span>
             </button>
           </div>
+        </div>
+
+        {/* SUBPESTAÑAS DE FILTRO POR ECOSISTEMA (PH-032 / PH-033) */}
+        <div className="flex flex-wrap items-center gap-2 border-b border-slate-200 pb-3">
+          <button
+            type="button"
+            onClick={() => setEcosystemTab("ALL")}
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition flex items-center gap-2 ${
+              ecosystemTab === "ALL"
+                ? "bg-slate-900 text-white shadow-sm"
+                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+            }`}
+          >
+            <span>Todos los Ecosistemas</span>
+            <span className={`rounded-full px-2 py-0.2 text-[10px] font-bold ${
+              ecosystemTab === "ALL" ? "bg-slate-800 text-cyan-300" : "bg-slate-200 text-slate-700"
+            }`}>
+              {sites.length}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setEcosystemTab("PRODUCT")}
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition flex items-center gap-2 ${
+              ecosystemTab === "PRODUCT"
+                ? "bg-cyan-700 text-white shadow-sm"
+                : "bg-cyan-50 text-cyan-900 hover:bg-cyan-100 border border-cyan-200"
+            }`}
+          >
+            <span>Producto</span>
+            <span className={`rounded-full px-2 py-0.2 text-[10px] font-bold ${
+              ecosystemTab === "PRODUCT" ? "bg-cyan-900 text-cyan-200" : "bg-cyan-200/80 text-cyan-900"
+            }`}>
+              {productSitesCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setEcosystemTab("BUSINESS")}
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition flex items-center gap-2 ${
+              ecosystemTab === "BUSINESS"
+                ? "bg-indigo-700 text-white shadow-sm"
+                : "bg-indigo-50 text-indigo-900 hover:bg-indigo-100 border border-indigo-200"
+            }`}
+          >
+            <span>Negocio (VSL)</span>
+            <span className={`rounded-full px-2 py-0.2 text-[10px] font-bold ${
+              ecosystemTab === "BUSINESS" ? "bg-indigo-900 text-indigo-200" : "bg-indigo-200/80 text-indigo-900"
+            }`}>
+              {businessSitesCount}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setEcosystemTab("PERSONAL_BRAND")}
+            className={`rounded-xl px-3.5 py-1.5 text-xs font-bold transition flex items-center gap-2 ${
+              ecosystemTab === "PERSONAL_BRAND"
+                ? "bg-emerald-700 text-white shadow-sm"
+                : "bg-emerald-50 text-emerald-900 hover:bg-emerald-100 border border-emerald-200"
+            }`}
+          >
+            <span>Marca Personal</span>
+            <span className={`rounded-full px-2 py-0.2 text-[10px] font-bold ${
+              ecosystemTab === "PERSONAL_BRAND" ? "bg-emerald-900 text-emerald-200" : "bg-emerald-200/80 text-emerald-900"
+            }`}>
+              {personalSitesCount}
+            </span>
+          </button>
         </div>
 
         {/* CONFIRMATION DIALOG / BANNER */}
@@ -336,16 +471,26 @@ export function MasterTemplateReplicationView() {
         {isLoading ? (
           <div className="flex flex-col items-center justify-center p-12 text-slate-400 space-y-3">
             <RefreshCw className="h-8 w-8 animate-spin text-cyan-500" />
-            <p className="text-sm font-medium">Cargando páginas de producto para replicación...</p>
+            <p className="text-sm font-medium">Cargando páginas para replicación...</p>
           </div>
-        ) : sites.length === 0 ? (
-          <div className="p-12 text-center space-y-3">
+        ) : filteredSites.length === 0 ? (
+          <div className="p-12 text-center space-y-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50/50">
             <FileCode2 className="mx-auto h-12 w-12 text-slate-300" />
             <h3 className="text-base font-bold text-slate-900">
-              No hay sitios de producto guardados
+              {ecosystemTab === "ALL"
+                ? "No hay sitios registrados"
+                : `No hay sitios registrados en el ecosistema ${
+                    ecosystemTab === "PRODUCT"
+                      ? "Producto"
+                      : ecosystemTab === "BUSINESS"
+                      ? "Negocio (VSL)"
+                      : "Marca Personal"
+                  }`}
             </h3>
             <p className="text-xs text-slate-500 max-w-md mx-auto">
-              Aún no existen configuraciones de páginas de producto guardadas en el directorio de fuentes del servidor.
+              {ecosystemTab === "ALL"
+                ? "Aún no existen configuraciones de páginas guardadas en el servidor."
+                : `Los empresarios configurados con este ecosistema aparecerán automáticamente aquí para la replicación correspondiente.`}
             </p>
           </div>
         ) : (
@@ -355,6 +500,7 @@ export function MasterTemplateReplicationView() {
                 <tr>
                   <th className="py-3 px-4 w-10 text-center">Selección</th>
                   <th className="py-3 px-4 w-36">ID del Sitio</th>
+                  <th className="py-3 px-4 w-32">Ecosistema</th>
                   <th className="py-3 px-4">Dominio de Publicación</th>
                   <th className="py-3 px-4">Plantilla / Marca</th>
                   <th className="py-3 px-4 w-44">Estado de Verificación</th>
@@ -362,7 +508,7 @@ export function MasterTemplateReplicationView() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
-                {sites.map((site) => {
+                {filteredSites.map((site) => {
                   const isChecked = selectedSiteIds.includes(site.siteId);
                   const title = site.configuration?.brandName || site.configuration?.title || site.siteId;
                   const domain = site.configuration?.site?.domain || site.configuration?.domain;
@@ -389,6 +535,10 @@ export function MasterTemplateReplicationView() {
 
                         <td className="py-3.5 px-4 font-mono font-bold text-slate-900">
                           {site.siteId}
+                        </td>
+
+                        <td className="py-3.5 px-4">
+                          {getEcosystemBadge(site.ecosystemType)}
                         </td>
 
                         <td className="py-3.5 px-4 font-mono text-xs font-semibold">
@@ -430,7 +580,7 @@ export function MasterTemplateReplicationView() {
 
                       {hasFailedChecks && site.lastVerification?.checks && (
                         <tr className="bg-rose-50/40">
-                          <td colSpan={6} className="px-4 py-2">
+                          <td colSpan={7} className="px-4 py-2">
                             <div className="space-y-1.5">
                               <DeliveryGuardAlert status={site.lastVerification.status} />
                               <FailedChecksDetails checks={site.lastVerification.checks} />

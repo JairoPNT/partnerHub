@@ -22,7 +22,13 @@ import {
   Layers,
   CheckSquare,
   Square,
-  Play
+  Play,
+  ShoppingBag,
+  Video,
+  UserCheck,
+  Sparkles,
+  Clock,
+  Lock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -111,7 +117,10 @@ const INITIAL_MASTER_FORM: MasterFormState = {
 };
 
 export function MasterSiteManagementView({ record }: MasterSiteManagementViewProps) {
-  // Configuración fija del sitio maestro
+  // Pestaña de ecosistema activa (PH-032 / PH-033)
+  const [activeEcosystem, setActiveEcosystem] = useState<"PRODUCT" | "BUSINESS" | "PERSONAL_BRAND">("PRODUCT");
+
+  // Configuración fija del sitio maestro (Ecosistema Producto)
   const MASTER_SITE_ID = "ganomaster";
   const MASTER_DOMAIN = "ganomaster.pro";
 
@@ -482,7 +491,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
   return (
     <div className="space-y-8 animate-fade-in text-slate-900">
-      {/* HEADER DEL MÓDULO */}
+      {/* HEADER DEL MÓDULO CON SELECTOR DE ECOSISTEMA */}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex flex-wrap items-center gap-3">
@@ -490,33 +499,97 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
               {record?.group || "Operaciones"}
             </span>
             <span className="rounded-full border border-slate-200 px-3 py-1 text-xs font-bold uppercase tracking-wider text-slate-600">
-              Editor de Plantilla Maestra
+              Plantilla Maestra Multi-Ecosistema
             </span>
           </div>
 
-          <a
-            href="https://ganomaster.pro"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-xs font-bold text-white shadow transition"
-          >
-            <Globe className="h-4 w-4" />
-            <span>Abrir ganomaster.pro</span>
-            <ExternalLink className="h-3.5 w-3.5" />
-          </a>
+          {activeEcosystem === "PRODUCT" && (
+            <a
+              href="https://ganomaster.pro"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-xs font-bold text-white shadow transition"
+            >
+              <Globe className="h-4 w-4" />
+              <span>Abrir ganomaster.pro</span>
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
+          )}
         </div>
 
         <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
-          Editor de Plantilla Maestra (`ganomaster.pro`)
+          {activeEcosystem === "PRODUCT"
+            ? "Plantilla Maestra · Producto (ganomaster.pro)"
+            : activeEcosystem === "BUSINESS"
+            ? "Plantilla Maestra · Negocio (VSL y Oportunidad)"
+            : "Plantilla Maestra · Marca Personal (Bio y Enlaces)"}
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-          Edita la configuración de la plantilla maestra con identificador fijo <code className="font-mono font-bold text-cyan-600">ganomaster</code> y dominio <code className="font-mono font-bold text-cyan-600">ganomaster.pro</code>. Genera la vista previa y publícala antes de replicar a los clientes.
+          {activeEcosystem === "PRODUCT"
+            ? "Administración central de la plantilla maestra de producto con identificador ganomaster y dominio ganomaster.pro. Genera la vista previa y publícala antes de replicar a los clientes."
+            : activeEcosystem === "BUSINESS"
+            ? "Estructura maestra para páginas de presentación de negocio y prospección con video VSL. Permite presentar la oportunidad con llamada a acción directa a WhatsApp."
+            : "Estructura maestra de perfil personal y enlaces estilo Linktree enriquecido con bloques modulares de servicios, biografía y contacto directo."}
         </p>
+
+        {/* SELECTOR DE PESTAÑAS DE ECOSISTEMA */}
+        <div className="mt-6 flex border-b border-slate-200 gap-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => setActiveEcosystem("PRODUCT")}
+            className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition whitespace-nowrap ${
+              activeEcosystem === "PRODUCT"
+                ? "border-cyan-600 text-cyan-950 font-extrabold"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <ShoppingBag className="h-4 w-4 text-cyan-600" />
+            <span>Producto</span>
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
+              Activo · ganomaster.pro
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveEcosystem("BUSINESS")}
+            className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition whitespace-nowrap ${
+              activeEcosystem === "BUSINESS"
+                ? "border-cyan-600 text-cyan-950 font-extrabold"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <Video className="h-4 w-4 text-indigo-600" />
+            <span>Negocio (VSL)</span>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
+              En preparación
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveEcosystem("PERSONAL_BRAND")}
+            className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition whitespace-nowrap ${
+              activeEcosystem === "PERSONAL_BRAND"
+                ? "border-cyan-600 text-cyan-950 font-extrabold"
+                : "border-transparent text-slate-500 hover:text-slate-900"
+            }`}
+          >
+            <UserCheck className="h-4 w-4 text-emerald-600" />
+            <span>Marca personal</span>
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
+              En preparación
+            </span>
+          </button>
+        </div>
       </section>
 
-      {/* DASHBOARD DE ESTADO DEL MASTER */}
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
+      {/* CONTENIDO CONDICIONAL POR ECOSISTEMA */}
+      {activeEcosystem === "PRODUCT" ? (
+        <>
+          {/* DASHBOARD DE ESTADO DEL MASTER PRODUCTO */}
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3">
           <div className="flex items-center gap-3">
             <Globe className="h-6 w-6 text-cyan-600" />
             <div>
@@ -1211,6 +1284,236 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             ))}
           </div>
         </section>
+      )}
+        </>
+      ) : activeEcosystem === "BUSINESS" ? (
+        <div className="space-y-8 animate-fade-in">
+          {/* DASHBOARD DE ESTADO DEL MASTER NEGOCIO */}
+          <section className="rounded-3xl border border-indigo-200/80 bg-white p-6 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-100 pb-3">
+              <div className="flex items-center gap-3">
+                <Video className="h-6 w-6 text-indigo-600" />
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    Estado de Plantilla Maestra · Negocio (VSL)
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Ecosistema orientado a la presentación de oportunidad comercial con video VSL y calificación
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 border border-amber-200 inline-flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-amber-600" />
+                  En Preparación
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 text-xs">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Dominio Maestro</span>
+                <span className="font-extrabold font-mono text-slate-500 text-xs italic">
+                  Pendiente de asignación
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">siteId Reservado</span>
+                <span className="font-extrabold font-mono text-indigo-900 text-sm">
+                  ganomaster-business
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Ecosistema</span>
+                <span className="font-bold text-indigo-700 text-xs">
+                  Negocio / Oportunidad (VSL)
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Replicación</span>
+                <span className="font-bold text-slate-500 text-xs">
+                  Inactiva (Esperando contrato)
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900 space-y-1.5">
+              <div className="flex items-center gap-2 font-bold text-amber-950">
+                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                <span>Ecosistema en fase de definición técnica (PH-032 / PH-033)</span>
+              </div>
+              <p className="text-amber-800 text-[11px] leading-relaxed">
+                El master de Negocio (VSL) cuenta con identificador canónico reservado <code className="font-mono font-bold">ganomaster-business</code>. La publicación real y la replicación masiva se habilitarán una vez que el arquitecto asigne el dominio oficial y se complete el contrato de plantilla VSL (AGR-20260806-002).
+              </p>
+            </div>
+          </section>
+
+          {/* ARQUITECTURA DE PLANTILLA VSL */}
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Layers className="h-5 w-5 text-indigo-600" />
+              Estructura Planeada de la Plantilla Maestra VSL
+            </h3>
+            <p className="text-xs text-slate-600">
+              Componentes modulares que conformarán la página de oportunidad de negocio de cada empresario:
+            </p>
+
+            <div className="grid gap-4 sm:grid-cols-3 text-xs">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-indigo-900 font-bold">
+                  <Video className="h-4 w-4 text-indigo-600" />
+                  <span>Video Principal (VSL)</span>
+                </div>
+                <p className="text-slate-600 text-[11px]">
+                  Player optimizado con soporte para video de presentación, controles adaptados y llamado a acción temporizado.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-indigo-900 font-bold">
+                  <Sparkles className="h-4 w-4 text-indigo-600" />
+                  <span>Objeciones y Propuesta</span>
+                </div>
+                <p className="text-slate-600 text-[11px]">
+                  Módulos de valor sobre el modelo de negocio, respaldo corporativo, preguntas frecuentes y testimonios.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
+                <div className="flex items-center gap-2 text-indigo-900 font-bold">
+                  <Phone className="h-4 w-4 text-indigo-600" />
+                  <span>Captación WhatsApp</span>
+                </div>
+                <p className="text-slate-600 text-[11px]">
+                  Enrutamiento directo al WhatsApp internacional del empresario con mensaje preconfigurado de prospección.
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
+      ) : (
+        <div className="space-y-8 animate-fade-in">
+          {/* DASHBOARD DE ESTADO DEL MASTER MARCA PERSONAL */}
+          <section className="rounded-3xl border border-emerald-200/80 bg-white p-6 shadow-sm space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 pb-3">
+              <div className="flex items-center gap-3">
+                <UserCheck className="h-6 w-6 text-emerald-600" />
+                <div>
+                  <h2 className="text-base font-bold text-slate-900">
+                    Estado de Plantilla Maestra · Marca Personal
+                  </h2>
+                  <p className="text-xs text-slate-500">
+                    Ecosistema tipo bio-link enriquecido con bloques modulares de servicios, biografía y agenda
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 border border-amber-200 inline-flex items-center gap-1.5">
+                  <Clock className="h-3.5 w-3.5 text-amber-600" />
+                  En Preparación
+                </span>
+              </div>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 text-xs">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Dominio Maestro</span>
+                <span className="font-extrabold font-mono text-slate-500 text-xs italic">
+                  Pendiente de asignación
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">siteId Reservado</span>
+                <span className="font-extrabold font-mono text-emerald-900 text-sm">
+                  ganomaster-personal-brand
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Ecosistema</span>
+                <span className="font-bold text-emerald-700 text-xs">
+                  Marca Personal (Bio & Enlaces)
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Replicación</span>
+                <span className="font-bold text-slate-500 text-xs">
+                  Inactiva (Esperando contrato)
+                </span>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900 space-y-1.5">
+              <div className="flex items-center gap-2 font-bold text-amber-950">
+                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                <span>Ecosistema en fase de diseño de bloques (PH-032 / PH-033)</span>
+              </div>
+              <p className="text-amber-800 text-[11px] leading-relaxed">
+                El master de Marca Personal cuenta con identificador canónico reservado <code className="font-mono font-bold">ganomaster-personal-brand</code>. Los bloques modulares (Bio, Avatar en R2, Servicios, Redes Sociales y Enlaces Externos) y el preview interactivo se implementarán en el request AGR-20260806-003.
+              </p>
+            </div>
+          </section>
+
+          {/* ARQUITECTURA DE BLOQUES DE MARCA PERSONAL */}
+          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
+            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+              <Layers className="h-5 w-5 text-emerald-600" />
+              Bloques Modulares de Marca Personal
+            </h3>
+            <p className="text-xs text-slate-600">
+              Estructura fija con activación de bloques independientes y temas visuales curados (PH-025):
+            </p>
+
+            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 text-xs">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold">
+                  <User className="h-4 w-4 text-emerald-600" />
+                  <span>Perfil & Biografía</span>
+                </div>
+                <p className="text-slate-600 text-[11px]">
+                  Foto de perfil en R2, nombre, título profesional y propuesta de valor personal.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold">
+                  <Sparkles className="h-4 w-4 text-emerald-600" />
+                  <span>Servicios / Negocios</span>
+                </div>
+                <p className="text-slate-600 text-[11px]">
+                  Tarjetas de productos o proyectos destacados con descripción y enlace directo.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold">
+                  <Globe className="h-4 w-4 text-emerald-600" />
+                  <span>Enlaces & Redes</span>
+                </div>
+                <p className="text-slate-600 text-[11px]">
+                  Botones estilizados para Instagram, TikTok, LinkedIn, YouTube y sitios web externos.
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
+                <div className="flex items-center gap-2 text-emerald-900 font-bold">
+                  <Phone className="h-4 w-4 text-emerald-600" />
+                  <span>Contacto Directo</span>
+                </div>
+                <p className="text-slate-600 text-[11px]">
+                  Botón principal de WhatsApp con mensaje personalizado y seguimiento GA4.
+                </p>
+              </div>
+            </div>
+          </section>
+        </div>
       )}
     </div>
   );
