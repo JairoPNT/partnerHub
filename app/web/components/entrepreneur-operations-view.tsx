@@ -25,7 +25,9 @@ import {
   UserPlus,
   Copy,
   Save,
-  Sparkles
+  Sparkles,
+  Lock,
+  Layers
 } from "lucide-react";
 import { FontSelector, PaletteSelector } from "@/components/ui/theme-selectors";
 import { FontPreset, PalettePreset } from "@/lib/theme-presets";
@@ -40,6 +42,7 @@ import { VerificationBadge,
 import { ModalPortal } from "@/components/ui/modal-portal";
 
 export type ActivationLeadStatus = "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
+export type EcosystemType = "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND";
 
 export interface ReferralCodeRecord {
   siteId: string;
@@ -90,6 +93,7 @@ export interface ActivationLeadRecord {
   email: string | null;
   brandName: string;
   mainProduct?: string;
+  ecosystemType?: EcosystemType;
   referrerCode: string | null;
   paymentMethod: "wompi" | "direct";
   termsAccepted: boolean;
@@ -2092,12 +2096,9 @@ export function EntrepreneurOperationsView() {
                               Código Propio para Compartir
                             </span>
                             {ownCodeRecord ? (
-                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                ownCodeRecord.siteId.startsWith("ref-")
-                                  ? "bg-amber-100 text-amber-800 border border-amber-200"
-                                  : "bg-emerald-100 text-emerald-800 border border-emerald-200"
-                              }`}>
-                                {ownCodeRecord.siteId.startsWith("ref-") ? "Provisional" : "Activo"}
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
+                                <Lock className="h-3 w-3 text-emerald-700" />
+                                {ownCodeRecord.siteId.startsWith("ref-") ? "Provisional (Bloqueado)" : "Asignado y Bloqueado"}
                               </span>
                             ) : (
                               <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
@@ -2109,8 +2110,9 @@ export function EntrepreneurOperationsView() {
                           {ownCodeRecord && !isEditingCode ? (
                             <div className="space-y-2">
                               <div className="flex items-center gap-2">
-                                <div className="flex-1 rounded-xl border border-cyan-200 bg-white px-3 py-2 font-mono text-base font-bold text-cyan-950 tracking-wider">
-                                  {ownCodeRecord.code}
+                                <div className="flex-1 rounded-xl border border-cyan-200 bg-white px-3 py-2 font-mono text-base font-bold text-cyan-950 tracking-wider flex items-center justify-between">
+                                  <span>{ownCodeRecord.code}</span>
+                                  <Lock className="h-4 w-4 text-cyan-600/70" />
                                 </div>
                                 <button
                                   type="button"
@@ -2140,9 +2142,10 @@ export function EntrepreneurOperationsView() {
                                     setIsEditingCode(true);
                                     setCodeAssignInput(ownCodeRecord.code);
                                   }}
-                                  className="text-[11px] font-bold text-cyan-700 hover:underline"
+                                  className="text-[11px] font-bold text-slate-500 hover:text-cyan-700 underline flex items-center gap-1"
                                 >
-                                  Modificar
+                                  <Lock className="h-3 w-3" />
+                                  <span>Desbloquear y modificar</span>
                                 </button>
                               </div>
                             </div>
@@ -2162,7 +2165,7 @@ export function EntrepreneurOperationsView() {
                                   onClick={() => handleAssignEntrepreneurCode(selectedLead.siteId!, selectedLead.brandName || selectedLead.fullName)}
                                   className="rounded-xl bg-cyan-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-cyan-500 transition disabled:opacity-50"
                                 >
-                                  {isAssigningCode ? "Guardando..." : ownCodeRecord ? "Actualizar" : "Asignar"}
+                                  {isAssigningCode ? "Guardando..." : ownCodeRecord ? "Guardar y Bloquear" : "Asignar"}
                                 </button>
                                 {isEditingCode && (
                                   <button
@@ -2195,12 +2198,9 @@ export function EntrepreneurOperationsView() {
                               Invitado Por (Referente)
                             </span>
                             {selectedLead.referrerCode ? (
-                              <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${
-                                inviterCodeRecord?.siteId.startsWith("ref-")
-                                  ? "bg-amber-100 text-amber-800 border border-amber-200"
-                                  : "bg-cyan-100 text-cyan-800 border border-cyan-200"
-                              }`}>
-                                {inviterCodeRecord?.siteId.startsWith("ref-") ? "Invitador Provisional" : "Registrado"}
+                              <span className="inline-flex items-center gap-1 rounded-full bg-cyan-100 px-2 py-0.5 text-[10px] font-bold text-cyan-800 border border-cyan-200">
+                                <Lock className="h-3 w-3 text-cyan-700" />
+                                Inmutable (Bloqueado)
                               </span>
                             ) : (
                               <span className="rounded-full bg-slate-200 px-2 py-0.5 text-[10px] font-bold text-slate-600">
@@ -2212,8 +2212,9 @@ export function EntrepreneurOperationsView() {
                           {selectedLead.referrerCode ? (
                             <div className="space-y-1.5">
                               <div className="flex items-center gap-2">
-                                <span className="font-mono text-sm font-bold text-slate-900">
-                                  {selectedLead.referrerCode}
+                                <span className="font-mono text-sm font-bold text-slate-900 flex items-center gap-1.5">
+                                  <span>{selectedLead.referrerCode}</span>
+                                  <Lock className="h-3.5 w-3.5 text-slate-400" />
                                 </span>
                                 {inviterReferralRecord && (
                                   <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${

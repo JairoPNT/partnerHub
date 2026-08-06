@@ -31,6 +31,7 @@ import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@
 import { ModuleRecord } from "@/modules/catalog";
 import { EntrepreneurOperationsView } from "@/components/entrepreneur-operations-view";
 import { MasterTemplateReplicationView } from "@/components/master-template-replication-view";
+import { ModalPortal } from "@/components/ui/modal-portal";
 
 type PartnersReferralsViewProps = {
   record?: ModuleRecord;
@@ -85,6 +86,10 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Modal para operaciones de código / registro manual
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<"ASSIGN_CODE" | "REGISTER_REFERRAL">("ASSIGN_CODE");
 
   // Form 1: Assign Code State
   const [assignForm, setAssignForm] = useState({
@@ -473,118 +478,217 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
         </div>
       </Card>
 
-      {/* Formulario Doble (Grid 2 Columnas) */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Formulario 1: Asignar Código de Empresario */}
-        <Card>
-          <CardHeader>
+      {/* BARRA DE REGLAS Y ACCIONES DE PROGRAMA DE REFERIDOS */}
+      <Card className="p-6 border-slate-200 bg-white">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="space-y-1">
             <div className="flex items-center gap-2">
-              <UserPlus className="h-5 w-5 text-cyan-600" />
-              <CardTitle>1. Asignar Código a Empresario</CardTitle>
+              <Tag className="h-4 w-4 text-cyan-600" />
+              <h4 className="text-sm font-bold text-slate-900">
+                Regla de Bonificación Oficial
+              </h4>
             </div>
-            <CardDescription>
-              Asocia un código de invitación único al slug del sitio de un empresario.
-            </CardDescription>
-          </CardHeader>
+            <p className="text-xs text-slate-600">
+              <strong className="text-cyan-900 font-bold">1 mes de mantenimiento gratis</strong> por cada <strong>2 referidos calificados efectivos</strong>. Las operaciones manuales se gestionan de forma controlada.
+            </p>
+          </div>
 
-          <CardContent>
-            <form onSubmit={handleAssignCodeSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="assignSiteId">ID de Sitio del Empresario (Slug) *</Label>
-                <Input
-                  id="assignSiteId"
-                  placeholder="ej. dorian-higuita"
-                  value={assignForm.siteId}
-                  onChange={(e) => setAssignForm((prev) => ({ ...prev, siteId: e.target.value }))}
-                />
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setModalMode("ASSIGN_CODE");
+                setIsModalOpen(true);
+              }}
+              leftIcon={<PlusCircle className="h-4 w-4 text-cyan-600" />}
+              className="text-xs"
+            >
+              Asignar Código Manual
+            </Button>
+
+            <Button
+              type="button"
+              variant="primary"
+              onClick={() => {
+                setModalMode("REGISTER_REFERRAL");
+                setIsModalOpen(true);
+              }}
+              leftIcon={<UserPlus className="h-4 w-4" />}
+              className="text-xs"
+            >
+              Registrar Referido Manual
+            </Button>
+          </div>
+        </div>
+      </Card>
+
+      {/* MODAL PARA ASIGNACIÓN / REGISTRO DE REFERIDOS */}
+      {isModalOpen && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm animate-in fade-in">
+            <div className="w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-5 animate-in zoom-in-95">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div className="flex items-center gap-2.5">
+                  {modalMode === "ASSIGN_CODE" ? (
+                    <UserPlus className="h-5 w-5 text-cyan-600" />
+                  ) : (
+                    <Users className="h-5 w-5 text-cyan-600" />
+                  )}
+                  <h3 className="text-base font-bold text-slate-900">
+                    {modalMode === "ASSIGN_CODE"
+                      ? "Asignar Código a Empresario"
+                      : "Registrar Nuevo Referido"}
+                  </h3>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  className="rounded-xl p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
               </div>
 
-              <div>
-                <Label htmlFor="assignDisplayName">Nombre del Empresario *</Label>
-                <Input
-                  id="assignDisplayName"
-                  placeholder="ej. Nombre del empresario"
-                  value={assignForm.displayName}
-                  onChange={(e) => setAssignForm((prev) => ({ ...prev, displayName: e.target.value }))}
-                />
+              {/* Subtabs to toggle inside modal */}
+              <div className="flex gap-2 rounded-xl bg-slate-100 p-1 text-xs font-semibold">
+                <button
+                  type="button"
+                  onClick={() => setModalMode("ASSIGN_CODE")}
+                  className={`flex-1 rounded-lg py-2 transition ${
+                    modalMode === "ASSIGN_CODE"
+                      ? "bg-white text-slate-900 shadow-sm font-bold"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Asignar Código
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModalMode("REGISTER_REFERRAL")}
+                  className={`flex-1 rounded-lg py-2 transition ${
+                    modalMode === "REGISTER_REFERRAL"
+                      ? "bg-white text-slate-900 shadow-sm font-bold"
+                      : "text-slate-600 hover:text-slate-900"
+                  }`}
+                >
+                  Registrar Referido
+                </button>
               </div>
 
-              <div>
-                <Label htmlFor="assignCode">Código de Invitación *</Label>
-                <Input
-                  id="assignCode"
-                  placeholder="ej. JP94536693"
-                  value={assignForm.code}
-                  onChange={(e) => setAssignForm((prev) => ({ ...prev, code: e.target.value }))}
-                  className="font-mono uppercase"
-                />
-              </div>
+              {modalMode === "ASSIGN_CODE" ? (
+                <form
+                  onSubmit={async (e) => {
+                    await handleAssignCodeSubmit(e);
+                    setIsModalOpen(false);
+                  }}
+                  className="space-y-4 text-xs"
+                >
+                  <div>
+                    <Label htmlFor="assignSiteId">ID de Sitio del Empresario (Slug) *</Label>
+                    <Input
+                      id="assignSiteId"
+                      placeholder="ej. dorian-higuita"
+                      value={assignForm.siteId}
+                      onChange={(e) => setAssignForm((prev) => ({ ...prev, siteId: e.target.value }))}
+                    />
+                  </div>
 
-              <Button
-                type="submit"
-                variant="primary"
-                className="w-full mt-2"
-                isLoading={isAssigning}
-                leftIcon={<PlusCircle className="h-4 w-4" />}
-              >
-                Asignar Código
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
+                  <div>
+                    <Label htmlFor="assignDisplayName">Nombre del Empresario *</Label>
+                    <Input
+                      id="assignDisplayName"
+                      placeholder="ej. Dorian Higuita"
+                      value={assignForm.displayName}
+                      onChange={(e) => setAssignForm((prev) => ({ ...prev, displayName: e.target.value }))}
+                    />
+                  </div>
 
-        {/* Formulario 2: Registrar un Referido */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <Users className="h-5 w-5 text-cyan-600" />
-              <CardTitle>2. Registrar Nuevo Referido</CardTitle>
+                  <div>
+                    <Label htmlFor="assignCode">Código de Invitación *</Label>
+                    <Input
+                      id="assignCode"
+                      placeholder="ej. JP94536693"
+                      value={assignForm.code}
+                      onChange={(e) => setAssignForm((prev) => ({ ...prev, code: e.target.value }))}
+                      className="font-mono uppercase"
+                    />
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setIsModalOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      isLoading={isAssigning}
+                      leftIcon={<PlusCircle className="h-4 w-4" />}
+                    >
+                      Asignar y Guardar
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <form
+                  onSubmit={async (e) => {
+                    await handleRegisterReferralSubmit(e);
+                    setIsModalOpen(false);
+                  }}
+                  className="space-y-4 text-xs"
+                >
+                  <div>
+                    <Label htmlFor="referredSiteId">ID de Sitio del Nuevo Referido (Slug) *</Label>
+                    <Input
+                      id="referredSiteId"
+                      placeholder="ej. jenny-varela"
+                      value={referralForm.referredSiteId}
+                      onChange={(e) => setReferralForm((prev) => ({ ...prev, referredSiteId: e.target.value }))}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="referrerCode">Código del Empresario Invitador *</Label>
+                    <Input
+                      id="referrerCode"
+                      placeholder="ej. JP94536693"
+                      value={referralForm.referrerCode}
+                      onChange={(e) => setReferralForm((prev) => ({ ...prev, referrerCode: e.target.value }))}
+                      className="font-mono uppercase"
+                    />
+                  </div>
+
+                  <p className="text-[11px] text-slate-500 leading-relaxed bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+                    Si el código no está asignado previamente, el registro quedará en estado <strong>PENDING</strong> para su posterior validación.
+                  </p>
+
+                  <div className="pt-2 flex items-center justify-end gap-2">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setIsModalOpen(false)}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      isLoading={isRegistering}
+                      leftIcon={<ArrowRight className="h-4 w-4" />}
+                    >
+                      Registrar Referido
+                    </Button>
+                  </div>
+                </form>
+              )}
             </div>
-            <CardDescription>
-              Vincula un nuevo sitio referido con el código del empresario invitador.
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <form onSubmit={handleRegisterReferralSubmit} className="space-y-4">
-              <div>
-                <Label htmlFor="referredSiteId">ID de Sitio del Nuevo Referido (Slug) *</Label>
-                <Input
-                  id="referredSiteId"
-                  placeholder="ej. jenny-varela"
-                  value={referralForm.referredSiteId}
-                  onChange={(e) => setReferralForm((prev) => ({ ...prev, referredSiteId: e.target.value }))}
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="referrerCode">Código del Empresario Invitador *</Label>
-                <Input
-                  id="referrerCode"
-                  placeholder="ej. JP94536693"
-                  value={referralForm.referrerCode}
-                  onChange={(e) => setReferralForm((prev) => ({ ...prev, referrerCode: e.target.value }))}
-                  className="font-mono uppercase"
-                />
-              </div>
-
-              <p className="text-[11px] text-slate-400 leading-relaxed">
-                Si el código no está asignado previamente, el registro no se bloqueará y quedará en estado <strong>PENDING</strong> para su posterior validación.
-              </p>
-
-              <Button
-                type="submit"
-                variant="outline"
-                className="w-full mt-2"
-                isLoading={isRegistering}
-                leftIcon={<ArrowRight className="h-4 w-4" />}
-              >
-                Registrar Referido
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </ModalPortal>
+      )}
 
       {/* Diálogo / Confirmación de Cambio de Estado */}
       {confirmation && (
