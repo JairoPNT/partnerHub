@@ -46,6 +46,7 @@ import {
   ProductPageSiteSummary
 } from "@/components/ui/verification-status-panel";
 import { ProductPageHistoryPanel } from "@/components/product-page-history-panel";
+import { PersonalBrandBlocksView } from "@/components/personal-brand-blocks-view";
 
 type MasterSiteManagementViewProps = {
   record?: ModuleRecord;
@@ -1397,122 +1398,8 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         </div>
       ) : (
         <div className="space-y-8 animate-fade-in">
-          {/* DASHBOARD DE ESTADO DEL MASTER MARCA PERSONAL */}
-          <section className="rounded-3xl border border-emerald-200/80 bg-white p-6 shadow-sm space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-emerald-100 pb-3">
-              <div className="flex items-center gap-3">
-                <UserCheck className="h-6 w-6 text-emerald-600" />
-                <div>
-                  <h2 className="text-base font-bold text-slate-900">
-                    Estado de Plantilla Maestra · Marca Personal
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Ecosistema tipo bio-link enriquecido con bloques modulares de servicios, biografía y agenda
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 border border-amber-200 inline-flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-amber-600" />
-                  En Preparación
-                </span>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 text-xs">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-                <span className="text-slate-400 font-bold text-[10px] uppercase block">Dominio Maestro</span>
-                <span className="font-extrabold font-mono text-slate-500 text-xs italic">
-                  Pendiente de asignación
-                </span>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-                <span className="text-slate-400 font-bold text-[10px] uppercase block">siteId Reservado</span>
-                <span className="font-extrabold font-mono text-emerald-900 text-sm">
-                  ganomaster-personal-brand
-                </span>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-                <span className="text-slate-400 font-bold text-[10px] uppercase block">Ecosistema</span>
-                <span className="font-bold text-emerald-700 text-xs">
-                  Marca Personal (Bio & Enlaces)
-                </span>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-                <span className="text-slate-400 font-bold text-[10px] uppercase block">Replicación</span>
-                <span className="font-bold text-slate-500 text-xs">
-                  Inactiva (Esperando contrato)
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900 space-y-1.5">
-              <div className="flex items-center gap-2 font-bold text-amber-950">
-                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                <span>Ecosistema en fase de diseño de bloques (PH-032 / PH-033)</span>
-              </div>
-              <p className="text-amber-800 text-[11px] leading-relaxed">
-                El master de Marca Personal cuenta con identificador canónico reservado <code className="font-mono font-bold">ganomaster-personal-brand</code>. Los bloques modulares (Bio, Avatar en R2, Servicios, Redes Sociales y Enlaces Externos) y el preview interactivo se implementarán en el request AGR-20260806-003.
-              </p>
-            </div>
-          </section>
-
-          {/* ARQUITECTURA DE BLOQUES DE MARCA PERSONAL */}
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Layers className="h-5 w-5 text-emerald-600" />
-              Bloques Modulares de Marca Personal
-            </h3>
-            <p className="text-xs text-slate-600">
-              Estructura fija con activación de bloques independientes y temas visuales curados (PH-025):
-            </p>
-
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 text-xs">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
-                <div className="flex items-center gap-2 text-emerald-900 font-bold">
-                  <User className="h-4 w-4 text-emerald-600" />
-                  <span>Perfil & Biografía</span>
-                </div>
-                <p className="text-slate-600 text-[11px]">
-                  Foto de perfil en R2, nombre, título profesional y propuesta de valor personal.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
-                <div className="flex items-center gap-2 text-emerald-900 font-bold">
-                  <Sparkles className="h-4 w-4 text-emerald-600" />
-                  <span>Servicios / Negocios</span>
-                </div>
-                <p className="text-slate-600 text-[11px]">
-                  Tarjetas de productos o proyectos destacados con descripción y enlace directo.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
-                <div className="flex items-center gap-2 text-emerald-900 font-bold">
-                  <Globe className="h-4 w-4 text-emerald-600" />
-                  <span>Enlaces & Redes</span>
-                </div>
-                <p className="text-slate-600 text-[11px]">
-                  Botones estilizados para Instagram, TikTok, LinkedIn, YouTube y sitios web externos.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-1.5">
-                <div className="flex items-center gap-2 text-emerald-900 font-bold">
-                  <Phone className="h-4 w-4 text-emerald-600" />
-                  <span>Contacto Directo</span>
-                </div>
-                <p className="text-slate-600 text-[11px]">
-                  Botón principal de WhatsApp con mensaje personalizado y seguimiento GA4.
-                </p>
-              </div>
-            </div>
-          </section>
+          {/* EDITOR MODULAR DE BLOQUES Y LIVE PREVIEW DE MARCA PERSONAL (AGR-20260806-003) */}
+          <PersonalBrandBlocksView />
         </div>
       )}
     </div>
