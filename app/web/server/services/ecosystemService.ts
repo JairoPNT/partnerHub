@@ -43,11 +43,10 @@ export function getMasterSiteDirectoryName(ecosystemType?: unknown) {
 }
 
 export function getMasterEcosystemType(siteId: string): EcosystemType | null {
-  const entry = Object.entries(MASTER_SITE_IDS).find(([, masterSiteId]) => masterSiteId === siteId);
-  return entry ? (entry[0] as EcosystemType) : null;
+  return ecosystemTypeSchema.options.find((type) => MASTER_SITE_IDS[type] === siteId) ?? null;
 }
 
-export function getMasterSiteDomainBySiteId(siteId: string) {
+export function getMasterSiteDomainBySiteId(siteId: string): string | null {
   const ecosystemType = getMasterEcosystemType(siteId);
   return ecosystemType ? getMasterSiteDomain(ecosystemType) : null;
 }

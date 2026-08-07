@@ -237,10 +237,13 @@ export function PersonalBrandBlocksView() {
       {/* Header y Control de Modo */}
       <div className="flex flex-wrap items-center justify-between gap-4 rounded-3xl border border-emerald-200/80 bg-gradient-to-r from-emerald-50/50 via-white to-slate-50 p-6 shadow-sm">
         <div className="space-y-1">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-bold text-emerald-800 border border-emerald-200">
               <Layers className="h-3.5 w-3.5 text-emerald-600" />
               Ecosistema Marca Personal
+            </span>
+            <span className="rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-mono font-bold text-emerald-700 border border-emerald-200">
+              brand.ganomaster.pro
             </span>
             <span className="text-xs font-mono font-bold text-slate-400">
               siteId: ganomaster-personal-brand
