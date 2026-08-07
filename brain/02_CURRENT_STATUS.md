@@ -4,7 +4,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Ticket
 
-`PH-020 - Publicacion verificada`
+`PH-038A - Domain inventory read model API (completed)`
 
 ## Status Summary
 
@@ -84,4 +84,6 @@ On 2026-08-01 Codex audited and stabilized the 2026-07-31 Antigravity change set
 
 ## Next Step
 
-Run one 0-to-100 operational test with `jairopinto.pro` before adding new features or loading more clients.
+PH-038A is closed with Cloudflare Access-protected `GET /api/internal/domains`. It returns three canonical masters plus only real legacy or explicit partner entries, with operational states kept separate and infrastructure details omitted. Three focused tests, targeted lint, and build pass. `AGR-20260807-002` is ready for Antigravity as a read-only frontend task. PH-038B may proceed in parallel as the separate restricted DNS diagnostic backend ticket.
+
+The broader queue is documented in `brain/PH-036_INCREMENTAL_MULTI_ECOSYSTEM_OPERATIONS_PLAN.md`. Subdomain automation (`PH-036`) and logo media handling (`PH-037`) are independent streams and must not be combined into a mega-task.

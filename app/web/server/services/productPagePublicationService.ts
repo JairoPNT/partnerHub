@@ -17,6 +17,7 @@ import {
   type ProductPageVerificationCheck
 } from "@/server/services/productPageVerificationService";
 import { productPageHistoryService } from "@/server/services/productPageHistoryService";
+import { resolvePublicationTargetForSite } from "@/server/services/publicationTargetService";
 
 const siteIdSchema = z
   .string()
@@ -224,7 +225,9 @@ export const productPagePublicationService = {
   async publish(input: ProductPagePublicationInput): Promise<ProductPagePublicationResult> {
     const configuration = getSftpConfiguration();
     const localDirectory = resolveInsideDirectory(getOutputRoot(), input.siteId);
-    const remoteRoot = await getRemoteRoot(configuration, input.siteId);
+    const legacyRemoteRoot = await getRemoteRoot(configuration, input.siteId);
+    const publicationTarget = await resolvePublicationTargetForSite(input.siteId, legacyRemoteRoot);
+    const remoteRoot = publicationTarget.remoteRoot;
 
     try {
       await access(localDirectory);

@@ -10,6 +10,8 @@ import { productPageHistoryService } from "@/server/services/productPageHistoryS
 import { productPageGenerationInputSchema } from "@/server/services/productPageGenerationService";
 import { getMasterSiteDomainBySiteId } from "@/server/services/ecosystemService";
 import { productPageSourceService } from "@/server/services/productPageSourceService";
+import { getPublishingTarget } from "@/server/services/subdomainProvisioningService";
+import { resolveVerificationHost } from "@/server/services/publicationTargetResolver";
 
 const siteIdSchema = z
   .string()
@@ -206,7 +208,8 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
 
   const expected = productPageGenerationInputSchema.parse(source);
   const expectedDomain = getMasterSiteDomainBySiteId(parsed.siteId) ?? expected.site.domain ?? null;
-  const domain = expectedDomain;
+  const publishingTarget = await getPublishingTarget(parsed.siteId);
+  const domain = resolveVerificationHost(expectedDomain, publishingTarget);
 
   if (!domain) {
     const result: ProductPageVerificationResult = {
