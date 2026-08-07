@@ -1,4 +1,4 @@
-﻿# Decisions
+# Decisions
 
 ## Decision 1: Local Brain As Operational Memory
 
@@ -138,3 +138,14 @@ Implication:
 - annual domain and hosting renewal is not included in monthly management and must be charged separately as a renewal/reactivation fee
 - personalization, AI video, video editing, advertising campaigns, and social media publishing are separate services
 - referral credits remain valid as monthly management credits and apply to the referrer's active plan price
+
+## Decision 14: Subdomain Architecture and Showcase Hub for Multi-Ecosystem Masters
+
+Each master ecosystem operates on its own dedicated subdomain under `ganomaster.pro` (`product.ganomaster.pro`, `business.ganomaster.pro`, `brand.ganomaster.pro`), while the apex domain `ganomaster.pro` serves as an interactive showcase and ecosystem demonstrator (documented in `brain/PH-034_MASTER_SHOWCASE_AND_SUBDOMAIN_ARCHITECTURE.md`).
+
+Implication:
+
+- zero blast radius between templates: modifying one ecosystem does not impact the others
+- future template types (events, catalog, webinars) can scale on their own subdomains seamlessly
+- the root domain `ganomaster.pro` becomes an interactive commercial demo hub for PartnerHub
+

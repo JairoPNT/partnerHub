@@ -7,6 +7,7 @@ import { resolve } from "node:path";
 import { z } from "zod";
 
 import { manualReferralService } from "@/server/services/manualReferralService";
+import { DEFAULT_ECOSYSTEM_TYPE, ecosystemTypeSchema, normalizeEcosystemType } from "@/server/services/ecosystemService";
 
 const siteIdSchema = z
   .string()
@@ -30,7 +31,8 @@ export const activationLeadSchema = z.object({
   referrerCode: referralCodeSchema.optional().nullable(),
   referrerName: z.string().trim().min(2).max(120).optional().nullable(),
   paymentMethod: z.enum(["wompi", "direct"]),
-  termsAccepted: z.literal(true)
+  termsAccepted: z.literal(true),
+  ecosystemType: ecosystemTypeSchema.default(DEFAULT_ECOSYSTEM_TYPE)
 });
 
 export const onboardingDataSchema = z.object({
@@ -111,6 +113,7 @@ export const updateActivationLeadSchema = z.object({
   referrerCode: referralCodeSchema.optional().nullable(),
   referrerName: z.string().trim().min(2).max(120).nullable().optional(),
   paymentMethod: z.enum(["wompi", "direct"]).optional(),
+  ecosystemType: ecosystemTypeSchema.optional(),
   onboardingData: editableOnboardingDataSchema.optional()
 });
 
@@ -212,6 +215,7 @@ async function createInternal(input: z.infer<typeof internalActivationLeadCreate
     referrerName: parsed.referrerName ?? null,
     paymentMethod: parsed.paymentMethod,
     termsAccepted: parsed.termsAccepted,
+    ecosystemType: parsed.ecosystemType,
     id: randomUUID(),
     status: parsed.status,
     recordState: "ACTIVE",
@@ -299,6 +303,7 @@ async function linkSite(id: string, input: z.infer<typeof linkActivationLeadSche
   const existing = leads.find((lead) => lead.id === id);
 
   if (!existing) throw new Error(`Activation lead ${id} was not found.`);
+
   if (existing.siteId && existing.siteId !== parsed.siteId) {
     throw new Error(`Activation lead ${id} is already linked to ${existing.siteId}.`);
   }
@@ -336,7 +341,18 @@ async function updateStatus(id: string, input: z.infer<typeof updateActivationLe
   const leads = await readLeads();
   const existing = leads.find((lead) => lead.id === id);
 
-  if (!existing) throw new Error(`Activation lead ${id} was not found.`);
+  if (!existing) throw new Error(`Activation lead ${id} was not found`);
+  const existingEcosystemType = normalizeEcosystemType(existing.ecosystemType);
+  if (parsed.ecosystemType && parsed.ecosystemType !== existingEcosystemType && existing.siteId) {
+    throw new Error("Ecosystem type cannot change after site linking.");
+  }
+  if (existing.referrerCode && parsed.referrerCode !== undefined && parsed.referrerCode !== existing.referrerCode) {
+    throw new Error("Referral code cannot be changed after assignment.");
+  }
+  if (existing.referrerName && parsed.referrerName !== undefined && parsed.referrerName !== existing.referrerName) {
+    throw new Error("Referrer name cannot be changed after assignment.");
+  }
+
 
   const hasEditableField = Object.keys(parsed).some((key) => key !== "status");
   if (!parsed.status && !hasEditableField) {
@@ -351,9 +367,10 @@ async function updateStatus(id: string, input: z.infer<typeof updateActivationLe
     email: parsed.email === undefined ? existing.email : parsed.email,
     brandName: parsed.brandName ?? existing.brandName,
     mainProduct: parsed.mainProduct ?? existing.mainProduct,
-    referrerCode: parsed.referrerCode === undefined ? existing.referrerCode : parsed.referrerCode,
-    referrerName: parsed.referrerName === undefined ? existing.referrerName : parsed.referrerName,
+    referrerCode: existing.referrerCode ?? parsed.referrerCode,
+    referrerName: existing.referrerName ?? parsed.referrerName,
     paymentMethod: parsed.paymentMethod ?? existing.paymentMethod,
+    ecosystemType: parsed.ecosystemType ?? existingEcosystemType,
     onboardingData: parsed.onboardingData
       ? { ...existing.onboardingData, ...parsed.onboardingData }
       : existing.onboardingData,
@@ -379,6 +396,7 @@ async function updateRecordState(id: string, recordState: z.infer<typeof activat
   const existing = leads.find((lead) => lead.id === id);
 
   if (!existing) throw new Error(`Activation lead ${id} was not found.`);
+
 
   const next: ActivationLead = {
     ...existing,
@@ -417,6 +435,7 @@ async function deleteTest(id: string, confirmation: string) {
   const existing = leads.find((lead) => lead.id === id);
 
   if (!existing) throw new Error(`Activation lead ${id} was not found.`);
+
   if (existing.siteId || ["PAID", "CONVERTED"].includes(existing.status)) {
     throw new Error("Linked or paid entrepreneurs cannot be deleted as tests.");
   }

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { productPageSourceService } from "@/server/services/productPageSourceService";
 import { activationLeadService } from "@/server/services/activationLeadService";
 import { productPageHistoryService } from "@/server/services/productPageHistoryService";
+import { DEFAULT_ECOSYSTEM_TYPE, ecosystemTypeSchema, getMasterSiteId, isMasterSiteId } from "@/server/services/ecosystemService";
 
 const siteIdSchema = z
   .string()
@@ -23,12 +24,7 @@ const httpsUrlSchema = z.string().url().refine((value) => new URL(value).protoco
   message: "URL must use HTTPS"
 });
 
-const purchaseUrlSchema = httpsUrlSchema.refine(
-  (value) => new URL(value).hostname.toLowerCase() !== "colombia.ganoexcel.com",
-  {
-    message: "Usa la URL exacta de compra del empresario. No uses colombia.ganoexcel.com."
-  }
-);
+const purchaseUrlSchema = httpsUrlSchema;
 
 const measurementIdSchema = z
   .string()
@@ -154,7 +150,8 @@ export const productPageGenerationInputSchema = z.object({
     })
     .optional(),
   mediaBaseUrl: httpsUrlSchema.optional(),
-  faviconUrl: httpsUrlSchema.optional()
+  faviconUrl: httpsUrlSchema.optional(),
+  ecosystemType: ecosystemTypeSchema.default(DEFAULT_ECOSYSTEM_TYPE)
 });
 
 export type ProductPageGenerationInput = z.infer<typeof productPageGenerationInputSchema>;
@@ -189,6 +186,7 @@ function getOutputRoot() {
 
 export type ProductPageGenerationOptions = {
   templateSource?: "canonical" | "master";
+  masterSiteId?: string;
 };
 
 async function parseSavedSource(siteId: string) {
@@ -202,18 +200,17 @@ async function parseSavedSource(siteId: string) {
 }
 
 async function resolveTemplateDirectory(siteId: string, options?: ProductPageGenerationOptions) {
-  const source = options?.templateSource ?? (siteId === "ganomaster" ? "canonical" : "master");
+  const source = options?.templateSource ?? (isMasterSiteId(siteId) ? "canonical" : "master");
   if (source === "canonical") {
     return getTemplateDirectory();
   }
 
-  const masterDirectory = resolveInsideDirectory(getOutputRoot(), "ganomaster");
+  const masterSiteId = options?.masterSiteId ?? getMasterSiteId(DEFAULT_ECOSYSTEM_TYPE);
+  const masterDirectory = resolveInsideDirectory(getOutputRoot(), masterSiteId);
   try {
     await access(masterDirectory);
   } catch {
-    throw new Error(
-      "The master template is not published yet. Publish ganomaster.pro before generating client pages."
-    );
+    throw new Error(`The master template is not published yet for ecosystem ${masterSiteId}.`);
   }
 
   return masterDirectory;
@@ -243,6 +240,7 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
     input.analytics?.measurementId ?? input.integrations?.analytics?.measurementId;
 
   return {
+    ecosystemType: input.ecosystemType,
     site: {
       id: input.site.id,
       domain: input.site.domain,
