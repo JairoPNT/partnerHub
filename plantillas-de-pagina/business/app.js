@@ -1,12 +1,13 @@
 /**
  * app.js - PartnerHub Business / VSL Template Controller
  * Resuelve placeholders, inyecta configuración e inicializa el tema PH-025 dinámicamente.
+ * Compatible con PH-025 y PH-033.
  */
 
 (function () {
   'use strict';
 
-  // Mapeo de Presets de Paleta (PH-025)
+  // 1. Mapeo de Presets de Paleta (PH-025)
   const PALETTE_MAP = {
     'cobalt-cyan': { base: '#0F172A', accent: '#06B6D4', hover: '#0891B2', bgSecondary: '#111827', textOnAccent: '#0F172A' },
     'emerald-slate': { base: '#022C22', accent: '#10B981', hover: '#059669', bgSecondary: '#064E3B', textOnAccent: '#022C22' },
@@ -20,7 +21,7 @@
     'sky-stone': { base: '#0C4A6E', accent: '#38BDF8', hover: '#0284C7', bgSecondary: '#075985', textOnAccent: '#0C4A6E' }
   };
 
-  // Mapeo de Presets de Fuentes (PH-025)
+  // 2. Mapeo de Presets de Fuentes (PH-025)
   const FONT_MAP = {
     'executive': { title: "'Montserrat', sans-serif", body: "'Space Grotesk', sans-serif" },
     'modern': { title: "'Outfit', sans-serif", body: "'Inter', sans-serif" },
@@ -50,6 +51,20 @@
     const font = FONT_MAP[theme.fontPreset] || FONT_MAP['executive'];
     root.style.setProperty('--font-title', font.title);
     root.style.setProperty('--font-body', font.body);
+  }
+
+  function getBenefitIconSvg(index, title) {
+    const t = (title || '').toLowerCase();
+    if (t.includes('consumo') || t.includes('producto') || t.includes('hábito') || index === 0) {
+      return `<svg class="icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>`;
+    }
+    if (t.includes('logística') || t.includes('infraestructura') || index === 1) {
+      return `<svg class="icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>`;
+    }
+    if (t.includes('mentoría') || t.includes('duplicación') || t.includes('equipo') || index === 2) {
+      return `<svg class="icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+    }
+    return `<svg class="icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
   }
 
   function renderDynamicContent(cfg) {
@@ -104,36 +119,45 @@
     if (vslCaptionEl && cfg.vsl?.caption) vslCaptionEl.textContent = cfg.vsl.caption;
 
     // 5. CTAs
-    const ctaUrl = cfg.cta?.primaryUrl || cfg.distributor?.ctaUrl || (cfg.distributor?.whatsappNumber ? `https://wa.me/${cfg.distributor.whatsappNumber}` : '#');
+    const rawNumber = (cfg.distributor?.whatsappNumber || '').replace(/\D/g, '');
+    const defaultMsg = cfg.distributor?.defaultMessage || 'Hola, vi la presentación de negocio en tu página web y quiero conocer cómo iniciar.';
+    const ctaUrl = cfg.cta?.primaryUrl || cfg.distributor?.ctaUrl || (rawNumber ? `https://wa.me/${rawNumber}?text=${encodeURIComponent(defaultMsg)}` : '#');
+
     const ctaPrimaryLinks = document.querySelectorAll('.bind-cta-primary');
     ctaPrimaryLinks.forEach(link => {
       link.setAttribute('href', ctaUrl);
-      if (link.dataset.bindText && cfg.cta?.primaryText) {
-        link.textContent = cfg.cta.primaryText;
+      if (link.target !== '_self') {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
       }
     });
 
+    const ctaPrimaryTextEl = document.querySelector('[data-bind="cta.primaryText"]');
+    if (ctaPrimaryTextEl && cfg.cta?.primaryText) {
+      ctaPrimaryTextEl.textContent = cfg.cta.primaryText;
+    }
+
     const ctaSecondaryLink = document.querySelector('.bind-cta-secondary');
-    if (ctaSecondaryLink && cfg.cta?.secondaryUrl) {
-      ctaSecondaryLink.setAttribute('href', cfg.cta.secondaryUrl);
-      if (cfg.cta.secondaryText) ctaSecondaryLink.textContent = cfg.cta.secondaryText;
+    if (ctaSecondaryLink) {
+      if (cfg.cta?.secondaryUrl) ctaSecondaryLink.setAttribute('href', cfg.cta.secondaryUrl);
+      if (cfg.cta?.secondaryText) ctaSecondaryLink.textContent = cfg.cta.secondaryText;
     }
 
     const guaranteeTextEl = document.querySelector('[data-bind="cta.guaranteeText"]');
     if (guaranteeTextEl && cfg.cta?.guaranteeText) guaranteeTextEl.textContent = cfg.cta.guaranteeText;
 
-    // 6. Benefits List
+    // 6. Benefits List (Hasta 4 items)
     const benefitsGrid = document.getElementById('benefits-grid');
     if (benefitsGrid && Array.isArray(cfg.benefits) && cfg.benefits.length > 0) {
       benefitsGrid.innerHTML = '';
-      cfg.benefits.forEach((benefit) => {
+      const items = cfg.benefits.slice(0, 4);
+      items.forEach((benefit, idx) => {
         const card = document.createElement('div');
         card.className = 'benefit-card';
+        const iconSvg = getBenefitIconSvg(idx, benefit.title);
         card.innerHTML = `
           <div class="benefit-icon-wrapper">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-            </svg>
+            ${iconSvg}
           </div>
           <h3>${escapeHtml(benefit.title)}</h3>
           <p>${escapeHtml(benefit.description)}</p>
@@ -142,7 +166,13 @@
       });
     }
 
-    // 7. Analytics
+    // 7. Footer Año
+    const footerYear = document.getElementById('footer-year');
+    if (footerYear) {
+      footerYear.textContent = new Date().getFullYear().toString();
+    }
+
+    // 8. Analytics
     if (cfg.analytics?.measurementId && typeof window.gtag === 'function') {
       window.gtag('config', cfg.analytics.measurementId);
     }
