@@ -1,0 +1,611 @@
+/* styles-negocio.css - Estilos dedicados para la landing de negocio VSL */
+
+/* Hero VSL con Fondo Oscuro Elegante */
+.vsl-hero {
+  padding: 140px 0 80px 0;
+  background: linear-gradient(180deg, #0B1120 0%, #0F172A 60%, #1E293B 100%) !important;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+
+.vsl-hero .container {
+  max-width: 900px;
+  position: relative;
+  z-index: 2;
+}
+
+/* Título y Subtítulo estilo VSL */
+.vsl-title {
+  font-size: clamp(2.5rem, 5vw, 4.25rem);
+  font-weight: 800;
+  line-height: 1.1;
+  color: #FFFFFF !important;
+  margin-bottom: 20px;
+  letter-spacing: -0.02em;
+}
+
+.vsl-title span.highlight {
+  position: relative;
+  display: inline-block;
+  color: #FFFFFF;
+}
+
+.vsl-title span.highlight::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  width: 100%;
+  height: 8px;
+  background-color: rgba(6, 182, 212, 0.4);
+  z-index: -1;
+  border-radius: var(--radius-sm);
+}
+
+.vsl-subtitle {
+  font-size: clamp(1.1rem, 2vw, 1.35rem);
+  color: #CBD5E1 !important;
+  font-family: var(--font-sans);
+  line-height: 1.65;
+  max-width: 720px;
+  margin: 0 auto 36px auto;
+  font-weight: 400;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
+}
+
+/* Botones del Hero VSL */
+.vsl-cta-group {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 40px;
+}
+
+@media (max-width: 576px) {
+  .vsl-cta-group {
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+  }
+  .vsl-cta-group .btn {
+    width: 100%;
+    max-width: 320px;
+  }
+}
+
+/* Prueba Social VSL */
+.vsl-social-proof {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-bottom: 50px;
+}
+
+.vsl-avatars {
+  display: flex;
+  align-items: center;
+}
+
+.vsl-avatar-img {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 2px solid var(--bg-dark);
+  margin-left: -10px;
+  object-fit: cover;
+}
+
+.vsl-avatar-img:first-child {
+  margin-left: 0;
+}
+
+.vsl-proof-text {
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--text-light-secondary);
+  text-align: left;
+  line-height: 1.3;
+}
+
+.vsl-proof-text strong {
+  color: var(--text-light);
+  font-size: 1rem;
+  display: block;
+}
+
+.vsl-stars {
+  color: var(--accent-gold);
+  font-size: 0.875rem;
+  letter-spacing: 1px;
+}
+
+@media (max-width: 576px) {
+  .vsl-social-proof {
+    flex-direction: column !important;
+    gap: 12px !important;
+    margin-bottom: 36px !important;
+  }
+  .vsl-proof-text {
+    text-align: center !important;
+  }
+  .vsl-avatars {
+    justify-content: center !important;
+    margin-left: 10px !important;
+  }
+}
+
+/* Contenedor del Reproductor de Video VSL */
+.vsl-video-wrapper {
+  position: relative;
+  max-width: 850px;
+  margin: 0 auto;
+  z-index: 10;
+}
+
+.vsl-video-container {
+  position: relative;
+  width: 100%;
+  padding-top: 56.25%; /* Relación de aspecto 16:9 */
+  background-color: #030712;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 40px rgba(0, 0, 0, 0.7), 0 0 25px rgba(21, 37, 63, 0.5);
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.vsl-video-container:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 255, 255, 0.25);
+  box-shadow: 0 0 50px rgba(0, 0, 0, 0.8), 0 0 35px rgba(21, 37, 63, 0.7);
+}
+
+/* Miniatura y Overlay del Video */
+.vsl-video-thumbnail {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  filter: brightness(0.55) contrast(1.1);
+  transition: transform 0.8s ease;
+}
+
+.vsl-video-container:hover .vsl-video-thumbnail {
+  transform: scale(1.03);
+}
+
+.vsl-video-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.6));
+  z-index: 2;
+}
+
+/* Botón Play VSL */
+.vsl-play-btn {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: var(--text-light);
+  color: var(--bg-dark);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3), 0 0 0 0px rgba(255, 255, 255, 0.2);
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+  cursor: pointer;
+  margin-bottom: 16px;
+  position: relative;
+}
+
+.vsl-play-btn svg {
+  width: 28px;
+  height: 28px;
+  fill: currentColor;
+  transform: translateX(2px);
+}
+
+.vsl-play-btn::after {
+  content: '';
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  border: 1px solid var(--text-light);
+  opacity: 0;
+  animation: pulse-ring 2s infinite;
+  z-index: -1;
+}
+
+.vsl-video-container:hover .vsl-play-btn {
+  background-color: var(--accent-gold);
+  color: #FFFFFF;
+  transform: scale(1.1);
+  box-shadow: 0 15px 30px rgba(0, 0, 0, 0.4), 0 0 20px rgba(245, 158, 11, 0.4);
+}
+
+.vsl-play-text {
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--text-light);
+  font-weight: 600;
+  text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(0.95);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* Flechas Curvas SVG Flotantes (Desktop) */
+.vsl-arrow {
+  position: absolute;
+  width: 70px;
+  height: 70px;
+  color: var(--text-light-secondary);
+  opacity: 0.7;
+  z-index: 5;
+  pointer-events: none;
+  animation: arrow-float 3s ease-in-out infinite;
+}
+
+.vsl-arrow-left {
+  left: -80px;
+  top: 40%;
+  transform: translateY(-50%);
+}
+
+.vsl-arrow-right {
+  right: -80px;
+  top: 40%;
+  transform: translateY(-50%) scaleX(-1); /* Espejo para la derecha */
+}
+
+@keyframes arrow-float {
+  0%, 100% {
+    transform: translateY(-50%) translate(0, 0);
+  }
+  50% {
+    transform: translateY(-50%) translate(-5px, -8px);
+  }
+}
+
+/* Ocultar flechas en tablets y móviles para responsividad */
+@media (max-width: 1024px) {
+  .vsl-arrow {
+    display: none;
+  }
+}
+
+/* Fila de Checkmarks de Confianza */
+.vsl-trust-checks {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 24px;
+  margin-top: 36px;
+  padding: 0 16px;
+}
+
+.vsl-check-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-sans);
+  font-size: 0.875rem;
+  color: var(--text-light-secondary);
+  font-weight: 500;
+}
+
+.vsl-check-item svg {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-green);
+  flex-shrink: 0;
+}
+
+/* Comparativa de Modelos (Sección Desafío vs Solución) */
+.comparison-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-top: 48px;
+}
+
+.comparison-card {
+  padding: 40px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-primary);
+  position: relative;
+  overflow: hidden;
+}
+
+.comparison-card.card-traditional {
+  border-color: rgba(239, 68, 68, 0.1);
+  background-color: rgba(239, 68, 68, 0.01);
+}
+
+.comparison-card.card-opportunity {
+  border-color: rgba(16, 185, 129, 0.15);
+  background-color: rgba(16, 185, 129, 0.01);
+  box-shadow: var(--shadow-md);
+}
+
+.comparison-title {
+  font-size: 1.5rem;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.comparison-card.card-traditional .comparison-title {
+  color: #EF4444;
+}
+
+.comparison-card.card-opportunity .comparison-title {
+  color: var(--accent-green);
+}
+
+.comparison-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.comparison-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-family: var(--font-sans);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.comparison-item svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.card-traditional .comparison-item svg {
+  color: #EF4444;
+}
+
+.card-opportunity .comparison-item svg {
+  color: var(--accent-green);
+}
+
+@media (max-width: 768px) {
+  .comparison-grid {
+    grid-template-columns: 1fr;
+    gap: 24px;
+  }
+  .comparison-card {
+    padding: 24px;
+  }
+}
+
+/* Sección 3 Pasos del Negocio */
+.steps-flex {
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  margin-top: 48px;
+}
+
+.step-box {
+  flex: 1;
+  background-color: var(--bg-dark-secondary);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  padding: 36px 28px;
+  border-radius: var(--radius-md);
+  position: relative;
+  transition: var(--transition-smooth);
+}
+
+.step-box:hover {
+  transform: translateY(-5px);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.2);
+}
+
+.step-number {
+  font-size: 3rem;
+  font-weight: 700;
+  font-family: var(--font-serif);
+  color: rgba(255, 255, 255, 0.1);
+  position: absolute;
+  top: 15px;
+  right: 20px;
+  line-height: 1;
+}
+
+.step-box:hover .step-number {
+  color: rgba(245, 158, 11, 0.2);
+}
+
+.step-title {
+  font-size: 1.25rem;
+  color: var(--text-light);
+  margin-bottom: 12px;
+  font-weight: 600;
+}
+
+.step-desc {
+  font-size: 0.9375rem;
+  color: var(--text-light-secondary);
+  line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+  .steps-flex {
+    flex-direction: column;
+    gap: 20px;
+  }
+  .step-box {
+    padding: 28px 24px;
+  }
+}
+
+/* Testimonios de Negocio */
+.testimonials-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 32px;
+  margin-top: 48px;
+}
+
+.testimonial-card {
+  background-color: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.testimonial-quote {
+  font-family: var(--font-sans);
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  margin-bottom: 24px;
+  font-style: italic;
+}
+
+.testimonial-user {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.testimonial-user-img {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.testimonial-user-info {
+  line-height: 1.3;
+}
+
+.testimonial-user-name {
+  font-weight: 600;
+  font-size: 0.9375rem;
+  color: var(--text-primary);
+  display: block;
+}
+
+.testimonial-user-role {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 768px) {
+  .testimonials-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .testimonial-card {
+    padding: 24px;
+  }
+}
+
+/* Sección CTA Final de Cierre Negocio */
+.vsl-footer-cta {
+  background: radial-gradient(circle at 50% 50%, rgba(21, 37, 63, 0.9) 0%, #060e18 100%) !important;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.vsl-footer-cta .contact-card {
+  background-color: rgba(21, 37, 63, 0.3) !important;
+  border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Modificación de estilos generales de la navbar en negocio.html */
+body.vsl-page .navbar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+}
+
+/* Bento Grid 2x2 para Pilares de Negocio */
+#beneficios .kits-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 30px !important;
+}
+
+#beneficios .kit-card {
+  background-color: var(--bg-dark-secondary) !important; /* Azul marino de contraste (#15253F) */
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+  padding: 40px 36px !important;
+  border-radius: var(--radius-lg) !important;
+}
+
+#beneficios .kit-card:hover {
+  transform: translateY(-6px) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.45) !important;
+}
+
+/* Títulos y textos de los Pilares */
+#beneficios .kit-title {
+  color: #FFFFFF !important;
+  font-family: var(--font-serif) !important;
+  font-size: 1.625rem !important;
+  font-style: italic !important;
+  margin-top: 14px !important;
+  margin-bottom: 12px !important;
+  font-weight: 500 !important;
+}
+
+#beneficios .kit-type {
+  color: var(--accent-green) !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.15em !important;
+}
+
+#beneficios .text-secondary {
+  color: var(--text-light-secondary) !important;
+  font-size: 0.9375rem !important;
+  line-height: 1.65 !important;
+  margin-bottom: 0 !important;
+}
+
+@media (max-width: 992px) {
+  #beneficios .kits-grid {
+    grid-template-columns: 1fr !important;
+    gap: 20px !important;
+  }
+  #beneficios .kit-card {
+    padding: 30px 24px !important;
+  }
+}

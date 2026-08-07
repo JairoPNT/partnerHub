@@ -4,12 +4,12 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Líder de Bienestar & Mentor Comercial — Hub Oficial</title>
-  <meta name="description" content="Espacio profesional de mentoría, proyectos de bienestar y conexión directa con empresarios.">
+  <meta name="description" content="Portal profesional y hub de marca personal. Mentoría ejecutiva, proyectos de salud adaptógena y expansión de redes comerciales.">
   
-  <!-- Open Graph -->
-  <meta property="og:type" content="profile">
+  <!-- Open Graph / Meta -->
+  <meta property="og:type" content="website">
   <meta property="og:title" content="Líder de Bienestar & Mentor Comercial — Hub Oficial">
-  <meta property="og:description" content="Espacio profesional de mentoría, proyectos de bienestar y conexión directa con empresarios.">
+  <meta property="og:description" content="Bienvenido a mi espacio oficial: proyectos de bienestar, mentorías estratégicas, agenda de eventos y contacto directo.">
   
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -19,109 +19,299 @@
 </head>
 <body>
 
-  <div class="hub-wrapper">
-    
-    <!-- 1. Profile Block -->
-    <section class="profile-card" id="block-profile">
-      <div class="profile-cover" id="profile-cover">
-        <div class="profile-cover-overlay"></div>
-      </div>
-      <div class="profile-details">
-        <div class="avatar-wrapper">
-          <img id="profile-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80" alt="Avatar" class="avatar-img">
+  <!-- Sticky Navbar -->
+  <header class="navbar" id="navbar">
+    <div class="container navbar-inner">
+      <a href="#block-profile" class="nav-brand">
+        <div class="brand-avatar-mini" id="nav-avatar-mini">
+          <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=100&q=80" alt="Avatar" data-bind-src="profile.avatarUrl">
         </div>
-        
-        <div class="profile-badge-pill" id="profile-badge">
-          Mentor Verificado
+        <div class="brand-text-group">
+          <span class="brand-name" data-bind="profile.fullName">Nombre del Profesional</span>
+          <span class="brand-badge-pill" data-bind="profile.badge">Mentor Verificado</span>
         </div>
+      </a>
 
-        <h1 class="profile-name" id="profile-name">Nombre del Profesional</h1>
-        <p class="profile-headline" id="profile-headline">Emprendedor & Mentor de Negocios</p>
-        <p class="profile-bio" id="profile-bio">
-          Ayudo a personas y equipos a desbloquear su potencial combinando salud integral, hábitos conscientes y desarrollo de negocios escalables.
-        </p>
-        
-        <div class="profile-location" id="profile-location">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
-            <circle cx="12" cy="10" r="3"/>
+      <nav class="nav-links" id="nav-links">
+        <a href="#block-profile" class="nav-link">Inicio</a>
+        <a href="#block-bio" class="nav-link" id="nav-link-bio">Propósito</a>
+        <a href="#block-services" class="nav-link" id="nav-link-services">Proyectos</a>
+        <a href="#block-links" class="nav-link" id="nav-link-links">Canales</a>
+        <a href="#block-events" class="nav-link" id="nav-link-events">Agenda</a>
+        <a href="#block-contact" class="nav-link" id="nav-link-contact">Contacto</a>
+      </nav>
+
+      <div class="nav-actions">
+        <a href="#block-contact" class="btn-nav-cta bind-wa-contact">
+          <svg class="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
           </svg>
-          <span>Colombia & Internacional</span>
+          <span>Agendar Cita</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="page-main">
+    
+    <!-- 1. Hero / Profile Header Block -->
+    <section class="profile-hero-section" id="block-profile">
+      <!-- Ambient Glow & Cover Image -->
+      <div class="cover-wrapper">
+        <img class="cover-image" id="profile-cover" src="https://images.unsplash.com/photo-1579546929518-9e396f3cc809?auto=format&fit=crop&w=1200&q=80" alt="Portada">
+        <div class="cover-overlay"></div>
+      </div>
+
+      <div class="container hero-container">
+        <div class="profile-header-card">
+          <div class="avatar-holder">
+            <div class="avatar-ring">
+              <img id="profile-avatar" class="profile-avatar" src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=400&q=80" alt="Foto de Perfil" data-bind-src="profile.avatarUrl">
+            </div>
+            <div class="status-indicator" title="Disponible para asesoría"></div>
+          </div>
+
+          <div class="profile-info-group">
+            <div class="badge-row">
+              <span class="status-pill" data-bind="profile.badge">Mentor Verificado</span>
+              <span class="location-pill" id="profile-location-pill">
+                <svg class="icon-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/>
+                  <circle cx="12" cy="10" r="3"/>
+                </svg>
+                <span data-bind="profile.location">Colombia & Internacional</span>
+              </span>
+            </div>
+
+            <h1 class="profile-name" data-bind="profile.fullName">Nombre del Profesional</h1>
+            <p class="profile-headline" data-bind="profile.headline">Liderazgo · Consultoría · Emprendimiento Inteligente</p>
+            
+            <p class="profile-bio" data-bind="profile.bio">
+              Bienvenido a mi portal empresarial. Aquí podrás agendar asesorías personalizadas, acceder al calendario de reuniones programadas, solicitar seguimiento de tu proceso y conectar en mis canales oficiales.
+            </p>
+
+            <div class="hero-actions">
+              <a href="#block-contact" class="btn btn-primary">
+                <svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                  <line x1="16" x2="16" y1="2" y2="6"/>
+                  <line x1="8" x2="8" y1="2" y2="6"/>
+                  <line x1="3" x2="21" y1="10" y2="10"/>
+                </svg>
+                <span>Solicitar Asesoría</span>
+              </a>
+
+              <a href="#block-events" class="btn btn-secondary">
+                <svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+                <span>Ver Agenda de Eventos</span>
+              </a>
+            </div>
+          </div>
         </div>
       </div>
     </section>
 
-    <!-- 2. Bio / Quote Block -->
-    <section class="block-section" id="block-bio">
-      <div class="bio-quote-card">
-        <p class="bio-quote-text" id="bio-quote-text">
-          "El verdadero liderazgo no consiste en crear seguidores, sino en inspirar a nuevos líderes a transformar su entorno."
-        </p>
-        <p class="bio-experience-text" id="bio-exp-text">
-          +8 años liderando organizaciones comerciales y proyectos de salud adaptógena.
-        </p>
+    <!-- 2. Bio & Leadership Purpose Block -->
+    <section class="section-block" id="block-bio">
+      <div class="container">
+        <div class="bio-purpose-grid">
+          
+          <!-- Quote Card -->
+          <div class="quote-card">
+            <div class="quote-icon-box">
+              <svg class="icon-svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
+                <path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/>
+              </svg>
+            </div>
+            <blockquote class="quote-text" id="bio-quote-text">
+              "El verdadero liderazgo no consiste en crear seguidores, sino en inspirar a nuevos líderes a transformar su entorno con salud, visión y libertad financiera."
+            </blockquote>
+            <div class="experience-badge" id="bio-experience-badge">
+              <svg class="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="8" r="7"/>
+                <polyline points="8.21 13.89 7 23 12 20 17 23 15.79 13.88"/>
+              </svg>
+              <span id="bio-experience-text">+8 años liderando organizaciones comerciales y proyectos de salud adaptógena.</span>
+            </div>
+          </div>
+
+          <!-- Purpose Card -->
+          <div class="purpose-card">
+            <div class="purpose-header">
+              <div class="purpose-icon-box">
+                <svg class="icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="m4.93 4.93 4.24 4.24"/>
+                  <path d="m14.83 9.17 4.24-4.24"/>
+                  <path d="m14.83 14.83 4.24 4.24"/>
+                  <path d="m9.17 14.83-4.24 4.24"/>
+                  <circle cx="12" cy="12" r="4"/>
+                </svg>
+              </div>
+              <h2 class="purpose-title">Propósito de Liderazgo</h2>
+            </div>
+            <p class="purpose-body">
+              Desarrollo sistemas duplicables de crecimiento personal, bienestar preventivo e ingresos residuales con una visión clara de impacto sostenible. Trabajamos bajo un modelo probado que democratiza el emprendimiento y premia la disciplina.
+            </p>
+            <div class="purpose-tags">
+              <span class="purpose-tag">
+                <svg class="icon-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                Salud Preventiva
+              </span>
+              <span class="purpose-tag">
+                <svg class="icon-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                Ingresos Residuales
+              </span>
+              <span class="purpose-tag">
+                <svg class="icon-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                Mentoría y Duplicación
+              </span>
+            </div>
+          </div>
+
+        </div>
       </div>
     </section>
 
-    <!-- 3. Services / Business Projects Block (Max 4) -->
-    <section class="block-section" id="block-services">
-      <div class="block-header">
-        <h2 id="services-title">Proyectos & Mentorías</h2>
-        <p id="services-subtitle">Áreas en las que colaboro activamente</p>
-      </div>
-      <div class="services-grid" id="services-grid">
-        <!-- Renderizado dinámico desde config.js -->
+    <!-- 3. Projects & Services Block -->
+    <section class="section-block" id="block-services">
+      <div class="container">
+        <div class="section-heading">
+          <span class="section-badge">Áreas de Enfoque</span>
+          <h2 class="section-title" data-bind="blocks.servicesBlock.title">Proyectos & Mentorías</h2>
+          <p class="section-subtitle" data-bind="blocks.servicesBlock.subtitle">Áreas en las que colaboro activamente y acompaño a líderes</p>
+        </div>
+
+        <div class="services-grid" id="services-container">
+          <!-- Renderizado dinámicamente desde config.js (máx 4) -->
+        </div>
       </div>
     </section>
 
-    <!-- 4. Links / Resources Block (Max 8) -->
-    <section class="block-section" id="block-links">
-      <div class="block-header">
-        <h2 id="links-title">Enlaces & Canales Oficiales</h2>
-        <p id="links-subtitle">Conéctate conmigo en mis diferentes plataformas</p>
-      </div>
-      <div class="links-stack" id="links-stack">
-        <!-- Renderizado dinámico desde config.js -->
+    <!-- 4. Links & Official Channels Block -->
+    <section class="section-block" id="block-links">
+      <div class="container">
+        <div class="section-heading">
+          <span class="section-badge">Ecosistema Digital</span>
+          <h2 class="section-title" data-bind="blocks.linksBlock.title">Enlaces & Canales Oficiales</h2>
+          <p class="section-subtitle" data-bind="blocks.linksBlock.subtitle">Conéctate conmigo en mis diferentes plataformas y comunidades</p>
+        </div>
+
+        <div class="links-list" id="links-container">
+          <!-- Renderizado dinámicamente desde config.js (máx 8) -->
+        </div>
       </div>
     </section>
 
-    <!-- 5. Events / Agenda Block (Max 6) -->
-    <section class="block-section" id="block-events">
-      <div class="block-header">
-        <h2 id="events-title">Próximos Eventos & Webinars</h2>
-        <p id="events-subtitle">Sesiones en vivo y encuentros presenciales</p>
-      </div>
-      <div class="events-stack" id="events-stack">
-        <!-- Renderizado dinámico desde config.js -->
+    <!-- 5. Events & Live Sessions Block -->
+    <section class="section-block" id="block-events">
+      <div class="container">
+        <div class="section-heading">
+          <span class="section-badge">Agenda Activa</span>
+          <h2 class="section-title" data-bind="blocks.eventsBlock.title">Calendario de Reuniones & Eventos</h2>
+          <p class="section-subtitle" data-bind="blocks.eventsBlock.subtitle">Participa en nuestras próximas sesiones de capacitación, webinars e interacciones en vivo</p>
+        </div>
+
+        <div class="events-grid" id="events-container">
+          <!-- Renderizado dinámicamente desde config.js (máx 6) -->
+        </div>
       </div>
     </section>
 
-    <!-- 6. Contact Block -->
-    <section class="block-section" id="block-contact">
-      <div class="contact-card">
-        <h2 id="contact-title">¿Listo para conectar?</h2>
-        <a href="#" id="btn-contact-main" class="btn-contact-main">
-          <span>Conversar Directamente por WhatsApp</span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
+    <!-- 6. Contact & Advisory Booking Block -->
+    <section class="section-block" id="block-contact">
+      <div class="container">
+        <div class="contact-card">
+          <div class="contact-glow"></div>
+          
+          <div class="contact-header">
+            <span class="section-badge">Atención Directa</span>
+            <h2 class="contact-title" data-bind="blocks.contactBlock.title">Solicitud de Asesoría Personalizada</h2>
+            <p class="contact-subtitle" id="contact-subtitle">Elige el tipo de sesión que requieres y coordinemos de forma directa fecha y hora de reunión:</p>
+          </div>
+
+          <!-- Advisory Session Types -->
+          <div class="session-types-grid">
+            <div class="session-type-pill" data-session-topic="Mentoría Ejecutiva 1-a-1">
+              <div class="session-dot"></div>
+              <span>Mentoría 1-a-1</span>
+            </div>
+            <div class="session-type-pill" data-session-topic="Expansión de Red Comercial">
+              <div class="session-dot"></div>
+              <span>Oportunidad de Negocio</span>
+            </div>
+            <div class="session-type-pill" data-session-topic="Asesoría en Ganoderma & Salud">
+              <div class="session-dot"></div>
+              <span>Salud & Ganoderma</span>
+            </div>
+            <div class="session-type-pill" data-session-topic="Seguimiento de Plan de Acción">
+              <div class="session-dot"></div>
+              <span>Seguimiento de Socios</span>
+            </div>
+          </div>
+
+          <!-- Action Buttons Group -->
+          <div class="contact-actions-box">
+            <a href="#" class="btn btn-primary btn-large bind-wa-contact" id="btn-main-whatsapp">
+              <svg class="icon-svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+              </svg>
+              <span id="contact-cta-text" data-bind="blocks.contactBlock.ctaText">Escribir para Agendar Cita</span>
+            </a>
+
+            <div class="contact-auxiliary-row">
+              <a href="#" class="contact-email-link" id="contact-email-link">
+                <svg class="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="20" height="16" x="2" y="4" rx="2"/>
+                  <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>
+                </svg>
+                <span id="contact-email-text">contacto@dominio.com</span>
+              </a>
+            </div>
+          </div>
+
+          <div class="contact-disclaimer-note">
+            <svg class="icon-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="12" x2="12" y1="16" y2="12"/>
+              <line x1="12" x2="12.01" y1="8" y2="8"/>
+            </svg>
+            <span>Respuesta en menos de 24 horas hábiles. Atención y asesoría profesional sin costo.</span>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="site-footer">
+    <div class="container footer-inner">
+      <div class="footer-brand-row">
+        <span class="footer-brand-name" data-bind="profile.brandName">Marca Personal</span>
+        <span class="footer-dot">·</span>
+        <span class="footer-role" data-bind="profile.headline">Liderazgo & Mentoría de Negocios</span>
+      </div>
+      <p class="footer-copy">
+        © <span id="current-year">2026</span> Espacio oficial e independiente de mentoría y desarrollo empresarial. Todos los derechos reservados.
+      </p>
+      <div class="footer-top-btn">
+        <a href="#block-profile" class="btn-back-top" title="Volver arriba">
+          <svg class="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="m18 15-6-6-6 6"/>
           </svg>
         </a>
-        <a href="#" id="contact-email" class="contact-email-link">contacto@dominio.com</a>
       </div>
-    </section>
+    </div>
+  </footer>
 
-    <!-- Footer -->
-    <footer class="hub-footer">
-      <p>© <span id="footer-year">2026</span> <span id="footer-brand-name">Hub Oficial</span> · Todos los derechos reservados</p>
-    </footer>
-
-  </div>
-
-  <!-- Configuration and Logic -->
+  <!-- Scripts -->
   <script src="config.js"></script>
   <script src="app.js"></script>
-  <script>
-    document.getElementById('footer-year').textContent = new Date().getFullYear();
-  </script>
 </body>
 </html>

@@ -1,14 +1,15 @@
 /**
- * app.js - PartnerHub Personal Brand Hub Controller
- * Resuelve bloques modulares, inyecta configuración e inicializa el tema PH-025 dinámicamente.
+ * app.js - Personal Brand Template Controller
+ * Ecosistema: PERSONAL_BRAND (PH-025 & PH-033)
+ * Inyecta dinámicamente configuración, aplica temas y maneja interacciones de asesoría.
  */
 
 (function () {
   'use strict';
 
-  // Mapeo de Presets de Paleta (PH-025)
+  // 1. Mapeo de Presets de Paleta (PH-025)
   const PALETTE_MAP = {
-    'cobalt-cyan': { base: '#0F172A', accent: '#06B6D4', hover: '#0891B2', bgSecondary: '#1E293B', textOnAccent: '#0F172A' },
+    'cobalt-cyan': { base: '#0F172A', accent: '#06B6D4', hover: '#0891B2', bgSecondary: '#111827', textOnAccent: '#0F172A' },
     'emerald-slate': { base: '#022C22', accent: '#10B981', hover: '#059669', bgSecondary: '#064E3B', textOnAccent: '#022C22' },
     'coffee-gold': { base: '#271C19', accent: '#D97706', hover: '#B45309', bgSecondary: '#3C2A21', textOnAccent: '#FFFFFF' },
     'rose-graphite': { base: '#18181B', accent: '#F43F5E', hover: '#E11D48', bgSecondary: '#27272A', textOnAccent: '#FFFFFF' },
@@ -20,7 +21,7 @@
     'sky-stone': { base: '#0C4A6E', accent: '#38BDF8', hover: '#0284C7', bgSecondary: '#075985', textOnAccent: '#0C4A6E' }
   };
 
-  // Mapeo de Presets de Fuentes (PH-025)
+  // 2. Mapeo de Presets de Fuentes (PH-025)
   const FONT_MAP = {
     'executive': { title: "'Montserrat', sans-serif", body: "'Space Grotesk', sans-serif" },
     'modern': { title: "'Outfit', sans-serif", body: "'Inter', sans-serif" },
@@ -37,259 +38,42 @@
     if (!theme) return;
     const root = document.documentElement;
 
-    // Aplicar Paleta
     const palette = PALETTE_MAP[theme.palettePreset] || PALETTE_MAP['cobalt-cyan'];
     root.style.setProperty('--accent-base', palette.base);
     root.style.setProperty('--accent-color', palette.accent);
     root.style.setProperty('--accent-hover', palette.hover);
-    root.style.setProperty('--accent-glow', palette.accent + '40');
-    root.style.setProperty('--accent-subtle', palette.accent + '1F');
-    root.style.setProperty('--border-focus', palette.accent + '80');
+    root.style.setProperty('--accent-glow', palette.accent + '4D'); // 30% alpha
+    root.style.setProperty('--accent-subtle', palette.accent + '1F'); // 12% alpha
+    root.style.setProperty('--border-focus', palette.accent + '80'); // 50% alpha
 
-    // Aplicar Tipografía
     const font = FONT_MAP[theme.fontPreset] || FONT_MAP['modern'];
     root.style.setProperty('--font-title', font.title);
     root.style.setProperty('--font-body', font.body);
   }
 
-  function renderHub(cfg) {
-    if (!cfg) return;
+  function getCategorySvgIcon(category, url) {
+    const u = (url || '').toLowerCase();
+    const cat = (category || '').toUpperCase();
 
-    // 1. Meta / SEO
-    if (cfg.site) {
-      if (cfg.site.title) document.title = cfg.site.title;
-      const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc && cfg.site.metaDescription) metaDesc.setAttribute('content', cfg.site.metaDescription);
-      
-      const ogTitle = document.querySelector('meta[property="og:title"]');
-      if (ogTitle && cfg.site.ogTitle) ogTitle.setAttribute('content', cfg.site.ogTitle);
-
-      const ogDesc = document.querySelector('meta[property="og:description"]');
-      if (ogDesc && cfg.site.ogDescription) ogDesc.setAttribute('content', cfg.site.ogDescription);
+    if (u.includes('wa.me') || u.includes('whatsapp')) {
+      return `<svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
     }
-
-    const blocks = cfg.blocks || {};
-
-    // 2. Profile Block
-    const profileSection = document.getElementById('block-profile');
-    if (profileSection) {
-      if (blocks.profileBlock?.enabled === false) {
-        profileSection.classList.add('block-hidden');
-      } else {
-        profileSection.classList.remove('block-hidden');
-        const p = cfg.profile || {};
-        
-        const avatarEl = document.getElementById('profile-avatar');
-        if (avatarEl && p.avatarUrl) avatarEl.src = p.avatarUrl;
-
-        const coverEl = document.getElementById('profile-cover');
-        if (coverEl && p.coverUrl) coverEl.style.backgroundImage = `url('${p.coverUrl}')`;
-
-        const nameEl = document.getElementById('profile-name');
-        if (nameEl) nameEl.textContent = p.fullName || p.brandName || 'Nombre del Profesional';
-
-        const headlineEl = document.getElementById('profile-headline');
-        if (headlineEl) headlineEl.textContent = p.headline || '';
-
-        const bioEl = document.getElementById('profile-bio');
-        if (bioEl) bioEl.textContent = p.bio || '';
-
-        const badgeEl = document.getElementById('profile-badge');
-        if (badgeEl) {
-          if (p.badge) {
-            badgeEl.textContent = p.badge;
-            badgeEl.style.display = 'inline-flex';
-          } else {
-            badgeEl.style.display = 'none';
-          }
-        }
-
-        const locationEl = document.getElementById('profile-location');
-        if (locationEl) {
-          if (p.location) {
-            locationEl.querySelector('span').textContent = p.location;
-            locationEl.style.display = 'inline-flex';
-          } else {
-            locationEl.style.display = 'none';
-          }
-        }
-      }
+    if (u.includes('instagram.com')) {
+      return `<svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/></svg>`;
     }
-
-    // 3. Bio / Quote Block
-    const bioSection = document.getElementById('block-bio');
-    if (bioSection) {
-      if (blocks.bioBlock?.enabled === false || (!blocks.bioBlock?.quote && !blocks.bioBlock?.experienceText)) {
-        bioSection.classList.add('block-hidden');
-      } else {
-        bioSection.classList.remove('block-hidden');
-        const quoteEl = document.getElementById('bio-quote-text');
-        if (quoteEl) quoteEl.textContent = `"${blocks.bioBlock.quote || ''}"`;
-
-        const expEl = document.getElementById('bio-exp-text');
-        if (expEl) expEl.textContent = blocks.bioBlock.experienceText || '';
-      }
+    if (u.includes('linkedin.com')) {
+      return `<svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"/><rect width="4" height="12" x="2" y="9"/><circle cx="4" cy="4" r="2"/></svg>`;
     }
-
-    // 4. Services Block (Max 4 items)
-    const servicesSection = document.getElementById('block-services');
-    if (servicesSection) {
-      const items = blocks.servicesBlock?.items || [];
-      if (blocks.servicesBlock?.enabled === false || items.length === 0) {
-        servicesSection.classList.add('block-hidden');
-      } else {
-        servicesSection.classList.remove('block-hidden');
-        const titleEl = document.getElementById('services-title');
-        if (titleEl) titleEl.textContent = blocks.servicesBlock.title || 'Proyectos & Mentorías';
-
-        const subtitleEl = document.getElementById('services-subtitle');
-        if (subtitleEl) subtitleEl.textContent = blocks.servicesBlock.subtitle || '';
-
-        const grid = document.getElementById('services-grid');
-        if (grid) {
-          grid.innerHTML = '';
-          items.slice(0, 4).forEach(service => {
-            const card = document.createElement('div');
-            card.className = 'service-card';
-            card.innerHTML = `
-              <div class="service-card-top">
-                ${service.badge ? `<span class="service-card-badge">${escapeHtml(service.badge)}</span>` : ''}
-                <h3>${escapeHtml(service.title)}</h3>
-                <p>${escapeHtml(service.description)}</p>
-              </div>
-              ${service.ctaUrl ? `
-                <a href="${escapeHtml(service.ctaUrl)}" target="_blank" rel="noopener noreferrer" class="service-cta-btn">
-                  <span>${escapeHtml(service.ctaText || 'Más Información')}</span>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                    <path d="M5 12h14M12 5l7 7-7 7"/>
-                  </svg>
-                </a>
-              ` : ''}
-            `;
-            grid.appendChild(card);
-          });
-        }
-      }
+    if (u.includes('tiktok.com')) {
+      return `<svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 12a4 4 0 1 0 4 4V4a5 5 0 0 0 5 5"/></svg>`;
     }
-
-    // 5. Links Block (Max 8 items)
-    const linksSection = document.getElementById('block-links');
-    if (linksSection) {
-      const items = blocks.linksBlock?.items || [];
-      if (blocks.linksBlock?.enabled === false || items.length === 0) {
-        linksSection.classList.add('block-hidden');
-      } else {
-        linksSection.classList.remove('block-hidden');
-        const titleEl = document.getElementById('links-title');
-        if (titleEl) titleEl.textContent = blocks.linksBlock.title || 'Enlaces Oficiales';
-
-        const subtitleEl = document.getElementById('links-subtitle');
-        if (subtitleEl) subtitleEl.textContent = blocks.linksBlock.subtitle || '';
-
-        const stack = document.getElementById('links-stack');
-        if (stack) {
-          stack.innerHTML = '';
-          items.slice(0, 8).forEach(link => {
-            const pill = document.createElement('a');
-            pill.href = link.url;
-            pill.target = '_blank';
-            pill.rel = 'noopener noreferrer';
-            pill.className = `link-pill ${link.featured ? 'featured' : ''}`;
-            pill.innerHTML = `
-              <div class="link-pill-left">
-                <svg class="link-pill-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                  <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-                </svg>
-                <span>${escapeHtml(link.label)}</span>
-              </div>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="9 18 15 12 9 6"/>
-              </svg>
-            `;
-            stack.appendChild(pill);
-          });
-        }
-      }
+    if (cat === 'RESOURCE' || u.includes('ganomaster.pro')) {
+      return `<svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" x2="22" y1="12" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>`;
     }
-
-    // 6. Events Block (Max 6 items)
-    const eventsSection = document.getElementById('block-events');
-    if (eventsSection) {
-      const items = blocks.eventsBlock?.items || [];
-      if (blocks.eventsBlock?.enabled === false || items.length === 0) {
-        eventsSection.classList.add('block-hidden');
-      } else {
-        eventsSection.classList.remove('block-hidden');
-        const titleEl = document.getElementById('events-title');
-        if (titleEl) titleEl.textContent = blocks.eventsBlock.title || 'Próximos Eventos';
-
-        const subtitleEl = document.getElementById('events-subtitle');
-        if (subtitleEl) subtitleEl.textContent = blocks.eventsBlock.subtitle || '';
-
-        const stack = document.getElementById('events-stack');
-        if (stack) {
-          stack.innerHTML = '';
-          items.slice(0, 6).forEach(event => {
-            const card = document.createElement('div');
-            card.className = 'event-card';
-            card.innerHTML = `
-              <div class="event-info">
-                <span class="event-date">${escapeHtml(event.date)}</span>
-                <span class="event-title">${escapeHtml(event.title)}</span>
-                <span class="event-location">${escapeHtml(event.location)}</span>
-              </div>
-              <a href="${escapeHtml(event.ctaUrl)}" target="_blank" rel="noopener noreferrer" class="event-cta">
-                ${escapeHtml(event.ctaText || 'Reservar')}
-              </a>
-            `;
-            stack.appendChild(card);
-          });
-        }
-      }
+    if (cat === 'COMMUNITY') {
+      return `<svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
     }
-
-    // 7. Contact Block
-    const contactSection = document.getElementById('block-contact');
-    if (contactSection) {
-      if (blocks.contactBlock?.enabled === false) {
-        contactSection.classList.add('block-hidden');
-      } else {
-        contactSection.classList.remove('block-hidden');
-        const titleEl = document.getElementById('contact-title');
-        if (titleEl) titleEl.textContent = blocks.contactBlock.title || '¿Listo para conectar?';
-
-        const btn = document.getElementById('btn-contact-main');
-        if (btn) {
-          const phone = blocks.contactBlock.whatsappNumber ? blocks.contactBlock.whatsappNumber.replace(/\D/g, '') : '';
-          const msg = encodeURIComponent(blocks.contactBlock.defaultMessage || 'Hola');
-          btn.href = phone ? `https://wa.me/${phone}?text=${msg}` : '#';
-          btn.querySelector('span').textContent = blocks.contactBlock.ctaText || 'Conversar por WhatsApp';
-        }
-
-        const emailEl = document.getElementById('contact-email');
-        if (emailEl) {
-          if (blocks.contactBlock.email) {
-            emailEl.href = `mailto:${blocks.contactBlock.email}`;
-            emailEl.textContent = blocks.contactBlock.email;
-            emailEl.style.display = 'inline-block';
-          } else {
-            emailEl.style.display = 'none';
-          }
-        }
-      }
-    }
-
-    // 8. Footer Brand
-    const footerBrand = document.getElementById('footer-brand-name');
-    if (footerBrand) {
-      footerBrand.textContent = cfg.profile?.fullName || cfg.profile?.brandName || 'Hub Oficial';
-    }
-
-    // 9. Analytics
-    if (cfg.analytics?.measurementId && typeof window.gtag === 'function') {
-      window.gtag('config', cfg.analytics.measurementId);
-    }
+    return `<svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>`;
   }
 
   function escapeHtml(text) {
@@ -299,10 +83,304 @@
     return div.innerHTML;
   }
 
-  // Inicialización
+  function renderDynamicContent(cfg) {
+    if (!cfg) return;
+
+    // 1. Meta / SEO
+    if (cfg.site) {
+      if (cfg.site.title) document.title = cfg.site.title;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc && cfg.site.metaDescription) metaDesc.setAttribute('content', cfg.site.metaDescription);
+
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle && cfg.site.ogTitle) ogTitle.setAttribute('content', cfg.site.ogTitle);
+
+      const ogDesc = document.querySelector('meta[property="og:description"]');
+      if (ogDesc && cfg.site.ogDescription) ogDesc.setAttribute('content', cfg.site.ogDescription);
+    }
+
+    // 2. Profile & Header
+    const profile = cfg.profile || {};
+    const fullNameEls = document.querySelectorAll('[data-bind="profile.fullName"]');
+    fullNameEls.forEach(el => el.textContent = profile.fullName || 'Nombre del Profesional');
+
+    const brandNameEls = document.querySelectorAll('[data-bind="profile.brandName"]');
+    brandNameEls.forEach(el => el.textContent = profile.brandName || 'Marca Personal');
+
+    const headlineEls = document.querySelectorAll('[data-bind="profile.headline"]');
+    headlineEls.forEach(el => el.textContent = profile.headline || 'Liderazgo & Consultoría');
+
+    const bioEl = document.querySelector('[data-bind="profile.bio"]');
+    if (bioEl && profile.bio) bioEl.textContent = profile.bio;
+
+    const badgeEls = document.querySelectorAll('[data-bind="profile.badge"]');
+    badgeEls.forEach(el => {
+      if (profile.badge) {
+        el.textContent = profile.badge;
+        el.style.display = '';
+      } else {
+        el.style.display = 'none';
+      }
+    });
+
+    const locationEl = document.querySelector('[data-bind="profile.location"]');
+    const locationPill = document.getElementById('profile-location-pill');
+    if (locationEl) {
+      if (profile.location) {
+        locationEl.textContent = profile.location;
+        if (locationPill) locationPill.style.display = '';
+      } else if (locationPill) {
+        locationPill.style.display = 'none';
+      }
+    }
+
+    if (profile.avatarUrl) {
+      const avatarImgs = document.querySelectorAll('[data-bind-src="profile.avatarUrl"]');
+      avatarImgs.forEach(img => img.setAttribute('src', profile.avatarUrl));
+    }
+
+    if (profile.coverUrl) {
+      const coverImg = document.getElementById('profile-cover');
+      if (coverImg) coverImg.setAttribute('src', profile.coverUrl);
+    }
+
+    const blocks = cfg.blocks || {};
+
+    // 3. Bio Block
+    const bioBlockEl = document.getElementById('block-bio');
+    const navLinkBio = document.getElementById('nav-link-bio');
+    if (blocks.bioBlock?.enabled === false) {
+      if (bioBlockEl) bioBlockEl.style.display = 'none';
+      if (navLinkBio) navLinkBio.style.display = 'none';
+    } else {
+      const quoteEl = document.getElementById('bio-quote-text');
+      if (quoteEl && blocks.bioBlock?.quote) {
+        quoteEl.textContent = `"${blocks.bioBlock.quote}"`;
+      }
+      const expTextEl = document.getElementById('bio-experience-text');
+      if (expTextEl && blocks.bioBlock?.experienceText) {
+        expTextEl.textContent = blocks.bioBlock.experienceText;
+      }
+    }
+
+    // 4. Services Block (Máximo 4 items)
+    const servicesBlockEl = document.getElementById('block-services');
+    const navLinkServices = document.getElementById('nav-link-services');
+    if (blocks.servicesBlock?.enabled === false) {
+      if (servicesBlockEl) servicesBlockEl.style.display = 'none';
+      if (navLinkServices) navLinkServices.style.display = 'none';
+    } else {
+      const srvTitleEl = document.querySelector('[data-bind="blocks.servicesBlock.title"]');
+      if (srvTitleEl && blocks.servicesBlock?.title) srvTitleEl.textContent = blocks.servicesBlock.title;
+
+      const srvSubtitleEl = document.querySelector('[data-bind="blocks.servicesBlock.subtitle"]');
+      if (srvSubtitleEl && blocks.servicesBlock?.subtitle) srvSubtitleEl.textContent = blocks.servicesBlock.subtitle;
+
+      const servicesContainer = document.getElementById('services-container');
+      if (servicesContainer && Array.isArray(blocks.servicesBlock?.items)) {
+        servicesContainer.innerHTML = '';
+        const items = blocks.servicesBlock.items.slice(0, 4);
+        items.forEach(srv => {
+          const card = document.createElement('div');
+          card.className = 'service-card';
+          
+          const badgeHtml = srv.badge ? `<span class="service-badge">${escapeHtml(srv.badge)}</span>` : '';
+          const ctaUrl = srv.ctaUrl || (blocks.contactBlock?.whatsappNumber ? `https://wa.me/${blocks.contactBlock.whatsappNumber}?text=${encodeURIComponent('Hola, me interesa información sobre: ' + srv.title)}` : '#block-contact');
+          const ctaText = srv.ctaText || 'Solicitar Asesoría';
+
+          card.innerHTML = `
+            <div class="service-header">
+              ${badgeHtml}
+              <h3 class="service-title">${escapeHtml(srv.title)}</h3>
+            </div>
+            <p class="service-description">${escapeHtml(srv.description)}</p>
+            <a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" class="service-btn">
+              <span>${escapeHtml(ctaText)}</span>
+              <svg class="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          `;
+          servicesContainer.appendChild(card);
+        });
+      }
+    }
+
+    // 5. Links Block (Máximo 8 items)
+    const linksBlockEl = document.getElementById('block-links');
+    const navLinkLinks = document.getElementById('nav-link-links');
+    if (blocks.linksBlock?.enabled === false) {
+      if (linksBlockEl) linksBlockEl.style.display = 'none';
+      if (navLinkLinks) navLinkLinks.style.display = 'none';
+    } else {
+      const linksTitleEl = document.querySelector('[data-bind="blocks.linksBlock.title"]');
+      if (linksTitleEl && blocks.linksBlock?.title) linksTitleEl.textContent = blocks.linksBlock.title;
+
+      const linksSubtitleEl = document.querySelector('[data-bind="blocks.linksBlock.subtitle"]');
+      if (linksSubtitleEl && blocks.linksBlock?.subtitle) linksSubtitleEl.textContent = blocks.linksBlock.subtitle;
+
+      const linksContainer = document.getElementById('links-container');
+      if (linksContainer && Array.isArray(blocks.linksBlock?.items)) {
+        linksContainer.innerHTML = '';
+        const items = blocks.linksBlock.items.slice(0, 8);
+        items.forEach(link => {
+          const row = document.createElement('a');
+          row.className = 'link-item-row' + (link.featured ? ' featured' : '');
+          row.href = link.url || '#';
+          row.target = '_blank';
+          row.rel = 'noopener noreferrer';
+
+          const iconSvg = getCategorySvgIcon(link.category, link.url);
+          const categoryTag = link.category ? `<span class="link-category-tag">${escapeHtml(link.category)}</span>` : '';
+
+          row.innerHTML = `
+            <div class="link-left-content">
+              <div class="link-icon-box">
+                ${iconSvg}
+              </div>
+              <div class="link-title-group">
+                <span class="link-label">${escapeHtml(link.label)}</span>
+                ${categoryTag}
+              </div>
+            </div>
+            <div class="link-arrow-box">
+              <svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="9 18 15 12 9 6"/>
+              </svg>
+            </div>
+          `;
+          linksContainer.appendChild(row);
+        });
+      }
+    }
+
+    // 6. Events Block (Máximo 6 items)
+    const eventsBlockEl = document.getElementById('block-events');
+    const navLinkEvents = document.getElementById('nav-link-events');
+    if (blocks.eventsBlock?.enabled === false) {
+      if (eventsBlockEl) eventsBlockEl.style.display = 'none';
+      if (navLinkEvents) navLinkEvents.style.display = 'none';
+    } else {
+      const eventsTitleEl = document.querySelector('[data-bind="blocks.eventsBlock.title"]');
+      if (eventsTitleEl && blocks.eventsBlock?.title) eventsTitleEl.textContent = blocks.eventsBlock.title;
+
+      const eventsSubtitleEl = document.querySelector('[data-bind="blocks.eventsBlock.subtitle"]');
+      if (eventsSubtitleEl && blocks.eventsBlock?.subtitle) eventsSubtitleEl.textContent = blocks.eventsBlock.subtitle;
+
+      const eventsContainer = document.getElementById('events-container');
+      if (eventsContainer && Array.isArray(blocks.eventsBlock?.items)) {
+        eventsContainer.innerHTML = '';
+        const items = blocks.eventsBlock.items.slice(0, 6);
+        items.forEach(ev => {
+          const card = document.createElement('div');
+          card.className = 'event-card';
+
+          const ctaUrl = ev.ctaUrl || (blocks.contactBlock?.whatsappNumber ? `https://wa.me/${blocks.contactBlock.whatsappNumber}?text=${encodeURIComponent('Hola, deseo reservar un cupo para el evento: ' + ev.title)}` : '#block-contact');
+          const ctaText = ev.ctaText || 'Reservar Cupo';
+
+          card.innerHTML = `
+            <div>
+              <div class="event-date-row">
+                <svg class="icon-svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="18" height="18" x="3" y="4" rx="2" ry="2"/>
+                  <line x1="16" x2="16" y1="2" y2="6"/>
+                  <line x1="8" x2="8" y1="2" y2="6"/>
+                  <line x1="3" x2="21" y1="10" y2="10"/>
+                </svg>
+                <span>${escapeHtml(ev.date)}</span>
+              </div>
+              <h3 class="event-title">${escapeHtml(ev.title)}</h3>
+              <p class="event-location">
+                <svg class="icon-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                <span>${escapeHtml(ev.location)}</span>
+              </p>
+            </div>
+            <a href="${ctaUrl}" target="_blank" rel="noopener noreferrer" class="event-btn">
+              <span>${escapeHtml(ctaText)}</span>
+              <svg class="icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </a>
+          `;
+          eventsContainer.appendChild(card);
+        });
+      }
+    }
+
+    // 7. Contact Block & Interactive WhatsApp session builder
+    const contact = blocks.contactBlock || {};
+    const contactBlockEl = document.getElementById('block-contact');
+    const navLinkContact = document.getElementById('nav-link-contact');
+    if (contact.enabled === false) {
+      if (contactBlockEl) contactBlockEl.style.display = 'none';
+      if (navLinkContact) navLinkContact.style.display = 'none';
+    } else {
+      const contactTitleEl = document.querySelector('[data-bind="blocks.contactBlock.title"]');
+      if (contactTitleEl && contact.title) contactTitleEl.textContent = contact.title;
+
+      const ctaTextEl = document.querySelector('[data-bind="blocks.contactBlock.ctaText"]');
+      if (ctaTextEl && contact.ctaText) ctaTextEl.textContent = contact.ctaText;
+
+      const emailTextEl = document.getElementById('contact-email-text');
+      const emailLinkEl = document.getElementById('contact-email-link');
+      if (contact.email) {
+        if (emailTextEl) emailTextEl.textContent = contact.email;
+        if (emailLinkEl) emailLinkEl.href = `mailto:${contact.email}`;
+      } else if (emailLinkEl) {
+        emailLinkEl.style.display = 'none';
+      }
+
+      // Configurar generador de enlace de WhatsApp dinámico
+      const waNumber = (contact.whatsappNumber || '').replace(/\D/g, '');
+      const defaultMsg = contact.defaultMessage || 'Hola, visité tu Hub de Marca Personal y me gustaría solicitar una cita de asesoría personalizada.';
+      
+      const buildWaUrl = (customTopic) => {
+        let msg = defaultMsg;
+        if (customTopic) {
+          msg = `Hola, visité tu Hub de Marca Personal y me gustaría agendar una sesión sobre: *${customTopic}*.`;
+        }
+        return `https://wa.me/${waNumber}?text=${encodeURIComponent(msg)}`;
+      };
+
+      const mainWaBtn = document.getElementById('btn-main-whatsapp');
+      if (mainWaBtn) {
+        mainWaBtn.href = buildWaUrl();
+      }
+
+      // Enlazar botones generales de contacto
+      const generalWaLinks = document.querySelectorAll('.bind-wa-contact');
+      generalWaLinks.forEach(link => {
+        if (link.id !== 'btn-main-whatsapp') {
+          link.href = buildWaUrl();
+        }
+      });
+
+      // Píldoras interactivas de selección de tema
+      const sessionPills = document.querySelectorAll('.session-type-pill');
+      sessionPills.forEach(pill => {
+        pill.addEventListener('click', function () {
+          sessionPills.forEach(p => p.classList.remove('active'));
+          this.classList.add('active');
+          const topic = this.getAttribute('data-session-topic');
+          if (mainWaBtn) {
+            mainWaBtn.href = buildWaUrl(topic);
+          }
+        });
+      });
+    }
+
+    // 8. Footer Año
+    const yearEl = document.getElementById('current-year');
+    if (yearEl) {
+      yearEl.textContent = new Date().getFullYear().toString();
+    }
+
+    // 9. Analytics
+    if (cfg.analytics?.measurementId && typeof window.gtag === 'function') {
+      window.gtag('config', cfg.analytics.measurementId);
+    }
+  }
+
+  // Inicialización en carga del DOM
   document.addEventListener('DOMContentLoaded', function () {
     const config = window.CONFIG || {};
     applyTheme(config.theme);
-    renderHub(config);
+    renderDynamicContent(config);
   });
 })();

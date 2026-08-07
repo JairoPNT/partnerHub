@@ -3,13 +3,13 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Oportunidad de Negocio & Expansión Comercial</title>
+  <title>Oportunidad de Negocio & Expansión Comercial — Presentación Oficial</title>
   <meta name="description" content="Presentación oficial de la oportunidad de negocio y distribución estratégica en bienestar integral.">
   
   <!-- Open Graph -->
   <meta property="og:type" content="website">
-  <meta property="og:title" content="Oportunidad de Negocio & Expansión Comercial">
-  <meta property="og:description" content="Presentación oficial de la oportunidad de negocio y distribución estratégica en bienestar integral.">
+  <meta property="og:title" content="Oportunidad de Negocio & Expansión Comercial — Presentación Oficial">
+  <meta property="og:description" content="Descubre cómo construir un negocio de bienestar sostenible apalancado en un sistema validado.">
   
   <!-- Favicon -->
   <link rel="icon" type="image/svg+xml" href="favicon.svg">
@@ -19,124 +19,183 @@
 </head>
 <body>
 
-  <!-- Header -->
-  <header class="header">
+  <!-- Sticky Header -->
+  <header class="header" id="header">
     <div class="container header-content">
       <div class="brand-badge">
         <span class="brand-dot"></span>
-        <span class="brand-name" data-bind="distributor.brandName">Líder de Negocio</span>
+        <div class="brand-info">
+          <span class="brand-name" data-bind="distributor.brandName">Líder de Negocio</span>
+          <span class="brand-role-mini" data-bind="distributor.role">Líder Comercial</span>
+        </div>
       </div>
-      <a href="#vsl" class="header-cta-btn bind-cta-primary">
-        <span>Contactar Ahora</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-      </a>
+      
+      <div class="header-nav-actions">
+        <a href="#beneficios" class="header-link">Pilares</a>
+        <a href="#metodologia" class="header-link">Cómo Funciona</a>
+        <a href="#vsl" class="header-cta-btn bind-cta-primary">
+          <svg class="icon-svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+          </svg>
+          <span>Contactar Ahora</span>
+        </a>
+      </div>
     </div>
   </header>
 
-  <!-- Hero & VSL Section -->
-  <section class="hero-section" id="vsl">
-    <div class="hero-glow-bg"></div>
-    <div class="container">
-      
-      <div class="pill-badge" data-bind="hero.badge">
-        Oportunidad de Expansión Comercial
-      </div>
-
-      <h1 class="hero-headline" data-bind="hero.headline">
-        Construye un Negocio Sólido Apalancado en Bienestar y Consumo Masivo
-      </h1>
-
-      <p class="hero-subheadline" data-bind="hero.subheadline">
-        Mira la presentación en video para conocer el sistema de distribución, márgenes y plan de expansión.
-      </p>
-
-      <!-- VSL Wrapper -->
-      <div class="vsl-wrapper">
-        <div class="vsl-aspect-ratio" id="vsl-aspect-container">
-          <iframe 
-            id="vsl-iframe" 
-            src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" 
-            title="Presentación de Negocio"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-            allowfullscreen>
-          </iframe>
-        </div>
-        <div class="vsl-caption">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
-          <span data-bind="vsl.caption">Duración aproximada: 10 minutos · Activa el sonido para mejor experiencia</span>
-        </div>
-      </div>
-
-      <!-- Main Action Call -->
-      <div class="cta-action-box">
-        <a href="#" class="btn-primary-vsl bind-cta-primary" data-bind-text="true">
-          <span>Agendar Sesión de Evaluación</span>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M5 12h14M12 5l7 7-7 7"/>
-          </svg>
-        </a>
+  <main>
+    <!-- Hero & VSL Section -->
+    <section class="hero-section" id="vsl">
+      <div class="hero-glow-bg"></div>
+      <div class="container">
         
-        <a href="#beneficios" class="btn-secondary-vsl bind-cta-secondary">
-          Conocer Más Detalles del Sistema
-        </a>
-
-        <span class="guaranteeText" data-bind="cta.guaranteeText">
-          Cupos limitados por zona para acompañamiento personalizado.
-        </span>
-      </div>
-
-    </div>
-  </section>
-
-  <!-- Benefits Section -->
-  <section class="benefits-section" id="beneficios">
-    <div class="container">
-      <div class="section-header">
-        <h2>Pilares del Modelo de Distribución</h2>
-        <p>Un sistema diseñado para ser duplicable, escalable y respaldado por una corporación global.</p>
-      </div>
-
-      <div class="benefits-grid" id="benefits-grid">
-        <!-- Generado dinámicamente desde config.js -->
-        <div class="benefit-card">
-          <div class="benefit-icon-wrapper">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-            </svg>
-          </div>
-          <h3>Modelo de Consumo Masivo</h3>
-          <p>Productos de alta rotación diaria y retención natural sin ventas forzadas.</p>
+        <div class="pill-badge" data-bind="hero.badge">
+          Oportunidad de Expansión Comercial
         </div>
-        <div class="benefit-card">
-          <div class="benefit-icon-wrapper">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect width="20" height="14" x="2" y="5" rx="2"/>
-              <line x1="2" x2="22" y1="10" y2="10"/>
-            </svg>
+
+        <h1 class="hero-headline" data-bind="hero.headline">
+          Construye un Negocio Sólido Apalancado en Bienestar y Consumo Masivo
+        </h1>
+
+        <p class="hero-subheadline" data-bind="hero.subheadline">
+          Mira el video completo para conocer el sistema de distribución, márgenes de ganancia y plan de expansión internacional.
+        </p>
+
+        <!-- VSL Video Wrapper -->
+        <div class="vsl-wrapper">
+          <div class="vsl-aspect-ratio" id="vsl-aspect-container">
+            <iframe 
+              id="vsl-iframe" 
+              src="https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ" 
+              title="Presentación de Negocio"
+              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+              allowfullscreen>
+            </iframe>
           </div>
-          <h3>Infraestructura Resuelta</h3>
-          <p>Compañía multinacional respalda inventario, envíos y cobros automatizados.</p>
+          <div class="vsl-caption">
+            <svg class="icon-svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            <span data-bind="vsl.caption">Duración aproximada: 10 minutos · Activa el sonido para mejor experiencia</span>
+          </div>
         </div>
-        <div class="benefit-card">
-          <div class="benefit-icon-wrapper">
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/>
+
+        <!-- Trust Highlights Row -->
+        <div class="trust-highlights-row">
+          <div class="trust-item">
+            <svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+            <span>Logística 100% Cubierta</span>
+          </div>
+          <div class="trust-item">
+            <svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="m16 12-4-4-4 4M12 16V8"/>
+            </svg>
+            <span>Consumo Masivo & Retención</span>
+          </div>
+          <div class="trust-item">
+            <svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
               <circle cx="9" cy="7" r="4"/>
-              <path d="M22 21v-2a4 4 0 0 0-3-3.87"/>
+              <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
               <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
             </svg>
+            <span>Mentoría & Duplicación</span>
           </div>
-          <h3>Mentoría y Duplicación</h3>
-          <p>Capacitación paso a paso desde el primer día con herramientas digitales validadas.</p>
+          <div class="trust-item">
+            <svg class="icon-svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="2" x2="22" y1="12" y2="12"/>
+              <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+            </svg>
+            <span>Expansión Internacional</span>
+          </div>
+        </div>
+
+        <!-- Main Action Box -->
+        <div class="cta-action-box">
+          <a href="#" class="btn-primary-vsl bind-cta-primary" id="main-vsl-cta">
+            <span data-bind="cta.primaryText">Agendar Sesión de Evaluación</span>
+            <svg class="icon-svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+          
+          <a href="#beneficios" class="btn-secondary-vsl bind-cta-secondary" data-bind="cta.secondaryText">
+            Conocer Más Detalles del Sistema
+          </a>
+
+          <span class="guarantee-text" data-bind="cta.guaranteeText">
+            Cupos limitados por zona para acompañamiento personalizado.
+          </span>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- Benefits Section -->
+    <section class="benefits-section" id="beneficios">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-badge">Ventajas Competitivas</span>
+          <h2>Pilares del Modelo de Distribución</h2>
+          <p>Un sistema diseñado para ser duplicable, escalable y respaldado por una corporación global.</p>
+        </div>
+
+        <div class="benefits-grid" id="benefits-grid">
+          <!-- Renderizado dinámicamente desde config.js (hasta 4 items) -->
         </div>
       </div>
-    </div>
-  </section>
+    </section>
+
+    <!-- 3-Step Methodology Section -->
+    <section class="methodology-section" id="metodologia">
+      <div class="container">
+        <div class="section-header">
+          <span class="section-badge">Ruta de Inicio</span>
+          <h2>Cómo Funciona el Proceso</h2>
+          <p>Tres pasos sencillos para evaluar, capacitarte e iniciar tu negocio de distribución.</p>
+        </div>
+
+        <div class="steps-grid">
+          <div class="step-card">
+            <div class="step-number">01</div>
+            <h3>Conexión & Evaluación</h3>
+            <p>Agendamos una breve llamada para analizar tu perfil comercial, resolver dudas específicas y validar disponibilidad en tu zona.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">02</div>
+            <h3>Capacitación & Sistema</h3>
+            <p>Accedes a herramientas digitales, plataforma de pedidos, capacitaciones semanales y acompañamiento directo 1-a-1.</p>
+          </div>
+
+          <div class="step-card">
+            <div class="step-number">03</div>
+            <h3>Distribución & Escala</h3>
+            <p>Posicionas la marca a través de hábitos de consumo diario y construyes un equipo comercial con ingresos directos y residuales.</p>
+          </div>
+        </div>
+
+        <!-- Callout Banner -->
+        <div class="ready-banner">
+          <div class="ready-banner-text">
+            <h3>¿Listo para dar el siguiente paso?</h3>
+            <p>Conversemos directamente por WhatsApp para coordinar tu sesión informativa personalizada.</p>
+          </div>
+          <a href="#" class="btn-banner-cta bind-cta-primary">
+            <span>Iniciar Conversación</span>
+            <svg class="icon-svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
 
   <!-- Footer -->
   <footer class="footer">
@@ -149,10 +208,14 @@
       <div class="footer-disclaimer">
         Los resultados comerciales y de negocio varían según el compromiso individual, experiencia y dedicación de cada empresario independiente. Este portal informativo es una herramienta independiente de distribución y prospección digital.
       </div>
+      
+      <p class="footer-copy">
+        © <span id="footer-year">2026</span> Todos los derechos reservados.
+      </p>
     </div>
   </footer>
 
-  <!-- Configuration and Logic -->
+  <!-- Scripts -->
   <script src="config.js"></script>
   <script src="app.js"></script>
 </body>
