@@ -4,6 +4,7 @@ import { z } from "zod";
 
 import {
   ecosystemTypeSchema,
+  getMasterSiteDomain,
   getMasterSiteId,
   isMasterSiteId,
   normalizeEcosystemType,
@@ -69,8 +70,15 @@ export const productPageReplicationService = {
       throw new Error(`No saved master site configuration exists for ${siteId}.`);
     }
 
+    const masterDomain = getMasterSiteDomain(ecosystemType);
+    const sourceRecord = asRecord(source);
+    const sourceSite = asRecord(sourceRecord.site);
     const configuration = productPageGenerationInputSchema.parse({
-      ...asRecord(source),
+      ...sourceRecord,
+      site: {
+        ...sourceSite,
+        domain: masterDomain
+      },
       ecosystemType
     });
     const generated = await productPageGenerationService.generate(configuration, { templateSource: "canonical" });
@@ -79,7 +87,7 @@ export const productPageReplicationService = {
     return {
       ecosystemType,
       siteId,
-      previewUrl: ecosystemType === "PRODUCT" ? "https://ganomaster.pro" : undefined,
+      previewUrl: `https://${masterDomain}`,
       generated,
       published
     };

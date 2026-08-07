@@ -149,3 +149,20 @@ Implication:
 - future template types (events, catalog, webinars) can scale on their own subdomains seamlessly
 - the root domain `ganomaster.pro` becomes an interactive commercial demo hub for PartnerHub
 
+## Decision 15: Master Ecosystems Publish To Canonical Subdomain Folders
+
+Date: 2026-08-06
+
+Decision:
+
+PartnerHub uses dedicated master hosts for each ecosystem preview:
+
+- `product.ganomaster.pro`
+- `business.ganomaster.pro`
+- `brand.ganomaster.pro`
+
+Each host maps to a fixed subdirectory under the `ganomaster.pro` Hostinger account. Master publishing must not depend on client-domain routing or per-client SFTP JSON mappings.
+
+Reason:
+
+The product, VSL/business, and personal brand ecosystems must be independently reviewable by the team before replication.

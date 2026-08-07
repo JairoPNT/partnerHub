@@ -8,6 +8,7 @@ import { z } from "zod";
 import { activationLeadService } from "@/server/services/activationLeadService";
 import { productPageHistoryService } from "@/server/services/productPageHistoryService";
 import { productPageGenerationInputSchema } from "@/server/services/productPageGenerationService";
+import { getMasterSiteDomainBySiteId } from "@/server/services/ecosystemService";
 import { productPageSourceService } from "@/server/services/productPageSourceService";
 
 const siteIdSchema = z
@@ -204,7 +205,8 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
   }
 
   const expected = productPageGenerationInputSchema.parse(source);
-  const domain = expected.site.domain ?? null;
+  const expectedDomain = getMasterSiteDomainBySiteId(parsed.siteId) ?? expected.site.domain ?? null;
+  const domain = expectedDomain;
 
   if (!domain) {
     const result: ProductPageVerificationResult = {
@@ -263,7 +265,7 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
 
   if (publicConfig) {
     addMatchCheck(checks, "site_id_matches", expected.site.id, publicConfig.site?.id);
-    addMatchCheck(checks, "site_domain_matches", expected.site.domain, publicConfig.site?.domain);
+    addMatchCheck(checks, "site_domain_matches", expectedDomain, publicConfig.site?.domain);
     addMatchCheck(checks, "brand_name_matches", expected.distributor.brandName, publicConfig.distributor?.brandName);
     addMatchCheck(checks, "full_name_matches", expected.distributor.fullName, publicConfig.distributor?.fullName);
     addMatchCheck(

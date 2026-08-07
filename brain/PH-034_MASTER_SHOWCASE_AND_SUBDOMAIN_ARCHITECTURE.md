@@ -38,3 +38,13 @@ Para eliminar el riesgo de errores cruzados entre ecosistemas y desacoplar total
    - Configurar los registros CNAME / A para `product`, `business` y `brand` apuntando al host correspondiente con SSL automático.
 3. **Backend & Replicación (Codex):**
    - Ajustar los mapeos de dominio por defecto en los servicios de generación y verificación para utilizar los subdominios respectivos.
+
+## PH-035 Update - Canonical Publication Paths
+
+The master ecosystem pages now publish to dedicated subdomain routes:
+
+- `ganomaster` -> `https://product.ganomaster.pro` -> `/home/u658137804/domains/ganomaster.pro/public_html/product`
+- `ganomaster-business` -> `https://business.ganomaster.pro` -> `/home/u658137804/domains/ganomaster.pro/public_html/business`
+- `ganomaster-personal-brand` -> `https://brand.ganomaster.pro` -> `/home/u658137804/domains/ganomaster.pro/public_html/brand`
+
+These routes are controlled in backend publication services and are not treated as client domains.
