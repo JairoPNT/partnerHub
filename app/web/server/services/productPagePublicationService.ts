@@ -7,6 +7,10 @@ import SftpClient from "ssh2-sftp-client";
 import { z } from "zod";
 
 import { productPageSourceService } from "@/server/services/productPageSourceService";
+import {
+  getMasterEcosystemType,
+  getMasterSiteDirectoryName
+} from "@/server/services/ecosystemService";
 import { activationLeadService } from "@/server/services/activationLeadService";
 import {
   productPageVerificationService,
@@ -17,6 +21,9 @@ import { productPageHistoryService } from "@/server/services/productPageHistoryS
 const siteIdSchema = z
   .string()
   .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, "siteId must be a lowercase slug");
+
+const DEFAULT_HOSTINGER_REMOTE_ROOT_TEMPLATE = "/home/u658137804/domains/{domain}/public_html";
+const DEFAULT_HOSTINGER_MASTER_REMOTE_ROOT = "/home/u658137804/domains/ganomaster.pro/public_html";
 
 export const productPagePublicationInputSchema = z.object({
   siteId: siteIdSchema
@@ -43,6 +50,7 @@ type SftpConfiguration = {
   remoteRoot: string;
   remoteRoots: Record<string, string>;
   remoteRootTemplate?: string;
+  masterRemoteRoot: string;
 };
 
 function getOutputRoot() {
@@ -70,6 +78,14 @@ function getSftpConfiguration(): SftpConfiguration {
 
   if (!remoteRoot.startsWith("/") || remoteRoot === "/") {
     throw new Error("HOSTINGER_SFTP_REMOTE_ROOT must be an absolute non-root path.");
+  }
+
+  const masterRemoteRoot = (
+    process.env.HOSTINGER_MASTER_REMOTE_ROOT?.trim() || DEFAULT_HOSTINGER_MASTER_REMOTE_ROOT
+  ).replace(/\/+$/, "");
+
+  if (!masterRemoteRoot.startsWith("/") || masterRemoteRoot === "/") {
+    throw new Error("HOSTINGER_MASTER_REMOTE_ROOT must be an absolute non-root path.");
   }
 
   let remoteRoots: Record<string, string> = {};
@@ -104,15 +120,21 @@ function getSftpConfiguration(): SftpConfiguration {
     password: requiredEnvironmentVariable("HOSTINGER_SFTP_PASSWORD"),
     remoteRoot,
     remoteRoots,
-    remoteRootTemplate: process.env.HOSTINGER_SFTP_REMOTE_ROOT_TEMPLATE?.trim() || "/home/u658137804/domains/{domain}/public_html",
+    remoteRootTemplate: process.env.HOSTINGER_SFTP_REMOTE_ROOT_TEMPLATE?.trim() || DEFAULT_HOSTINGER_REMOTE_ROOT_TEMPLATE,
+    masterRemoteRoot
   };
 }
 
 async function getRemoteRoot(configuration: SftpConfiguration, siteId: string) {
+  const masterEcosystemType = getMasterEcosystemType(siteId);
+  if (masterEcosystemType) {
+    return posix.join(configuration.masterRemoteRoot, getMasterSiteDirectoryName(masterEcosystemType));
+  }
+
   const mappedRoot = configuration.remoteRoots[siteId];
   if (mappedRoot) return mappedRoot;
 
-  const template = configuration.remoteRootTemplate || "/home/u658137804/domains/{domain}/public_html";
+  const template = configuration.remoteRootTemplate || DEFAULT_HOSTINGER_REMOTE_ROOT_TEMPLATE;
   const source = await productPageSourceService.get(siteId) as { site?: { domain?: unknown } } | null;
   const domain = typeof source?.site?.domain === "string" ? source.site.domain : null;
 
