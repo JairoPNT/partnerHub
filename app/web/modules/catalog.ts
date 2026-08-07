@@ -5,7 +5,6 @@ export type ModuleSlug =
   | "payments"
   | "master-site"
   | "landing-builder"
-  | "vsl-builder"
   | "creative-assets"
   | "analytics"
   | "campaigns"
@@ -83,12 +82,12 @@ export const moduleCatalog: ModuleRecord[] = [
   },
   {
     slug: "master-site",
-    name: "Master Site",
+    name: "Master Sites",
     group: "Operations",
     status: "Foundation",
-    description: "Fuente de verdad para contenido, promociones y material maestro.",
+    description: "Fuente de verdad para contenido, promociones y material maestro de todos los ecosistemas.",
     intent: "Centralizar lo replicable y minimizar mantenimiento repetido.",
-    focus: ["Productos", "Copys", "Recursos", "Promos"],
+    focus: ["Productos", "Negocio VSL", "Marca Personal", "Promos"],
     outputs: ["Contenido maestro", "Versiones", "Replicacion"],
     notYet: ["Editor visual avanzado", "Workflow editorial completo"]
   },
@@ -102,17 +101,6 @@ export const moduleCatalog: ModuleRecord[] = [
     focus: ["Hero", "Beneficios", "CTA", "WhatsApp"],
     outputs: ["Landing base", "Bloques reutilizables", "Publicacion"],
     notYet: ["Drag and drop total", "A/B testing"]
-  },
-  {
-    slug: "vsl-builder",
-    name: "VSL Builder",
-    group: "Operations",
-    status: "Foundation",
-    description: "Constructor de paginas para VSL de negocio y captacion.",
-    intent: "Presentar oportunidad y objeciones en una experiencia guiada.",
-    focus: ["Video principal", "Historia", "CTA", "Lead capture"],
-    outputs: ["Pagina VSL", "Script base", "CTA controlado"],
-    notYet: ["Video hosting avanzado", "Funnels complejos"]
   },
   {
     slug: "creative-assets",

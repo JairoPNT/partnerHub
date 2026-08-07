@@ -6,9 +6,8 @@ Initial modules in the scaffold:
 - Partners
 - Plans
 - Payments
-- Master Site
+- Master Sites
 - Landing Builder
-- VSL Builder
 - Creative Assets
 - Campaigns
 - Automations
