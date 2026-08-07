@@ -177,6 +177,10 @@ async function qualifyByReferredSite(input: z.infer<typeof qualifyReferralSchema
 
   const current = referrals.find((record) => record.id === existing?.id);
   if (!current) throw new Error(`Referral for ${parsed.referredSiteId} was not found.`);
+  const codes = await readJson<ReferralCodeRecord[]>("codes", []);
+  const registeredCode = codes.find((record) => record.code === current.referrerCode);
+  if (!registeredCode || registeredCode.siteId.startsWith("ref-")) return current;
+
   if (current.status === "QUALIFIED") return current;
 
   return updateStatus(current.id, "QUALIFIED");
