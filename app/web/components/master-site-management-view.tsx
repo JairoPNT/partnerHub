@@ -47,6 +47,12 @@ import {
 } from "@/components/ui/verification-status-panel";
 import { ProductPageHistoryPanel } from "@/components/product-page-history-panel";
 import { PersonalBrandBlocksView } from "@/components/personal-brand-blocks-view";
+import {
+  MASTER_SITE_DOMAINS,
+  CANONICAL_URLS,
+  SHOWCASE_DOMAIN,
+  EcosystemType
+} from "@/lib/ecosystem-contracts";
 
 type MasterSiteManagementViewProps = {
   record?: ModuleRecord;
@@ -504,33 +510,50 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             </span>
           </div>
 
-          {activeEcosystem === "PRODUCT" && (
+          <div className="flex flex-wrap items-center gap-2">
             <a
-              href="https://ganomaster.pro"
+              href={CANONICAL_URLS.SHOWCASE}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 px-4 py-2 text-xs font-bold text-white shadow transition"
+              className="inline-flex items-center gap-2 rounded-xl bg-slate-900 hover:bg-slate-800 px-3.5 py-2 text-xs font-bold text-white shadow-sm transition border border-slate-700"
+            >
+              <Sparkles className="h-3.5 w-3.5 text-cyan-400" />
+              <span>Showcase ({SHOWCASE_DOMAIN})</span>
+              <ExternalLink className="h-3 w-3 text-slate-400" />
+            </a>
+
+            <a
+              href={CANONICAL_URLS[activeEcosystem]}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`inline-flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-bold text-white shadow transition ${
+                activeEcosystem === "PRODUCT"
+                  ? "bg-cyan-600 hover:bg-cyan-500"
+                  : activeEcosystem === "BUSINESS"
+                  ? "bg-indigo-600 hover:bg-indigo-500"
+                  : "bg-emerald-600 hover:bg-emerald-500"
+              }`}
             >
               <Globe className="h-4 w-4" />
-              <span>Abrir ganomaster.pro</span>
+              <span>Abrir {MASTER_SITE_DOMAINS[activeEcosystem]}</span>
               <ExternalLink className="h-3.5 w-3.5" />
             </a>
-          )}
+          </div>
         </div>
 
         <h1 className="mt-5 text-3xl font-bold tracking-tight text-slate-900 sm:text-4xl">
           {activeEcosystem === "PRODUCT"
-            ? "Plantilla Maestra · Producto (ganomaster.pro)"
+            ? `Plantilla Maestra · Producto (${MASTER_SITE_DOMAINS.PRODUCT})`
             : activeEcosystem === "BUSINESS"
-            ? "Plantilla Maestra · Negocio (VSL y Oportunidad)"
-            : "Plantilla Maestra · Marca Personal (Bio y Enlaces)"}
+            ? `Plantilla Maestra · Negocio (${MASTER_SITE_DOMAINS.BUSINESS})`
+            : `Plantilla Maestra · Marca Personal (${MASTER_SITE_DOMAINS.PERSONAL_BRAND})`}
         </h1>
         <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
           {activeEcosystem === "PRODUCT"
-            ? "Administración central de la plantilla maestra de producto con identificador ganomaster y dominio ganomaster.pro. Genera la vista previa y publícala antes de replicar a los clientes."
+            ? `Administración central de la plantilla maestra de producto con identificador ganomaster y subdominio ${MASTER_SITE_DOMAINS.PRODUCT}. Genera la vista previa y publícala antes de replicar a los clientes.`
             : activeEcosystem === "BUSINESS"
-            ? "Estructura maestra para páginas de presentación de negocio y prospección con video VSL. Permite presentar la oportunidad con llamada a acción directa a WhatsApp."
-            : "Estructura maestra de perfil personal y enlaces estilo Linktree enriquecido con bloques modulares de servicios, biografía y contacto directo."}
+            ? `Estructura maestra para páginas de presentación de negocio y prospección con video VSL en ${MASTER_SITE_DOMAINS.BUSINESS}. Permite presentar la oportunidad con llamada a acción directa a WhatsApp.`
+            : `Estructura maestra de perfil personal y enlaces estilo Linktree enriquecido en ${MASTER_SITE_DOMAINS.PERSONAL_BRAND} con bloques modulares de servicios, biografía y contacto directo.`}
         </p>
 
         {/* SELECTOR DE PESTAÑAS DE ECOSISTEMA */}
@@ -547,7 +570,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             <ShoppingBag className="h-4 w-4 text-cyan-600" />
             <span>Producto</span>
             <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
-              Activo · ganomaster.pro
+              Activo · {MASTER_SITE_DOMAINS.PRODUCT}
             </span>
           </button>
 
@@ -556,14 +579,14 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             onClick={() => setActiveEcosystem("BUSINESS")}
             className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition whitespace-nowrap ${
               activeEcosystem === "BUSINESS"
-                ? "border-cyan-600 text-cyan-950 font-extrabold"
+                ? "border-indigo-600 text-indigo-950 font-extrabold"
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
             <Video className="h-4 w-4 text-indigo-600" />
             <span>Negocio (VSL)</span>
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
-              En preparación
+            <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-bold text-indigo-800 border border-indigo-200">
+              Activo · {MASTER_SITE_DOMAINS.BUSINESS}
             </span>
           </button>
 
@@ -572,14 +595,14 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             onClick={() => setActiveEcosystem("PERSONAL_BRAND")}
             className={`flex items-center gap-2 border-b-2 py-3 px-4 text-xs font-bold transition whitespace-nowrap ${
               activeEcosystem === "PERSONAL_BRAND"
-                ? "border-cyan-600 text-cyan-950 font-extrabold"
+                ? "border-emerald-600 text-emerald-950 font-extrabold"
                 : "border-transparent text-slate-500 hover:text-slate-900"
             }`}
           >
             <UserCheck className="h-4 w-4 text-emerald-600" />
             <span>Marca personal</span>
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-800 border border-amber-200">
-              En preparación
+            <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 border border-emerald-200">
+              Activo · {MASTER_SITE_DOMAINS.PERSONAL_BRAND}
             </span>
           </button>
         </div>
@@ -595,10 +618,10 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             <Globe className="h-6 w-6 text-cyan-600" />
             <div>
               <h2 className="text-base font-bold text-slate-900">
-                Estado Actual de ganomaster.pro
+                Estado Actual de {MASTER_SITE_DOMAINS.PRODUCT}
               </h2>
               <p className="text-xs text-slate-500">
-                Información técnica y fechas de actualización de la plantilla maestra
+                Información técnica y fechas de actualización de la plantilla maestra de producto
               </p>
             </div>
           </div>
@@ -614,14 +637,14 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
         <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 text-xs">
           <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-            <span className="text-slate-400 font-bold text-[10px] uppercase block">Dominio Fijo</span>
+            <span className="text-slate-400 font-bold text-[10px] uppercase block">Subdominio Canónico</span>
             <a
-              href="https://ganomaster.pro"
+              href={CANONICAL_URLS.PRODUCT}
               target="_blank"
               rel="noopener noreferrer"
               className="font-extrabold font-mono text-cyan-600 text-sm hover:underline inline-flex items-center gap-1"
             >
-              {MASTER_DOMAIN}
+              {MASTER_SITE_DOMAINS.PRODUCT}
               <ExternalLink className="h-3 w-3" />
             </a>
           </div>
@@ -1314,10 +1337,16 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
             <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 text-xs">
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-                <span className="text-slate-400 font-bold text-[10px] uppercase block">Dominio Maestro</span>
-                <span className="font-extrabold font-mono text-slate-500 text-xs italic">
-                  Pendiente de asignación
-                </span>
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Subdominio Canónico</span>
+                <a
+                  href={CANONICAL_URLS.BUSINESS}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-extrabold font-mono text-indigo-600 text-sm hover:underline inline-flex items-center gap-1"
+                >
+                  {MASTER_SITE_DOMAINS.BUSINESS}
+                  <ExternalLink className="h-3 w-3" />
+                </a>
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
@@ -1335,20 +1364,20 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
               </div>
 
               <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-                <span className="text-slate-400 font-bold text-[10px] uppercase block">Replicación</span>
-                <span className="font-bold text-slate-500 text-xs">
-                  Inactiva (Esperando contrato)
+                <span className="text-slate-400 font-bold text-[10px] uppercase block">Aislamiento SFTP</span>
+                <span className="font-bold text-emerald-700 text-xs">
+                  Directorio /business aislado
                 </span>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-amber-200 bg-amber-50/60 p-4 text-xs text-amber-900 space-y-1.5">
-              <div className="flex items-center gap-2 font-bold text-amber-950">
-                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                <span>Ecosistema en fase de definición técnica (PH-032 / PH-033)</span>
+            <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4 text-xs text-indigo-900 space-y-1.5">
+              <div className="flex items-center gap-2 font-bold text-indigo-950">
+                <ShieldCheck className="h-4 w-4 text-indigo-600 shrink-0" />
+                <span>Ecosistema aislado en subdominio dedicado (PH-034)</span>
               </div>
-              <p className="text-amber-800 text-[11px] leading-relaxed">
-                El master de Negocio (VSL) cuenta con identificador canónico reservado <code className="font-mono font-bold">ganomaster-business</code>. La publicación real y la replicación masiva se habilitarán una vez que el arquitecto asigne el dominio oficial y se complete el contrato de plantilla VSL (AGR-20260806-002).
+              <p className="text-indigo-800 text-[11px] leading-relaxed">
+                El master de Negocio (VSL) cuenta con identificador canónico <code className="font-mono font-bold">ganomaster-business</code> y subdominio asignado <code className="font-mono font-bold">{MASTER_SITE_DOMAINS.BUSINESS}</code>. La arquitectura multi-subdominio garantiza que cada plantilla opere en su propio árbol web sin riesgo de colisión.
               </p>
             </div>
           </section>
