@@ -10,6 +10,14 @@ Antigravity owns frontend implementation, UI design, UX flows, React components,
 4. Antigravity writes a matching report in `reports/`.
 5. Codex reviews the report and creates a follow-up request only if needed.
 
+## Parallel Execution
+
+- Antigravity requests must be small, independently verifiable, and limited to declared frontend files or routes.
+- Each request must identify dependencies and tickets that are safe to execute in parallel.
+- Do not absorb additional unrelated UX or frontend work into an active request; create a new request ID.
+- Do not edit files assigned to another active ticket or backend/infrastructure ownership.
+- If a file overlap is discovered, stop that portion and report the conflict for orchestration.
+
 ## Do Not Repeat
 
 If a request already has a completion report, do not execute it again unless a new request explicitly references it as a follow-up.

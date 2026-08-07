@@ -104,6 +104,19 @@ Authority:
 - Review feedback should be specific, actionable, and tied to code or documentation.
 - Jairo is the CEO and product owner for final product-direction decisions.
 
+## Parallel Work and Non-Overlap Rule
+
+All agents must read and follow `brain/18_PARALLEL_WORK_AND_TASK_SLICING_POLICY.md`.
+
+- Do not create or execute mega tasks that combine independent deliverables.
+- Split work into small tickets with one owner, one outcome, one branch, and declared file/module boundaries.
+- Delegate independent frontend and backend work in parallel instead of waiting sequentially.
+- Parallel tickets must declare dependencies, allowed areas, excluded areas, and other tickets they are safe to run beside.
+- Multiple Codex chats may run concurrently only with separate ticket IDs, branches, worktrees, and non-overlapping source areas.
+- Two active tasks must never edit the same files, migrations, API contracts, infrastructure configuration, or shared generated output.
+- Cross-cutting integration belongs to a separate integration ticket owned by one agent.
+- If overlap appears, the later task must stop in the conflicting area and create a handoff or follow-up request.
+
 ## Cross-Agent Request Protocol
 
 Todas las tareas de frontend, UX, diseño visual, React, Tailwind, navegación e interacción deben gestionarse mediante archivos de request antes de ejecutarse.
