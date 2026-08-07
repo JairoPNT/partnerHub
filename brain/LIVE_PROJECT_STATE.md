@@ -4,7 +4,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Current Ticket
 
-`PH-020 - Publicacion verificada`
+`PH-038A - Domain inventory read model API (completed)`
 
 ## Current State
 
@@ -60,4 +60,6 @@ PH-020 backend MVP was implemented on 2026-07-30. The internal product page publ
 
 ## Next Step
 
-Antigravity should implement the PH-020 admin dashboard states: verified, published but not verified, verification failed, failed-check detail, and `Verificar ahora`.
+PH-038A is closed. The authenticated read-only Domains API exposes canonical masters and only persisted partner domains/targets, without live DNS or infrastructure secrets. Three focused tests, targeted lint, and build pass. Antigravity may begin `AGR-20260807-002`; PH-038B is parallel-safe because it owns separate backend diagnostic files and routes.
+
+Antigravity work for provisioning and logo upload must begin later from new, specific AGR requests after the corresponding backend APIs are stable. Existing completed AGR requests must not be reopened.
