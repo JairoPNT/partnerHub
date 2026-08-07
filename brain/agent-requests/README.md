@@ -15,6 +15,8 @@ Use request files when a task should be executed by a specific agent, especially
 
 Every request must have a stable ID and every completed request must have a matching report.
 
+Every request must also comply with `brain/18_PARALLEL_WORK_AND_TASK_SLICING_POLICY.md`. Before dispatch, declare the owner, bounded scope, allowed and excluded files/modules, dependencies, parallel-safe ticket IDs, and integration notes. Broad requests must be split before execution.
+
 Example:
 
 - Request: `antigravity/requests/AGR-20260805-001_partners_compact_ui.md`
