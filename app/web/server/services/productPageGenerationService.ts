@@ -9,6 +9,7 @@ import { productPageSourceService } from "@/server/services/productPageSourceSer
 import { activationLeadService } from "@/server/services/activationLeadService";
 import { productPageHistoryService } from "@/server/services/productPageHistoryService";
 import { DEFAULT_ECOSYSTEM_TYPE, ecosystemTypeSchema, getMasterSiteId, isMasterSiteId } from "@/server/services/ecosystemService";
+import { applyMetaPixelToHtml, metaPixelIdPattern } from "@/server/services/metaPixelHtml";
 
 const siteIdSchema = z
   .string()
@@ -133,7 +134,11 @@ export const productPageGenerationInputSchema = z.object({
         .optional(),
       meta: z
         .object({
-          pixelId: z.string().trim().min(1).optional()
+          pixelId: z
+            .string()
+            .trim()
+            .regex(metaPixelIdPattern, "Meta Pixel ID must contain between 5 and 32 digits")
+            .optional()
         })
         .optional(),
       googleAds: z
@@ -294,6 +299,17 @@ async function applyAssetVersion(outputDirectory: string, assetVersion: string) 
   await writeFile(indexPath, versionedHtml, "utf8");
 }
 
+async function applyConfiguredIntegrations(
+  outputDirectory: string,
+  configuration: ReturnType<typeof normalizedConfiguration>
+) {
+  const indexPath = resolve(outputDirectory, "index.html");
+  const html = await readFile(indexPath, "utf8");
+  const integratedHtml = applyMetaPixelToHtml(html, configuration.integrations?.meta?.pixelId);
+
+  await writeFile(indexPath, integratedHtml, "utf8");
+}
+
 export const productPageGenerationService = {
   async generate(
     input: ProductPageGenerationInput,
@@ -325,6 +341,7 @@ export const productPageGenerationService = {
 
     await writeFile(resolve(outputDirectory, "config.js"), buildConfigSource(configuration), "utf8");
     await writeFile(resolve(outputDirectory, ".htaccess"), noCacheHtaccessSource, "utf8");
+    await applyConfiguredIntegrations(outputDirectory, configuration);
     await applyAssetVersion(outputDirectory, assetVersion);
     await writeFile(
       resolve(outputDirectory, "manifest.json"),
