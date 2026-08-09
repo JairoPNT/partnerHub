@@ -53,6 +53,7 @@ export interface PartnerLead {
 }
 
 const MEASUREMENT_ID_REGEX = /^G-[A-Z0-9]+$/i;
+const META_PIXEL_ID_REGEX = /^\d{5,32}$/;
 
 export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps) {
   const [leads, setLeads] = useState<PartnerLead[]>([]);
@@ -62,12 +63,14 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
 
   // Form states
   const [measurementId, setMeasurementId] = useState("");
+  const [metaPixelId, setMetaPixelId] = useState("");
   const [operatorNotes, setOperatorNotes] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [isMarkingVerified, setIsMarkingVerified] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [ga4FieldError, setGa4FieldError] = useState<string | null>(null);
+  const [metaFieldError, setMetaFieldError] = useState<string | null>(null);
 
   const fetchLeads = async () => {
     setIsLoading(true);
@@ -101,11 +104,17 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
     setSelectedLead(lead);
     setSuccessMessage(null);
     setErrorMessage(null);
-    setFieldError(null);
+    setGa4FieldError(null);
+    setMetaFieldError(null);
 
     const existingId =
       lead.onboardingData?.analyticsMeasurementId || "";
     setMeasurementId(existingId);
+    
+    const existingMetaId =
+      lead.onboardingData?.metaPixelId || "";
+    setMetaPixelId(existingMetaId);
+    
     setOperatorNotes(lead.onboardingData?.operatorNotes || "");
   };
 
@@ -142,13 +151,24 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
     e.preventDefault();
     if (!selectedLead) return;
 
-    setFieldError(null);
+    setGa4FieldError(null);
+    setMetaFieldError(null);
     setSuccessMessage(null);
     setErrorMessage(null);
 
     const trimmedId = measurementId.trim().toUpperCase();
     if (trimmedId && !MEASUREMENT_ID_REGEX.test(trimmedId)) {
-      setFieldError("El ID de medición debe tener el formato G-XXXXXXXXXX (ej. G-7F24PBZPDM).");
+      setGa4FieldError("El ID de medición debe tener el formato G-XXXXXXXXXX (ej. G-7F24PBZPDM).");
+      return;
+    }
+    
+    const trimmedMetaId = metaPixelId.trim();
+    if (selectedLead.onboardingData?.metaPixelId && !trimmedMetaId) {
+      setMetaFieldError("La eliminación del Pixel no está disponible en esta vista. Conserva el actual o ingresa uno válido.");
+      return;
+    }
+    if (trimmedMetaId && !META_PIXEL_ID_REGEX.test(trimmedMetaId)) {
+      setMetaFieldError("El Pixel ID de Meta debe contener únicamente entre 5 y 32 números. No pegues scripts de código.");
       return;
     }
 
@@ -158,6 +178,7 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
       const payload = {
         onboardingData: {
           analyticsMeasurementId: trimmedId || undefined,
+          metaPixelId: trimmedMetaId || undefined,
           operatorNotes: operatorNotes.trim() || undefined
         }
       };
@@ -174,9 +195,10 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
       }
 
       const updatedLead = await res.json();
-      setSuccessMessage("Configuración de Google Analytics 4 guardada correctamente.");
+      setSuccessMessage("Configuración de analítica guardada correctamente. Recuerda que debes regenerar y publicar el sitio web para que estos cambios se reflejen al público.");
       setSelectedLead(updatedLead);
       setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+      setMetaPixelId(updatedLead.onboardingData?.metaPixelId || "");
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Error al guardar la configuración.");
     } finally {
@@ -447,23 +469,72 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
                         value={measurementId}
                         onChange={(e) => {
                           setMeasurementId(e.target.value);
-                          setFieldError(null);
+                          setGa4FieldError(null);
                         }}
                         className={`text-xs font-mono uppercase bg-white rounded-xl border-slate-200 ${
-                          fieldError ? "border-rose-500 ring-1 ring-rose-500" : "focus-visible:ring-cyan-500"
+                          ga4FieldError ? "border-rose-500 ring-1 ring-rose-500" : "focus-visible:ring-cyan-500"
                         }`}
                       />
 
-                      {fieldError && (
+                      {ga4FieldError && (
                         <p className="text-[11px] font-medium text-rose-600 flex items-center gap-1">
                           <AlertCircle className="h-3.5 w-3.5" />
-                          {fieldError}
+                          {ga4FieldError}
                         </p>
                       )}
 
                       <p className="text-[11px] text-slate-500">
                         Este código se inyecta en <code className="text-cyan-800 bg-cyan-100 px-1 py-0.5 rounded">integrations.analytics.measurementId</code> al generar la landing del empresario.
                       </p>
+                    </div>
+
+                    {/* Campo Meta Pixel */}
+                    <div className="rounded-2xl border border-blue-100 bg-blue-50/40 p-4 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <Label htmlFor="metaPixelId" className="text-xs font-bold text-slate-900 flex items-center gap-2">
+                          <svg className="w-4 h-4 text-blue-600" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.469h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.469h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/>
+                          </svg>
+                          Pixel ID de Meta (Facebook/Instagram)
+                        </Label>
+                        <Badge variant="neutral" className={`text-[10px] font-bold ${selectedLead?.onboardingData?.metaPixelId ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
+                          {selectedLead?.onboardingData?.metaPixelId ? "Configurado" : "Pendiente"}
+                        </Badge>
+                      </div>
+
+                      <Input
+                        id="metaPixelId"
+                        type="text"
+                        placeholder="Ej. 123456789012345"
+                        value={metaPixelId}
+                        onChange={(e) => {
+                          setMetaPixelId(e.target.value);
+                          setMetaFieldError(null);
+                        }}
+                        className={`text-xs font-mono bg-white rounded-xl border-slate-200 ${
+                          metaFieldError ? "border-rose-500 ring-1 ring-rose-500" : "focus-visible:ring-blue-500"
+                        }`}
+                      />
+
+                      {metaFieldError && (
+                        <p className="text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                          <AlertCircle className="h-3.5 w-3.5" />
+                          {metaFieldError}
+                        </p>
+                      )}
+
+                      <p className="text-[11px] text-slate-500">
+                        Pega únicamente el Pixel ID numérico (Dataset ID). No pegues scripts ni código. Esta modificación requiere regeneración para reflejarse en la página de producto.
+                      </p>
+                      
+                      <a
+                        href="https://business.facebook.com/events_manager2"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-[11px] font-semibold text-blue-600 hover:underline flex items-center gap-1 w-max"
+                      >
+                        Buscar ID en Events Manager <ExternalLink className="h-3 w-3" />
+                      </a>
                     </div>
 
                     {/* Notas Internas del Operador */}
@@ -656,26 +727,7 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
                   </div>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Meta Pixel */}
-                  <div className="p-4 rounded-2xl border border-slate-200 bg-white opacity-70 relative">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-xs font-bold text-slate-900">Meta Pixel (Facebook/Instagram)</span>
-                      <Badge variant="neutral" className="text-[9px] font-bold text-purple-700 bg-purple-50 border-purple-200">
-                        Próximamente
-                      </Badge>
-                    </div>
-                    <Input
-                      disabled
-                      placeholder="Pixel ID (No disponible en MVP)"
-                      className="text-xs rounded-xl bg-slate-50 border-slate-200 cursor-not-allowed"
-                    />
-                    <p className="text-[10px] text-slate-400 mt-2 flex items-center gap-1">
-                      <Lock className="h-3 w-3" />
-                      Habilitado para seguimiento de retargeting en v2.0
-                    </p>
-                  </div>
-
+                <div className="grid grid-cols-1 gap-4">
                   {/* Google Ads */}
                   <div className="p-4 rounded-2xl border border-slate-200 bg-white opacity-70 relative">
                     <div className="flex items-center justify-between mb-2">
