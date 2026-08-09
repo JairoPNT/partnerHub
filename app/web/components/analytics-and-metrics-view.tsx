@@ -69,7 +69,8 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
   const [isMarkingVerified, setIsMarkingVerified] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [fieldError, setFieldError] = useState<string | null>(null);
+  const [ga4FieldError, setGa4FieldError] = useState<string | null>(null);
+  const [metaFieldError, setMetaFieldError] = useState<string | null>(null);
 
   const fetchLeads = async () => {
     setIsLoading(true);
@@ -103,7 +104,8 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
     setSelectedLead(lead);
     setSuccessMessage(null);
     setErrorMessage(null);
-    setFieldError(null);
+    setGa4FieldError(null);
+    setMetaFieldError(null);
 
     const existingId =
       lead.onboardingData?.analyticsMeasurementId || "";
@@ -149,19 +151,24 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
     e.preventDefault();
     if (!selectedLead) return;
 
-    setFieldError(null);
+    setGa4FieldError(null);
+    setMetaFieldError(null);
     setSuccessMessage(null);
     setErrorMessage(null);
 
     const trimmedId = measurementId.trim().toUpperCase();
     if (trimmedId && !MEASUREMENT_ID_REGEX.test(trimmedId)) {
-      setFieldError("El ID de medición debe tener el formato G-XXXXXXXXXX (ej. G-7F24PBZPDM).");
+      setGa4FieldError("El ID de medición debe tener el formato G-XXXXXXXXXX (ej. G-7F24PBZPDM).");
       return;
     }
     
     const trimmedMetaId = metaPixelId.trim();
+    if (selectedLead.onboardingData?.metaPixelId && !trimmedMetaId) {
+      setMetaFieldError("La eliminación del Pixel no está disponible en esta vista. Conserva el actual o ingresa uno válido.");
+      return;
+    }
     if (trimmedMetaId && !META_PIXEL_ID_REGEX.test(trimmedMetaId)) {
-      setFieldError("El Pixel ID de Meta debe contener únicamente entre 5 y 32 números. No pegues scripts de código.");
+      setMetaFieldError("El Pixel ID de Meta debe contener únicamente entre 5 y 32 números. No pegues scripts de código.");
       return;
     }
 
@@ -170,7 +177,6 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
     try {
       const payload = {
         onboardingData: {
-          ...selectedLead.onboardingData,
           analyticsMeasurementId: trimmedId || undefined,
           metaPixelId: trimmedMetaId || undefined,
           operatorNotes: operatorNotes.trim() || undefined
@@ -189,9 +195,10 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
       }
 
       const updatedLead = await res.json();
-      setSuccessMessage("Configuración de Google Analytics 4 guardada correctamente.");
+      setSuccessMessage("Configuración de analítica guardada correctamente. Recuerda que debes regenerar y publicar el sitio web para que estos cambios se reflejen al público.");
       setSelectedLead(updatedLead);
       setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+      setMetaPixelId(updatedLead.onboardingData?.metaPixelId || "");
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Error al guardar la configuración.");
     } finally {
@@ -209,7 +216,6 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
     try {
       const payload = {
         onboardingData: {
-          ...selectedLead.onboardingData,
           analyticsVerified: true
         }
       };
@@ -463,17 +469,17 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
                         value={measurementId}
                         onChange={(e) => {
                           setMeasurementId(e.target.value);
-                          setFieldError(null);
+                          setGa4FieldError(null);
                         }}
                         className={`text-xs font-mono uppercase bg-white rounded-xl border-slate-200 ${
-                          fieldError ? "border-rose-500 ring-1 ring-rose-500" : "focus-visible:ring-cyan-500"
+                          ga4FieldError ? "border-rose-500 ring-1 ring-rose-500" : "focus-visible:ring-cyan-500"
                         }`}
                       />
 
-                      {fieldError && (
+                      {ga4FieldError && (
                         <p className="text-[11px] font-medium text-rose-600 flex items-center gap-1">
                           <AlertCircle className="h-3.5 w-3.5" />
-                          {fieldError}
+                          {ga4FieldError}
                         </p>
                       )}
 
@@ -491,8 +497,8 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
                           </svg>
                           Pixel ID de Meta (Facebook/Instagram)
                         </Label>
-                        <Badge variant="neutral" className={`text-[10px] font-bold ${metaPixelId ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
-                          {metaPixelId ? "Configurado" : "Pendiente"}
+                        <Badge variant="neutral" className={`text-[10px] font-bold ${selectedLead?.onboardingData?.metaPixelId ? 'bg-blue-100 text-blue-800 border-blue-200' : 'bg-amber-100 text-amber-800 border-amber-200'}`}>
+                          {selectedLead?.onboardingData?.metaPixelId ? "Configurado" : "Pendiente"}
                         </Badge>
                       </div>
 
@@ -503,12 +509,19 @@ export function AnalyticsAndMetricsView({ record }: AnalyticsAndMetricsViewProps
                         value={metaPixelId}
                         onChange={(e) => {
                           setMetaPixelId(e.target.value);
-                          setFieldError(null);
+                          setMetaFieldError(null);
                         }}
                         className={`text-xs font-mono bg-white rounded-xl border-slate-200 ${
-                          fieldError && fieldError.includes("Meta") ? "border-rose-500 ring-1 ring-rose-500" : "focus-visible:ring-blue-500"
+                          metaFieldError ? "border-rose-500 ring-1 ring-rose-500" : "focus-visible:ring-blue-500"
                         }`}
                       />
+
+                      {metaFieldError && (
+                        <p className="text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                          <AlertCircle className="h-3.5 w-3.5" />
+                          {metaFieldError}
+                        </p>
+                      )}
 
                       <p className="text-[11px] text-slate-500">
                         Pega únicamente el Pixel ID numérico (Dataset ID). No pegues scripts ni código. Esta modificación requiere regeneración para reflejarse en la página de producto.
