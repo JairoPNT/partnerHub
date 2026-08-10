@@ -261,18 +261,18 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         .filter((item) => {
           const sId = item.siteId?.toLowerCase();
           const dom = (item.configuration?.site?.domain || item.configuration?.domain)?.toLowerCase();
-          
+
           if (!sId) return false;
-          
+
           // Excluir todos los masters y el showcase
           if (Object.values(MASTER_SITE_IDS).includes(sId)) return false;
           if (sId === SHOWCASE_SITE_ID.toLowerCase()) return false;
-          
+
           if (dom) {
             if (Object.values(MASTER_SITE_DOMAINS).includes(dom)) return false;
             if (dom === SHOWCASE_DOMAIN.toLowerCase()) return false;
           }
-          
+
           return true;
         })
         .map((item) => {
