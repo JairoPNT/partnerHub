@@ -28,6 +28,7 @@ COPY --from=builder /repo/app/web/public ./public
 COPY --from=builder /repo/app/web/.next/standalone ./
 COPY --from=builder /repo/app/web/.next/static ./.next/static
 COPY --from=builder /repo/plantillas-de-pagina/producto ./plantillas-de-pagina/producto
+COPY --from=builder /repo/app/web/scripts/cleanup-jairo-pinto-test-referrals.mjs ./scripts/cleanup-jairo-pinto-test-referrals.mjs
 
 EXPOSE 3000
 CMD ["node", "server.js"]
