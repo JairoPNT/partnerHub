@@ -48,8 +48,10 @@ import { ProductPageHistoryPanel } from "@/components/product-page-history-panel
 import { PersonalBrandBlocksView } from "@/components/personal-brand-blocks-view";
 import {
   MASTER_SITE_DOMAINS,
+  MASTER_SITE_IDS,
   CANONICAL_URLS,
   SHOWCASE_DOMAIN,
+  SHOWCASE_SITE_ID,
   EcosystemType
 } from "@/lib/ecosystem-contracts";
 
@@ -128,27 +130,11 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
 
   // Contrato Canónico (AGR-20260810-001)
   const activeContract = React.useMemo(() => {
-    switch (activeEcosystem) {
-      case "BUSINESS":
-        return {
-          id: "ganomaster-business",
-          domain: "business.ganomaster.pro",
-          type: "BUSINESS" as EcosystemType
-        };
-      case "PERSONAL_BRAND":
-        return {
-          id: "ganomaster-personal-brand",
-          domain: "brand.ganomaster.pro",
-          type: "PERSONAL_BRAND" as EcosystemType
-        };
-      case "PRODUCT":
-      default:
-        return {
-          id: "ganomaster",
-          domain: "product.ganomaster.pro",
-          type: "PRODUCT" as EcosystemType
-        };
-    }
+    return {
+      id: MASTER_SITE_IDS[activeEcosystem],
+      domain: MASTER_SITE_DOMAINS[activeEcosystem],
+      type: activeEcosystem
+    };
   }, [activeEcosystem]);
 
   const MASTER_SITE_ID = activeContract.id;
@@ -270,12 +256,24 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         leads = data.leads || [];
       }
 
-      // Exclusión obligatoria del sitio maestro actual
+      // Exclusión obligatoria de todos los sitios maestros y la vitrina
       const filtered: ClientSiteItem[] = pageSites
         .filter((item) => {
           const sId = item.siteId?.toLowerCase();
-          const dom = item.configuration?.site?.domain || item.configuration?.domain;
-          return sId !== MASTER_SITE_ID && dom !== MASTER_DOMAIN;
+          const dom = (item.configuration?.site?.domain || item.configuration?.domain)?.toLowerCase();
+          
+          if (!sId) return false;
+          
+          // Excluir todos los masters y el showcase
+          if (Object.values(MASTER_SITE_IDS).includes(sId)) return false;
+          if (sId === SHOWCASE_SITE_ID.toLowerCase()) return false;
+          
+          if (dom) {
+            if (Object.values(MASTER_SITE_DOMAINS).includes(dom)) return false;
+            if (dom === SHOWCASE_DOMAIN.toLowerCase()) return false;
+          }
+          
+          return true;
         })
         .map((item) => {
           const lead = leads.find((l) => l.siteId === item.siteId);
@@ -785,7 +783,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             <div className="flex items-center gap-2">
               <User className="h-5 w-5 text-cyan-600" />
               <CardTitle className="text-base font-bold text-slate-900">
-                1. Identificación y Datos de Marca (`${MASTER_SITE_ID}`)
+                1. Identificación y Datos de Marca ({MASTER_SITE_ID})
               </CardTitle>
             </div>
             <CardDescription className="text-xs text-slate-500">
