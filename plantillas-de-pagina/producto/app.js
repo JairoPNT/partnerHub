@@ -46,6 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initVideoCarousel();
   initModals();
   initCountryTargeting();
+  initMetaPixelEvents();
 });
 
 /**
@@ -163,6 +164,49 @@ function initAnalyticsConfig(cfg) {
 
   window.gtag('js', new Date());
   window.gtag('config', normalizedMeasurementId);
+}
+
+/**
+ * Eventos delegados de intención de click para Meta Pixel
+ */
+function initMetaPixelEvents() {
+  if (window._metaPixelEventsInitialized) return;
+  window._metaPixelEventsInitialized = true;
+
+  document.addEventListener('click', (e) => {
+    let target = e.target;
+    if (target && target.nodeType === Node.TEXT_NODE) {
+      target = target.parentNode;
+    }
+    if (!target || typeof target.closest !== 'function') return;
+
+    if (typeof window.fbq !== 'function') return;
+
+    const anchor = target.closest('a');
+    if (!anchor) return;
+
+    const href = anchor.getAttribute('href') || '';
+    
+    // WhatsAppClick
+    if (anchor.hasAttribute('data-wa-action') && href.startsWith('https://wa.me/')) {
+      window.fbq('trackCustom', 'WhatsAppClick', {
+        funnel: 'productos',
+        destination: 'whatsapp'
+      });
+      return;
+    }
+
+    // StoreClick
+    if (anchor.classList.contains('product-btn-buy')) {
+      const isDisabled = anchor.getAttribute('aria-disabled') === 'true';
+      if (!isDisabled && href.startsWith('https://')) {
+        window.fbq('trackCustom', 'StoreClick', {
+          funnel: 'productos',
+          destination: 'ganoexcel_store'
+        });
+      }
+    }
+  });
 }
 
 const THEME_FONT_PRESETS = {
