@@ -14,6 +14,7 @@
     "test:cloudflare-access": "node --experimental-strip-types --test server/auth/cloudflareAccessAuth.test.ts",
     "test:domain-inventory": "node --experimental-strip-types --test server/services/domainInventoryBuilder.test.ts",
     "test:meta-pixel": "node --experimental-strip-types --test server/services/metaPixelHtml.test.ts",
+    "test:ecosystem-templates": "node --experimental-strip-types --test server/services/ecosystemTemplateResolver.test.ts",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "db:generate": "prisma generate",

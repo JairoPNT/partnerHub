@@ -2,16 +2,18 @@ import "server-only";
 
 import { z } from "zod";
 
-export const ecosystemTypeSchema = z.enum(["PRODUCT", "BUSINESS", "PERSONAL_BRAND"]);
-export type EcosystemType = z.infer<typeof ecosystemTypeSchema>;
+import {
+  ECOSYSTEM_TYPES,
+  MASTER_SITE_IDS,
+  type EcosystemType
+} from "@/server/services/ecosystemTemplateResolver";
+
+export { MASTER_SITE_IDS } from "@/server/services/ecosystemTemplateResolver";
+export type { EcosystemType } from "@/server/services/ecosystemTemplateResolver";
+
+export const ecosystemTypeSchema = z.enum(ECOSYSTEM_TYPES);
 
 export const DEFAULT_ECOSYSTEM_TYPE: EcosystemType = "PRODUCT";
-
-export const MASTER_SITE_IDS: Record<EcosystemType, string> = {
-  PRODUCT: "ganomaster",
-  BUSINESS: "ganomaster-business",
-  PERSONAL_BRAND: "ganomaster-personal-brand"
-};
 
 export const MASTER_SITE_DOMAINS: Record<EcosystemType, string> = {
   PRODUCT: "product.ganomaster.pro",

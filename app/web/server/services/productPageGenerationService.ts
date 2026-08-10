@@ -8,7 +8,11 @@ import { z } from "zod";
 import { productPageSourceService } from "@/server/services/productPageSourceService";
 import { activationLeadService } from "@/server/services/activationLeadService";
 import { productPageHistoryService } from "@/server/services/productPageHistoryService";
-import { DEFAULT_ECOSYSTEM_TYPE, ecosystemTypeSchema, getMasterSiteId, isMasterSiteId } from "@/server/services/ecosystemService";
+import { DEFAULT_ECOSYSTEM_TYPE, ecosystemTypeSchema, isMasterSiteId } from "@/server/services/ecosystemService";
+import {
+  resolveCanonicalTemplateDirectory,
+  resolveMasterTemplateSiteId
+} from "@/server/services/ecosystemTemplateResolver";
 import { applyMetaPixelToHtml, metaPixelIdPattern } from "@/server/services/metaPixelHtml";
 
 const siteIdSchema = z
@@ -181,8 +185,9 @@ const noCacheHtaccessSource = `DirectoryIndex index.html
 </IfModule>
 `;
 
-function getTemplateDirectory() {
-  return process.env.PRODUCT_PAGE_TEMPLATE_DIR ?? "/app/plantillas-de-pagina/producto";
+function getTemplateDirectory(ecosystemType: ProductPageGenerationInput["ecosystemType"]) {
+  const productTemplateDirectory = process.env.PRODUCT_PAGE_TEMPLATE_DIR ?? "/app/plantillas-de-pagina/producto";
+  return resolveCanonicalTemplateDirectory(productTemplateDirectory, ecosystemType);
 }
 
 function getOutputRoot() {
@@ -204,13 +209,17 @@ async function parseSavedSource(siteId: string) {
   return productPageGenerationInputSchema.parse(source);
 }
 
-async function resolveTemplateDirectory(siteId: string, options?: ProductPageGenerationOptions) {
+async function resolveTemplateDirectory(
+  siteId: string,
+  ecosystemType: ProductPageGenerationInput["ecosystemType"],
+  options?: ProductPageGenerationOptions
+) {
   const source = options?.templateSource ?? (isMasterSiteId(siteId) ? "canonical" : "master");
   if (source === "canonical") {
-    return getTemplateDirectory();
+    return getTemplateDirectory(ecosystemType);
   }
 
-  const masterSiteId = options?.masterSiteId ?? getMasterSiteId(DEFAULT_ECOSYSTEM_TYPE);
+  const masterSiteId = resolveMasterTemplateSiteId(ecosystemType, options?.masterSiteId);
   const masterDirectory = resolveInsideDirectory(getOutputRoot(), masterSiteId);
   try {
     await access(masterDirectory);
@@ -316,7 +325,11 @@ export const productPageGenerationService = {
     options?: ProductPageGenerationOptions
   ): Promise<ProductPageGenerationResult> {
     const configuration = normalizedConfiguration(input);
-    const templateDirectory = await resolveTemplateDirectory(configuration.site.id, options);
+    const templateDirectory = await resolveTemplateDirectory(
+      configuration.site.id,
+      configuration.ecosystemType,
+      options
+    );
     const outputDirectory = resolveInsideDirectory(getOutputRoot(), configuration.site.id);
 
     await rm(outputDirectory, { recursive: true, force: true });
