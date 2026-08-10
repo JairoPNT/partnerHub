@@ -14,7 +14,6 @@ import {
   Phone,
   Search,
   ImageIcon,
-  BarChart3,
   UploadCloud,
   FileCode2,
   Copy,
@@ -72,7 +71,6 @@ export interface MasterFormState {
   heroDesktop: string;
   heroMobile: string;
   defaultMessage: string;
-  measurementId: string;
   faviconUrl: string;
 }
 
@@ -120,7 +118,6 @@ const INITIAL_MASTER_FORM: MasterFormState = {
   heroDesktop: "",
   heroMobile: "",
   defaultMessage: "Hola, me gustaría más información sobre la oportunidad y productos Gano Excel.",
-  measurementId: "G-7F24PBZPDM",
   faviconUrl: ""
 };
 
@@ -199,7 +196,6 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         const site = cfg.site || {};
         const dist = cfg.distributor || {};
         const hero = cfg.hero || {};
-        const analytics = cfg.analytics || {};
 
         const sanitizeHeroUrl = (url: string | undefined): string => {
           if (!url || typeof url !== "string") return "";
@@ -222,7 +218,6 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           heroDesktop: sanitizeHeroUrl(hero.desktop),
           heroMobile: sanitizeHeroUrl(hero.mobile),
           defaultMessage: dist.defaultMessage || INITIAL_MASTER_FORM.defaultMessage,
-          measurementId: typeof analytics === "string" ? analytics : (analytics.measurementId || INITIAL_MASTER_FORM.measurementId),
           faviconUrl: site.faviconUrl || cfg.faviconUrl || ""
         });
 
@@ -367,10 +362,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       hero: {
         desktop: form.heroDesktop.trim(),
         mobile: form.heroMobile.trim()
-      },
-      analytics: form.measurementId.trim()
-        ? { measurementId: form.measurementId.trim().toUpperCase() }
-        : undefined
+      }
     };
 
     try {
@@ -980,30 +972,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           </CardContent>
         </Card>
 
-        {/* Bloque 5: Analítica */}
-        <Card className="border-slate-200 bg-white shadow-sm">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5 text-cyan-600" />
-              <CardTitle className="text-base font-bold text-slate-900">
-                5. Google Analytics
-              </CardTitle>
-            </div>
-          </CardHeader>
 
-          <CardContent>
-            <div>
-              <Label htmlFor="measurementId">Measurement ID de Google Analytics</Label>
-              <Input
-                id="measurementId"
-                placeholder="ej. G-7F24PBZPDM"
-                value={form.measurementId}
-                onChange={(e) => handleInputChange("measurementId", e.target.value)}
-                className="font-mono"
-              />
-            </div>
-          </CardContent>
-        </Card>
 
         {/* BOTONES DE ACCIÓN PRINCIPALES DEL MASTER */}
         <div className="flex flex-wrap items-center justify-end gap-3 pt-2">
