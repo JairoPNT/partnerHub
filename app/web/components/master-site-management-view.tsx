@@ -27,8 +27,7 @@ import {
   Video,
   UserCheck,
   Sparkles,
-  Clock,
-  Lock
+  Clock
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -49,8 +48,10 @@ import { ProductPageHistoryPanel } from "@/components/product-page-history-panel
 import { PersonalBrandBlocksView } from "@/components/personal-brand-blocks-view";
 import {
   MASTER_SITE_DOMAINS,
+  MASTER_SITE_IDS,
   CANONICAL_URLS,
   SHOWCASE_DOMAIN,
+  SHOWCASE_SITE_ID,
   EcosystemType
 } from "@/lib/ecosystem-contracts";
 
@@ -125,11 +126,20 @@ const INITIAL_MASTER_FORM: MasterFormState = {
 
 export function MasterSiteManagementView({ record }: MasterSiteManagementViewProps) {
   // Pestaña de ecosistema activa (PH-032 / PH-033)
-  const [activeEcosystem, setActiveEcosystem] = useState<"PRODUCT" | "BUSINESS" | "PERSONAL_BRAND">("PRODUCT");
+  const [activeEcosystem, setActiveEcosystem] = useState<EcosystemType>("PRODUCT");
 
-  // Configuración fija del sitio maestro (Ecosistema Producto)
-  const MASTER_SITE_ID = "ganomaster";
-  const MASTER_DOMAIN = "ganomaster.pro";
+  // Contrato Canónico (AGR-20260810-001)
+  const activeContract = React.useMemo(() => {
+    return {
+      id: MASTER_SITE_IDS[activeEcosystem],
+      domain: MASTER_SITE_DOMAINS[activeEcosystem],
+      type: activeEcosystem
+    };
+  }, [activeEcosystem]);
+
+  const MASTER_SITE_ID = activeContract.id;
+  const MASTER_DOMAIN = activeContract.domain;
+  const MASTER_ECOSYSTEM = activeContract.type;
 
   // Estados del formulario y operación del master
   const [form, setForm] = useState<MasterFormState>(INITIAL_MASTER_FORM);
@@ -246,12 +256,24 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
         leads = data.leads || [];
       }
 
-      // Exclusión obligatoria de ganomaster y ganomaster.pro
+      // Exclusión obligatoria de todos los sitios maestros y la vitrina
       const filtered: ClientSiteItem[] = pageSites
         .filter((item) => {
           const sId = item.siteId?.toLowerCase();
-          const dom = item.configuration?.site?.domain || item.configuration?.domain;
-          return sId !== MASTER_SITE_ID && dom !== MASTER_DOMAIN;
+          const dom = (item.configuration?.site?.domain || item.configuration?.domain)?.toLowerCase();
+
+          if (!sId) return false;
+
+          // Excluir todos los masters y el showcase
+          if (Object.values(MASTER_SITE_IDS).includes(sId)) return false;
+          if (sId === SHOWCASE_SITE_ID.toLowerCase()) return false;
+
+          if (dom) {
+            if (Object.values(MASTER_SITE_DOMAINS).includes(dom)) return false;
+            if (dom === SHOWCASE_DOMAIN.toLowerCase()) return false;
+          }
+
+          return true;
         })
         .map((item) => {
           const lead = leads.find((l) => l.siteId === item.siteId);
@@ -294,15 +316,24 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
   };
 
   useEffect(() => {
+    setForm(INITIAL_MASTER_FORM);
+    setGeneratedAt(null);
+    setPublishedAt(null);
+    setGenerationOutput(null);
+    setMasterVerification(null);
+    setPublicationState("PENDING");
+    setMasterSuccessMessage(null);
+    setMasterErrorMessage(null);
+
     fetchMasterConfig();
     fetchClientSites();
-  }, []);
+  }, [activeEcosystem]);
 
   const handleInputChange = (field: keyof MasterFormState, value: string) => {
     setForm((prev) => ({ ...prev, [field]: value }));
   };
 
-  // 1. Generar Vista Previa Local (POST /api/internal/product-pages/generate) con payload fijo ganomaster / ganomaster.pro
+  // 1. Generar Vista Previa Local (POST /api/internal/product-pages/generate) con payload fijo del ecosistema
   const handleGenerateMaster = async (e: FormEvent) => {
     e.preventDefault();
     setIsGeneratingMaster(true);
@@ -311,6 +342,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
     setGenerationOutput(null);
 
     const payload = {
+      ecosystemType: MASTER_ECOSYSTEM,
       site: {
         id: MASTER_SITE_ID,
         domain: MASTER_DOMAIN,
@@ -359,7 +391,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       setPublicationState("GENERATED");
       setGenerationOutput(data);
       triggerHistoryRefresh();
-      setMasterSuccessMessage("Paquete estático maestro generado localmente. Ahora puedes publicarlo en ganomaster.pro.");
+      setMasterSuccessMessage(`Paquete estático maestro generado localmente. Ahora puedes publicarlo en ${MASTER_DOMAIN}.`);
     } catch (err: unknown) {
       setMasterErrorMessage(err instanceof Error ? err.message : "Error al generar la plantilla maestra.");
     } finally {
@@ -367,7 +399,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
     }
   };
 
-  // 2. Publicar en ganomaster.pro (POST /api/internal/product-pages/publish)
+  // 2. Publicar (POST /api/internal/product-pages/publish)
   const handlePublishMaster = async () => {
     setIsPublishingMaster(true);
     setIsPublishStepMaster("SFTP");
@@ -388,7 +420,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "No se pudo publicar en ganomaster.pro.");
+        throw new Error(data.error || `No se pudo publicar en ${MASTER_DOMAIN}.`);
       }
 
       const now = new Date().toISOString();
@@ -408,12 +440,12 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       }
 
       if (pubState === "VERIFIED") {
-        setMasterSuccessMessage("Vista previa publicada y verificada en ganomaster.pro.");
+        setMasterSuccessMessage(`Vista previa publicada y verificada en ${MASTER_DOMAIN}.`);
       } else {
-        setMasterErrorMessage("Vista previa publicada, pero la verificación en ganomaster.pro requiere revisión.");
+        setMasterErrorMessage(`Vista previa publicada, pero la verificación en ${MASTER_DOMAIN} requiere revisión.`);
       }
     } catch (err: unknown) {
-      setMasterErrorMessage(err instanceof Error ? err.message : "Error al publicar en ganomaster.pro.");
+      setMasterErrorMessage(err instanceof Error ? err.message : `Error al publicar en ${MASTER_DOMAIN}.`);
     } finally {
       clearTimeout(timer);
       setIsPublishingMaster(false);
@@ -431,7 +463,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
     if (publicationState === "VERIFY_FAILED") {
       return "Publicado, pero requiere revisión";
     }
-    return "Publicar en ganomaster.pro";
+    return `Publicar en ${MASTER_DOMAIN}`;
   };
 
   // 3. Control de selección de clientes receptores
@@ -751,7 +783,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             <div className="flex items-center gap-2">
               <User className="h-5 w-5 text-cyan-600" />
               <CardTitle className="text-base font-bold text-slate-900">
-                1. Identificación y Datos de Marca (`ganomaster`)
+                1. Identificación y Datos de Marca ({MASTER_SITE_ID})
               </CardTitle>
             </div>
             <CardDescription className="text-xs text-slate-500">
@@ -874,7 +906,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
               </CardTitle>
             </div>
             <CardDescription className="text-xs text-slate-500">
-              Metadatos para la versión maestra ganomaster.pro.
+              Metadatos para la versión maestra {MASTER_DOMAIN}.
             </CardDescription>
           </CardHeader>
 
@@ -1016,10 +1048,10 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
             />
             <div className="space-y-0.5">
               <span className="text-xs font-bold text-slate-900 select-none">
-                He revisado y aprobado la versión actual de ganomaster.pro
+                He revisado y aprobado la versión actual de {MASTER_DOMAIN}
               </span>
               <p className="text-[11px] text-slate-500">
-                La replicación masiva en clientes estará habilitada únicamente cuando la versión publicada en <code className="font-mono">ganomaster.pro</code> esté totalmente aprobada.
+                La replicación masiva en clientes estará habilitada únicamente cuando la versión publicada en <code className="font-mono">{MASTER_DOMAIN}</code> esté totalmente aprobada.
               </p>
             </div>
           </label>
@@ -1027,7 +1059,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
           {!isApproved && (
             <div className="flex items-center gap-2 text-amber-700 text-xs font-semibold pt-1">
               <AlertTriangle className="h-4 w-4 shrink-0" />
-              <span>La replicación masiva está deshabilitada hasta que apruebes la versión publicada en ganomaster.pro.</span>
+              <span>La replicación masiva está deshabilitada hasta que apruebes la versión publicada en {MASTER_DOMAIN}.</span>
             </div>
           )}
         </div>
@@ -1085,7 +1117,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
                   Confirmación de Replicación Masiva en Clientes
                 </h4>
                 <p className="text-xs text-amber-800">
-                  Estás a punto de replicar la plantilla maestra aprobada <strong>ganomaster.pro</strong> en{" "}
+                  Estás a punto de replicar la plantilla maestra aprobada <strong>{MASTER_DOMAIN}</strong> en{" "}
                   <strong>{selectedSiteIds.length} cliente(s) seleccionado(s)</strong>:
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5 max-h-24 overflow-y-auto p-2 rounded-xl bg-white/80 border border-amber-200">
@@ -1286,7 +1318,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
                     )}
                   </div>
                   <p className="text-slate-500 text-[11px]">
-                    Origen: <code className="font-mono font-bold">ganomaster.pro</code>
+                    Origen: <code className="font-mono font-bold">{MASTER_DOMAIN}</code>
                   </p>
                 </div>
 
