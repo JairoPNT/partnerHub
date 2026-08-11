@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
 import {
   type LucideIcon,
@@ -54,34 +55,25 @@ export function Sidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="sticky top-0 h-screen hidden w-[285px] shrink-0 border-r border-slate-200/80 bg-white/80 px-4 py-6 backdrop-blur-md xl:flex xl:flex-col overflow-y-auto">
-      <div className="rounded-3xl border border-slate-200/90 bg-gradient-to-br from-slate-50 via-cyan-50/40 to-slate-100/60 p-5 shadow-sm text-slate-900">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-cyan-600 text-white shadow-sm">
-            <Sparkle className="h-4.5 w-4.5" />
-          </div>
-          <div>
-            <p className="text-[11px] font-black uppercase tracking-[0.22em] text-cyan-700">
-              PartnerHub
-            </p>
-            <h1 className="text-sm font-extrabold leading-tight text-slate-900 font-heading">
-              SaaS Operativo
-            </h1>
-          </div>
-        </div>
+    <aside className="sticky top-0 h-screen hidden w-64 shrink-0 border-r border-ph-navy bg-ph-navy flex-col xl:flex overflow-hidden">
+      
+      {/* Brand & Logo */}
+      <div className="px-6 py-8 flex items-center gap-3 shrink-0">
+        <Image src="/logos/logo-blanco.png" alt="PartnerHub Logo" width={32} height={32} className="object-contain" />
+        <span className="font-heading font-semibold text-white text-xl tracking-wide">
+          Partner<span className="text-ph-blue">Hub</span>
+        </span>
       </div>
 
-      <nav className="mt-6 flex-1 space-y-6 overflow-y-auto pr-1">
+      {/* Navigation */}
+      <nav className="flex-1 px-4 py-2 space-y-6 overflow-y-auto custom-scrollbar">
         {navigationGroupOrder.map((group) => {
           const items = groupedNavigation[group] || [];
-
-          if (items.length === 0) {
-            return null;
-          }
+          if (items.length === 0) return null;
 
           return (
             <section key={group} className="space-y-1.5">
-              <p className="px-3 text-[10px] font-bold uppercase tracking-[0.2em] text-slate-400">
+              <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-white/40">
                 {group}
               </p>
               <div className="space-y-1">
@@ -94,18 +86,15 @@ export function Sidebar() {
                       key={item.href}
                       href={item.href}
                       className={cn(
-                        "flex items-center gap-3 rounded-2xl border px-3.5 py-2.5 transition-all duration-200",
+                        "flex items-center gap-3 px-4 py-3 rounded-xl transition-colors font-medium text-sm group",
                         active
-                          ? "border-cyan-300/80 bg-cyan-50/80 text-cyan-950 font-semibold shadow-sm"
-                          : "border-transparent text-slate-600 hover:bg-slate-100/70 hover:text-slate-950"
+                          ? "bg-ph-blue text-white shadow-card"
+                          : "text-white/70 hover:bg-white/5 hover:text-white"
                       )}
                     >
-                      <Icon className={cn("h-4.5 w-4.5 shrink-0", active ? "text-cyan-600" : "text-slate-400")} />
+                      <Icon className={cn("h-5 w-5 shrink-0", active ? "opacity-90 text-white" : "opacity-70 group-hover:opacity-90")} />
                       <div className="min-w-0">
-                        <span className="block text-xs font-semibold tracking-tight">{item.name}</span>
-                        <span className="block truncate text-[10px] text-slate-500">
-                          {item.description}
-                        </span>
+                        <span className="block truncate">{item.name}</span>
                       </div>
                     </Link>
                   );
@@ -115,6 +104,26 @@ export function Sidebar() {
           );
         })}
       </nav>
+
+      {/* User Profile Footer */}
+      <div className="p-4 mt-auto border-t border-white/10 shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border border-white/20">
+            <Image 
+              src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80" 
+              alt="User profile" 
+              width={40} 
+              height={40} 
+              className="h-full w-full object-cover"
+            />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-semibold text-white truncate">Ana Martinez</p>
+            <p className="text-xs text-white/60 truncate">Admin de marca</p>
+          </div>
+        </div>
+      </div>
+
     </aside>
   );
 }

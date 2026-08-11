@@ -1,0 +1,19 @@
+[
+  {
+    "fullName": "Onboarding Test",
+    "whatsapp": "+573001112233",
+    "email": "onboarding-test-2@example.com",
+    "brandName": "Marca test",
+    "mainProduct": "",
+    "referrerCode": null,
+    "paymentMethod": "direct",
+    "termsAccepted": true,
+    "id": "b4549fe2-1c69-4e7f-aed9-c2a0ae94aa3a",
+    "status": "NEW",
+    "siteId": null,
+    "createdAt": "2026-07-29T12:16:50.576Z",
+    "updatedAt": "2026-07-29T12:16:50.576Z",
+    "onboardingTokenHash": "fe37797f08159185776a19a07c58fc4fd8f2262b0c12666fcfff7e8a888fa76e",
+    "onboardingData": {}
+  }
+]

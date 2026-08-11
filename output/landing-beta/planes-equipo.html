@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planes de Equipo y Grupos — Ecosistema de Producto | PartnerHub</title>
+  <meta name="description" content="Precios especiales y condiciones preferenciales para equipos, comunidades y redes de 5 a más de 20 empresarios en el Ecosistema de Producto PartnerHub.">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            heading: ['Outfit', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 text-slate-900 selection:bg-cyan-500 selection:text-white min-h-screen flex flex-col justify-between">
+
+  <!-- Top Announcement Bar -->
+  <div class="bg-gradient-to-r from-cyan-900 via-sky-900 to-blue-950 px-4 py-2.5 text-center text-xs font-medium text-cyan-100 border-b border-cyan-800/40">
+    <div class="mx-auto flex max-w-6xl items-center justify-center gap-2">
+      <span class="inline-block rounded-full bg-cyan-500/20 px-2 py-0.5 text-[10px] font-bold text-cyan-300 uppercase tracking-wider">
+        Equipos & Comunidades
+      </span>
+      <span>Condiciones preferenciales de entrada para registros en grupo (5 a 20+ empresarios)</span>
+    </div>
+  </div>
+
+  <!-- Header Navigation -->
+  <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/90 backdrop-blur-md">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6 lg:px-8">
+      <div class="flex items-center gap-3">
+        <a href="index.html" class="flex items-center gap-3 group">
+          <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 text-white font-bold text-lg shadow-md font-heading group-hover:scale-105 transition-transform">
+            P
+          </div>
+          <div>
+            <span class="font-heading text-lg font-bold tracking-tight text-slate-900">
+              PartnerHub
+            </span>
+            <span class="ml-2 rounded-md bg-cyan-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-cyan-900">
+              Beta
+            </span>
+          </div>
+        </a>
+      </div>
+
+      <div class="flex items-center gap-4">
+        <a href="index.html" class="text-xs font-semibold text-slate-600 hover:text-slate-900 flex items-center gap-1">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l-7 7m7-7H3"/>
+          </svg>
+          <span>Oferta Individual</span>
+        </a>
+
+        <a href="#registro" class="rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:from-cyan-500 hover:to-blue-500 transition">
+          Registrar Equipo
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO SECTION PLANES DE EQUIPO -->
+  <section class="bg-gradient-to-b from-slate-900 via-sky-950 to-slate-950 py-16 text-white sm:py-24">
+    <div class="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-300">
+          <svg class="w-4 h-4 text-cyan-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+          Planes de Equipo — Precios Especiales por Grupo
+        </div>
+
+        <h1 class="mt-6 font-heading text-3xl font-extrabold tracking-tight sm:text-4xl lg:text-5xl">
+          Condiciones Preferenciales para Equipos y Comunidades
+        </h1>
+
+        <p class="mx-auto mt-4 max-w-2xl text-base text-slate-300 sm:text-lg">
+          Si te sumas junto a tu equipo de trabajo, red de ventas o comunidad de empresarios, accede a tarifas especiales. Elige entre <strong class="text-white">Menor Pago Inicial</strong> o <strong class="text-cyan-300">Más Meses Bonificados</strong>.
+        </p>
+      </div>
+
+      <!-- TIER CARDS GRID -->
+      <div class="mt-14 grid gap-8 lg:grid-cols-3">
+        
+        <!-- Tier 1: Grupo 5 a 9 -->
+        <div class="flex flex-col justify-between rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl backdrop-blur-md">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-cyan-500/20 px-3 py-1 text-xs font-bold text-cyan-300 border border-cyan-500/30">
+                Grupo 5 a 9 Empresarios
+              </span>
+            </div>
+
+            <h2 class="mt-4 text-xl font-extrabold text-white">5 a 9 Empresarios</h2>
+            <p class="mt-1 text-xs text-slate-400">Ideal para pequeños equipos de trabajo</p>
+
+            <div class="mt-6 space-y-4">
+              <!-- Camino A -->
+              <div class="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                <span class="text-[11px] font-semibold uppercase text-slate-400">Camino A: Pago inicial menor</span>
+                <p class="mt-1 font-heading text-2xl font-bold text-white">$220.000 COP <span class="text-xs font-normal text-slate-400">/ pers.</span></p>
+                <p class="mt-1 text-xs text-emerald-400 font-medium">Ahorro inmediato de $27.000 COP en implementación</p>
+              </div>
+
+              <!-- Camino B (Recomendado) -->
+              <div class="rounded-2xl border border-cyan-500/40 bg-gradient-to-br from-cyan-950/40 to-slate-900 p-4 ring-1 ring-cyan-500/30 relative">
+                <span class="absolute -top-2.5 right-3 rounded-full bg-fuchsia-600 px-2.5 py-0.5 text-[10px] font-bold text-white uppercase">Recomendado</span>
+                <span class="text-[11px] font-semibold uppercase text-cyan-300">Camino B: Más meses bonificados</span>
+                <p class="mt-1 font-heading text-2xl font-bold text-white">$247.000 COP <span class="text-xs font-normal text-slate-400">/ pers.</span></p>
+                <p class="mt-1 text-xs text-fuchsia-300 font-semibold">2 meses de gestión bonificada</p>
+                <p class="mt-0.5 text-[11px] text-cyan-200">Ahorro real total: $119.800 COP</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-800">
+            <a href="#registro" class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 py-3 text-xs font-bold text-white shadow-md hover:from-cyan-500 hover:to-blue-500 transition">
+              <span>Registrar Grupo 5-9</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Tier 2: Grupo 10 a 19 -->
+        <div class="flex flex-col justify-between rounded-3xl border border-cyan-400/50 bg-gradient-to-b from-slate-900 via-sky-950/80 to-slate-900 p-6 shadow-2xl backdrop-blur-md ring-2 ring-cyan-500/30 relative">
+          <span class="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-gradient-to-r from-cyan-500 to-blue-600 px-4 py-1 text-xs font-extrabold text-white uppercase tracking-wider shadow-md">
+            Más Popular
+          </span>
+
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-cyan-500/20 px-3 py-1 text-xs font-bold text-cyan-300 border border-cyan-500/30">
+                Grupo 10 a 19 Empresarios
+              </span>
+            </div>
+
+            <h2 class="mt-4 text-xl font-extrabold text-white">10 a 19 Empresarios</h2>
+            <p class="mt-1 text-xs text-slate-400">Para organizaciones y redes de líderes</p>
+
+            <div class="mt-6 space-y-4">
+              <!-- Camino A -->
+              <div class="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                <span class="text-[11px] font-semibold uppercase text-slate-400">Camino A: Descuento + 1 mes</span>
+                <p class="mt-1 font-heading text-2xl font-bold text-white">$210.000 COP <span class="text-xs font-normal text-slate-400">/ pers.</span></p>
+                <p class="mt-1 text-xs text-emerald-400 font-medium">1 mes bonificado ($59.900 COP)</p>
+                <p class="mt-0.5 text-[11px] text-slate-300">Ahorro real total: $96.900 COP</p>
+              </div>
+
+              <!-- Camino B (Recomendado) -->
+              <div class="rounded-2xl border border-cyan-400 bg-gradient-to-br from-cyan-950 to-slate-900 p-4 ring-1 ring-cyan-400 relative">
+                <span class="absolute -top-2.5 right-3 rounded-full bg-fuchsia-600 px-2.5 py-0.5 text-[10px] font-bold text-white uppercase">Recomendado</span>
+                <span class="text-[11px] font-semibold uppercase text-cyan-300">Camino B: Más meses bonificados</span>
+                <p class="mt-1 font-heading text-2xl font-bold text-white">$247.000 COP <span class="text-xs font-normal text-slate-400">/ pers.</span></p>
+                <p class="mt-1 text-xs text-fuchsia-300 font-semibold">3 meses de gestión bonificada</p>
+                <p class="mt-0.5 text-[11px] text-cyan-200">Ahorro real total: $179.700 COP</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-800">
+            <a href="#registro" class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 py-3 text-xs font-bold text-white shadow-md hover:from-cyan-400 hover:to-blue-500 transition">
+              <span>Registrar Grupo 10-19</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Tier 3: Grupo 20+ -->
+        <div class="flex flex-col justify-between rounded-3xl border border-slate-800 bg-slate-900/90 p-6 shadow-xl backdrop-blur-md">
+          <div>
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center gap-1.5 rounded-full bg-fuchsia-500/20 px-3 py-1 text-xs font-bold text-fuchsia-300 border border-fuchsia-500/30">
+                Grupo 20+ Empresarios
+              </span>
+            </div>
+
+            <h2 class="mt-4 text-xl font-extrabold text-white">20+ Empresarios</h2>
+            <p class="mt-1 text-xs text-slate-400">Para grandes equipos y comunidades</p>
+
+            <div class="mt-6 space-y-4">
+              <!-- Camino A -->
+              <div class="rounded-2xl border border-slate-800 bg-slate-950/70 p-4">
+                <span class="text-[11px] font-semibold uppercase text-slate-400">Camino A: Descuento + 1 mes</span>
+                <p class="mt-1 font-heading text-2xl font-bold text-white">$198.000 COP <span class="text-xs font-normal text-slate-400">/ pers.</span></p>
+                <p class="mt-1 text-xs text-emerald-400 font-medium">1 mes bonificado ($59.900 COP)</p>
+                <p class="mt-0.5 text-[11px] text-slate-300">Ahorro real total: $108.900 COP</p>
+              </div>
+
+              <!-- Camino B (Recomendado) -->
+              <div class="rounded-2xl border border-fuchsia-500/40 bg-gradient-to-br from-fuchsia-950/40 to-slate-900 p-4 ring-1 ring-fuchsia-500/30 relative">
+                <span class="absolute -top-2.5 right-3 rounded-full bg-fuchsia-600 px-2.5 py-0.5 text-[10px] font-bold text-white uppercase">Recomendado</span>
+                <span class="text-[11px] font-semibold uppercase text-fuchsia-300">Camino B: Más meses bonificados</span>
+                <p class="mt-1 font-heading text-2xl font-bold text-white">$247.000 COP <span class="text-xs font-normal text-slate-400">/ pers.</span></p>
+                <p class="mt-1 text-xs text-fuchsia-300 font-semibold">4 meses de gestión bonificada</p>
+                <p class="mt-0.5 text-[11px] text-cyan-200">Ahorro real total: $239.600 COP</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 pt-4 border-t border-slate-800">
+            <a href="#registro" class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-fuchsia-600 to-purple-600 py-3 text-xs font-bold text-white shadow-md hover:from-fuchsia-500 hover:to-purple-500 transition">
+              <span>Registrar Grupo 20+</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ACTIVATION FORM SECTION FOR GROUPS -->
+  <section id="registro" class="bg-slate-900 py-16 text-white sm:py-24 border-t border-slate-800">
+    <div class="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center">
+        <div class="inline-flex items-center gap-2 rounded-full border border-cyan-400/30 bg-cyan-500/10 px-4 py-1.5 text-xs font-bold uppercase tracking-wider text-cyan-300">
+          Formulario de Pre-Registro de Equipo
+        </div>
+
+        <h2 class="mt-4 font-heading text-3xl font-extrabold tracking-tight sm:text-4xl">
+          Pre-Registra tu Grupo o Equipo
+        </h2>
+
+        <p class="mx-auto mt-3 max-w-xl text-sm text-slate-300">
+          Ingresa tus datos y los de tu equipo para asegurar la tarifa de grupo y recibir las instrucciones de activación.
+        </p>
+      </div>
+
+      <div class="mt-10 rounded-3xl border border-slate-800 bg-slate-950 p-6 shadow-2xl sm:p-10">
+        <form id="activation-form" class="space-y-6">
+          
+          <div class="grid gap-6 md:grid-cols-2">
+            
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                Nombre de Líder o Representante del Grupo <span class="text-rose-400">*</span>
+              </label>
+              <div class="relative mt-2">
+                <input
+                  type="text"
+                  id="input-fullname"
+                  placeholder="Ej. Carlos Mendoza"
+                  class="w-full rounded-xl border border-slate-800 bg-slate-900/80 py-3 px-4 text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+              <p id="err-fullname" class="mt-1 text-xs text-rose-400 hidden"></p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                WhatsApp de Contacto Directo <span class="text-rose-400">*</span>
+              </label>
+              <div class="relative mt-2">
+                <input
+                  type="tel"
+                  id="input-whatsapp"
+                  placeholder="Ej. +57 300 123 4567"
+                  class="w-full rounded-xl border border-slate-800 bg-slate-900/80 py-3 px-4 text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+              <p id="err-whatsapp" class="mt-1 text-xs text-rose-400 hidden"></p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                Correo Electrónico del Líder <span class="text-rose-400">*</span>
+              </label>
+              <div class="relative mt-2">
+                <input
+                  type="email"
+                  id="input-email"
+                  placeholder="carlos@mimarca.com"
+                  class="w-full rounded-xl border border-slate-800 bg-slate-900/80 py-3 px-4 text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+              <p id="err-email" class="mt-1 text-xs text-rose-400 hidden"></p>
+            </div>
+
+            <div>
+              <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+                Nombre del Equipo o Marca Comercial <span class="text-rose-400">*</span>
+              </label>
+              <div class="relative mt-2">
+                <input
+                  type="text"
+                  id="input-brand"
+                  placeholder="Ej. Equipo Liderazgo Norte / Red de Empresarios"
+                  class="w-full rounded-xl border border-slate-800 bg-slate-900/80 py-3 px-4 text-sm text-white placeholder-slate-500 focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                />
+              </div>
+              <p id="err-brand" class="mt-1 text-xs text-rose-400 hidden"></p>
+            </div>
+
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300">
+              Plan de Equipo Seleccionado <span class="text-rose-400">*</span>
+            </label>
+            <div class="relative mt-2">
+              <select
+                id="input-plan"
+                class="w-full rounded-xl border border-slate-800 bg-slate-900/80 py-3 px-4 text-sm text-white focus:border-cyan-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+              >
+                <optgroup label="Grupo 5 a 9 Empresarios">
+                  <option value="grupo5_b" selected>Grupo 5-9 | Camino B (Recomendado): $247.000 COP + 2 meses bonificados</option>
+                  <option value="grupo5_a">Grupo 5-9 | Camino A: $220.000 COP ($27.000 descuento)</option>
+                </optgroup>
+                <optgroup label="Grupo 10 a 19 Empresarios">
+                  <option value="grupo10_b">Grupo 10-19 | Camino B (Recomendado): $247.000 COP + 3 meses bonificados</option>
+                  <option value="grupo10_a">Grupo 10-19 | Camino A: $210.000 COP + 1 mes bonificado</option>
+                </optgroup>
+                <optgroup label="Grupo 20+ Empresarios">
+                  <option value="grupo20_b">Grupo 20+ | Camino B (Recomendado): $247.000 COP + 4 meses bonificados</option>
+                  <option value="grupo20_a">Grupo 20+ | Camino A: $198.000 COP + 1 mes bonificado</option>
+                </optgroup>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-3">
+              Método de Pago Preferido <span class="text-rose-400">*</span>
+            </label>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <label class="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4 cursor-pointer hover:border-cyan-500/50 transition">
+                <input type="radio" name="payment_method" value="wompi" checked class="h-4 w-4 text-cyan-600 focus:ring-cyan-500">
+                <div>
+                  <span class="font-bold text-white text-sm block">Tarjeta de Crédito / Débito (Wompi)</span>
+                  <span class="text-xs text-slate-400">Diferible hasta en 3 cuotas con tarjeta</span>
+                </div>
+              </label>
+
+              <label class="flex items-center gap-3 rounded-xl border border-slate-800 bg-slate-900/60 p-4 cursor-pointer hover:border-cyan-500/50 transition">
+                <input type="radio" name="payment_method" value="transfer" class="h-4 w-4 text-cyan-600 focus:ring-cyan-500">
+                <div>
+                  <span class="font-bold text-white text-sm block">Bancolombia Ahorros / Bre-b</span>
+                  <span class="text-xs text-slate-400">Transferencia directa en línea</span>
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Terms acceptance -->
+          <div class="rounded-xl border border-slate-800 bg-slate-900/40 p-4">
+            <label class="flex items-start gap-3 cursor-pointer">
+              <input type="checkbox" id="chk-terms" class="mt-1 h-4 w-4 rounded border-slate-700 text-cyan-600 focus:ring-cyan-500">
+              <span class="text-xs text-slate-300 leading-relaxed">
+                Acepto los términos de pre-registro en grupo. Entiendo que la tarifa especial se valida una vez completados los registros del grupo.
+              </span>
+            </label>
+            <p id="err-terms" class="mt-1 text-xs text-rose-400 hidden"></p>
+          </div>
+
+          <button
+            type="submit"
+            class="flex w-full items-center justify-center gap-3 rounded-2xl bg-gradient-to-r from-cyan-500 via-blue-600 to-indigo-600 px-8 py-4 text-base font-bold text-white shadow-xl shadow-cyan-900/40 hover:from-cyan-400 hover:to-indigo-500 hover:scale-[1.01] transition"
+          >
+            <span>Confirmar Pre-Registro de Equipo</span>
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/>
+            </svg>
+          </button>
+
+        </form>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- PAYMENT METHODS RECAP SECTION -->
+  <section id="metodos-pago" class="bg-slate-950 py-16 text-white border-t border-slate-800">
+    <div class="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+      
+      <div class="text-center">
+        <h3 class="font-heading text-2xl font-bold text-white sm:text-3xl">
+          Instrucciones de Pago Directo
+        </h3>
+        <p class="mt-2 text-xs text-slate-400">
+          Usa cualquiera de estos métodos autorizados para realizar el pago de implementación.
+        </p>
+      </div>
+
+      <div class="mt-10 grid gap-6 md:grid-cols-2">
+        
+        <!-- Wompi Card -->
+        <div class="rounded-3xl border border-cyan-500/30 bg-slate-900 p-6 shadow-xl">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-cyan-600 text-white font-bold">
+              W
+            </div>
+            <div>
+              <h4 class="font-bold text-white text-base">Tarjeta de Crédito (Wompi)</h4>
+              <p class="text-xs text-slate-400">Diferible hasta en 3 cuotas con tu tarjeta</p>
+            </div>
+          </div>
+
+          <div class="mt-6 space-y-3">
+            <a
+              href="https://checkout.wompi.co/l/y3r4Vi"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-5 py-3 text-xs font-bold text-white hover:from-cyan-500 hover:to-blue-500 transition"
+            >
+              <span>Ir al Checkout de Wompi</span>
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/>
+              </svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Bancolombia / Bre-b Card -->
+        <div class="rounded-3xl border border-slate-800 bg-slate-900 p-6 shadow-xl">
+          <div class="flex items-center gap-3">
+            <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-600 text-white font-bold">
+              B
+            </div>
+            <div>
+              <h4 class="font-bold text-white text-base">Bancolombia & Bre-b</h4>
+              <p class="text-xs text-slate-400">Transferencia directa en línea</p>
+            </div>
+          </div>
+
+          <div class="mt-4 space-y-2 text-xs">
+            <div class="flex justify-between items-center rounded-lg bg-slate-950 p-2.5">
+              <span class="text-slate-400">Bancolombia Ahorros:</span>
+              <span class="font-mono font-bold text-white">75024566161</span>
+            </div>
+            <div class="flex justify-between items-center rounded-lg bg-slate-950 p-2.5">
+              <span class="text-slate-400">Bre-b Llave 1:</span>
+              <span class="font-mono font-bold text-white">94536693</span>
+            </div>
+            <div class="flex justify-between items-center rounded-lg bg-slate-950 p-2.5">
+              <span class="text-slate-400">Bre-b Llave 2:</span>
+              <span class="font-mono font-bold text-white">3188430283</span>
+            </div>
+            <div class="flex justify-between items-center rounded-lg bg-slate-950 p-2.5">
+              <span class="text-slate-400">Bre-b Llave 3:</span>
+              <span class="font-mono font-bold text-white">@XML693</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 bg-slate-950 py-8 text-center text-xs text-slate-500">
+    <div class="mx-auto max-w-6xl px-4">
+      <p>© 2026 PartnerHub / Franquicia Digital. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

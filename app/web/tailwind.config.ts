@@ -11,26 +11,21 @@ const config: Config = {
     extend: {
       fontFamily: {
         sans: ["var(--font-sans)", "Inter", "sans-serif"],
-        heading: ["var(--font-heading)", "Outfit", "sans-serif"]
+        heading: ["var(--font-heading)", "Sora", "sans-serif"]
       },
       colors: {
-        sand: {
-          50: "#fcf8f2",
-          100: "#f7efe0",
-          200: "#edd9b5",
-          300: "#d7b57b",
-          400: "#c58a3b",
-          500: "#a96a17",
-          600: "#864d0f",
-          700: "#683b0f",
-          800: "#4f2d0d",
-          900: "#321c09"
+        ph: {
+          blue: "#0086FE",
+          navy: "#0B1D3A",
+          light: "#E6F2FF",
+          bg: "#F5F8FC",
+          success: "#00C2A8",
         }
       },
       boxShadow: {
-        glow: "0 24px 80px rgba(166, 105, 23, 0.14)",
+        card: "0 4px 24px -8px rgba(11, 29, 58, 0.08)",
+        glow: "0 10px 30px rgba(0, 134, 254, 0.2)",
         subtle: "0 4px 20px rgba(0, 0, 0, 0.03)",
-        premium: "0 10px 30px -10px rgba(134, 77, 15, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02)"
       },
       borderRadius: {
         "4xl": "2rem",
@@ -42,5 +37,4 @@ const config: Config = {
 };
 
 export default config;
-
 

@@ -1,0 +1,17 @@
+[
+  {
+    "fullName": "Prueba PartnerHub",
+    "whatsapp": "+573001112233",
+    "email": "prueba@example.com",
+    "brandName": "Marca de prueba",
+    "mainProduct": "Producto de prueba",
+    "referrerCode": "7417984",
+    "paymentMethod": "direct",
+    "termsAccepted": true,
+    "id": "559327cc-0a3a-4fa8-9961-d735927e45a6",
+    "status": "CONTACTED",
+    "siteId": "prueba-partnerhub",
+    "createdAt": "2026-07-29T00:08:11.460Z",
+    "updatedAt": "2026-07-29T00:08:11.476Z"
+  }
+]

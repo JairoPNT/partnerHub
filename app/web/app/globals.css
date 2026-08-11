@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Sora:wght@400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -7,7 +7,7 @@
 :root {
   color-scheme: light;
   --font-sans: 'Inter', sans-serif;
-  --font-heading: 'Outfit', sans-serif;
+  --font-heading: 'Sora', sans-serif;
 }
 
 html {
@@ -17,11 +17,8 @@ html {
 body {
   min-height: 100vh;
   font-family: var(--font-sans);
-  background:
-    radial-gradient(circle at top left, rgba(14, 165, 233, 0.07), transparent 35%),
-    radial-gradient(circle at top right, rgba(99, 102, 241, 0.05), transparent 30%),
-    linear-gradient(180deg, #f8fafc 0%, #f1f5f9 50%, #e2e8f0 100%);
-  color: #0f172a;
+  background-color: #F5F8FC;
+  color: #0B1D3A;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

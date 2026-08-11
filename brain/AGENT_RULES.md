@@ -15,7 +15,8 @@
 - Codex does not touch UI.
 - Antigravity does not touch backend, Prisma, auth, Docker, or database design.
 - Antigravity works strictly under the Cross-Agent Request Protocol (`brain/agent-requests/antigravity/`).
-- Claude does not create features unless explicitly assigned.
+- Ticket owners are responsible for automated verification and a documented self-review.
+- ChatGPT reviews cross-cutting architecture and high-risk decisions.
 - Jairo is the CEO / Product Owner.
 
 ## Work Product Requirements

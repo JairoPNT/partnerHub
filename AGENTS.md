@@ -74,27 +74,6 @@ Authority:
 
 - Owns the visual and interaction language of the product, within approved product and architecture constraints.
 
-## Claude Code
-
-Role: Principal Reviewer
-
-Responsibilities:
-
-- Code quality review.
-- Refactor recommendations.
-- Performance review.
-- Maintainability checks.
-- Accessibility review.
-- Architecture review from a second-opinion perspective.
-
-Scope boundary:
-
-- Claude does not create features unless explicitly assigned to a ticket.
-
-Authority:
-
-- Does not overwrite ownership decisions, but can block unsafe or low-quality changes through review feedback.
-
 ## Collaboration Rules
 
 - One ticket should have one clear primary owner.
@@ -190,7 +169,9 @@ Cuando termines, indica solo:
 - ChatGPT is used for CTO, architecture, and product decisions.
 - Codex is used for backend lead work.
 - Antigravity is used for frontend and UX work.
-- Claude is used for QA and review.
+- Ticket owners execute their required automated checks and documented review checklist.
+- ChatGPT reviews cross-cutting architecture and high-risk decisions.
+- Jairo provides final product and production approval.
 - Cheap models should handle routine work.
 - Balanced models should handle daily engineering and review.
 - Premium models should be reserved for critical architecture, security, database, auth, payment, tenant isolation, and high-risk decisions.

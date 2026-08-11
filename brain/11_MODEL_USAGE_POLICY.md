@@ -11,7 +11,7 @@ PartnerHub uses AI agents as a coordinated engineering team. Model selection mus
 | ChatGPT | CTO / Chief Software Architect | Architecture, product direction, roadmap, ticket definition, cross-cutting decisions |
 | Codex | Backend Lead | Backend architecture, APIs, Prisma, PostgreSQL, auth, authorization, services, Docker, testing |
 | Antigravity | Frontend and UX Lead | UI, UX flows, React implementation, Tailwind, responsive behavior, design system |
-| Claude | QA and Principal Reviewer | Quality review, risk review, maintainability, accessibility, architecture second opinion |
+| Ticket owner | Verification owner | Automated checks, scoped review checklist, maintainability and regression evidence |
 
 ## Cost-Control Principle
 
@@ -145,27 +145,14 @@ Use stronger models only for:
 - Large frontend refactors.
 - Design system decisions with long-term impact.
 
-### Claude
+### Verification without a dedicated reviewer agent
 
-Use Claude as QA and Principal Reviewer for:
-
-- Pull request review.
-- Maintainability review.
-- Accessibility review.
-- Security review.
-- Performance review.
-- Second-opinion architecture review.
-
-Use balanced models for daily review.
-
-Use premium models only for:
-
-- Security review.
-- Architecture review.
-- Database review.
-- Auth review.
-- Payment review.
-- High-risk production readiness review.
+- Each ticket owner runs the required automated checks and records a scoped self-review.
+- Antigravity owns accessibility and visual verification for frontend tickets.
+- Codex owns backend regression, security, performance, and maintainability evidence for backend tickets.
+- ChatGPT reviews architecture and high-risk decisions before implementation or production rollout.
+- Jairo retains final product and production approval.
+- A ticket must not claim independent review when only self-review was performed.
 
 ## Escalation Rules
 
@@ -186,8 +173,8 @@ Use premium models only for:
 | Auth implementation | Codex | Premium or balanced plus premium review | Security-sensitive by default |
 | UI page implementation | Antigravity | Cheap or balanced | Codex should not implement visual decisions |
 | Design system change | Antigravity | Balanced | Escalate if product-wide interaction model changes |
-| PR review | Claude | Balanced | Premium only for high-risk areas |
-| Security review | Claude | Premium | Required for auth, payments, secrets, file storage |
+| Scoped code review | Ticket owner | Balanced | Record automated checks and disclose self-review |
+| Security review | Codex + ChatGPT approval | Premium | Required for auth, payments, secrets, file storage |
 | Deployment config | Codex | Balanced | Premium if production security or data persistence is affected |
 
 ## Operating Rule

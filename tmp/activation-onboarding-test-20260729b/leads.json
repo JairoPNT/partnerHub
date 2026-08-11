@@ -1,0 +1,24 @@
+[
+  {
+    "fullName": "Onboarding Test",
+    "whatsapp": "+573001112233",
+    "email": "onboarding-test-3@example.com",
+    "brandName": "Marca test",
+    "mainProduct": "",
+    "referrerCode": null,
+    "paymentMethod": "direct",
+    "termsAccepted": true,
+    "id": "afe74678-1c51-4ea5-bbba-d01b8094884f",
+    "status": "NEW",
+    "siteId": null,
+    "createdAt": "2026-07-29T12:17:26.483Z",
+    "updatedAt": "2026-07-29T12:17:26.516Z",
+    "onboardingTokenHash": "38d229310c6e46d34608d9bd9be2eff088f7cbff7623b78e9e1fa7126290783c",
+    "onboardingData": {
+      "country": "Colombia",
+      "purchaseUrl": "https://col.ganoexcel.com/prueba",
+      "agreementAccepted": true
+    },
+    "onboardingUpdatedAt": "2026-07-29T12:17:26.516Z"
+  }
+]
