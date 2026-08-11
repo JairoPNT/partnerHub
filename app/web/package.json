@@ -20,6 +20,7 @@
     "test:referral-cleanup": "node --test scripts/cleanup-jairo-pinto-test-referrals.test.mjs",
     "maintenance:cleanup-test-referrals": "node scripts/cleanup-jairo-pinto-test-referrals.mjs",
     "maintenance:reconcile-claudia-heroes": "node scripts/reconcile-claudia-heroes.mjs",
+    "maintenance:reconcile-partner-heroes": "node scripts/reconcile-claudia-heroes.mjs",
     "lint": "eslint . --max-warnings=0",
     "format": "prettier --write .",
     "db:generate": "prisma generate",
