@@ -2388,47 +2388,58 @@ export function EntrepreneurOperationsView() {
                 </div>
 
                 {/* 4. Fotografías fuente del onboarding */}
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                      Fotografías fuente del onboarding
-                    </h4>
-                    {selectedLead.onboardingData?.sourcePhotos && selectedLead.onboardingData.sourcePhotos.length > 0 && (
-                      <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
-                        {selectedLead.onboardingData.sourcePhotos.length} fotos
-                      </span>
-                    )}
-                  </div>
+                {(() => {
+                  const validPhotos = (selectedLead.onboardingData?.sourcePhotos || []).filter(url => url.startsWith('https://'));
+                  return (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                          Fotografías fuente del onboarding
+                        </h4>
+                        {validPhotos.length > 0 && (
+                          <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                            {validPhotos.length} fotos
+                          </span>
+                        )}
+                      </div>
 
-                  {selectedLead.onboardingData?.sourcePhotos && selectedLead.onboardingData.sourcePhotos.length > 0 ? (
-                    <div className="grid grid-cols-3 gap-2">
-                      {selectedLead.onboardingData.sourcePhotos.map((photoUrl, idx) => (
-                        <a
-                          key={idx}
-                          href={photoUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-100 hover:border-cyan-500 transition-colors"
-                        >
-                          <img
-                            src={photoUrl}
-                            alt={`Source photo ${idx + 1}`}
-                            className="h-full w-full object-cover"
-                            onError={(e) => {
-                              (e.target as HTMLImageElement).style.display = 'none';
-                              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
-                            }}
-                          />
-                          <div className="hidden absolute inset-0 flex items-center justify-center bg-slate-100 text-slate-400">
-                            <ImageIcon className="h-5 w-5" />
-                          </div>
-                        </a>
-                      ))}
+                      {validPhotos.length > 0 ? (
+                        <div className="grid grid-cols-3 gap-2">
+                          {validPhotos.map((photoUrl, idx) => (
+                            <a
+                              key={idx}
+                              href={photoUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-100 hover:border-cyan-500 transition-colors"
+                              onClick={(e) => {
+                                const img = e.currentTarget.querySelector('img');
+                                if (img && img.style.display === 'none') {
+                                  e.preventDefault();
+                                }
+                              }}
+                            >
+                              <img
+                                src={photoUrl}
+                                alt={`Fotografía fuente ${idx + 1}`}
+                                className="h-full w-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).style.display = 'none';
+                                  (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                                }}
+                              />
+                              <div className="hidden absolute inset-0 flex items-center justify-center bg-slate-100 text-slate-400">
+                                <ImageIcon className="h-5 w-5" />
+                              </div>
+                            </a>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-xs text-slate-400 italic">No hay fotografías fuente cargadas</p>
+                      )}
                     </div>
-                  ) : (
-                    <p className="text-xs text-slate-400 italic">No hay fotografías fuente cargadas</p>
-                  )}
-                </div>
+                  );
+                })()}
 
               </>
             )}
