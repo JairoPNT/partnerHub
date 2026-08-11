@@ -85,6 +85,16 @@ export interface OnboardingData {
   agreementAccepted?: boolean;
 }
 
+const isValidHttpsUrl = (value: unknown): value is string => {
+  if (typeof value !== "string") return false;
+
+  try {
+    return new URL(value).protocol === "https:";
+  } catch {
+    return false;
+  }
+};
+
 export interface ActivationLeadRecord {
   id: string;
   fullName: string;
@@ -2389,7 +2399,7 @@ export function EntrepreneurOperationsView() {
 
                 {/* 4. Fotografías fuente del onboarding */}
                 {(() => {
-                  const validPhotos = (selectedLead.onboardingData?.sourcePhotos || []).filter(url => url.startsWith('https://'));
+                  const validPhotos = selectedLead.onboardingData?.sourcePhotos?.filter(isValidHttpsUrl) ?? [];
                   return (
                     <div className="space-y-3">
                       <div className="flex items-center justify-between border-b border-slate-200 pb-2">

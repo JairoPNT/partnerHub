@@ -13,7 +13,7 @@
 
 Se aplicaron las correcciones solicitadas sobre la implementación de la galería de fotografías fuente, garantizando el cumplimiento íntegro de los criterios de aceptación:
 
-1. **Filtrado de URLs HTTPS Válidas**: Se implementó una constante `validPhotos` que depura el arreglo provisto en `onboardingData.sourcePhotos`, conservando estrictamente los *strings* que comienzan con el protocolo `https://`.
+1. **Filtrado Exigente de URLs HTTPS**: Se implementó una validación rigurosa a través de la función auxiliar `isValidHttpsUrl`. Ésta comprueba primero el tipo (`typeof value === "string"`) y luego procesa el valor mediante un bloque `try/catch` envolviendo a `new URL(value)`. Sólo se consideran válidas aquellas imágenes que arrojen un `parsed.protocol === "https:"`.
 2. **Consistencia en Contador y Galería**: Se utilizó este arreglo validado para renderizar la galería e indicar el contador del encabezado. De tal forma, imágenes con esquemas no válidos o strings vacíos son ignorados silenciosamente.
 3. **Prevención de Navegación Rota (Broken Links)**: Se agregó un evento `onClick` a la etiqueta `<a>` (wrapper) de la galería que detecta dinámicamente si el `img` interno está oculto (`display: 'none'`, lo que ocurre cuando el `onError` de Next ha sido activado). De ser así, se ejecuta `e.preventDefault()`, anulando el salto a una nueva pestaña.
 4. **Localización de Alt Text**: Se reemplazó el texto alternativo `Source photo ${idx + 1}` por el string en español `Fotografía fuente ${idx + 1}` para brindar semántica coherente.
