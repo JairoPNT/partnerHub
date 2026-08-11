@@ -8,6 +8,10 @@ import { z } from "zod";
 
 import { manualReferralService } from "@/server/services/manualReferralService";
 import { DEFAULT_ECOSYSTEM_TYPE, ecosystemTypeSchema, normalizeEcosystemType } from "@/server/services/ecosystemService";
+import {
+  mergeFinalHeroUrls,
+  type FinalHeroUrls
+} from "@/server/services/productPageHeroSyncService";
 
 const siteIdSchema = z
   .string()
@@ -426,6 +430,27 @@ async function updatePublicationStateBySiteId(
   return toPublicLead(next);
 }
 
+async function updateHeroUrlsBySiteId(siteId: string, heroUrls: FinalHeroUrls) {
+  const parsedSiteId = siteIdSchema.parse(siteId);
+  const parsedHeroUrls = onboardingDataSchema
+    .pick({ heroDesktopUrl: true, heroMobileUrl: true })
+    .parse(heroUrls);
+  const leads = await readLeads();
+  const existing = leads.find((lead) => lead.siteId === parsedSiteId);
+  if (!existing) return null;
+
+  const now = new Date().toISOString();
+  const next: ActivationLead = {
+    ...existing,
+    onboardingData: mergeFinalHeroUrls(existing.onboardingData, parsedHeroUrls),
+    onboardingUpdatedAt: now,
+    updatedAt: now
+  };
+
+  await writeLeads(leads.map((lead) => (lead.id === existing.id ? next : lead)));
+  return toPublicLead(next);
+}
+
 async function deleteTest(id: string, confirmation: string) {
   if (confirmation !== "DELETE_TEST") {
     throw new Error("Test deletion requires explicit confirmation.");
@@ -456,5 +481,6 @@ export const activationLeadService = {
   updateStatus,
   updateRecordState,
   updatePublicationStateBySiteId,
+  updateHeroUrlsBySiteId,
   deleteTest
 };

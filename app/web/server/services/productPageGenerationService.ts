@@ -8,6 +8,7 @@ import { z } from "zod";
 import { productPageSourceService } from "@/server/services/productPageSourceService";
 import { activationLeadService } from "@/server/services/activationLeadService";
 import { productPageHistoryService } from "@/server/services/productPageHistoryService";
+import { syncProductPageHeroesToLead } from "@/server/services/productPageHeroSyncService";
 import { DEFAULT_ECOSYSTEM_TYPE, ecosystemTypeSchema, isMasterSiteId } from "@/server/services/ecosystemService";
 import {
   resolveCanonicalTemplateDirectory,
@@ -171,6 +172,7 @@ export type ProductPageGenerationResult = {
   outputDirectory: string;
   previewUrl: string;
   files: string[];
+  warnings?: string[];
 };
 
 const templateEntries = ["index.html", "styles.css", "app.js", "favicon.svg", "tipografia"];
@@ -363,6 +365,11 @@ export const productPageGenerationService = {
     );
 
     await productPageSourceService.save(configuration.site.id, configuration);
+    const heroSync = await syncProductPageHeroesToLead(
+      configuration.site.id,
+      configuration.hero,
+      activationLeadService
+    );
     await productPageSourceService.clearLastVerification(configuration.site.id);
     await activationLeadService.updatePublicationStateBySiteId(configuration.site.id, "GENERATED");
     await productPageHistoryService.append({
@@ -380,7 +387,8 @@ export const productPageGenerationService = {
       generatedAt,
       outputDirectory,
       previewUrl: `/api/internal/product-pages/preview/${configuration.site.id}/index.html`,
-      files: [...files, "manifest.json"]
+      files: [...files, "manifest.json"],
+      ...(heroSync.warning ? { warnings: [heroSync.warning] } : {})
     };
   },
 
