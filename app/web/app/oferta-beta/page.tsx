@@ -7,7 +7,7 @@ import { SolutionSection } from "@/components/beta-landing/SolutionSection";
 import { ActiveDemosSection } from "@/components/beta-landing/ActiveDemosSection";
 import { IncludesSection } from "@/components/beta-landing/IncludesSection";
 import { BetaOfferSection } from "@/components/beta-landing/BetaOfferSection";
-import { ReferralSection } from "@/components/beta-landing/ReferralSection";
+
 import { ActivationForm, FormDataState } from "@/components/beta-landing/ActivationForm";
 import { PaymentSection } from "@/components/beta-landing/PaymentSection";
 import { PaymentModal } from "@/components/beta-landing/PaymentModal";
@@ -15,7 +15,7 @@ import { FaqSection } from "@/components/beta-landing/FaqSection";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FinalCtaSection } from "@/components/beta-landing/FinalCtaSection";
-import { Sparkles, ShieldCheck } from "lucide-react";
+import { Sparkles } from "lucide-react";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 
 export default function OfertaBetaPage() {

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ExternalLink, Star, Compass, ShieldCheck, AlertCircle } from "lucide-react";
+import { ExternalLink, Star, Compass, AlertCircle } from "lucide-react";
 
 export function ActiveDemosSection() {
   const demos = [

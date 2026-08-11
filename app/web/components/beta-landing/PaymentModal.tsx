@@ -8,9 +8,7 @@ import {
   CreditCard,
   Building2,
   ExternalLink,
-  ShieldCheck,
-  Zap,
-  QrCode,
+  ShieldCheck
 } from "lucide-react";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 
