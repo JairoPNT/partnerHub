@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 
-import { reconcileClaudiaHeroes } from "./reconcile-claudia-heroes.mjs";
+import { reconcileClaudiaHeroes, reconcilePartnerHeroes } from "./reconcile-claudia-heroes.mjs";
 
 const desktop = "https://media.partnerhub.club/clientes/claudia-calero/producto/v1/hero-desktop.webp";
 const mobile = "https://media.partnerhub.club/clientes/claudia-calero/producto/v1/hero-mobile.webp";
@@ -104,5 +104,22 @@ test("fails closed when the target lead is missing or duplicated", async () => {
     } finally {
       await rm(paths.root, { recursive: true, force: true });
     }
+  }
+});
+
+test("reconciles any valid partner siteId through the generic entry point", async () => {
+  const paths = await fixture();
+  const sourcePath = resolve(paths.sourceDirectory, "other-partner.json");
+  const leadsPath = resolve(paths.activationDirectory, "leads.json");
+  try {
+    await writeFile(sourcePath, JSON.stringify({ hero: { desktop, mobile } }), "utf8");
+    const leads = JSON.parse(await readFile(leadsPath, "utf8"));
+    leads[1].onboardingData = {};
+    await writeFile(leadsPath, JSON.stringify(leads), "utf8");
+    const result = await reconcilePartnerHeroes({ ...paths, siteId: "other-partner" });
+    assert.equal(result.targetSiteId, "other-partner");
+    assert.equal(result.changed, true);
+  } finally {
+    await rm(paths.root, { recursive: true, force: true });
   }
 });
