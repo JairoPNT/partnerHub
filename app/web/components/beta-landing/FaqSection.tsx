@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { HelpCircle, ChevronDown, ShieldCheck } from "lucide-react";
+import { HelpCircle, ChevronDown } from "lucide-react";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 
 export function FaqSection() {

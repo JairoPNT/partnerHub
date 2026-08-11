@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Copy, Check, CreditCard, Building2, ExternalLink, ShieldCheck, Zap, QrCode } from "lucide-react";
+import { Copy, Check, CreditCard, Building2, ExternalLink, ShieldCheck } from "lucide-react";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 
 export function PaymentSection() {

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Check, ArrowRight, Clock, ShieldCheck, Zap } from "lucide-react";
+import { Check, ArrowRight, Clock, Zap } from "lucide-react";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 
 interface BetaOfferSectionProps {

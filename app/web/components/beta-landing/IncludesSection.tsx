@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CheckCircle2, Layout, Globe, Sliders, MessageSquare, ShieldCheck, Headphones } from "lucide-react";
+import { Layout, Globe, Sliders, MessageSquare, ShieldCheck, Headphones } from "lucide-react";
 
 export function IncludesSection() {
   const items = [
