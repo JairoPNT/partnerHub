@@ -6,8 +6,7 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertCircle,
-  Building2,
-  CreditCard,
+
   Link2,
   ExternalLink,
   MessageCircle,
@@ -15,7 +14,6 @@ import {
   Check,
   Edit3,
   Globe,
-  Phone,
   Mail,
   FileCheck,
   AlertTriangle,
@@ -27,7 +25,7 @@ import {
   Save,
   Sparkles,
   Lock,
-  Layers
+  Image as ImageIcon
 } from "lucide-react";
 import { FontSelector, PaletteSelector } from "@/components/ui/theme-selectors";
 import { FontPreset, PalettePreset } from "@/lib/theme-presets";
@@ -80,6 +78,7 @@ export interface OnboardingData {
   analyticsMeasurementId?: string;
   fontPreset?: FontPreset;
   palettePreset?: PalettePreset;
+  sourcePhotos?: string[];
   operatorNotes?: string;
   analyticsVerified?: boolean;
   imageUseConsent?: boolean;
@@ -296,8 +295,8 @@ export function EntrepreneurOperationsView() {
       setCodeAssignSuccess(`Código "${json.code}" asignado exitosamente.`);
       setIsEditingCode(false);
       await fetchReferrals();
-    } catch (err: any) {
-      setCodeAssignError(err.message || "Error al asignar código.");
+    } catch (err: unknown) {
+      setCodeAssignError(err instanceof Error ? err.message : "Error al asignar código.");
     } finally {
       setIsAssigningCode(false);
     }
@@ -2387,6 +2386,50 @@ export function EntrepreneurOperationsView() {
                     <p className="text-xs text-slate-400 italic">El empresario aún no ha iniciado el formulario de onboarding.</p>
                   )}
                 </div>
+
+                {/* 4. Fotografías fuente del onboarding */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                      Fotografías fuente del onboarding
+                    </h4>
+                    {selectedLead.onboardingData?.sourcePhotos && selectedLead.onboardingData.sourcePhotos.length > 0 && (
+                      <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+                        {selectedLead.onboardingData.sourcePhotos.length} fotos
+                      </span>
+                    )}
+                  </div>
+
+                  {selectedLead.onboardingData?.sourcePhotos && selectedLead.onboardingData.sourcePhotos.length > 0 ? (
+                    <div className="grid grid-cols-3 gap-2">
+                      {selectedLead.onboardingData.sourcePhotos.map((photoUrl, idx) => (
+                        <a
+                          key={idx}
+                          href={photoUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="group relative aspect-square overflow-hidden rounded-lg border border-slate-200 bg-slate-100 hover:border-cyan-500 transition-colors"
+                        >
+                          <img
+                            src={photoUrl}
+                            alt={`Source photo ${idx + 1}`}
+                            className="h-full w-full object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.display = 'none';
+                              (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden');
+                            }}
+                          />
+                          <div className="hidden absolute inset-0 flex items-center justify-center bg-slate-100 text-slate-400">
+                            <ImageIcon className="h-5 w-5" />
+                          </div>
+                        </a>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic">No hay fotografías fuente cargadas</p>
+                  )}
+                </div>
+
               </>
             )}
           </div>
