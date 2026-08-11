@@ -80,4 +80,3 @@ Display the original onboarding source photos in the selected partner's administ
 - Report: `brain/agent-requests/antigravity/reports/AGR-20260811-001_partner_source_photos_visibility_DONE.md`.
 - Suggested branch: `antigravity/AGR-20260811-001-partner-source-photos-visibility`.
 - PR target: `main`.
-
