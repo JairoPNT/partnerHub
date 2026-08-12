@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -72,4 +72,54 @@ test("protects ganomaster and rejects immutable root fallback conflicts before p
   const { instance, calls } = service(directory); const input = { ownerKey, siteId: "jairo-product", ecosystemType: "PRODUCT" as const, rootEcosystemType: "PRODUCT" as const, baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" as const };
   await instance.provision(input); const count = calls.length;
   await assert.rejects(() => instance.provision({ ...input, rootEcosystemType: "PERSONAL_BRAND" }), (error: unknown) => error instanceof ProvisioningError && error.code === "PROVISIONING_TARGET_CONFLICT"); assert.equal(calls.length, count);
+}));
+
+test("migrates an unambiguous v1 root target to v2 without changing its persisted root", async () => isolated(async (directory) => {
+  const legacy = {
+    version: 1, ownerKey, siteId: "jairo-product", ecosystemType: "PRODUCT", baseDomain: "jairopinto.pro",
+    publicHost: "jairopinto.pro", remoteRoot: "/legacy/hostinger-root", provisioningState: "READY",
+    hostingerState: "READY", dnsState: "RESOLVED", sslState: "READY",
+    createdAt: "2026-08-07T12:00:00.000Z", updatedAt: "2026-08-07T12:00:00.000Z"
+  };
+  await writeFile(join(directory, "jairo-product.json"), JSON.stringify(legacy));
+  const { instance } = service(directory);
+  const migrated = await instance.get("jairo-product");
+  assert.equal(migrated?.version, 2); assert.equal(migrated?.rootEcosystemType, "PRODUCT"); assert.equal(migrated?.remoteRoot, legacy.remoteRoot);
+  assert.equal(JSON.parse(await readFile(join(directory, "jairo-product.json"), "utf8")).version, 2);
+}));
+
+test("migrates a v1 subdomain only with explicit non-ambiguous root identity", async () => isolated(async (directory) => {
+  const legacy = {
+    version: 1, ownerKey, siteId: "jairo-product", ecosystemType: "PRODUCT", baseDomain: "jairopinto.pro",
+    publicHost: "producto.jairopinto.pro", remoteRoot: "/hostinger/producto-from-api", provisioningState: "DNS_PENDING",
+    hostingerState: "READY", dnsState: "CREATED", sslState: "PENDING",
+    createdAt: "2026-08-07T12:00:00.000Z", updatedAt: "2026-08-07T12:00:00.000Z"
+  };
+  await writeFile(join(directory, "jairo-product.json"), JSON.stringify(legacy));
+  const { instance } = service(directory);
+  await assert.rejects(() => instance.get("jairo-product"), (error: unknown) => error instanceof ProvisioningError && error.code === "PROVISIONING_MIGRATION_CONFLICT");
+  const migrated = await instance.provision({ ownerKey, siteId: "jairo-product", ecosystemType: "PRODUCT", rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" });
+  assert.equal(migrated.version, 2); assert.equal(migrated.rootEcosystemType, "PERSONAL_BRAND");
+}));
+
+test("stops on a changed Hostinger document root and persists only a safe conflict code", async () => isolated(async (directory) => {
+  const first = service(directory); const input = { ownerKey, siteId: "jairo-product", ecosystemType: "PRODUCT" as const, rootEcosystemType: "PERSONAL_BRAND" as const, baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" as const };
+  await first.instance.provision(input);
+  const conflicting = createSubdomainProvisioningService({
+    storageDirectory: directory,
+    hostingerClient: { getWebsite: async () => website, ensure: async () => ({ ...subdomain("producto"), subdomain: { ...subdomain("producto").subdomain, root_directory: "/unexpected/root" } }) },
+    dnsClient: { ensureARecord: async (_zone, host) => dnsResult(host) },
+    readinessProbe: { dnsResolves: async () => true, httpsReady: async () => true }
+  });
+  await assert.rejects(() => conflicting.provision(input), (error: unknown) => error instanceof ProvisioningError && error.code === "PROVISIONING_PROVIDER_FAILED" && !error.message.includes("/unexpected/root"));
+  const persisted = JSON.parse(await readFile(join(directory, "jairo-product.json"), "utf8"));
+  assert.equal(persisted.remoteRoot, "/hostinger/producto-from-api"); assert.equal(persisted.lastErrorCode, "HOSTINGER_SUBDOMAIN_CONFLICT"); assert.equal(persisted.provisioningState, "FAILED");
+}));
+
+test("never migrates a legacy ganomaster target", async () => isolated(async (directory) => {
+  const legacy = { version: 1, ownerKey, siteId: "master-product", ecosystemType: "PRODUCT", baseDomain: "ganomaster.pro", publicHost: "producto.ganomaster.pro", remoteRoot: "/master", provisioningState: "READY", hostingerState: "READY", dnsState: "RESOLVED", sslState: "READY", createdAt: "2026-08-07T12:00:00.000Z", updatedAt: "2026-08-07T12:00:00.000Z" };
+  await writeFile(join(directory, "master-product.json"), JSON.stringify(legacy));
+  const { instance, calls } = service(directory);
+  await assert.rejects(() => instance.get("master-product"), (error: unknown) => error instanceof ProvisioningError && error.code === "PROVISIONING_MIGRATION_CONFLICT"); assert.equal(calls.length, 0);
+  assert.equal(JSON.parse(await readFile(join(directory, "master-product.json"), "utf8")).version, 1);
 }));

@@ -36,6 +36,25 @@ const publishingTargetSchema = z.object({
   updatedAt: z.string().datetime()
 });
 
+const legacyPublishingTargetSchema = z.object({
+  version: z.literal(1),
+  ownerKey: ownerKeySchema,
+  siteId: siteIdSchema,
+  ecosystemType: z.enum(["PRODUCT", "BUSINESS"]),
+  baseDomain: hostnameSchema,
+  publicHost: hostnameSchema,
+  remoteRoot: z.string().min(1).nullable(),
+  provisioningState: stateSchema,
+  hostingerState: z.enum(["PENDING", "READY"]),
+  dnsState: z.enum(["PENDING", "CREATED", "RESOLVED"]),
+  sslState: z.enum(["PENDING", "READY"]),
+  dnsRecordId: z.string().min(1).optional(),
+  lastErrorCode: z.string().min(1).optional(),
+  lastCheckedAt: z.string().datetime().optional(),
+  createdAt: z.string().datetime(),
+  updatedAt: z.string().datetime()
+});
+
 export type PublishingTarget = z.infer<typeof publishingTargetSchema>;
 export type ProvisioningState = z.infer<typeof stateSchema>;
 export const provisionSubdomainInputSchema = z.object({
@@ -58,8 +77,8 @@ type ReadinessProbe = { dnsResolves(hostname: string, ipv4: string): Promise<boo
 type Dependencies = { hostingerClient: HostingerClient; dnsClient: DnsClient; readinessProbe?: ReadinessProbe; storageDirectory?: string; now?: () => Date };
 
 export class ProvisioningError extends Error {
-  public readonly code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED";
-  constructor(code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED", message: string) {
+  public readonly code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED";
+  constructor(code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED", message: string) {
     super(message); this.name = "ProvisioningError"; this.code = code;
   }
 }
@@ -71,8 +90,43 @@ function targetPath(root: string, siteId: string) {
   if (!target.startsWith(`${directory}${sep}`)) throw new ProvisioningError("PROVISIONING_STORAGE_FAILED", "Publishing target path escaped storage.");
   return target;
 }
-export async function getPublishingTarget(siteId: string, root = defaultStorageDirectory()) {
-  try { return publishingTargetSchema.parse(JSON.parse(await readFile(targetPath(root, siteId), "utf8"))); }
+function assertNotMaster(baseDomain: string) {
+  if (baseDomain === "ganomaster.pro" || baseDomain.endsWith(".ganomaster.pro")) {
+    throw new ProvisioningError("PROVISIONING_MIGRATION_CONFLICT", "Master-domain targets are excluded from migration.");
+  }
+}
+function migrateLegacyTarget(raw: unknown, rootEcosystemType?: z.infer<typeof publishingEcosystemTypeSchema>): PublishingTarget {
+  const legacy = legacyPublishingTargetSchema.parse(raw);
+  assertNotMaster(legacy.baseDomain);
+  const isRoot = legacy.publicHost === legacy.baseDomain;
+  const expectedSubdomain = `${labels[legacy.ecosystemType]}.${legacy.baseDomain}`;
+  if (!isRoot && legacy.publicHost !== expectedSubdomain) {
+    throw new ProvisioningError("PROVISIONING_MIGRATION_CONFLICT", "Legacy target hostname does not match its ecosystem identity.");
+  }
+  const resolvedRoot = isRoot ? legacy.ecosystemType : rootEcosystemType;
+  if (!resolvedRoot || (!isRoot && resolvedRoot === legacy.ecosystemType)) {
+    throw new ProvisioningError("PROVISIONING_MIGRATION_CONFLICT", "Legacy target root ecosystem is ambiguous.");
+  }
+  return publishingTargetSchema.parse({
+    ...legacy,
+    version: 2,
+    rootEcosystemType: resolvedRoot,
+    publicationState: legacy.provisioningState === "READY" ? "READY" : "PENDING"
+  });
+}
+async function persistTarget(root: string, target: PublishingTarget) {
+  const destination = targetPath(root, target.siteId); const temporary = `${destination}.tmp-${process.pid}-${Date.now()}`;
+  await mkdir(root, { recursive: true }); await writeFile(temporary, `${JSON.stringify(target, null, 2)}\n`); await rename(temporary, destination);
+  return target;
+}
+export async function getPublishingTarget(siteId: string, root = defaultStorageDirectory(), rootEcosystemType?: z.infer<typeof publishingEcosystemTypeSchema>) {
+  try {
+    const raw = JSON.parse(await readFile(targetPath(root, siteId), "utf8"));
+    const current = publishingTargetSchema.safeParse(raw);
+    if (current.success) { assertNotMaster(current.data.baseDomain); return current.data; }
+    const migrated = migrateLegacyTarget(raw, rootEcosystemType);
+    return persistTarget(root, migrated);
+  }
   catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
 }
 export async function listPublishingTargets(root = defaultStorageDirectory()) {
@@ -91,15 +145,11 @@ export function createSubdomainProvisioningService(deps: Dependencies) {
     dnsResolves: async (host, ip) => { try { return (await dns.resolve4(host)).includes(ip); } catch { return false; } },
     httpsReady: async (host) => { try { await fetch(`https://${host}/`, { redirect: "manual" }); return true; } catch { return false; } }
   };
-  async function save(target: PublishingTarget) {
-    const parsed = publishingTargetSchema.parse(target); const destination = targetPath(root, parsed.siteId);
-    await mkdir(root, { recursive: true }); const temporary = `${destination}.tmp-${process.pid}-${Date.now()}`;
-    await writeFile(temporary, `${JSON.stringify(parsed, null, 2)}\n`); await rename(temporary, destination); return parsed;
-  }
+  async function save(target: PublishingTarget) { return persistTarget(root, publishingTargetSchema.parse(target)); }
   const get = (siteId: string) => getPublishingTarget(siteId, root); const list = () => listPublishingTargets(root);
   async function update(target: PublishingTarget, changes: Partial<PublishingTarget>) { return save({ ...target, ...changes, updatedAt: now().toISOString() }); }
   async function createOrLoad(input: ProvisionSubdomainInput) {
-    const host = publicHost(input); const existing = await get(input.siteId);
+    const host = publicHost(input); const existing = await getPublishingTarget(input.siteId, root, input.rootEcosystemType);
     if (existing) {
       if (existing.ownerKey !== input.ownerKey || existing.ecosystemType !== input.ecosystemType || existing.rootEcosystemType !== input.rootEcosystemType || existing.baseDomain !== input.baseDomain || existing.publicHost !== host) throw new ProvisioningError("PROVISIONING_TARGET_CONFLICT", "Publishing target has a different immutable identity.");
       return existing;
@@ -115,6 +165,9 @@ export function createSubdomainProvisioningService(deps: Dependencies) {
       const rootTarget = input.ecosystemType === input.rootEcosystemType;
       if (rootTarget && !deps.hostingerClient.getWebsite) throw Object.assign(new Error("Hostinger root lookup is unavailable."), { code: "HOSTINGER_ROOT_LOOKUP_UNAVAILABLE" });
       const hosting = rootTarget ? await deps.hostingerClient.getWebsite!(input.baseDomain) : (await deps.hostingerClient.ensure(input.baseDomain, labels[input.ecosystemType as keyof typeof labels])).subdomain;
+      if (target.remoteRoot && target.remoteRoot !== hosting.root_directory) {
+        throw Object.assign(new Error("Hostinger returned a different document root for the persisted target."), { code: "HOSTINGER_SUBDOMAIN_CONFLICT" });
+      }
       target = await update(target, { remoteRoot: hosting.root_directory, hostingerState: "READY", provisioningState: "HOSTING_CREATED", lastErrorCode: undefined });
       const record = await deps.dnsClient.ensureARecord(input.baseDomain, target.publicHost, input.ipv4);
       target = await update(target, { dnsRecordId: record.record.id, dnsState: "CREATED", provisioningState: "DNS_PENDING" });
