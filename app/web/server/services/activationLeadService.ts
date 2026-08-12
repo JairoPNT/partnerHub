@@ -11,7 +11,9 @@ import {
   activationOfferSelectionSchema,
   createActivationOfferSelection,
   immutableActivationOfferFieldsSchema,
+  resolveActivationOfferEcosystemType,
   serializeActivationOfferSnapshot,
+  type ActivationOfferCode,
   type ActivationOfferSnapshot
 } from "@/server/services/activationOfferCatalog";
 import { manualReferralService } from "@/server/services/manualReferralService";
@@ -34,7 +36,7 @@ const referralCodeSchema = z
   .regex(/^[a-z0-9_-]+$/i, "referrerCode contains unsupported characters")
   .transform((value) => value.toUpperCase());
 
-export const activationLeadSchema = z.object({
+const activationLeadShape = {
   fullName: z.string().trim().min(2).max(160),
   whatsapp: z.string().trim().min(7).max(40),
   email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()),
@@ -44,10 +46,40 @@ export const activationLeadSchema = z.object({
   referrerName: z.string().trim().min(2).max(120).optional().nullable(),
   paymentMethod: z.enum(["wompi", "direct"]),
   termsAccepted: z.literal(true),
-  ecosystemType: ecosystemTypeSchema.default(DEFAULT_ECOSYSTEM_TYPE),
+  ecosystemType: ecosystemTypeSchema.optional(),
   offerCode: activationOfferCodeSchema.optional(),
   ...activationOfferSelectionSchema.omit({ offerCode: true }).shape
-});
+};
+
+type ActivationOfferEcosystemInput = {
+  offerCode?: ActivationOfferCode;
+  ecosystemType?: z.infer<typeof ecosystemTypeSchema>;
+};
+
+function enforceActivationOfferEcosystemConsistency<T extends z.ZodType<ActivationOfferEcosystemInput>>(
+  schema: T
+) {
+  return schema.transform((input, context): z.output<T> & ActivationOfferEcosystemInput => {
+    try {
+      const ecosystemType = resolveActivationOfferEcosystemType(input.offerCode, input.ecosystemType);
+      return {
+        ...input,
+        ecosystemType: input.offerCode ? ecosystemType : ecosystemType ?? DEFAULT_ECOSYSTEM_TYPE
+      } as z.output<T> & ActivationOfferEcosystemInput;
+    } catch (error) {
+      context.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["ecosystemType"],
+        message: error instanceof Error ? error.message : "Offer and ecosystemType are inconsistent."
+      });
+      return z.NEVER;
+    }
+  });
+}
+
+export const activationLeadSchema = enforceActivationOfferEcosystemConsistency(
+  z.object(activationLeadShape)
+);
 
 export const onboardingDataSchema = z.object({
   domain: z
@@ -132,12 +164,15 @@ export const updateActivationLeadSchema = z.object({
   ...immutableActivationOfferFieldsSchema.shape
 });
 
-export const internalActivationLeadCreateSchema = activationLeadSchema.extend({
-  email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()).nullable().optional(),
-  status: activationLeadStatusSchema.default("NEW"),
-  siteId: siteIdSchema.nullable().optional(),
-  onboardingData: onboardingDataSchema.optional()
-});
+export const internalActivationLeadCreateSchema = enforceActivationOfferEcosystemConsistency(
+  z.object({
+    ...activationLeadShape,
+    email: z.string().trim().email().max(254).transform((value) => value.toLowerCase()).nullable().optional(),
+    status: activationLeadStatusSchema.default("NEW"),
+    siteId: siteIdSchema.nullable().optional(),
+    onboardingData: onboardingDataSchema.optional()
+  })
+);
 
 type ActivationLead = Omit<z.infer<typeof activationLeadSchema>, "email" | "offerSnapshot"> & {
   email: string | null;

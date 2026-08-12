@@ -46,6 +46,27 @@ export type ActivationOfferCode = z.infer<typeof activationOfferCodeSchema>;
 export type ActivationOffer = z.infer<typeof activationOfferSchema>;
 export type ActivationOfferSnapshot = z.infer<typeof activationOfferSnapshotSchema>;
 
+export function resolveActivationOfferEcosystemType(
+  offerCode: ActivationOfferCode | undefined,
+  ecosystemType: z.infer<typeof activationOfferEcosystemSchema> | undefined
+) {
+  if (!offerCode) return ecosystemType;
+
+  const offer = resolveActivationOffer(offerCode);
+  if (offer.ecosystemTypes.length !== 1) {
+    if (ecosystemType !== undefined) {
+      throw new Error(`${offerCode} must not use a single ecosystemType.`);
+    }
+    return undefined;
+  }
+
+  const expectedEcosystemType = offer.ecosystemTypes[0];
+  if (ecosystemType !== undefined && ecosystemType !== expectedEcosystemType) {
+    throw new Error(`${offerCode} requires ecosystemType ${expectedEcosystemType}.`);
+  }
+  return expectedEcosystemType;
+}
+
 const catalog = z.object({
   PRODUCT_ONLY: activationOfferSchema,
   BUSINESS_ONLY: activationOfferSchema,

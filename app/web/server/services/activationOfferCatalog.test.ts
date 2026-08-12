@@ -11,6 +11,7 @@ import {
   getActivationOfferCatalog,
   immutableActivationOfferFieldsSchema,
   resolveActivationOffer,
+  resolveActivationOfferEcosystemType,
   serializeActivationOfferSnapshot
 } from "./activationOfferCatalog.ts";
 
@@ -98,4 +99,41 @@ test("forbids changing an offer or its snapshot after selection", () => {
     false
   );
   assert.equal(immutableActivationOfferFieldsSchema.safeParse({ amountCop: 1 }).success, false);
+});
+
+test("accepts a matching offer and ecosystem combination", () => {
+  assert.equal(resolveActivationOfferEcosystemType("PRODUCT_ONLY", "PRODUCT"), "PRODUCT");
+});
+
+test("derives the ecosystem when an individual offer omits it", () => {
+  assert.equal(resolveActivationOfferEcosystemType("BUSINESS_ONLY", undefined), "BUSINESS");
+  assert.equal(
+    resolveActivationOfferEcosystemType("PERSONAL_BRAND_ONLY", undefined),
+    "PERSONAL_BRAND"
+  );
+});
+
+test("rejects an ecosystem that contradicts an individual offer", () => {
+  assert.throws(
+    () => resolveActivationOfferEcosystemType("BUSINESS_ONLY", "PRODUCT"),
+    /BUSINESS_ONLY requires ecosystemType BUSINESS/
+  );
+});
+
+test("PLAN_360 keeps all ecosystems in the snapshot and rejects a single ecosystemType", () => {
+  assert.equal(resolveActivationOfferEcosystemType("PLAN_360", undefined), undefined);
+  assert.throws(
+    () => resolveActivationOfferEcosystemType("PLAN_360", "PRODUCT"),
+    /PLAN_360 must not use a single ecosystemType/
+  );
+  assert.deepEqual(createActivationOfferSnapshot("PLAN_360").ecosystemTypes, [
+    "PRODUCT",
+    "BUSINESS",
+    "PERSONAL_BRAND"
+  ]);
+});
+
+test("preserves historical creation without an offer", () => {
+  assert.equal(resolveActivationOfferEcosystemType(undefined, undefined), undefined);
+  assert.equal(resolveActivationOfferEcosystemType(undefined, "BUSINESS"), "BUSINESS");
 });

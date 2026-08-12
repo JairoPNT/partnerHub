@@ -8,12 +8,15 @@
 
 Se implementó un catálogo backend Zod para las cuatro ofertas aprobadas y la selección server-side por `offerCode`. Las altas públicas e internas pueden recibir únicamente el código y persisten `offerCode` junto con un `offerSnapshot` normalizado e inmutable. Los campos derivados enviados por el cliente se rechazan y los registros históricos sin oferta siguen siendo válidos.
 
+El follow-up `CDX-20260812-012` corrigió la consistencia entre oferta y ecosistema. Las ofertas individuales aceptan únicamente su ecosistema o lo derivan cuando se omite. `PLAN_360` rechaza cualquier `ecosystemType` único y conserva sus tres ecosistemas exclusivamente en el snapshot. Las altas sin `offerCode` mantienen el comportamiento histórico: respetan el ecosistema enviado o usan `PRODUCT` por defecto.
+
 ## Archivos modificados
 
 - `app/web/server/services/activationOfferCatalog.ts`
 - `app/web/server/services/activationOfferCatalog.test.ts`
 - `app/web/server/services/activationLeadService.ts`
 - `brain/agent-requests/codex/requests/CDX-20260812-010_offer_catalog_snapshot_contract.md`
+- `brain/agent-requests/codex/requests/CDX-20260812-012_offer_ecosystem_consistency_fix.md`
 - `brain/agent-requests/codex/reports/CDX-20260812-010_offer_catalog_snapshot_contract_DONE.md`
 
 ## Contrato producido
@@ -22,11 +25,13 @@ Se implementó un catálogo backend Zod para las cuatro ofertas aprobadas y la s
 - Persistencia: `offerCode` y `offerSnapshot` opcionales para compatibilidad histórica.
 - `offerSnapshot`: `{ offerCode, ecosystemTypes, amountCop, currency: "COP", billingType: "ONE_TIME", selectedAt }`.
 - El snapshot se deriva exclusivamente del catálogo backend y no forma parte de ningún contrato de actualización.
+- `PRODUCT_ONLY`, `BUSINESS_ONLY` y `PERSONAL_BRAND_ONLY` derivan o validan el `ecosystemType` correspondiente.
+- `PLAN_360` no persiste un `ecosystemType` único; `offerSnapshot.ecosystemTypes` es la fuente de verdad de sus tres ecosistemas.
 - `CDX-20260812-011` debe usar exclusivamente el snapshot persistido como fuente económica para Payment Intent/Wompi.
 
 ## Verificación
 
-- Pruebas focalizadas: PASS, 8/8.
+- Pruebas focalizadas: PASS, 13/13, incluidas combinación válida, campo omitido, contradicción, `PLAN_360` y alta histórica sin oferta.
 - ESLint focalizado de los tres archivos backend: PASS, cero warnings.
 - ESLint global: ejecutado; FAIL por 4 errores y 13 warnings preexistentes únicamente en archivos frontend excluidos (`partners-referrals-view.tsx`, `personal-brand-blocks-view.tsx`, `topbar.tsx` y `lib/ecosystem-contracts.ts`).
 - `npm run build`: PASS.
@@ -36,7 +41,8 @@ Se implementó un catálogo backend Zod para las cuatro ofertas aprobadas y la s
 
 - Rama: `codex/CDX-20260812-010-offer-catalog-snapshot`
 - Commit de implementación: `ec8dd28`
-- PR: no creado; pendiente de auditoría del diff por Codex principal.
+- Commit de consistencia CDX-012: incluido en el nuevo commit de cierre de este follow-up.
+- PR existente de CDX-010: `#113`. CDX-012 no abrió un PR adicional.
 
 ## Riesgos pendientes
 
