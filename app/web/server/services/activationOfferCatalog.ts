@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+export const ACTIVATION_OFFER_CATALOG_VERSION = "2026-08-12.v1" as const;
+
 export const activationOfferCodeSchema = z.enum([
   "PRODUCT_ONLY",
   "BUSINESS_ONLY",
@@ -22,6 +24,8 @@ export const activationOfferSchema = z.object({
 }).strict();
 
 export const activationOfferSnapshotSchema = activationOfferSchema.extend({
+  ecosystemType: activationOfferEcosystemSchema.nullable(),
+  catalogVersion: z.literal(ACTIVATION_OFFER_CATALOG_VERSION),
   selectedAt: z.string().datetime({ offset: true })
 }).strict();
 
@@ -31,6 +35,7 @@ const activationOfferDerivedFieldsSchema = z.object({
   ecosystemTypes: z.never().optional(),
   currency: z.never().optional(),
   billingType: z.never().optional(),
+  catalogVersion: z.never().optional(),
   selectedAt: z.never().optional()
 });
 
@@ -120,8 +125,11 @@ export function createActivationOfferSnapshot(
   offerCode: ActivationOfferCode,
   selectedAt = new Date().toISOString()
 ): ActivationOfferSnapshot {
+  const offer = resolveActivationOffer(offerCode);
   return activationOfferSnapshotSchema.parse({
-    ...resolveActivationOffer(offerCode),
+    ...offer,
+    ecosystemType: offer.ecosystemTypes.length === 1 ? offer.ecosystemTypes[0] : null,
+    catalogVersion: ACTIVATION_OFFER_CATALOG_VERSION,
     selectedAt
   });
 }

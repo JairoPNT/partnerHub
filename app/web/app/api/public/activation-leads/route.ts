@@ -16,7 +16,10 @@ export async function POST(request: Request) {
       {
         leadId: result.lead.id,
         receivedAt: result.lead.createdAt,
-        onboardingPath: `/onboarding/${result.onboardingToken}`
+        onboardingPath: `/onboarding/${result.onboardingToken}`,
+        offerCode: result.lead.offerCode,
+        ecosystemType: result.lead.ecosystemType,
+        offerSnapshot: result.lead.offerSnapshot
       },
       { status: 201 }
     );
