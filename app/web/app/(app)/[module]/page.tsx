@@ -7,6 +7,7 @@ import { PartnersReferralsView } from "@/components/partners-referrals-view";
 import { MasterSiteManagementView } from "@/components/master-site-management-view";
 import { AnalyticsAndMetricsView } from "@/components/analytics-and-metrics-view";
 import { DomainsInventoryView } from "@/components/domains-inventory-view";
+import { PaymentsManagementView } from "@/components/payments-management-view";
 import { getModule, moduleCatalog } from "@/modules/catalog";
 
 type ModuleRouteProps = {
@@ -51,6 +52,10 @@ export default async function ModuleRoute({ params }: ModuleRouteProps) {
 
   if (moduleSlug === "domains") {
     return <DomainsInventoryView record={record} />;
+  }
+
+  if (moduleSlug === "payments") {
+    return <PaymentsManagementView record={record} />;
   }
 
   return <ModulePage module={record} />;

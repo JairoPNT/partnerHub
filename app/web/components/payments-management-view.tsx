@@ -1,0 +1,616 @@
+"use client";
+
+import { useState, useEffect, FormEvent } from "react";
+import {
+  CreditCard,
+  DollarSign,
+  PlusCircle,
+  Search,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+  RefreshCw,
+  Ban,
+  Clock
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Label, Input } from "@/components/ui/form";
+import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from "@/components/ui/table";
+import { ModalPortal } from "@/components/ui/modal-portal";
+import { ModuleRecord } from "@/modules/catalog";
+
+type PaymentCategory = "ACTIVATION" | "MONTHLY_FEE" | "ANNUAL_RENEWAL" | "ADD_ON" | "OTHER";
+type PaymentMethod = "WOMPI" | "BANCOLOMBIA" | "NEQUI" | "NU" | "CASH" | "OTHER";
+type PaymentStatus = "CONFIRMED" | "VOIDED";
+
+interface PaymentRecord {
+  id: string;
+  activationLeadId: string;
+  siteId: string | null;
+  category: PaymentCategory;
+  amountCop: number;
+  method: PaymentMethod;
+  status: PaymentStatus;
+  paidAt: string;
+  reference: string | null;
+  notes: string | null;
+  createdAt: string;
+  voidedAt?: string | null;
+  voidReason?: string | null;
+}
+
+interface PaymentsResponse {
+  payments: PaymentRecord[];
+  totalAmountCop: number;
+  totalsByLocalDate: Record<string, number>;
+}
+
+type PaymentsManagementViewProps = {
+  record?: ModuleRecord;
+};
+
+export function PaymentsManagementView({ record }: PaymentsManagementViewProps) {
+  const [paymentsData, setPaymentsData] = useState<PaymentsResponse>({
+    payments: [],
+    totalAmountCop: 0,
+    totalsByLocalDate: {}
+  });
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<"ALL" | PaymentStatus>("ALL");
+  const [categoryFilter, setCategoryFilter] = useState<"ALL" | PaymentCategory>("ALL");
+  const [searchLeadId, setSearchLeadId] = useState("");
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+
+  // Modals
+  const [isRegisterModalOpen, setIsRegisterModalOpen] = useState(false);
+  const [isVoidModalOpen, setIsVoidModalOpen] = useState(false);
+
+  // Register Form
+  const [registerForm, setRegisterForm] = useState({
+    activationLeadId: "",
+    category: "ACTIVATION" as PaymentCategory,
+    amountCop: "",
+    method: "WOMPI" as PaymentMethod,
+    paidAt: new Date().toISOString().slice(0, 16),
+    reference: "",
+    notes: ""
+  });
+  const [isRegistering, setIsRegistering] = useState(false);
+
+  // Void Form
+  const [voidForm, setVoidForm] = useState({
+    paymentId: "",
+    reason: ""
+  });
+  const [isVoiding, setIsVoiding] = useState(false);
+
+  useEffect(() => {
+    fetchPayments();
+  }, [statusFilter, dateFrom, dateTo]);
+
+  const fetchPayments = async () => {
+    setIsLoading(true);
+    setErrorMsg(null);
+    try {
+      const params = new URLSearchParams();
+      if (statusFilter !== "ALL") params.append("status", statusFilter);
+      if (dateFrom) params.append("from", dateFrom);
+      if (dateTo) params.append("to", dateTo);
+      if (searchLeadId.trim()) params.append("activationLeadId", searchLeadId.trim());
+
+      const res = await fetch(`/api/internal/payments?${params.toString()}`);
+      if (!res.ok) throw new Error("Fallo al obtener los pagos");
+      const data = await res.json();
+      setPaymentsData(data);
+    } catch (err: unknown) {
+      setErrorMsg(err instanceof Error ? err.message : "Error de red");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: "COP",
+      minimumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const handleRegisterPayment = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!registerForm.activationLeadId.trim()) {
+      alert("El Partner ID (Activation Lead) es obligatorio.");
+      return;
+    }
+    const amount = parseInt(registerForm.amountCop, 10);
+    if (isNaN(amount) || amount <= 0) {
+      alert("El monto debe ser un entero positivo.");
+      return;
+    }
+
+    if (!confirm(`¿Estás seguro de registrar este pago por ${formatCurrency(amount)}?`)) return;
+
+    setIsRegistering(true);
+    try {
+      const payload = {
+        activationLeadId: registerForm.activationLeadId.trim(),
+        category: registerForm.category,
+        amountCop: amount,
+        method: registerForm.method,
+        paidAt: new Date(registerForm.paidAt).toISOString(),
+        reference: registerForm.reference.trim() || undefined,
+        notes: registerForm.notes.trim() || undefined
+      };
+
+      const res = await fetch("/api/internal/payments", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) throw new Error("No se pudo registrar el pago");
+
+      setIsRegisterModalOpen(false);
+      setRegisterForm({
+        ...registerForm,
+        activationLeadId: "",
+        amountCop: "",
+        reference: "",
+        notes: ""
+      });
+      fetchPayments();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error desconocido");
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  const openVoidModal = (paymentId: string) => {
+    setVoidForm({ paymentId, reason: "" });
+    setIsVoidModalOpen(true);
+  };
+
+  const handleVoidPayment = async (e: FormEvent) => {
+    e.preventDefault();
+    if (!voidForm.reason.trim()) {
+      alert("El motivo de anulación es obligatorio.");
+      return;
+    }
+
+    if (!confirm("Esta acción es irreversible. ¿Confirmas anular este pago?")) return;
+
+    setIsVoiding(true);
+    try {
+      const res = await fetch(`/api/internal/payments/${voidForm.paymentId}/void`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ reason: voidForm.reason.trim() })
+      });
+      if (!res.ok) throw new Error("No se pudo anular el pago");
+
+      setIsVoidModalOpen(false);
+      fetchPayments();
+    } catch (err: unknown) {
+      alert(err instanceof Error ? err.message : "Error desconocido");
+    } finally {
+      setIsVoiding(false);
+    }
+  };
+
+  // Local filtering for category and text search if backend query wasn't strictly enforcing searchLeadId immediately
+  const filteredPayments = paymentsData.payments.filter((p) => {
+    if (categoryFilter !== "ALL" && p.category !== categoryFilter) return false;
+    if (searchLeadId && !p.activationLeadId.includes(searchLeadId)) return false;
+    return true;
+  });
+
+  return (
+    <div className="space-y-6">
+      {/* Header */}
+      <div>
+        <h1 className="text-3xl font-bold tracking-tight text-slate-900 flex items-center gap-2">
+          <CreditCard className="h-8 w-8 text-blue-600" />
+          {record?.name || "Payments"}
+        </h1>
+        <p className="text-slate-500 mt-2">
+          {record?.description || "Registro y trazabilidad financiera."}
+        </p>
+      </div>
+
+      {/* Metrics Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">Ingresos Confirmados</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-900">
+              {formatCurrency(paymentsData.totalAmountCop)}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Total de pagos con estado CONFIRMED
+            </p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-slate-500">Total Transacciones</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-slate-900">
+              {paymentsData.payments.length}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Cantidad de movimientos en el periodo
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Area */}
+      <Card>
+        <CardHeader className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50 border-b border-slate-100">
+          <div>
+            <CardTitle>Historial de Pagos</CardTitle>
+          </div>
+          <Button
+            className="bg-blue-600 hover:bg-blue-700"
+            onClick={() => setIsRegisterModalOpen(true)}
+          >
+            <PlusCircle className="h-4 w-4 mr-2" />
+            Registrar Pago Manual
+          </Button>
+        </CardHeader>
+
+        <CardContent className="p-0">
+          {/* Filters Bar */}
+          <div className="p-4 flex flex-col md:flex-row gap-4 border-b border-slate-100 bg-white">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Input
+                placeholder="Buscar por ID de Partner..."
+                value={searchLeadId}
+                onChange={(e) => setSearchLeadId(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <div className="flex gap-2">
+              <select
+                className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as PaymentStatus | "ALL")}
+              >
+                <option value="ALL">Todos los estados</option>
+                <option value="CONFIRMED">CONFIRMED</option>
+                <option value="VOIDED">VOIDED</option>
+              </select>
+              <select
+                className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-slate-950 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value as PaymentCategory | "ALL")}
+              >
+                <option value="ALL">Todas las categorías</option>
+                <option value="ACTIVATION">ACTIVATION</option>
+                <option value="MONTHLY_FEE">MONTHLY_FEE</option>
+                <option value="ANNUAL_RENEWAL">ANNUAL_RENEWAL</option>
+                <option value="ADD_ON">ADD_ON</option>
+                <option value="OTHER">OTHER</option>
+              </select>
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="w-auto"
+                title="Desde"
+              />
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="w-auto"
+                title="Hasta"
+              />
+              <Button variant="outline" size="sm" className="px-2 h-10" onClick={fetchPayments} title="Actualizar">
+                <RefreshCw className="h-4 w-4 text-slate-500" />
+              </Button>
+            </div>
+          </div>
+
+          {/* Table */}
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Fecha</TableHead>
+                  <TableHead>Partner / Site</TableHead>
+                  <TableHead>Categoría / Método</TableHead>
+                  <TableHead className="text-right">Monto (COP)</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Detalles</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-slate-500">
+                      <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-slate-400" />
+                      Cargando pagos...
+                    </TableCell>
+                  </TableRow>
+                ) : errorMsg ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12">
+                      <AlertTriangle className="h-8 w-8 text-rose-500 mx-auto mb-2" />
+                      <p className="text-rose-600 font-medium">{errorMsg}</p>
+                    </TableCell>
+                  </TableRow>
+                ) : filteredPayments.length === 0 ? (
+                  <TableRow>
+                    <TableCell colSpan={7} className="text-center py-12 text-slate-500">
+                      <DollarSign className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                      No hay pagos registrados para los filtros seleccionados.
+                    </TableCell>
+                  </TableRow>
+                ) : (
+                  filteredPayments.map((payment) => (
+                    <TableRow key={payment.id} className={payment.status === "VOIDED" ? "bg-slate-50 opacity-70" : ""}>
+                      <TableCell>
+                        <div className="font-medium text-slate-900">
+                          {new Date(payment.paidAt).toLocaleDateString("es-CO")}
+                        </div>
+                        <div className="text-xs text-slate-500 flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {new Date(payment.paidAt).toLocaleTimeString("es-CO", { hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm font-medium text-slate-900 font-mono">
+                          {payment.activationLeadId}
+                        </div>
+                        {payment.siteId && (
+                          <div className="text-xs text-slate-500 font-mono">
+                            Site: {payment.siteId}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-sm font-medium text-slate-700">
+                          {payment.category}
+                        </div>
+                        <div className="text-xs text-slate-500 mt-0.5">
+                          {payment.method}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right font-medium text-slate-900">
+                        {payment.status === "VOIDED" ? (
+                          <span className="line-through text-slate-400">{formatCurrency(payment.amountCop)}</span>
+                        ) : (
+                          formatCurrency(payment.amountCop)
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {payment.status === "CONFIRMED" ? (
+                          <Badge variant="success" className="bg-emerald-50 text-emerald-700 border-emerald-200">
+                            <CheckCircle2 className="h-3 w-3 mr-1" />
+                            CONFIRMED
+                          </Badge>
+                        ) : (
+                          <Badge variant="neutral" className="bg-slate-100 text-slate-600 border-slate-300">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            VOIDED
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <div className="text-xs max-w-[200px] truncate text-slate-600" title={payment.reference || ""}>
+                          Ref: {payment.reference || "N/A"}
+                        </div>
+                        {payment.status === "VOIDED" && payment.voidReason && (
+                          <div className="text-xs text-rose-600 max-w-[200px] truncate mt-0.5" title={payment.voidReason}>
+                            Anulado: {payment.voidReason}
+                          </div>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {payment.status === "CONFIRMED" && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
+                            onClick={() => openVoidModal(payment.id)}
+                          >
+                            <Ban className="h-3 w-3 mr-1" />
+                            Anular
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))
+                )}
+              </TableBody>
+            </Table>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Manual Payment Modal */}
+      {isRegisterModalOpen && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <Card className="w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+              <CardHeader className="pb-4 border-b border-slate-100 bg-slate-50/50">
+                <CardTitle className="text-lg">Registrar Pago Manual</CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <form onSubmit={handleRegisterPayment} className="space-y-4">
+                  <div className="space-y-1">
+                    <Label>Partner ID (Activation Lead) *</Label>
+                    <Input
+                      required
+                      value={registerForm.activationLeadId}
+                      onChange={e => setRegisterForm({...registerForm, activationLeadId: e.target.value})}
+                      placeholder="Ej: act_12345abc"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <Label>Categoría *</Label>
+                      <select
+                        required
+                        className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-950"
+                        value={registerForm.category}
+                        onChange={e => setRegisterForm({...registerForm, category: e.target.value as PaymentCategory})}
+                      >
+                        <option value="ACTIVATION">ACTIVATION</option>
+                        <option value="MONTHLY_FEE">MONTHLY_FEE</option>
+                        <option value="ANNUAL_RENEWAL">ANNUAL_RENEWAL</option>
+                        <option value="ADD_ON">ADD_ON</option>
+                        <option value="OTHER">OTHER</option>
+                      </select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label>Método *</Label>
+                      <select
+                        required
+                        className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-slate-950"
+                        value={registerForm.method}
+                        onChange={e => setRegisterForm({...registerForm, method: e.target.value as PaymentMethod})}
+                      >
+                        <option value="WOMPI">WOMPI</option>
+                        <option value="BANCOLOMBIA">BANCOLOMBIA</option>
+                        <option value="NEQUI">NEQUI</option>
+                        <option value="NU">NU</option>
+                        <option value="CASH">CASH</option>
+                        <option value="OTHER">OTHER</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label>Monto (COP) *</Label>
+                    <Input
+                      required
+                      type="number"
+                      min="1"
+                      step="1"
+                      value={registerForm.amountCop}
+                      onChange={e => setRegisterForm({...registerForm, amountCop: e.target.value})}
+                      placeholder="100000"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label>Fecha y Hora del Pago *</Label>
+                    <Input
+                      required
+                      type="datetime-local"
+                      value={registerForm.paidAt}
+                      onChange={e => setRegisterForm({...registerForm, paidAt: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label>Referencia (Opcional)</Label>
+                    <Input
+                      value={registerForm.reference}
+                      onChange={e => setRegisterForm({...registerForm, reference: e.target.value})}
+                      placeholder="Ref del banco o transacción"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <Label>Notas Internas (Opcional)</Label>
+                    <Input
+                      value={registerForm.notes}
+                      onChange={e => setRegisterForm({...registerForm, notes: e.target.value})}
+                      placeholder="Información adicional"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setIsRegisterModalOpen(false)}
+                      disabled={isRegistering}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      className="bg-blue-600 hover:bg-blue-700"
+                      disabled={isRegistering}
+                    >
+                      {isRegistering ? "Registrando..." : "Registrar Pago"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </ModalPortal>
+      )}
+
+      {/* Void Modal */}
+      {isVoidModalOpen && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+            <Card className="w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 border-rose-100">
+              <CardHeader className="pb-4 border-b border-rose-100 bg-rose-50/50">
+                <CardTitle className="text-lg text-rose-800 flex items-center">
+                  <AlertTriangle className="h-5 w-5 mr-2" />
+                  Anular Pago Confirmado
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-4">
+                <p className="text-sm text-slate-600 mb-4">
+                  Los ingresos se descontarán de las métricas. Esta acción no se puede deshacer y quedará registrada en el historial financiero del Partner.
+                </p>
+                <form onSubmit={handleVoidPayment} className="space-y-4">
+                  <div className="space-y-1">
+                    <Label>Motivo de la anulación *</Label>
+                    <Input
+                      required
+                      autoFocus
+                      placeholder="Ej: Registro duplicado, cliente solicitó reembolso..."
+                      value={voidForm.reason}
+                      onChange={e => setVoidForm({...voidForm, reason: e.target.value})}
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      onClick={() => setIsVoidModalOpen(false)}
+                      disabled={isVoiding}
+                    >
+                      Cancelar
+                    </Button>
+                    <Button
+                      type="submit"
+                      variant="danger"
+                      disabled={isVoiding}
+                    >
+                      {isVoiding ? "Anulando..." : "Confirmar Anulación"}
+                    </Button>
+                  </div>
+                </form>
+              </CardContent>
+            </Card>
+          </div>
+        </ModalPortal>
+      )}
+    </div>
+  );
+}
