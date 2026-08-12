@@ -6,6 +6,14 @@ import { resolve } from "node:path";
 
 import { z } from "zod";
 
+import {
+  activationOfferCodeSchema,
+  activationOfferSelectionSchema,
+  createActivationOfferSelection,
+  immutableActivationOfferFieldsSchema,
+  serializeActivationOfferSnapshot,
+  type ActivationOfferSnapshot
+} from "@/server/services/activationOfferCatalog";
 import { manualReferralService } from "@/server/services/manualReferralService";
 import { DEFAULT_ECOSYSTEM_TYPE, ecosystemTypeSchema, normalizeEcosystemType } from "@/server/services/ecosystemService";
 import {
@@ -36,7 +44,9 @@ export const activationLeadSchema = z.object({
   referrerName: z.string().trim().min(2).max(120).optional().nullable(),
   paymentMethod: z.enum(["wompi", "direct"]),
   termsAccepted: z.literal(true),
-  ecosystemType: ecosystemTypeSchema.default(DEFAULT_ECOSYSTEM_TYPE)
+  ecosystemType: ecosystemTypeSchema.default(DEFAULT_ECOSYSTEM_TYPE),
+  offerCode: activationOfferCodeSchema.optional(),
+  ...activationOfferSelectionSchema.omit({ offerCode: true }).shape
 });
 
 export const onboardingDataSchema = z.object({
@@ -118,7 +128,8 @@ export const updateActivationLeadSchema = z.object({
   referrerName: z.string().trim().min(2).max(120).nullable().optional(),
   paymentMethod: z.enum(["wompi", "direct"]).optional(),
   ecosystemType: ecosystemTypeSchema.optional(),
-  onboardingData: editableOnboardingDataSchema.optional()
+  onboardingData: editableOnboardingDataSchema.optional(),
+  ...immutableActivationOfferFieldsSchema.shape
 });
 
 export const internalActivationLeadCreateSchema = activationLeadSchema.extend({
@@ -128,7 +139,7 @@ export const internalActivationLeadCreateSchema = activationLeadSchema.extend({
   onboardingData: onboardingDataSchema.optional()
 });
 
-type ActivationLead = Omit<z.infer<typeof activationLeadSchema>, "email"> & {
+type ActivationLead = Omit<z.infer<typeof activationLeadSchema>, "email" | "offerSnapshot"> & {
   email: string | null;
   id: string;
   status: z.infer<typeof activationLeadStatusSchema>;
@@ -140,6 +151,7 @@ type ActivationLead = Omit<z.infer<typeof activationLeadSchema>, "email"> & {
   onboardingTokenHash: string;
   onboardingData: z.infer<typeof onboardingDataSchema>;
   onboardingUpdatedAt?: string;
+  offerSnapshot?: ActivationOfferSnapshot;
 };
 
 function getStorageDirectory() {
@@ -178,7 +190,8 @@ function toPublicLead(lead: ActivationLead) {
   return {
     ...publicLead,
     recordState: lead.recordState ?? "ACTIVE",
-    publicationState: lead.publicationState ?? "NOT_STARTED"
+    publicationState: lead.publicationState ?? "NOT_STARTED",
+    offerSnapshot: serializeActivationOfferSnapshot(lead.offerSnapshot)
   };
 }
 
@@ -189,6 +202,7 @@ async function create(input: z.infer<typeof activationLeadSchema>) {
   const onboardingToken = randomUUID();
   const lead: ActivationLead = {
     ...parsed,
+    ...createActivationOfferSelection(parsed.offerCode, now),
     id: randomUUID(),
     status: "NEW",
     recordState: "ACTIVE",
@@ -220,6 +234,7 @@ async function createInternal(input: z.infer<typeof internalActivationLeadCreate
     paymentMethod: parsed.paymentMethod,
     termsAccepted: parsed.termsAccepted,
     ecosystemType: parsed.ecosystemType,
+    ...createActivationOfferSelection(parsed.offerCode, now),
     id: randomUUID(),
     status: parsed.status,
     recordState: "ACTIVE",
