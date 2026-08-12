@@ -1,15 +1,24 @@
 import "server-only";
 
 import { activationLeadService } from "@/server/services/activationLeadService";
+import {
+  buildDashboardFinancialMetrics,
+  type DashboardMetricsPeriodInput
+} from "@/server/services/dashboardFinancialMetricsCore";
+import { manualPaymentLedgerService } from "@/server/services/manualPaymentLedgerService";
 
 export const dashboardMetricsService = {
-  async get() {
-    const leads = await activationLeadService.list();
+  async get(period: DashboardMetricsPeriodInput = {}) {
+    const [leads, ledger] = await Promise.all([
+      activationLeadService.list(),
+      manualPaymentLedgerService.list()
+    ]);
     const linkedSiteIds = new Set(leads.map((lead) => lead.siteId).filter(Boolean));
     const count = (status: string) => leads.filter((lead) => lead.status === status).length;
+    const financial = buildDashboardFinancialMetrics(ledger.payments, leads, period);
 
     return {
-      source: "activation-leads",
+      source: "activation-leads-and-manual-payment-ledger",
       generatedAt: new Date().toISOString(),
       totalLeads: leads.length,
       operationalActive: count("PAID") + count("CONVERTED"),
@@ -19,7 +28,8 @@ export const dashboardMetricsService = {
       convertedLeads: count("CONVERTED"),
       cancelledLeads: count("CANCELLED"),
       linkedSites: linkedSiteIds.size,
-      unsupportedMetrics: ["revenue", "vslConversion", "sslCoverage"]
+      financial,
+      unsupportedMetrics: ["vslConversion", "sslCoverage"]
     };
   }
 };

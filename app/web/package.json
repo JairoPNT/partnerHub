@@ -17,6 +17,7 @@
     "test:ecosystem-templates": "node --experimental-strip-types --test server/services/ecosystemTemplateResolver.test.ts",
     "test:hero-sync": "node --experimental-strip-types --test server/services/productPageHeroSyncService.test.ts",
     "test:manual-payments": "node --experimental-strip-types --test server/services/manualPaymentLedgerCore.test.ts",
+    "test:dashboard-metrics": "node --experimental-strip-types --test server/services/dashboardFinancialMetricsCore.test.ts",
     "test:claudia-hero-reconciliation": "node --test scripts/reconcile-claudia-heroes.test.mjs",
     "test:referral-cleanup": "node --test scripts/cleanup-jairo-pinto-test-referrals.test.mjs",
     "maintenance:cleanup-test-referrals": "node scripts/cleanup-jairo-pinto-test-referrals.mjs",
