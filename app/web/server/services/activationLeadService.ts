@@ -16,6 +16,7 @@ import {
   type ActivationOfferCode,
   type ActivationOfferSnapshot
 } from "@/server/services/activationOfferCatalog";
+import { assertActivationOfferEcosystemUpdate } from "@/server/services/activationOfferUpdateGuard";
 import { manualReferralService } from "@/server/services/manualReferralService";
 import { DEFAULT_ECOSYSTEM_TYPE, ecosystemTypeSchema, normalizeEcosystemType } from "@/server/services/ecosystemService";
 import {
@@ -397,6 +398,7 @@ async function updateStatus(id: string, input: z.infer<typeof updateActivationLe
 
   if (!existing) throw new Error(`Activation lead ${id} was not found`);
   const existingEcosystemType = normalizeEcosystemType(existing.ecosystemType);
+  assertActivationOfferEcosystemUpdate(existing.offerSnapshot, parsed.ecosystemType);
   if (parsed.ecosystemType && parsed.ecosystemType !== existingEcosystemType && existing.siteId) {
     throw new Error("Ecosystem type cannot change after site linking.");
   }
