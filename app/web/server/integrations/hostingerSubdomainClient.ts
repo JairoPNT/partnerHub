@@ -24,12 +24,19 @@ const subdomainResourceSchema = z.object({
 
 const subdomainCollectionSchema = z.array(subdomainResourceSchema);
 
+const websiteResourceSchema = z.object({
+  username: z.string(),
+  domain: hostnameSchema,
+  root_directory: z.string().min(1)
+}).passthrough();
+
 const providerErrorSchema = z.object({
   error: z.union([z.string(), z.record(z.unknown())]).optional(),
   correlation_id: z.string().optional()
 });
 
 export type HostingerSubdomain = z.infer<typeof subdomainResourceSchema>;
+export type HostingerWebsite = z.infer<typeof websiteResourceSchema>;
 
 export type HostingerEnsureSubdomainResult = {
   state: "EXISTING" | "CREATED";
@@ -79,10 +86,6 @@ function normalizeBaseUrl(value?: string) {
   const parsed = new URL(value?.trim() || "https://developers.hostinger.com");
   if (parsed.protocol !== "https:") throw new Error("HOSTINGER_API_BASE_URL must use HTTPS.");
   return parsed.toString().replace(/\/$/, "");
-}
-
-function expectedRootDirectory(username: string, publicHost: string) {
-  return `/home/${username}/domains/${publicHost}/public_html`;
 }
 
 async function safeJson(response: Response): Promise<unknown> {
@@ -165,6 +168,11 @@ export function createHostingerSubdomainClient(
     return `${baseUrl}/api/hosting/v1/accounts/${encodeURIComponent(username)}/websites/${encodeURIComponent(domain)}/subdomains`;
   }
 
+  function websiteEndpoint(parentDomain: string) {
+    const domain = hostnameSchema.parse(parentDomain);
+    return `${baseUrl}/api/hosting/v1/accounts/${encodeURIComponent(username)}/websites/${encodeURIComponent(domain)}`;
+  }
+
   async function request(parentDomain: string, init?: RequestInit) {
     const response = await fetchImplementation(endpoint(parentDomain), {
       ...init,
@@ -200,14 +208,29 @@ export function createHostingerSubdomainClient(
     return (await list(domain)).find((item) => item.domain === publicHost) ?? null;
   }
 
+  async function getWebsite(parentDomain: string): Promise<HostingerWebsite> {
+    const response = await fetchImplementation(websiteEndpoint(parentDomain), {
+      headers: { Accept: "application/json", Authorization: `Bearer ${apiToken}` }
+    });
+    if (!response.ok) await throwProviderError(response);
+    const parsed = websiteResourceSchema.safeParse(await safeJson(response));
+    if (!parsed.success || parsed.data.username !== username || parsed.data.domain !== parentDomain) {
+      throw new HostingerApiError(
+        "HOSTINGER_INVALID_RESPONSE",
+        "Hostinger returned an invalid website resource.",
+        response.status
+      );
+    }
+    return parsed.data;
+  }
+
   function assertMatchingTarget(resource: HostingerSubdomain, parentDomain: string, label: string) {
     const publicHost = `${label}.${parentDomain}`;
-    const expectedRoot = expectedRootDirectory(username, publicHost);
     if (
       resource.username !== username ||
       resource.parent_domain !== parentDomain ||
       resource.subdomain !== label ||
-      resource.root_directory !== expectedRoot
+      resource.domain !== publicHost
     ) {
       throw new HostingerApiError(
         "HOSTINGER_SUBDOMAIN_CONFLICT",
@@ -247,5 +270,5 @@ export function createHostingerSubdomainClient(
     return { state: "CREATED", subdomain: created };
   }
 
-  return { ensure, find, list };
+  return { ensure, find, getWebsite, list };
 }

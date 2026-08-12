@@ -8,6 +8,7 @@
     "start": "next start",
     "test:dns": "node --experimental-strip-types --test server/integrations/cloudflareDnsClient.test.ts",
     "test:hostinger": "node --experimental-strip-types --test server/integrations/hostingerSubdomainClient.test.ts",
+    "test:hostinger-only": "node --experimental-strip-types --test server/integrations/hostingerSubdomainClient.test.ts server/integrations/hostingerDnsClient.test.ts server/services/subdomainProvisioningService.test.ts server/services/publicationTargetResolver.test.ts",
     "test:provisioning": "node --experimental-strip-types --test server/services/subdomainProvisioningService.test.ts",
     "test:publication-target": "node --experimental-strip-types --test server/services/publicationTargetResolver.test.ts",
     "test:provisioning-api": "node --experimental-strip-types --test server/services/provisioningApiContract.test.ts",

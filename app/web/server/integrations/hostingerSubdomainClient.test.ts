@@ -99,7 +99,7 @@ test("normalizes provider failures and preserves a safe correlation id", async (
   );
 });
 
-test("rejects a conflicting document root without a create request", async () => {
+test("uses the document root returned by Hostinger instead of deriving one", async () => {
   const calls: Array<RequestInit | undefined> = [];
   const client = createHostingerSubdomainClient(config, async (_input, init) => {
     calls.push(init);
@@ -111,13 +111,16 @@ test("rejects a conflicting document root without a create request", async () =>
     ]);
   });
 
-  await assert.rejects(
-    () => client.ensure("lidacastaneda.pro", "producto"),
-    (error: unknown) => {
-      assert.ok(error instanceof HostingerApiError);
-      assert.equal(error.code, "HOSTINGER_SUBDOMAIN_CONFLICT");
-      return true;
-    }
-  );
+  const result = await client.ensure("lidacastaneda.pro", "producto");
+  assert.equal(result.subdomain.root_directory, "/home/u658137804/domains/lidacastaneda.pro/public_html/producto");
   assert.equal(calls.length, 1);
+});
+
+test("reads the root website document root directly from Hostinger", async () => {
+  const client = createHostingerSubdomainClient(config, async () => jsonResponse({
+    username: "u658137804",
+    domain: "lidacastaneda.pro",
+    root_directory: "/hostinger/returned-root"
+  }));
+  assert.equal((await client.getWebsite("lidacastaneda.pro")).root_directory, "/hostinger/returned-root");
 });
