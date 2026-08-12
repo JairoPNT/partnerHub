@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, FormEvent } from "react";
+import { useState, useEffect, useMemo, FormEvent } from "react";
 import {
   CreditCard,
   DollarSign,
@@ -11,7 +11,10 @@ import {
   AlertTriangle,
   RefreshCw,
   Ban,
-  Clock
+  Clock,
+  ChevronDown,
+  X,
+  UserCheck
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -52,6 +55,14 @@ type PaymentsManagementViewProps = {
   record?: ModuleRecord;
 };
 
+export interface ActivationLeadOption {
+  id: string;
+  fullName: string;
+  brandName: string;
+  siteId: string | null;
+  domain: string | null;
+}
+
 export function PaymentsManagementView({ record }: PaymentsManagementViewProps) {
   const [paymentsData, setPaymentsData] = useState<PaymentsResponse>({
     payments: [],
@@ -91,6 +102,77 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
   });
   const [isVoiding, setIsVoiding] = useState(false);
 
+  // Activation Leads for Searchable Partner Selector
+  const [leads, setLeads] = useState<ActivationLeadOption[]>([]);
+  const [isLeadsLoading, setIsLeadsLoading] = useState(false);
+  const [leadsError, setLeadsError] = useState<string | null>(null);
+  const [leadSearchQuery, setLeadSearchQuery] = useState("");
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+
+  const fetchLeads = async () => {
+    setIsLeadsLoading(true);
+    setLeadsError(null);
+    try {
+      const res = await fetch("/api/internal/activation-leads");
+      if (!res.ok) throw new Error("No se pudo obtener la lista de partners");
+      const data = await res.json();
+      const rawLeads = data.leads || [];
+      const mapped: ActivationLeadOption[] = rawLeads.map((lead: {
+        id: string;
+        fullName?: string;
+        brandName?: string;
+        siteId?: string | null;
+        onboardingData?: { domain?: string; customDomain?: string; domainName?: string };
+      }) => ({
+        id: lead.id,
+        fullName: lead.fullName || "Sin nombre",
+        brandName: lead.brandName || "",
+        siteId: lead.siteId || null,
+        domain: lead.onboardingData?.domain || lead.onboardingData?.customDomain || lead.onboardingData?.domainName || null
+      }));
+      setLeads(mapped);
+    } catch (err: unknown) {
+      setLeadsError(err instanceof Error ? err.message : "Error al cargar partners");
+    } finally {
+      setIsLeadsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLeads();
+  }, []);
+
+  const leadsMap = useMemo(() => {
+    const map: Record<string, ActivationLeadOption> = {};
+    leads.forEach((l) => {
+      map[l.id] = l;
+    });
+    return map;
+  }, [leads]);
+
+  const openRegisterModal = () => {
+    setIsRegisterModalOpen(true);
+    setIsSelectorOpen(false);
+    setLeadSearchQuery("");
+    if (leads.length === 0 && !isLeadsLoading) {
+      fetchLeads();
+    }
+  };
+
+  const filteredLeadsForSelector = leads.filter((lead) => {
+    const q = leadSearchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      lead.fullName.toLowerCase().includes(q) ||
+      lead.brandName.toLowerCase().includes(q) ||
+      (lead.siteId && lead.siteId.toLowerCase().includes(q)) ||
+      (lead.domain && lead.domain.toLowerCase().includes(q)) ||
+      lead.id.toLowerCase().includes(q)
+    );
+  });
+
+  const selectedLeadObj = leads.find((l) => l.id === registerForm.activationLeadId);
+
   useEffect(() => {
     fetchPayments();
   }, [statusFilter, dateFrom, dateTo]);
@@ -127,7 +209,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
   const handleRegisterPayment = async (e: FormEvent) => {
     e.preventDefault();
     if (!registerForm.activationLeadId.trim()) {
-      alert("El Partner ID (Activation Lead) es obligatorio.");
+      alert("Debes seleccionar un Partner antes de registrar el pago.");
       return;
     }
     const amount = parseInt(registerForm.amountCop, 10);
@@ -158,6 +240,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
       if (!res.ok) throw new Error("No se pudo registrar el pago");
 
       setIsRegisterModalOpen(false);
+      setIsSelectorOpen(false);
       setRegisterForm({
         ...registerForm,
         activationLeadId: "",
@@ -263,7 +346,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
           </div>
           <Button
             className="bg-blue-600 hover:bg-blue-700"
-            onClick={() => setIsRegisterModalOpen(true)}
+            onClick={openRegisterModal}
           >
             <PlusCircle className="h-4 w-4 mr-2" />
             Registrar Pago Manual
@@ -373,8 +456,11 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
                         </div>
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm font-medium text-slate-900 font-mono">
-                          {payment.activationLeadId}
+                        <div className="text-sm font-medium text-slate-900">
+                          {leadsMap[payment.activationLeadId]?.fullName || payment.activationLeadId}
+                        </div>
+                        <div className="text-xs text-slate-500 font-mono">
+                          ID: {payment.activationLeadId}
                         </div>
                         {payment.siteId && (
                           <div className="text-xs text-slate-500 font-mono">
@@ -452,14 +538,122 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
               </CardHeader>
               <CardContent className="pt-4">
                 <form onSubmit={handleRegisterPayment} className="space-y-4">
-                  <div className="space-y-1">
-                    <Label>Partner ID (Activation Lead) *</Label>
-                    <Input
-                      required
-                      value={registerForm.activationLeadId}
-                      onChange={e => setRegisterForm({...registerForm, activationLeadId: e.target.value})}
-                      placeholder="Ej: act_12345abc"
-                    />
+                  <div className="space-y-1.5 relative">
+                    <Label>Partner (Activation Lead) *</Label>
+                    {selectedLeadObj ? (
+                      <div className="flex items-center justify-between p-2.5 bg-slate-50 border border-slate-200 rounded-md text-sm">
+                        <div className="truncate">
+                          <div className="font-semibold text-slate-900 flex items-center gap-1.5">
+                            <UserCheck className="h-4 w-4 text-blue-600 shrink-0" />
+                            <span>{selectedLeadObj.fullName}</span>
+                            {selectedLeadObj.brandName && (
+                              <span className="text-slate-500 font-normal">({selectedLeadObj.brandName})</span>
+                            )}
+                          </div>
+                          <div className="text-xs text-slate-500 flex items-center gap-2 mt-0.5">
+                            <span className="font-mono text-[11px] bg-slate-200/70 px-1 rounded">ID: {selectedLeadObj.id}</span>
+                            {selectedLeadObj.siteId && (
+                              <span className="font-mono text-[11px]">Site: {selectedLeadObj.siteId}</span>
+                            )}
+                            {selectedLeadObj.domain && (
+                              <span className="text-blue-600 font-medium">🌐 {selectedLeadObj.domain}</span>
+                            )}
+                          </div>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-slate-400 hover:text-slate-600 ml-2 shrink-0"
+                          onClick={() => setRegisterForm({ ...registerForm, activationLeadId: "" })}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <div>
+                        <button
+                          type="button"
+                          className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 py-2 text-sm text-slate-500 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-slate-950"
+                          onClick={() => setIsSelectorOpen(!isSelectorOpen)}
+                        >
+                          <span className="text-slate-400">Seleccionar Partner...</span>
+                          <ChevronDown className="h-4 w-4 text-slate-400" />
+                        </button>
+
+                        {isSelectorOpen && (
+                          <div className="absolute z-10 left-0 right-0 mt-1 bg-white border border-slate-200 rounded-md shadow-lg p-2 space-y-2 max-h-64 flex flex-col">
+                            <div className="relative">
+                              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
+                              <Input
+                                autoFocus
+                                placeholder="Buscar por nombre, site, dominio o ID..."
+                                value={leadSearchQuery}
+                                onChange={(e) => setLeadSearchQuery(e.target.value)}
+                                className="pl-8 text-xs h-8"
+                              />
+                            </div>
+
+                            <div className="overflow-y-auto flex-1 space-y-1 min-h-[80px]">
+                              {isLeadsLoading ? (
+                                <div className="p-4 text-center text-xs text-slate-500 flex items-center justify-center gap-2">
+                                  <RefreshCw className="h-4 w-4 animate-spin text-blue-600" />
+                                  Cargando partners...
+                                </div>
+                              ) : leadsError ? (
+                                <div className="p-3 text-center text-xs text-rose-600 space-y-1">
+                                  <p className="flex items-center justify-center gap-1">
+                                    <AlertTriangle className="h-4 w-4" /> {leadsError}
+                                  </p>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={fetchLeads}
+                                    className="text-xs h-7 text-blue-600 hover:underline"
+                                  >
+                                    <RefreshCw className="h-3 w-3 mr-1" /> Reintentar
+                                  </Button>
+                                </div>
+                              ) : leads.length === 0 ? (
+                                <div className="p-4 text-center text-xs text-slate-500">
+                                  No hay partners registrados.
+                                </div>
+                              ) : filteredLeadsForSelector.length === 0 ? (
+                                <div className="p-4 text-center text-xs text-slate-500">
+                                  No se encontraron partners para &quot;{leadSearchQuery}&quot;.
+                                </div>
+                              ) : (
+                                filteredLeadsForSelector.map((lead) => (
+                                  <button
+                                    key={lead.id}
+                                    type="button"
+                                    className="w-full text-left p-2 rounded hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100 flex flex-col gap-0.5"
+                                    onClick={() => {
+                                      setRegisterForm({ ...registerForm, activationLeadId: lead.id });
+                                      setIsSelectorOpen(false);
+                                      setLeadSearchQuery("");
+                                    }}
+                                  >
+                                    <div className="flex items-center justify-between text-xs">
+                                      <span className="font-semibold text-slate-900">{lead.fullName}</span>
+                                      {lead.brandName && (
+                                        <span className="text-slate-500 font-normal truncate max-w-[120px]">{lead.brandName}</span>
+                                      )}
+                                    </div>
+                                    <div className="flex items-center gap-2 text-[11px] text-slate-500">
+                                      <span className="font-mono text-[10px] bg-slate-100 px-1 rounded">ID: {lead.id}</span>
+                                      {lead.siteId && <span className="font-mono">Site: {lead.siteId}</span>}
+                                      {lead.domain && <span className="text-blue-600">🌐 {lead.domain}</span>}
+                                    </div>
+                                  </button>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">
@@ -549,7 +743,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
                     <Button
                       type="submit"
                       className="bg-blue-600 hover:bg-blue-700"
-                      disabled={isRegistering}
+                      disabled={isRegistering || !registerForm.activationLeadId.trim()}
                     >
                       {isRegistering ? "Registrando..." : "Registrar Pago"}
                     </Button>

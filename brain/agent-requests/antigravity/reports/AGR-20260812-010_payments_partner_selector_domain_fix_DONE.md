@@ -1,0 +1,22 @@
+# Request Completado: AGR-20260812-010
+
+- **Request ID**: AGR-20260812-010_payments_partner_selector_domain_fix.md
+- **Resumen de cambios realizados**:
+  - Corregido el mapeo de dominio del partner en `app/web/components/payments-management-view.tsx` para incorporar como primer fallback el campo real del backend `lead.onboardingData?.domain`.
+  - Orden de resolución actualizado: `domain || customDomain || domainName`.
+- **Archivos o rutas modificadas**:
+  - `app/web/components/payments-management-view.tsx`
+  - `brain/agent-requests/antigravity/requests/AGR-20260812-010_payments_partner_selector_domain_fix.md`
+  - `brain/agent-requests/antigravity/reports/AGR-20260812-010_payments_partner_selector_domain_fix_DONE.md`
+- **Verificación realizada**:
+  - `npx eslint components/payments-management-view.tsx` ejecutado con éxito (0 errores).
+  - `npm run build` ejecutado exitosamente (`✓ Compiled successfully`).
+  - `git diff --check origin/main...HEAD` limpio (0 errores de espacios en blanco).
+- **Resultado del build**:
+  - Éxito `0 errores`.
+- **Rama, commit y PR si aplica**:
+  - Rama: `antigravity/AGR-20260812-009-payments-partner-selector`
+  - No se creó PR (en espera de auditoría).
+- **Riesgos pendientes**:
+  - Ninguno.
+- **Requiere follow-up**: No.
