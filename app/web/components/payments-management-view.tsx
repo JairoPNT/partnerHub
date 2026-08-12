@@ -122,13 +122,13 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
         fullName?: string;
         brandName?: string;
         siteId?: string | null;
-        onboardingData?: { customDomain?: string; domainName?: string };
+        onboardingData?: { domain?: string; customDomain?: string; domainName?: string };
       }) => ({
         id: lead.id,
         fullName: lead.fullName || "Sin nombre",
         brandName: lead.brandName || "",
         siteId: lead.siteId || null,
-        domain: lead.onboardingData?.customDomain || lead.onboardingData?.domainName || null
+        domain: lead.onboardingData?.domain || lead.onboardingData?.customDomain || lead.onboardingData?.domainName || null
       }));
       setLeads(mapped);
     } catch (err: unknown) {
