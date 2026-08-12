@@ -101,23 +101,29 @@ test("forbids changing an offer or its snapshot after selection", () => {
   assert.equal(immutableActivationOfferFieldsSchema.safeParse({ amountCop: 1 }).success, false);
 });
 
-test("accepts a matching offer and ecosystem combination", () => {
-  assert.equal(resolveActivationOfferEcosystemType("PRODUCT_ONLY", "PRODUCT"), "PRODUCT");
+test("accepts matching and derives omitted ecosystems for every individual offer", () => {
+  const combinations = [
+    ["PRODUCT_ONLY", "PRODUCT"],
+    ["BUSINESS_ONLY", "BUSINESS"],
+    ["PERSONAL_BRAND_ONLY", "PERSONAL_BRAND"]
+  ] as const;
+
+  for (const [offerCode, ecosystemType] of combinations) {
+    assert.equal(resolveActivationOfferEcosystemType(offerCode, ecosystemType), ecosystemType);
+    assert.equal(resolveActivationOfferEcosystemType(offerCode, undefined), ecosystemType);
+  }
 });
 
-test("derives the ecosystem when an individual offer omits it", () => {
-  assert.equal(resolveActivationOfferEcosystemType("BUSINESS_ONLY", undefined), "BUSINESS");
-  assert.equal(
-    resolveActivationOfferEcosystemType("PERSONAL_BRAND_ONLY", undefined),
-    "PERSONAL_BRAND"
-  );
-});
+test("rejects contradictory ecosystems for every individual offer", () => {
+  const contradictions = [
+    ["PRODUCT_ONLY", "BUSINESS", /PRODUCT_ONLY requires ecosystemType PRODUCT/],
+    ["BUSINESS_ONLY", "PERSONAL_BRAND", /BUSINESS_ONLY requires ecosystemType BUSINESS/],
+    ["PERSONAL_BRAND_ONLY", "PRODUCT", /PERSONAL_BRAND_ONLY requires ecosystemType PERSONAL_BRAND/]
+  ] as const;
 
-test("rejects an ecosystem that contradicts an individual offer", () => {
-  assert.throws(
-    () => resolveActivationOfferEcosystemType("BUSINESS_ONLY", "PRODUCT"),
-    /BUSINESS_ONLY requires ecosystemType BUSINESS/
-  );
+  for (const [offerCode, ecosystemType, message] of contradictions) {
+    assert.throws(() => resolveActivationOfferEcosystemType(offerCode, ecosystemType), message);
+  }
 });
 
 test("PLAN_360 keeps all ecosystems in the snapshot and rejects a single ecosystemType", () => {

@@ -31,7 +31,7 @@ El follow-up `CDX-20260812-012` corrigió la consistencia entre oferta y ecosist
 
 ## Verificación
 
-- Pruebas focalizadas: PASS, 13/13, incluidas combinación válida, campo omitido, contradicción, `PLAN_360` y alta histórica sin oferta.
+- Pruebas focalizadas: PASS, 12/12, incluidas combinaciones coincidentes y omitidas para las tres ofertas individuales, contradicciones, `PLAN_360` y alta histórica sin oferta.
 - ESLint focalizado de los tres archivos backend: PASS, cero warnings.
 - ESLint global: ejecutado; FAIL por 4 errores y 13 warnings preexistentes únicamente en archivos frontend excluidos (`partners-referrals-view.tsx`, `personal-brand-blocks-view.tsx`, `topbar.tsx` y `lib/ecosystem-contracts.ts`).
 - `npm run build`: PASS.
@@ -41,7 +41,7 @@ El follow-up `CDX-20260812-012` corrigió la consistencia entre oferta y ecosist
 
 - Rama: `codex/CDX-20260812-010-offer-catalog-snapshot`
 - Commit de implementación: `ec8dd28`
-- Commit de consistencia CDX-012: incluido en el nuevo commit de cierre de este follow-up.
+- Commit de consistencia CDX-012: `a615da6`.
 - PR existente de CDX-010: `#113`. CDX-012 no abrió un PR adicional.
 
 ## Riesgos pendientes
