@@ -156,7 +156,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
         body: JSON.stringify(payload)
       });
       if (!res.ok) throw new Error("No se pudo registrar el pago");
-      
+
       setIsRegisterModalOpen(false);
       setRegisterForm({
         ...registerForm,
@@ -195,7 +195,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
         body: JSON.stringify({ reason: voidForm.reason.trim() })
       });
       if (!res.ok) throw new Error("No se pudo anular el pago");
-      
+
       setIsVoidModalOpen(false);
       fetchPayments();
     } catch (err: unknown) {
@@ -261,8 +261,8 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
           <div>
             <CardTitle>Historial de Pagos</CardTitle>
           </div>
-          <Button 
-            className="bg-blue-600 hover:bg-blue-700" 
+          <Button
+            className="bg-blue-600 hover:bg-blue-700"
             onClick={() => setIsRegisterModalOpen(true)}
           >
             <PlusCircle className="h-4 w-4 mr-2" />
@@ -422,8 +422,8 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
                       </TableCell>
                       <TableCell className="text-right">
                         {payment.status === "CONFIRMED" && (
-                          <Button 
-                            variant="outline" 
+                          <Button
+                            variant="outline"
                             size="sm"
                             className="text-rose-600 hover:text-rose-700 hover:bg-rose-50"
                             onClick={() => openVoidModal(payment.id)}
@@ -454,14 +454,14 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
                 <form onSubmit={handleRegisterPayment} className="space-y-4">
                   <div className="space-y-1">
                     <Label>Partner ID (Activation Lead) *</Label>
-                    <Input 
+                    <Input
                       required
                       value={registerForm.activationLeadId}
                       onChange={e => setRegisterForm({...registerForm, activationLeadId: e.target.value})}
                       placeholder="Ej: act_12345abc"
                     />
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-1">
                       <Label>Categoría *</Label>
@@ -498,7 +498,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
 
                   <div className="space-y-1">
                     <Label>Monto (COP) *</Label>
-                    <Input 
+                    <Input
                       required
                       type="number"
                       min="1"
@@ -511,7 +511,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
 
                   <div className="space-y-1">
                     <Label>Fecha y Hora del Pago *</Label>
-                    <Input 
+                    <Input
                       required
                       type="datetime-local"
                       value={registerForm.paidAt}
@@ -521,7 +521,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
 
                   <div className="space-y-1">
                     <Label>Referencia (Opcional)</Label>
-                    <Input 
+                    <Input
                       value={registerForm.reference}
                       onChange={e => setRegisterForm({...registerForm, reference: e.target.value})}
                       placeholder="Ref del banco o transacción"
@@ -530,7 +530,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
 
                   <div className="space-y-1">
                     <Label>Notas Internas (Opcional)</Label>
-                    <Input 
+                    <Input
                       value={registerForm.notes}
                       onChange={e => setRegisterForm({...registerForm, notes: e.target.value})}
                       placeholder="Información adicional"
@@ -538,16 +538,16 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
                   </div>
 
                   <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
+                    <Button
+                      type="button"
+                      variant="ghost"
                       onClick={() => setIsRegisterModalOpen(false)}
                       disabled={isRegistering}
                     >
                       Cancelar
                     </Button>
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       className="bg-blue-600 hover:bg-blue-700"
                       disabled={isRegistering}
                     >
@@ -579,7 +579,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
                 <form onSubmit={handleVoidPayment} className="space-y-4">
                   <div className="space-y-1">
                     <Label>Motivo de la anulación *</Label>
-                    <Input 
+                    <Input
                       required
                       autoFocus
                       placeholder="Ej: Registro duplicado, cliente solicitó reembolso..."
@@ -589,16 +589,16 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
                   </div>
 
                   <div className="flex items-center justify-end gap-2 pt-4 border-t border-slate-100">
-                    <Button 
-                      type="button" 
-                      variant="ghost" 
+                    <Button
+                      type="button"
+                      variant="ghost"
                       onClick={() => setIsVoidModalOpen(false)}
                       disabled={isVoiding}
                     >
                       Cancelar
                     </Button>
-                    <Button 
-                      type="submit" 
+                    <Button
+                      type="submit"
                       variant="danger"
                       disabled={isVoiding}
                     >
