@@ -5,6 +5,8 @@ export type PublicationTargetSnapshot = {
   publicHost: string;
   remoteRoot: string | null;
   provisioningState: string;
+  ecosystemType?: "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND";
+  rootEcosystemType?: "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND";
 };
 
 export type ResolvedPublicationTarget = {
@@ -57,6 +59,13 @@ export function resolvePublicationTarget(
       "PUBLICATION_TARGET_INVALID",
       `Publishing target ${target.siteId} has no remote root.`
     );
+  }
+
+  if (target.ecosystemType && target.rootEcosystemType && target.publicHost.indexOf(".") > -1) {
+    const usesRoot = target.ecosystemType === target.rootEcosystemType;
+    if (usesRoot && target.publicHost.split(".").length > 2) {
+      throw new PublicationTargetError("PUBLICATION_TARGET_INVALID", "Root ecosystem target must use the persisted base hostname.");
+    }
   }
 
   return {
