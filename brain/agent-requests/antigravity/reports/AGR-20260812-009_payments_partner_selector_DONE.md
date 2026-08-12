@@ -1,0 +1,26 @@
+# Request Completado: AGR-20260812-009
+
+- **Request ID**: AGR-20260812-009_payments_partner_selector.md
+- **Resumen de cambios realizados**:
+  - Reemplazado el campo libre de texto `activationLeadId` en la modal de registro manual de pagos por un selector de partners searchable con soporte para búsqueda por nombre, marca, site ID, dominio o ID.
+  - Consumo de `GET /api/internal/activation-leads` al montar el componente/abrir la modal.
+  - Renderizado de información legible del Partner: Nombre, Marca, Site ID y Dominio (cuando esté disponible).
+  - Manejo integral de estados en el selector: carga (`isLeadsLoading`), error y reintento (`leadsError`, `fetchLeads`), estado vacío (`leads.length === 0`), y sin resultados en búsqueda (`filteredLeadsForSelector.length === 0`).
+  - Validación estricta que deshabilita el botón de envío e impide registrar pagos si no hay un partner seleccionado.
+  - Conservación del contrato exacto hacia `POST /api/internal/payments` enviando `activationLeadId`.
+  - Enriquecimiento visual de la tabla principal de pagos para mostrar el nombre completo del partner según el mapa de leads.
+- **Archivos o rutas modificadas**:
+  - `app/web/components/payments-management-view.tsx`
+  - `brain/agent-requests/antigravity/reports/AGR-20260812-009_payments_partner_selector_DONE.md`
+- **Verificación realizada**:
+  - `npx eslint components/payments-management-view.tsx` ejecutado sin errores (0 errors).
+  - `npm run build` ejecutado exitosamente (`✓ Compiled successfully`).
+  - `git diff --check` verificado sin advertencias ni errores de espacios en blanco.
+- **Resultado del build**:
+  - Éxito `0 errors`.
+- **Rama, commit y PR si aplica**:
+  - Rama: `antigravity/AGR-20260812-009-payments-partner-selector`
+  - No se creó PR (en espera de auditoría por Codex).
+- **Riesgos pendientes**:
+  - Ninguno. Se mantuvieron intactos los contratos, endpoints, filtros y flujos de anulación de pagos.
+- **Requiere follow-up**: No.
