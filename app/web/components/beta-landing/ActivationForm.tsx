@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Send, User, Phone, Mail, Tag, UserCheck, AlertCircle, CreditCard, Building2 } from "lucide-react";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
+import { getActivationOfferCatalog } from "@/server/services/activationOfferCatalog";
 
 export interface FormDataState {
   fullName: string;
@@ -15,6 +16,7 @@ export interface FormDataState {
   referrerName: string;
   paymentMethod: "wompi" | "direct";
   termsAccepted: boolean;
+  offerCode: string;
 }
 
 interface ActivationFormProps {
@@ -23,6 +25,8 @@ interface ActivationFormProps {
 
 export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
   const router = useRouter();
+  const offers = getActivationOfferCatalog();
+
   const [formData, setFormData] = useState<FormDataState>({
     fullName: "",
     whatsapp: "",
@@ -32,6 +36,7 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
     referrerName: "",
     paymentMethod: "wompi",
     termsAccepted: false,
+    offerCode: "",
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -45,6 +50,7 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
     if (!formData.email.trim() || !formData.email.includes("@"))
       newErrors.email = "Ingresa un correo electrónico válido";
     if (!formData.brandName.trim()) newErrors.brandName = "Ingresa el nombre de tu marca o negocio";
+    if (!formData.offerCode) newErrors.offerCode = "Selecciona una oferta para continuar";
     if (!formData.termsAccepted)
       newErrors.termsAccepted = "Debes aceptar los términos y condiciones de la oferta beta";
 
@@ -62,6 +68,8 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
 
     setIsSubmitting(true);
 
+    const selectedOffer = offers.find(o => o.offerCode === formData.offerCode);
+
     const payload = {
       fullName: formData.fullName.trim(),
       whatsapp: formData.whatsapp.trim(),
@@ -73,7 +81,9 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
           ? formData.referrerName.trim()
           : null,
       paymentMethod: formData.paymentMethod,
-      termsAccepted: formData.termsAccepted
+      termsAccepted: formData.termsAccepted,
+      offerCode: formData.offerCode,
+      ...(selectedOffer && selectedOffer.ecosystemTypes.length === 1 ? { ecosystemType: selectedOffer.ecosystemTypes[0] } : {})
     };
 
     try {
@@ -242,6 +252,75 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
 
             </div>
 
+            {/* Offer Selection */}
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-3">
+                Selecciona tu Oferta <span className="text-rose-400">*</span>
+              </label>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {offers.map((offer) => {
+                  const formatPrice = (amount: number) => {
+                    return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(amount);
+                  };
+                  let label = "";
+                  let desc = "";
+                  switch(offer.offerCode) {
+                    case "PRODUCT_ONLY":
+                      label = "Ecosistema de Producto";
+                      desc = "Ideal para venta de productos físicos o digitales.";
+                      break;
+                    case "BUSINESS_ONLY":
+                      label = "Ecosistema de Negocio";
+                      desc = "Ideal para empresas de servicios y corporativos.";
+                      break;
+                    case "PERSONAL_BRAND_ONLY":
+                      label = "Marca Personal";
+                      desc = "Ideal para consultores, coaches y figuras públicas.";
+                      break;
+                    case "PLAN_360":
+                      label = "Plan 360 (Todos los Ecosistemas)";
+                      desc = "Incluye Producto, Negocio y Marca Personal.";
+                      break;
+                  }
+
+                  return (
+                    <label
+                      key={offer.offerCode}
+                      onClick={() => !isSubmitting && setFormData({ ...formData, offerCode: offer.offerCode })}
+                      className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
+                        formData.offerCode === offer.offerCode
+                          ? "border-cyan-500 bg-cyan-950/40 ring-1 ring-cyan-500"
+                          : "border-slate-800 bg-slate-900/60 hover:border-slate-700"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="offerCode"
+                        disabled={isSubmitting}
+                        checked={formData.offerCode === offer.offerCode}
+                        onChange={() => {}}
+                        className="mt-1 text-cyan-500 focus:ring-cyan-500"
+                      />
+                      <div>
+                        <div className="flex items-center gap-2 font-semibold text-white text-sm">
+                          {label}
+                        </div>
+                        <div className="mt-1 font-bold text-cyan-400">
+                          {formatPrice(offer.amountCop)}
+                        </div>
+                        <p className="mt-1 text-xs text-slate-400">
+                          {desc}
+                        </p>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              {errors.offerCode && (
+                <p className="mt-2 text-xs text-rose-400">{errors.offerCode}</p>
+              )}
+            </div>
+
             {/* Referrer Code */}
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300">
@@ -364,7 +443,7 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
                   className="mt-1 h-4 w-4 rounded border-slate-700 text-cyan-500 focus:ring-cyan-500"
                 />
                 <span className="text-xs text-slate-300 leading-relaxed">
-                  Entiendo que accedo a una <strong className="text-white">oferta beta fundadora</strong> de activación ({PAYMENT_CONFIG.amount}) para mi Ecosistema de Producto. La gestión mensual regular ({PAYMENT_CONFIG.monthlyFee}) es necesaria para mantener el sitio publicado, con soporte y cambios menores dentro del alcance. Reconozco que este servicio no garantiza ventas ni ingresos y no incluye VSL, CRM ni pauta publicitaria.
+                  Entiendo que accedo a una <strong className="text-white">oferta beta fundadora</strong> de activación para mi Ecosistema. La gestión mensual regular ({PAYMENT_CONFIG.monthlyFee}) es necesaria para mantener el sitio publicado, con soporte y cambios menores dentro del alcance. Reconozco que este servicio no garantiza ventas ni ingresos y no incluye VSL, CRM ni pauta publicitaria.
                 </span>
               </label>
               {errors.termsAccepted && (
