@@ -24,12 +24,12 @@ export interface WompiStatusResponse {
   error?: string;
 }
 
-export interface WompiReturnUrlParams {
+export interface WompiReturnContext {
+  activationLeadId: string;
+  reference?: string;
+  intentId?: string;
   transactionId?: string;
   environment?: string;
-  reference?: string;
-  activationLeadId?: string;
-  intentId?: string;
 }
 
 /**
@@ -96,7 +96,7 @@ export function buildWompiStatusQueryUrl(
   return `/api/public/payments/wompi/status?${query.toString()}`;
 }
 
-export function parseWompiReturnParams(searchParamsString: string): WompiReturnUrlParams | null {
+export function parseWompiReturnParams(searchParamsString: string): WompiReturnContext | null {
   const params = new URLSearchParams(searchParamsString);
   const transactionId = params.get("id") ?? undefined;
   const environment = params.get("env") ?? undefined;
@@ -111,11 +111,11 @@ export function parseWompiReturnParams(searchParamsString: string): WompiReturnU
   }
 
   return {
-    transactionId,
-    environment,
-    reference,
     activationLeadId,
-    intentId
+    reference,
+    intentId,
+    transactionId,
+    environment
   };
 }
 

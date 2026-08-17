@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Clock3, Gift, ShieldCheck } from "lucide-react";
 import { ActivationForm, FormDataState, WompiIntentData } from "@/components/beta-landing/ActivationForm";
 import { PaymentModal } from "@/components/beta-landing/PaymentModal";
-import { parseWompiReturnParams } from "@/components/beta-landing/wompiCheckoutFlow";
+import { parseWompiReturnParams, type WompiReturnContext } from "@/components/beta-landing/wompiCheckoutFlow";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 
 const includedItems = [
@@ -21,6 +21,7 @@ export default function DirectActivationPage() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"wompi" | "direct">("wompi");
   const [onboardingPath, setOnboardingPath] = useState<string | undefined>(undefined);
   const [wompiIntent, setWompiIntent] = useState<WompiIntentData | undefined>(undefined);
+  const [returnContext, setReturnContext] = useState<WompiReturnContext | undefined>(undefined);
 
   React.useEffect(() => {
     if (typeof window === "undefined") return;
@@ -28,16 +29,8 @@ export default function DirectActivationPage() {
     if (!searchStr) return;
 
     const params = parseWompiReturnParams(searchStr);
-    if (params && params.activationLeadId && (params.reference || params.intentId)) {
-      setWompiIntent({
-        intentId: params.intentId || "",
-        reference: params.reference || "",
-        amountInCents: 0,
-        currency: "COP",
-        publicKey: "",
-        signature: { integrity: "" },
-        activationLeadId: params.activationLeadId
-      });
+    if (params) {
+      setReturnContext(params);
       setSelectedPaymentMethod("wompi");
       setIsModalOpen(true);
     }
@@ -146,6 +139,7 @@ export default function DirectActivationPage() {
             : undefined
         }
         wompiIntent={wompiIntent}
+        returnContext={returnContext}
         onboardingPath={onboardingPath}
       />
     </main>

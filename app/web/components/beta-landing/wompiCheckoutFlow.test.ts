@@ -8,7 +8,8 @@ import {
   isOnboardingAllowed,
   parseWompiReturnParams,
   type WompiCheckoutStatus,
-  type WompiIntentData
+  type WompiIntentData,
+  type WompiReturnContext
 } from "./wompiCheckoutFlow.ts";
 
 test("onboarding access is strictly blocked for Wompi unless status === APPROVED AND paymentRecorded === true", () => {
@@ -91,35 +92,32 @@ test("buildWompiCheckoutUrl NEVER contains onboarding path in redirect-url query
   );
 });
 
-test("parseWompiReturnParams does NOT convert Wompi transaction id into a PH- reference", () => {
-  // Wompi return URL with ONLY id and env (no PartnerHub correlation)
+test("parseWompiReturnParams returns clean WompiReturnContext without creating artificial WompiIntent or fixed amounts", () => {
+  const correlatedReturnUrl = "id=tx_998877&env=test&reference=PH-intent-123&activationLeadId=lead-456&intentId=uuid-789";
+  const parsed: WompiReturnContext | null = parseWompiReturnParams(correlatedReturnUrl);
+
+  assert.ok(parsed !== null);
+  assert.equal(parsed?.activationLeadId, "lead-456");
+  assert.equal(parsed?.reference, "PH-intent-123");
+  assert.equal(parsed?.intentId, "uuid-789");
+  assert.equal(parsed?.transactionId, "tx_998877");
+  assert.equal(parsed?.environment, "test");
+
+  // Verify no fake intent fields (publicKey, signature, amountInCents) exist on context
+  assert.equal((parsed as Record<string, unknown>).amountInCents, undefined);
+  assert.equal((parsed as Record<string, unknown>).publicKey, undefined);
+  assert.equal((parsed as Record<string, unknown>).signature, undefined);
+});
+
+test("parseWompiReturnParams returns null for uncorrelated return URL (e.g. only id and env)", () => {
   const wompiOnlyReturnUrl = "id=12345-6789-000&env=test";
   const parsed = parseWompiReturnParams(wompiOnlyReturnUrl);
 
   assert.equal(
     parsed,
     null,
-    "Return URL without activationLeadId and reference MUST NOT be parsed into a PH reference"
+    "Return URL without activationLeadId and reference MUST NOT create return context or artificial intents"
   );
-});
-
-test("retorno sin correlacion (sin activationLeadId/reference) NO crea intent artificial ni usa montos fijos", () => {
-  const searchString = "id=tx_998877&env=sandbox";
-  const parsed = parseWompiReturnParams(searchString);
-
-  assert.equal(parsed, null, "Uncorrelated return URL must return null so no artificial intent is created");
-});
-
-test("parseWompiReturnParams extracts valid correlated return parameters", () => {
-  const correlatedReturnUrl = "id=tx_998877&env=test&reference=PH-intent-123&activationLeadId=lead-456&intentId=uuid-789";
-  const parsed = parseWompiReturnParams(correlatedReturnUrl);
-
-  assert.ok(parsed !== null);
-  assert.equal(parsed?.transactionId, "tx_998877");
-  assert.equal(parsed?.environment, "test");
-  assert.equal(parsed?.reference, "PH-intent-123");
-  assert.equal(parsed?.activationLeadId, "lead-456");
-  assert.equal(parsed?.intentId, "uuid-789");
 });
 
 test("buildWompiStatusQueryUrl constructs exact GET endpoint with activationLeadId and reference or intentId", () => {
