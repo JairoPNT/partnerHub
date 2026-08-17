@@ -96,6 +96,9 @@ export function PaymentModal({
     if (!wompiIntent) return;
     setWompiStatus("PENDING");
 
+    const resultPath = "/oferta-beta";
+    const returnUrl = typeof window !== "undefined" ? `${window.location.origin}${resultPath}` : undefined;
+
     if (typeof window !== "undefined" && window.WompiWidget) {
       try {
         const checkout = new window.WompiWidget({
@@ -106,7 +109,7 @@ export function PaymentModal({
           signature: {
             integrity: wompiIntent.signature.integrity
           },
-          redirectUrl: onboardingPath && typeof window !== "undefined" ? `${window.location.origin}${onboardingPath}` : undefined
+          redirectUrl: returnUrl
         });
         checkout.open((result?: WompiWidgetResult) => {
           if (result?.transaction?.status) {
@@ -117,7 +120,7 @@ export function PaymentModal({
         const fallbackUrl = buildWompiCheckoutUrl(
           wompiIntent,
           typeof window !== "undefined" ? window.location.origin : undefined,
-          onboardingPath
+          resultPath
         );
         window.open(fallbackUrl, "_blank");
       }
@@ -125,7 +128,7 @@ export function PaymentModal({
       const fallbackUrl = buildWompiCheckoutUrl(
         wompiIntent,
         typeof window !== "undefined" ? window.location.origin : undefined,
-        onboardingPath
+        resultPath
       );
       window.open(fallbackUrl, "_blank");
     }
@@ -267,7 +270,7 @@ export function PaymentModal({
                           buildWompiCheckoutUrl(
                             wompiIntent,
                             typeof window !== "undefined" ? window.location.origin : undefined,
-                            onboardingPath
+                            "/oferta-beta"
                           ),
                           "wompi-intent-link"
                         )

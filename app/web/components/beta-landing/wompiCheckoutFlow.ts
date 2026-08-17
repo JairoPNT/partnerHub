@@ -17,11 +17,21 @@ export function isOnboardingAllowed(status: WompiCheckoutStatus, paymentMethod: 
   return status === "APPROVED";
 }
 
+/**
+ * Builds the Wompi Checkout URL using server-generated signature and reference.
+ * CRITICAL SECURITY & ACCESSIBILITY RULE:
+ * The `redirect-url` query parameter MUST NEVER contain an onboarding path (e.g. /onboarding/[token]).
+ * It must point back to a public payment status / landing page (e.g. /oferta-beta or /activar).
+ */
 export function buildWompiCheckoutUrl(
   intent: WompiIntentData,
   baseUrl?: string,
-  onboardingPath?: string
+  resultPath: string = "/oferta-beta"
 ): string {
+  // Sanitize resultPath to prevent any accidental onboarding token leakage into Wompi query params
+  const safeResultPath = resultPath.includes("/onboarding/") ? "/oferta-beta" : resultPath;
+  const normalizedPath = safeResultPath.startsWith("/") ? safeResultPath : `/${safeResultPath}`;
+
   const params = new URLSearchParams({
     "public-key": intent.publicKey,
     currency: intent.currency,
@@ -29,9 +39,11 @@ export function buildWompiCheckoutUrl(
     reference: intent.reference,
     "signature:integrity": intent.signature.integrity
   });
-  if (onboardingPath && baseUrl) {
-    params.append("redirect-url", `${baseUrl}${onboardingPath}`);
+
+  if (baseUrl) {
+    params.append("redirect-url", `${baseUrl}${normalizedPath}`);
   }
+
   return `https://checkout.wompi.co/p/?${params.toString()}`;
 }
 
