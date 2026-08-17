@@ -9,6 +9,7 @@ export interface WompiIntentData {
   signature: {
     integrity: string;
   };
+  activationLeadId?: string;
   idempotent?: boolean;
 }
 
@@ -46,10 +47,12 @@ export function isOnboardingAllowed(
 }
 
 /**
- * Builds the Wompi Checkout URL using server-generated signature and reference.
- * CRITICAL SECURITY & ACCESSIBILITY RULE:
- * The `redirect-url` query parameter MUST NEVER contain an onboarding path (e.g. /onboarding/[token]).
- * It must point back to a public payment status / landing page (e.g. /oferta-beta or /activar).
+ * Builds the Wompi Checkout URL with correlation query parameters in the redirect-url.
+ * CRITICAL SECURITY & ACCESSIBILITY RULES:
+ * 1. The `redirect-url` query parameter MUST contain PartnerHub correlation parameters:
+ *    `activationLeadId`, `reference`, `intentId` so Wompi return carries the context back to PartnerHub.
+ * 2. The `redirect-url` parameter MUST NEVER contain an onboarding path (e.g. /onboarding/[token]).
+ * 3. It must point to a public landing page (default: /oferta-beta).
  */
 export function buildWompiCheckoutUrl(
   intent: WompiIntentData,
@@ -68,7 +71,13 @@ export function buildWompiCheckoutUrl(
   });
 
   if (baseUrl) {
-    params.append("redirect-url", `${baseUrl}${normalizedPath}`);
+    const returnParams = new URLSearchParams();
+    if (intent.activationLeadId) returnParams.append("activationLeadId", intent.activationLeadId);
+    returnParams.append("reference", intent.reference);
+    returnParams.append("intentId", intent.intentId);
+
+    const fullReturnUrl = `${baseUrl}${normalizedPath}?${returnParams.toString()}`;
+    params.append("redirect-url", fullReturnUrl);
   }
 
   return `https://checkout.wompi.co/p/?${params.toString()}`;
@@ -95,7 +104,9 @@ export function parseWompiReturnParams(searchParamsString: string): WompiReturnU
   const activationLeadId = params.get("activationLeadId") ?? params.get("leadId") ?? undefined;
   const intentId = params.get("intentId") ?? undefined;
 
-  if (!transactionId && !reference && !activationLeadId && !intentId) {
+  // Correlation REQUIRES activationLeadId AND (reference OR intentId).
+  // Return URLs containing only `id` and `env` without correlation parameters CANNOT be polled and MUST NOT fabricate artificial intents.
+  if (!activationLeadId || (!reference && !intentId)) {
     return null;
   }
 

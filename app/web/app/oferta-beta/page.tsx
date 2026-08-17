@@ -31,21 +31,18 @@ export default function OfertaBetaPage() {
     if (!searchStr) return;
 
     const params = parseWompiReturnParams(searchStr);
-    if (params && (params.activationLeadId || params.reference || params.transactionId)) {
-      const leadId = params.activationLeadId || "";
-      const ref = params.reference || (params.transactionId ? `PH-${params.transactionId}` : "");
-      if (leadId || ref) {
-        setWompiIntent({
-          intentId: params.intentId || "",
-          reference: ref,
-          amountInCents: 15000000,
-          currency: "COP",
-          publicKey: "",
-          signature: { integrity: "" }
-        });
-        setSelectedPaymentMethod("wompi");
-        setIsModalOpen(true);
-      }
+    if (params && params.activationLeadId && (params.reference || params.intentId)) {
+      setWompiIntent({
+        intentId: params.intentId || "",
+        reference: params.reference || "",
+        amountInCents: 0,
+        currency: "COP",
+        publicKey: "",
+        signature: { integrity: "" },
+        activationLeadId: params.activationLeadId
+      });
+      setSelectedPaymentMethod("wompi");
+      setIsModalOpen(true);
     }
   }, []);
 

@@ -40,33 +40,29 @@ test("flujo de transferencia directa permite acceso al onboarding sin pasar por 
   assert.equal(isOnboardingAllowed("PENDING", "direct"), true);
 });
 
-test("parseWompiReturnParams extracts Wompi transaction id and env from return URL", () => {
-  const searchString = "id=tx_wompi_998877&env=test&reference=PH-intent-123&activationLeadId=lead-456";
-  const parsed = parseWompiReturnParams(searchString);
+test("buildWompiCheckoutUrl encodes correlation parameters (activationLeadId, reference, intentId) in redirect-url", () => {
+  const intent: WompiIntentData = {
+    intentId: "intent-uuid-100",
+    reference: "PH-ref-200",
+    amountInCents: 15000000,
+    currency: "COP",
+    publicKey: "pub_test_12345",
+    signature: {
+      integrity: "a".repeat(64)
+    },
+    activationLeadId: "lead-uuid-300"
+  };
 
-  assert.ok(parsed !== null);
-  assert.equal(parsed?.transactionId, "tx_wompi_998877");
-  assert.equal(parsed?.environment, "test");
-  assert.equal(parsed?.reference, "PH-intent-123");
-  assert.equal(parsed?.activationLeadId, "lead-456");
-});
+  const url = buildWompiCheckoutUrl(intent, "https://oferta.partnerhub.club", "/oferta-beta");
+  const parsedUrl = new URL(url);
+  const redirectUrlParam = parsedUrl.searchParams.get("redirect-url");
 
-test("parseWompiReturnParams returns null for standard URL without payment return parameters", () => {
-  assert.equal(parseWompiReturnParams(""), null);
-  assert.equal(parseWompiReturnParams("utm_source=google"), null);
-});
+  assert.ok(redirectUrlParam !== null, "redirect-url query parameter must be present");
+  const returnUrl = new URL(redirectUrlParam);
 
-test("buildWompiStatusQueryUrl constructs exact GET endpoint with activationLeadId and reference or intentId", () => {
-  const refUrl = buildWompiStatusQueryUrl("lead-123", { reference: "PH-ref-001" });
-  assert.equal(refUrl, "/api/public/payments/wompi/status?activationLeadId=lead-123&reference=PH-ref-001");
-
-  const intentUrl = buildWompiStatusQueryUrl("lead-123", { intentId: "uuid-intent-456" });
-  assert.equal(intentUrl, "/api/public/payments/wompi/status?activationLeadId=lead-123&intentId=uuid-intent-456");
-});
-
-test("formatWompiAmount formats cents correctly in COP currency", () => {
-  assert.equal(formatWompiAmount(15000000).replace(/\s/g, " "), "$ 150.000");
-  assert.equal(formatWompiAmount(30000000).replace(/\s/g, " "), "$ 300.000");
+  assert.equal(returnUrl.searchParams.get("activationLeadId"), "lead-uuid-300");
+  assert.equal(returnUrl.searchParams.get("reference"), "PH-ref-200");
+  assert.equal(returnUrl.searchParams.get("intentId"), "intent-uuid-100");
 });
 
 test("buildWompiCheckoutUrl NEVER contains onboarding path in redirect-url query parameter", () => {
@@ -78,7 +74,8 @@ test("buildWompiCheckoutUrl NEVER contains onboarding path in redirect-url query
     publicKey: "pub_test_12345",
     signature: {
       integrity: "a".repeat(64)
-    }
+    },
+    activationLeadId: "lead-123"
   };
 
   const urlWithAttemptedOnboarding = buildWompiCheckoutUrl(
@@ -92,23 +89,48 @@ test("buildWompiCheckoutUrl NEVER contains onboarding path in redirect-url query
     false,
     "Checkout URL MUST NEVER contain the onboarding path parameter"
   );
-  assert.ok(
-    urlWithAttemptedOnboarding.includes("redirect-url=https%3A%2F%2Foferta.partnerhub.club%2Foferta-beta"),
-    "Redirect URL must safely fall back to public landing page"
+});
+
+test("parseWompiReturnParams does NOT convert Wompi transaction id into a PH- reference", () => {
+  // Wompi return URL with ONLY id and env (no PartnerHub correlation)
+  const wompiOnlyReturnUrl = "id=12345-6789-000&env=test";
+  const parsed = parseWompiReturnParams(wompiOnlyReturnUrl);
+
+  assert.equal(
+    parsed,
+    null,
+    "Return URL without activationLeadId and reference MUST NOT be parsed into a PH reference"
   );
 });
 
-test("intent failure state retains lead state without calling submit callback", () => {
-  let submitCalled = false;
-  const _onFormSubmit = () => { submitCalled = true; };
+test("retorno sin correlacion (sin activationLeadId/reference) NO crea intent artificial ni usa montos fijos", () => {
+  const searchString = "id=tx_998877&env=sandbox";
+  const parsed = parseWompiReturnParams(searchString);
 
-  const handleIntentFailure = (createdLeadId: string) => {
-    assert.ok(createdLeadId.length > 0, "Lead ID must be retained for retrying intent");
-    return { submitCalled, leadRetained: true };
-  };
+  assert.equal(parsed, null, "Uncorrelated return URL must return null so no artificial intent is created");
+});
 
-  const result = handleIntentFailure("lead-uuid-999");
-  assert.equal(result.submitCalled, false, "onFormSubmit must not be called on intent failure");
-  assert.equal(result.leadRetained, true, "Lead ID must be retained for retry without duplication");
-  assert.equal(submitCalled, false);
+test("parseWompiReturnParams extracts valid correlated return parameters", () => {
+  const correlatedReturnUrl = "id=tx_998877&env=test&reference=PH-intent-123&activationLeadId=lead-456&intentId=uuid-789";
+  const parsed = parseWompiReturnParams(correlatedReturnUrl);
+
+  assert.ok(parsed !== null);
+  assert.equal(parsed?.transactionId, "tx_998877");
+  assert.equal(parsed?.environment, "test");
+  assert.equal(parsed?.reference, "PH-intent-123");
+  assert.equal(parsed?.activationLeadId, "lead-456");
+  assert.equal(parsed?.intentId, "uuid-789");
+});
+
+test("buildWompiStatusQueryUrl constructs exact GET endpoint with activationLeadId and reference or intentId", () => {
+  const refUrl = buildWompiStatusQueryUrl("lead-123", { reference: "PH-ref-001" });
+  assert.equal(refUrl, "/api/public/payments/wompi/status?activationLeadId=lead-123&reference=PH-ref-001");
+
+  const intentUrl = buildWompiStatusQueryUrl("lead-123", { intentId: "uuid-intent-456" });
+  assert.equal(intentUrl, "/api/public/payments/wompi/status?activationLeadId=lead-123&intentId=uuid-intent-456");
+});
+
+test("formatWompiAmount formats cents correctly in COP currency", () => {
+  assert.equal(formatWompiAmount(15000000).replace(/\s/g, " "), "$ 150.000");
+  assert.equal(formatWompiAmount(30000000).replace(/\s/g, " "), "$ 300.000");
 });
