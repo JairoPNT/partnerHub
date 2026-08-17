@@ -6,6 +6,18 @@ import { Send, User, Phone, Mail, Tag, UserCheck, AlertCircle, CreditCard, Build
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 import { getActivationOfferCatalog } from "@/server/services/activationOfferCatalog";
 
+export interface WompiIntentData {
+  intentId: string;
+  reference: string;
+  amountInCents: number;
+  currency: string;
+  publicKey: string;
+  signature: {
+    integrity: string;
+  };
+  idempotent?: boolean;
+}
+
 export interface FormDataState {
   fullName: string;
   whatsapp: string;
@@ -20,7 +32,12 @@ export interface FormDataState {
 }
 
 interface ActivationFormProps {
-  onFormSubmit: (data: FormDataState, onboardingPath?: string, leadId?: string) => void;
+  onFormSubmit: (
+    data: FormDataState,
+    onboardingPath?: string,
+    leadId?: string,
+    wompiIntent?: WompiIntentData
+  ) => void;
 }
 
 export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
@@ -101,12 +118,40 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
         throw new Error(json.error || "No pudimos registrar tu solicitud. Verifica los datos e inténtalo nuevamente.");
       }
 
-      onFormSubmit(formData, json.onboardingPath, json.leadId);
-      if (json.onboardingPath) {
-        router.push(json.onboardingPath);
+      if (formData.paymentMethod === "wompi") {
+        try {
+          const intentRes = await fetch("/api/public/payments/wompi/intent", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              activationLeadId: json.leadId,
+              offerCode: formData.offerCode
+            })
+          });
+
+          const intentJson = await intentRes.json();
+
+          if (!intentRes.ok) {
+            throw new Error(intentJson.error || "No pudimos generar la intención de pago con Wompi Sandbox.");
+          }
+
+          onFormSubmit(formData, json.onboardingPath, json.leadId, intentJson);
+        } catch (err: unknown) {
+          const msg = err instanceof Error ? err.message : "Error al conectar con la pasarela de Wompi Sandbox.";
+          setSubmitError(msg);
+          onFormSubmit(formData, json.onboardingPath, json.leadId);
+        }
+      } else {
+        onFormSubmit(formData, json.onboardingPath, json.leadId);
+        if (json.onboardingPath) {
+          router.push(json.onboardingPath);
+        }
       }
-    } catch {
-      setSubmitError("No pudimos registrar tu solicitud. Verifica los datos e inténtalo nuevamente.");
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "No pudimos registrar tu solicitud. Verifica los datos e inténtalo nuevamente.";
+      setSubmitError(msg);
     } finally {
       setIsSubmitting(false);
     }

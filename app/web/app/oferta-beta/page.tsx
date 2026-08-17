@@ -8,21 +8,21 @@ import { ActiveDemosSection } from "@/components/beta-landing/ActiveDemosSection
 import { IncludesSection } from "@/components/beta-landing/IncludesSection";
 import { BetaOfferSection } from "@/components/beta-landing/BetaOfferSection";
 
-import { ActivationForm, FormDataState } from "@/components/beta-landing/ActivationForm";
+import { ActivationForm, FormDataState, WompiIntentData } from "@/components/beta-landing/ActivationForm";
 import { PaymentSection } from "@/components/beta-landing/PaymentSection";
 import { PaymentModal } from "@/components/beta-landing/PaymentModal";
 import { FaqSection } from "@/components/beta-landing/FaqSection";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { FinalCtaSection } from "@/components/beta-landing/FinalCtaSection";
 import { Sparkles } from "lucide-react";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 
 export default function OfertaBetaPage() {
-  const router = useRouter();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [submittedData, setSubmittedData] = useState<FormDataState | undefined>(undefined);
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"wompi" | "direct">("wompi");
+  const [onboardingPath, setOnboardingPath] = useState<string | undefined>(undefined);
+  const [wompiIntent, setWompiIntent] = useState<WompiIntentData | undefined>(undefined);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -31,13 +31,16 @@ export default function OfertaBetaPage() {
     }
   };
 
-  const handleFormSubmit = (data: FormDataState, onboardingPath?: string) => {
-    if (onboardingPath) {
-      router.push(onboardingPath);
-      return;
-    }
+  const handleFormSubmit = (
+    data: FormDataState,
+    onboardingPath?: string,
+    _leadId?: string,
+    wompiIntent?: WompiIntentData
+  ) => {
     setSubmittedData(data);
     setSelectedPaymentMethod(data.paymentMethod);
+    setOnboardingPath(onboardingPath);
+    setWompiIntent(wompiIntent);
     setIsModalOpen(true);
     // Smooth scroll to payment section on page as well
     scrollToSection("metodos-pago");
@@ -141,6 +144,8 @@ export default function OfertaBetaPage() {
               }
             : undefined
         }
+        wompiIntent={wompiIntent}
+        onboardingPath={onboardingPath}
       />
     </div>
   );
