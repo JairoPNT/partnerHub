@@ -15,6 +15,7 @@ export interface WompiIntentData {
   signature: {
     integrity: string;
   };
+  activationLeadId?: string;
   idempotent?: boolean;
 }
 
@@ -98,7 +99,7 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
         throw new Error(intentJson.error || "No pudimos generar la intención de pago con Wompi Sandbox.");
       }
 
-      onFormSubmit(formData, onboardingPath, leadId, intentJson);
+      onFormSubmit(formData, onboardingPath, leadId, { ...intentJson, activationLeadId: leadId });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Error al conectar con la pasarela de Wompi Sandbox.";
       setSubmitError(`Tu solicitud quedó registrada, pero ocurrió un inconveniente con Wompi Sandbox: ${msg}`);

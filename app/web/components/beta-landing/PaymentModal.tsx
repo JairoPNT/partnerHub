@@ -15,11 +15,20 @@ import {
 } from "lucide-react";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 import type { WompiIntentData } from "@/components/beta-landing/ActivationForm";
-import { isOnboardingAllowed, buildWompiCheckoutUrl, formatWompiAmount } from "@/components/beta-landing/wompiCheckoutFlow";
+import {
+  isOnboardingAllowed,
+  isTerminalWompiStatus,
+  buildWompiCheckoutUrl,
+  buildWompiStatusQueryUrl,
+  formatWompiAmount,
+  type WompiCheckoutStatus,
+  type WompiStatusResponse,
+  type WompiReturnContext
+} from "@/components/beta-landing/wompiCheckoutFlow";
 
 interface WompiWidgetResult {
   transaction?: {
-    status?: "INITIAL" | "PENDING" | "APPROVED" | "DECLINED" | "ERROR";
+    status?: WompiCheckoutStatus;
   };
 }
 
@@ -48,6 +57,7 @@ interface PaymentModalProps {
     brandName: string;
   };
   wompiIntent?: WompiIntentData;
+  returnContext?: WompiReturnContext;
   onboardingPath?: string;
 }
 
@@ -57,22 +67,31 @@ export function PaymentModal({
   selectedMethod = "wompi",
   userFormData,
   wompiIntent,
+  returnContext,
   onboardingPath
 }: PaymentModalProps) {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<"wompi" | "direct">(
-    selectedMethod === "wompi" || wompiIntent ? "wompi" : "direct"
+    selectedMethod === "wompi" || wompiIntent || returnContext ? "wompi" : "direct"
   );
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [wompiStatus, setWompiStatus] = useState<"INITIAL" | "PENDING" | "APPROVED" | "DECLINED" | "ERROR">("INITIAL");
+  const [wompiStatus, setWompiStatus] = useState<WompiCheckoutStatus>("INITIAL");
+  const [statusResponse, setStatusResponse] = useState<WompiStatusResponse | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
+  const [manualCheckLoading, setManualCheckLoading] = useState(false);
+
+  const isReturnMode = Boolean(returnContext && !wompiIntent);
+  const targetLeadId = wompiIntent?.activationLeadId || returnContext?.activationLeadId;
+  const targetRef = wompiIntent?.reference || returnContext?.reference;
+  const targetIntentId = wompiIntent?.intentId || returnContext?.intentId;
 
   useEffect(() => {
-    if (selectedMethod === "wompi" || wompiIntent) {
+    if (selectedMethod === "wompi" || wompiIntent || returnContext) {
       setActiveTab("wompi");
     } else {
       setActiveTab("direct");
     }
-  }, [selectedMethod, wompiIntent]);
+  }, [selectedMethod, wompiIntent, returnContext]);
 
   useEffect(() => {
     if (isOpen && typeof window !== "undefined" && !document.getElementById("wompi-widget-script")) {
@@ -84,12 +103,70 @@ export function PaymentModal({
     }
   }, [isOpen]);
 
+  const pollStatus = async (): Promise<WompiStatusResponse | null> => {
+    if (!targetLeadId || (!targetRef && !targetIntentId)) return null;
+    try {
+      setIsPolling(true);
+      const url = buildWompiStatusQueryUrl(targetLeadId, {
+        reference: targetRef,
+        intentId: targetIntentId
+      });
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.ok) {
+        const data: WompiStatusResponse = await res.json();
+        setStatusResponse(data);
+        setWompiStatus(data.status);
+        return data;
+      }
+    } catch {
+      // Ignore transient errors
+    } finally {
+      setIsPolling(false);
+    }
+    return null;
+  };
+
+  useEffect(() => {
+    if (!isOpen || (!wompiIntent && !returnContext) || activeTab !== "wompi") return;
+
+    let cancelled = false;
+    let attempts = 0;
+    let timer: NodeJS.Timeout | null = null;
+
+    const runPoll = async () => {
+      if (cancelled) return;
+      const latestData = await pollStatus();
+      attempts += 1;
+
+      if (latestData && isTerminalWompiStatus(latestData.status)) {
+        return;
+      }
+
+      if (!cancelled && attempts < 20) {
+        timer = setTimeout(runPoll, 3000);
+      }
+    };
+
+    runPoll();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [isOpen, wompiIntent?.intentId, wompiIntent?.reference, returnContext?.activationLeadId, returnContext?.reference, activeTab]);
+
   if (!isOpen) return null;
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2500);
+  };
+
+  const triggerManualStatusCheck = async () => {
+    setManualCheckLoading(true);
+    await pollStatus();
+    setManualCheckLoading(false);
   };
 
   const openWompiWidget = () => {
@@ -114,6 +191,7 @@ export function PaymentModal({
         checkout.open((result?: WompiWidgetResult) => {
           if (result?.transaction?.status) {
             setWompiStatus(result.transaction.status);
+            pollStatus();
           }
         });
       } catch {
@@ -220,78 +298,111 @@ export function PaymentModal({
                 </div>
               </div>
 
-              {wompiIntent ? (
+              {wompiIntent || returnContext ? (
                 <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm space-y-4">
                   <div>
                     <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">
                       Monto total de la oferta seleccionada
                     </p>
                     <p className="mt-1 text-3xl font-extrabold text-slate-900">
-                      {formatWompiAmount(wompiIntent.amountInCents)}
+                      {statusResponse?.amountInCents
+                        ? formatWompiAmount(statusResponse.amountInCents)
+                        : wompiIntent?.amountInCents && wompiIntent.amountInCents > 0
+                        ? formatWompiAmount(wompiIntent.amountInCents)
+                        : isReturnMode
+                        ? "Verificando..."
+                        : PAYMENT_CONFIG.amount}
                     </p>
                     <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1 text-xs font-mono text-slate-700">
-                      <span>Referencia: {wompiIntent.reference}</span>
+                      <span>Referencia: {statusResponse?.reference || wompiIntent?.reference || returnContext?.reference || "Consultando..."}</span>
                     </div>
                   </div>
 
-                  {wompiStatus === "PENDING" && (
+                  {(wompiStatus === "PENDING" || isPolling) && (
                     <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 flex items-center justify-center gap-2">
                       <RefreshCw className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
-                      <span>Procesando en Wompi Sandbox. Completa el pago en la pasarela.</span>
+                      <span>Verificando estado con Wompi Sandbox en tiempo real...</span>
                     </div>
                   )}
 
-                  {wompiStatus === "APPROVED" && (
+                  {wompiStatus === "APPROVED" && statusResponse?.paymentRecorded && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 font-semibold flex items-center justify-center gap-2">
                       <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span>¡Pago Aprobado en Wompi Sandbox! Tu transacción se ha verificado.</span>
+                      <span>¡Pago Aprobado y Confirmado por Servidor! Tu transacción está asentada.</span>
                     </div>
                   )}
 
-                  {wompiStatus === "DECLINED" && (
+                  {wompiStatus === "APPROVED" && !statusResponse?.paymentRecorded && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center justify-center gap-2">
+                      <RefreshCw className="h-4 w-4 animate-spin text-amber-600 shrink-0" />
+                      <span>Pago Aprobado por Wompi Sandbox. Confirmando asentamiento financiero en servidor...</span>
+                    </div>
+                  )}
+
+                  {(wompiStatus === "DECLINED" || wompiStatus === "VOIDED" || wompiStatus === "EXPIRED") && (
                     <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-center justify-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
-                      <span>Transacción rechazada. Puedes reintentar o usar transferencia directa.</span>
+                      <span>Transacción {wompiStatus.toLowerCase()}. Reintenta el pago o usa transferencia directa.</span>
+                    </div>
+                  )}
+
+                  {wompiStatus === "ERROR" && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center justify-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>No pudimos obtener la actualización automática. Usa el botón de verificación manual.</span>
                     </div>
                   )}
 
                   <div className="pt-2 flex flex-col gap-3 sm:flex-row sm:justify-center">
-                    <button
-                      onClick={openWompiWidget}
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-3.5 text-base font-semibold text-white shadow-lg transition hover:from-cyan-500 hover:to-blue-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
-                    >
-                      <CreditCard className="h-5 w-5" />
-                      Pagar con Wompi Sandbox
-                    </button>
+                    {!isReturnMode && wompiIntent && (
+                      <button
+                        onClick={openWompiWidget}
+                        className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-3.5 text-base font-semibold text-white shadow-lg transition hover:from-cyan-500 hover:to-blue-500 focus:outline-none focus:ring-2 focus:ring-cyan-500"
+                      >
+                        <CreditCard className="h-5 w-5" />
+                        Pagar con Wompi Sandbox
+                      </button>
+                    )}
 
                     <button
-                      onClick={() =>
-                        copyToClipboard(
-                          buildWompiCheckoutUrl(
-                            wompiIntent,
-                            typeof window !== "undefined" ? window.location.origin : undefined,
-                            "/oferta-beta"
-                          ),
-                          "wompi-intent-link"
-                        )
-                      }
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-5 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                      onClick={triggerManualStatusCheck}
+                      disabled={manualCheckLoading}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-5 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
                     >
-                      {copiedKey === "wompi-intent-link" ? (
-                        <>
-                          <Check className="h-4 w-4 text-emerald-600" />
-                          Link copiado
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4" />
-                          Copiar link de pago
-                        </>
-                      )}
+                      <RefreshCw className={`h-4 w-4 ${manualCheckLoading ? "animate-spin" : ""}`} />
+                      Verificar Estado
                     </button>
+
+                    {!isReturnMode && wompiIntent && (
+                      <button
+                        onClick={() =>
+                          copyToClipboard(
+                            buildWompiCheckoutUrl(
+                              wompiIntent,
+                              typeof window !== "undefined" ? window.location.origin : undefined,
+                              "/oferta-beta"
+                            ),
+                            "wompi-intent-link"
+                          )
+                        }
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-5 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                      >
+                        {copiedKey === "wompi-intent-link" ? (
+                          <>
+                            <Check className="h-4 w-4 text-emerald-600" />
+                            Link copiado
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4" />
+                            Copiar link de pago
+                          </>
+                        )}
+                      </button>
+                    )}
                   </div>
 
-                  {onboardingPath && isOnboardingAllowed(wompiStatus, "wompi") && (
+                  {onboardingPath && isOnboardingAllowed(wompiStatus, "wompi", statusResponse?.paymentRecorded) && (
                     <div className="pt-3 border-t border-slate-100 animate-in fade-in duration-200">
                       <button
                         onClick={() => {

@@ -11,6 +11,7 @@ import { BetaOfferSection } from "@/components/beta-landing/BetaOfferSection";
 import { ActivationForm, FormDataState, WompiIntentData } from "@/components/beta-landing/ActivationForm";
 import { PaymentSection } from "@/components/beta-landing/PaymentSection";
 import { PaymentModal } from "@/components/beta-landing/PaymentModal";
+import { parseWompiReturnParams, type WompiReturnContext } from "@/components/beta-landing/wompiCheckoutFlow";
 import { FaqSection } from "@/components/beta-landing/FaqSection";
 import Link from "next/link";
 import { FinalCtaSection } from "@/components/beta-landing/FinalCtaSection";
@@ -23,6 +24,20 @@ export default function OfertaBetaPage() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"wompi" | "direct">("wompi");
   const [onboardingPath, setOnboardingPath] = useState<string | undefined>(undefined);
   const [wompiIntent, setWompiIntent] = useState<WompiIntentData | undefined>(undefined);
+  const [returnContext, setReturnContext] = useState<WompiReturnContext | undefined>(undefined);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const searchStr = window.location.search;
+    if (!searchStr) return;
+
+    const params = parseWompiReturnParams(searchStr);
+    if (params) {
+      setReturnContext(params);
+      setSelectedPaymentMethod("wompi");
+      setIsModalOpen(true);
+    }
+  }, []);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
@@ -145,6 +160,7 @@ export default function OfertaBetaPage() {
             : undefined
         }
         wompiIntent={wompiIntent}
+        returnContext={returnContext}
         onboardingPath={onboardingPath}
       />
     </div>
