@@ -33,6 +33,19 @@ export interface WompiReturnContext {
 }
 
 /**
+ * Determines whether a Wompi transaction status is terminal (polling must stop immediately).
+ */
+export function isTerminalWompiStatus(status: WompiCheckoutStatus): boolean {
+  return (
+    status === "APPROVED" ||
+    status === "DECLINED" ||
+    status === "VOIDED" ||
+    status === "EXPIRED" ||
+    status === "ERROR"
+  );
+}
+
+/**
  * Checks if the onboarding path can be accessed.
  * CRITICAL SECURITY RULE:
  * For Wompi payments, onboarding is allowed ONLY when status === "APPROVED" AND paymentRecorded === true.
@@ -105,7 +118,6 @@ export function parseWompiReturnParams(searchParamsString: string): WompiReturnC
   const intentId = params.get("intentId") ?? undefined;
 
   // Correlation REQUIRES activationLeadId AND (reference OR intentId).
-  // Return URLs containing only `id` and `env` without correlation parameters CANNOT be polled and MUST NOT fabricate artificial intents.
   if (!activationLeadId || (!reference && !intentId)) {
     return null;
   }

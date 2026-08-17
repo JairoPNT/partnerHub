@@ -17,6 +17,7 @@ import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 import type { WompiIntentData } from "@/components/beta-landing/ActivationForm";
 import {
   isOnboardingAllowed,
+  isTerminalWompiStatus,
   buildWompiCheckoutUrl,
   buildWompiStatusQueryUrl,
   formatWompiAmount,
@@ -102,8 +103,8 @@ export function PaymentModal({
     }
   }, [isOpen]);
 
-  const pollStatus = async () => {
-    if (!targetLeadId || (!targetRef && !targetIntentId)) return;
+  const pollStatus = async (): Promise<WompiStatusResponse | null> => {
+    if (!targetLeadId || (!targetRef && !targetIntentId)) return null;
     try {
       setIsPolling(true);
       const url = buildWompiStatusQueryUrl(targetLeadId, {
@@ -115,12 +116,14 @@ export function PaymentModal({
         const data: WompiStatusResponse = await res.json();
         setStatusResponse(data);
         setWompiStatus(data.status);
+        return data;
       }
     } catch {
       // Ignore transient errors
     } finally {
       setIsPolling(false);
     }
+    return null;
   };
 
   useEffect(() => {
@@ -132,9 +135,14 @@ export function PaymentModal({
 
     const runPoll = async () => {
       if (cancelled) return;
-      await pollStatus();
+      const latestData = await pollStatus();
       attempts += 1;
-      if (!cancelled && attempts < 20 && (wompiStatus === "INITIAL" || wompiStatus === "PENDING")) {
+
+      if (latestData && isTerminalWompiStatus(latestData.status)) {
+        return;
+      }
+
+      if (!cancelled && attempts < 20) {
         timer = setTimeout(runPoll, 3000);
       }
     };

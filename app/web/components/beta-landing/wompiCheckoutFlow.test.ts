@@ -6,11 +6,23 @@ import {
   buildWompiStatusQueryUrl,
   formatWompiAmount,
   isOnboardingAllowed,
+  isTerminalWompiStatus,
   parseWompiReturnParams,
   type WompiCheckoutStatus,
   type WompiIntentData,
   type WompiReturnContext
 } from "./wompiCheckoutFlow.ts";
+
+test("isTerminalWompiStatus correctly identifies terminal vs polling statuses", () => {
+  assert.equal(isTerminalWompiStatus("PENDING"), false, "PENDING status must continue polling");
+  assert.equal(isTerminalWompiStatus("INITIAL"), false, "INITIAL status must continue polling");
+
+  assert.equal(isTerminalWompiStatus("APPROVED"), true, "APPROVED status must stop polling immediately");
+  assert.equal(isTerminalWompiStatus("DECLINED"), true, "DECLINED status must stop polling immediately");
+  assert.equal(isTerminalWompiStatus("VOIDED"), true, "VOIDED status must stop polling immediately");
+  assert.equal(isTerminalWompiStatus("EXPIRED"), true, "EXPIRED status must stop polling immediately");
+  assert.equal(isTerminalWompiStatus("ERROR"), true, "ERROR status must stop polling immediately");
+});
 
 test("onboarding access is strictly blocked for Wompi unless status === APPROVED AND paymentRecorded === true", () => {
   const blockedStatuses: WompiCheckoutStatus[] = ["INITIAL", "PENDING", "DECLINED", "VOIDED", "ERROR", "EXPIRED"];

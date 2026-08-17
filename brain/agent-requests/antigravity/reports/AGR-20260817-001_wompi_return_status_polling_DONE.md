@@ -5,32 +5,21 @@
 
 ## Resumen de cambios realizados
 
-Se implementó el modo de retorno de solo estado (*return status-only mode*) sin creación de objetos de intención artificiales ni montos fijos:
+Se implementó la detención inmediata del polling al alcanzar estados terminales en Wompi Sandbox:
 
-1. **Definición de Contexto Separado de Retorno (`wompiCheckoutFlow.ts`):**
-   - Creada la interfaz `WompiReturnContext` conteniendo estrictamente `{ activationLeadId, reference, intentId, transactionId, environment }`.
-   - `parseWompiReturnParams` devuelve `WompiReturnContext | null` y **jamás genera objetos `WompiIntent` artificiales, firmas vacías ni montos fijos (`0` ó `15000000`)**.
+1. **Función de Estado Terminal (`wompiCheckoutFlow.ts`):**
+   - Creada la función `isTerminalWompiStatus(status)` que identifica como terminales los estados `APPROVED`, `DECLINED`, `VOIDED`, `EXPIRED` y `ERROR`.
 
-2. **Modo Estado Único en Modal de Pago (`PaymentModal.tsx`):**
-   - `PaymentModal` acepta la nueva propiedad `returnContext?: WompiReturnContext`.
-   - En modo retorno (`returnContext` presente sin `wompiIntent` activo):
-     - **Oculto** el botón "Pagar con Wompi Sandbox".
-     - **Oculto** el botón "Copiar link de pago".
-     - **Oculto** cualquier monto inventado o en `0` (muestra "Verificando..." o el monto real retornado por la API server-side).
-     - Desplegado **únicamente** el indicador de estado verificado por servidor y el botón "Verificar Estado".
+2. **Detención Inmediata en el Ciclo de Polling (`PaymentModal.tsx`):**
+   - `pollStatus()` devuelve directamente el objeto `WompiStatusResponse` o `null` obtenido de la consulta asíncrona actual.
+   - `runPoll()` evalúa el estado retornado inmediatamente y cancela las siguientes iteraciones si `isTerminalWompiStatus` es `true`.
+   - Se erradicó la dependencia de variables de estado desactualizadas (`wompiStatus`) capturadas por closure.
 
-3. **Polling Controlado por Servidor:**
-   - La consulta `GET /api/public/payments/wompi/status` se realiza dinámicamente con `activationLeadId` + `reference` (o `intentId`).
-
-4. **Protección Estricta del Acceso al Onboarding:**
-   - Habilitado **únicamente** cuando `status === "APPROVED"` Y `paymentRecorded === true`.
-
-5. **Pruebas de Unidad Automáticas (`wompiCheckoutFlow.test.ts`):**
-   - 8 casos de prueba automáticos pasados (100% éxito):
-     - `parseWompiReturnParams` devuelve `WompiReturnContext` limpio sin campos de `WompiIntent` artificial.
-     - Retorno sin correlación devuelve `null`.
-     - `redirect-url` incluye correlación y jamás contiene rutas de onboarding.
-     - `isOnboardingAllowed` exige `status === APPROVED` y `paymentRecorded === true`.
+3. **Pruebas de Unidad Automáticas (`wompiCheckoutFlow.test.ts`):**
+   - Prueba de unidad añadida que valida explícitamente:
+     - `PENDING` e `INITIAL` continúan polling (`isTerminalWompiStatus === false`).
+     - `APPROVED`, `DECLINED`, `VOIDED`, `EXPIRED` y `ERROR` detienen polling (`isTerminalWompiStatus === true`).
+   - Total: **9/9 casos de prueba pasados con éxito**.
 
 ## Archivos o rutas modificadas
 - `app/web/components/beta-landing/wompiCheckoutFlow.ts`
@@ -41,7 +30,7 @@ Se implementó el modo de retorno de solo estado (*return status-only mode*) sin
 - `brain/agent-requests/antigravity/reports/AGR-20260817-001_wompi_return_status_polling_DONE.md`
 
 ## Verificación realizada
-- `node --experimental-strip-types --test components/beta-landing/wompiCheckoutFlow.test.ts` -> Pass (8/8 tests pasados)
+- `node --experimental-strip-types --test components/beta-landing/wompiCheckoutFlow.test.ts` -> Pass (9/9 tests pasados)
 - `npx eslint components/beta-landing/ActivationForm.tsx components/beta-landing/PaymentModal.tsx components/beta-landing/wompiCheckoutFlow.ts components/beta-landing/wompiCheckoutFlow.test.ts app/oferta-beta/page.tsx app/activar/page.tsx` -> Pass (0 errores, 0 warnings)
 - `npm run build` en `app/web` -> Pass (Compiled successfully, static pages generated).
 - `git diff --check origin/main...HEAD` -> Pass (Limpio, sin errores de whitespace).
