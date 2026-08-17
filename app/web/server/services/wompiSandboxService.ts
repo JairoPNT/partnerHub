@@ -19,6 +19,11 @@ import {
   type WompiIntentInput,
   type WompiPaymentIntent
 } from "@/server/services/wompiSandboxCore";
+import {
+  lookupWompiIntentStatus,
+  wompiIntentStatusQuerySchema,
+  type WompiIntentStatusQuery
+} from "@/server/services/wompiIntentStatusCore";
 
 function getConfig() {
   return resolveWompiSandboxConfig(process.env);
@@ -136,4 +141,13 @@ async function processEvent(rawEvent: unknown, headerChecksum?: string | null) {
   return { accepted: true, duplicate: false, ledgerIdempotent, status: result.intent.status };
 }
 
-export const wompiSandboxService = { createIntent, processEvent };
+async function getIntentStatus(query: WompiIntentStatusQuery) {
+  const parsed = wompiIntentStatusQuerySchema.parse(query);
+  const [intents, ledger] = await Promise.all([
+    readIntents(),
+    manualPaymentLedgerService.list({ activationLeadId: parsed.activationLeadId, status: "CONFIRMED" })
+  ]);
+  return lookupWompiIntentStatus(intents, ledger.payments, parsed);
+}
+
+export const wompiSandboxService = { createIntent, getIntentStatus, processEvent };
