@@ -111,11 +111,14 @@ export function createPaymentRecord(
 
 export function findIdempotentPayment(records: ManualPaymentRecord[], input: ManualPaymentCreateInput) {
   const parsed = manualPaymentCreateSchema.parse(input);
-  if (!parsed.idempotencyKey) return null;
   return (
     records.find(
       (payment) =>
-        payment.activationLeadId === parsed.activationLeadId && payment.idempotencyKey === parsed.idempotencyKey
+        payment.activationLeadId === parsed.activationLeadId &&
+        (
+          (Boolean(parsed.idempotencyKey) && payment.idempotencyKey === parsed.idempotencyKey) ||
+          (parsed.method === "WOMPI" && Boolean(parsed.reference) && payment.reference === parsed.reference)
+        )
     ) ?? null
   );
 }

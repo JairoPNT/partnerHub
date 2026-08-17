@@ -119,26 +119,56 @@ async function processEvent(rawEvent: unknown, headerChecksum?: string | null) {
   if (index < 0) throw new Error("Wompi payment intent was not found.");
   const current = intents[index];
   const result = applyWompiEvent(current, event, new Date().toISOString());
-  if (result.duplicate) return { accepted: true, duplicate: true, status: current.status };
+  if (result.duplicate) {
+    return {
+      accepted: true,
+      duplicate: true,
+      status: current.status,
+      observation: {
+        activationLeadId: current.activationLeadId,
+        reference: current.reference,
+        transactionId: event.data.transaction.id
+      }
+    };
+  }
 
   let ledgerIdempotent = false;
   if (result.intent.status === "APPROVED") {
     const transaction = (event as WompiEvent).data.transaction;
-    const ledger = await manualPaymentLedgerService.create({
-      activationLeadId: current.activationLeadId,
-      category: "ACTIVATION",
-      amountCop: current.amountCop,
-      method: "WOMPI",
-      paidAt: transaction.finalized_at ?? event.sent_at,
-      reference: current.reference,
-      notes: `Wompi Sandbox transaction ${transaction.id}`,
-      idempotencyKey: `wompi:${transaction.id}`
-    });
+    let ledger;
+    try {
+      ledger = await manualPaymentLedgerService.create({
+        activationLeadId: current.activationLeadId,
+        category: "ACTIVATION",
+        amountCop: current.amountCop,
+        method: "WOMPI",
+        paidAt: transaction.finalized_at ?? event.sent_at,
+        reference: current.reference,
+        notes: `Wompi Sandbox transaction ${transaction.id}`,
+        idempotencyKey: `wompi:${transaction.id}`
+      });
+    } catch {
+      throw new Error("Wompi ledger persistence failed.");
+    }
     ledgerIdempotent = ledger.idempotent;
   }
   intents[index] = result.intent;
-  await writeIntents(intents);
-  return { accepted: true, duplicate: false, ledgerIdempotent, status: result.intent.status };
+  try {
+    await writeIntents(intents);
+  } catch {
+    throw new Error("Wompi intent persistence failed.");
+  }
+  return {
+    accepted: true,
+    duplicate: false,
+    ledgerIdempotent,
+    status: result.intent.status,
+    observation: {
+      activationLeadId: current.activationLeadId,
+      reference: current.reference,
+      transactionId: result.intent.transactionId!
+    }
+  };
 }
 
 async function getIntentStatus(query: WompiIntentStatusQuery) {
@@ -150,4 +180,11 @@ async function getIntentStatus(query: WompiIntentStatusQuery) {
   return lookupWompiIntentStatus(intents, ledger.payments, parsed);
 }
 
-export const wompiSandboxService = { createIntent, getIntentStatus, processEvent };
+async function findIntentObservation(reference: string) {
+  const intent = (await readIntents()).find((candidate) => candidate.reference === reference);
+  return intent ? { activationLeadId: intent.activationLeadId } : {};
+}
+
+export const wompiSandboxService = { createIntent, findIntentObservation, getIntentStatus, processEvent };
+
+export const wompiSandboxPersistence = { readIntents, writeIntents };

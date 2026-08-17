@@ -87,6 +87,7 @@ test("fails safely for missing or production credentials", () => {
     WOMPI_SANDBOX_EVENTS_SECRET: "test_events_secret"
   }), {
     publicKey: "pub_test_public",
+    privateKey: "prv_test_private",
     integritySecret: "test_integrity_secret",
     eventsSecret: "test_events_secret"
   });
