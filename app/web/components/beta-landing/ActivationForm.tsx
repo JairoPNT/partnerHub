@@ -59,6 +59,8 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const [createdLeadId, setCreatedLeadId] = useState<string | null>(null);
+  const [createdOnboardingPath, setCreatedOnboardingPath] = useState<string | null>(null);
 
   const validate = () => {
     const newErrors: Record<string, string> = {};
@@ -75,11 +77,47 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
     return Object.keys(newErrors).length === 0;
   };
 
+  const requestWompiIntent = async (leadId: string, offerCode: string, onboardingPath?: string) => {
+    setSubmitError(null);
+    setIsSubmitting(true);
+    try {
+      const intentRes = await fetch("/api/public/payments/wompi/intent", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          activationLeadId: leadId,
+          offerCode
+        })
+      });
+
+      const intentJson = await intentRes.json();
+
+      if (!intentRes.ok) {
+        throw new Error(intentJson.error || "No pudimos generar la intención de pago con Wompi Sandbox.");
+      }
+
+      onFormSubmit(formData, onboardingPath, leadId, intentJson);
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Error al conectar con la pasarela de Wompi Sandbox.";
+      setSubmitError(`Tu solicitud quedó registrada, pero ocurrió un inconveniente con Wompi Sandbox: ${msg}`);
+      // Do NOT call onFormSubmit without a valid Wompi intent!
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
 
     if (!validate()) {
+      return;
+    }
+
+    if (createdLeadId && formData.paymentMethod === "wompi") {
+      await requestWompiIntent(createdLeadId, formData.offerCode, createdOnboardingPath || undefined);
       return;
     }
 
@@ -118,31 +156,11 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
         throw new Error(json.error || "No pudimos registrar tu solicitud. Verifica los datos e inténtalo nuevamente.");
       }
 
+      setCreatedLeadId(json.leadId);
+      setCreatedOnboardingPath(json.onboardingPath);
+
       if (formData.paymentMethod === "wompi") {
-        try {
-          const intentRes = await fetch("/api/public/payments/wompi/intent", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json"
-            },
-            body: JSON.stringify({
-              activationLeadId: json.leadId,
-              offerCode: formData.offerCode
-            })
-          });
-
-          const intentJson = await intentRes.json();
-
-          if (!intentRes.ok) {
-            throw new Error(intentJson.error || "No pudimos generar la intención de pago con Wompi Sandbox.");
-          }
-
-          onFormSubmit(formData, json.onboardingPath, json.leadId, intentJson);
-        } catch (err: unknown) {
-          const msg = err instanceof Error ? err.message : "Error al conectar con la pasarela de Wompi Sandbox.";
-          setSubmitError(msg);
-          onFormSubmit(formData, json.onboardingPath, json.leadId);
-        }
+        await requestWompiIntent(json.leadId, formData.offerCode, json.onboardingPath);
       } else {
         onFormSubmit(formData, json.onboardingPath, json.leadId);
         if (json.onboardingPath) {
@@ -179,9 +197,23 @@ export function ActivationForm({ onFormSubmit }: ActivationFormProps) {
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Submit Error Banner */}
             {submitError && (
-              <div className="flex items-center gap-3 rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-xs font-semibold text-rose-300">
-                <AlertCircle className="h-5 w-5 shrink-0 text-rose-400" />
-                <span>{submitError}</span>
+              <div className="flex flex-col gap-3 rounded-2xl border border-rose-500/40 bg-rose-500/10 p-4 text-xs text-rose-300">
+                <div className="flex items-center gap-3 font-semibold">
+                  <AlertCircle className="h-5 w-5 shrink-0 text-rose-400" />
+                  <span>{submitError}</span>
+                </div>
+                {createdLeadId && formData.paymentMethod === "wompi" && (
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      disabled={isSubmitting}
+                      onClick={() => requestWompiIntent(createdLeadId, formData.offerCode, createdOnboardingPath || undefined)}
+                      className="rounded-xl bg-rose-600 px-4 py-2 text-xs font-bold text-white shadow-md hover:bg-rose-500 transition disabled:opacity-50"
+                    >
+                      Reintentar Conexión Wompi Sandbox
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 

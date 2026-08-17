@@ -8,7 +8,6 @@ import {
   Check,
   CreditCard,
   Building2,
-  ExternalLink,
   ShieldCheck,
   ArrowRight,
   AlertTriangle,
@@ -16,6 +15,7 @@ import {
 } from "lucide-react";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 import type { WompiIntentData } from "@/components/beta-landing/ActivationForm";
+import { isOnboardingAllowed, buildWompiCheckoutUrl, formatWompiAmount } from "@/components/beta-landing/wompiCheckoutFlow";
 
 interface WompiWidgetResult {
   transaction?: {
@@ -92,28 +92,6 @@ export function PaymentModal({
     setTimeout(() => setCopiedKey(null), 2500);
   };
 
-  const formatAmountInCents = (cents: number) => {
-    return new Intl.NumberFormat("es-CO", {
-      style: "currency",
-      currency: "COP",
-      maximumFractionDigits: 0
-    }).format(cents / 100);
-  };
-
-  const buildWompiCheckoutUrl = (intent: WompiIntentData, path?: string) => {
-    const params = new URLSearchParams({
-      "public-key": intent.publicKey,
-      currency: intent.currency,
-      "amount-in-cents": intent.amountInCents.toString(),
-      reference: intent.reference,
-      "signature:integrity": intent.signature.integrity
-    });
-    if (path && typeof window !== "undefined") {
-      params.append("redirect-url", `${window.location.origin}${path}`);
-    }
-    return `https://checkout.wompi.co/p/?${params.toString()}`;
-  };
-
   const openWompiWidget = () => {
     if (!wompiIntent) return;
     setWompiStatus("PENDING");
@@ -136,10 +114,20 @@ export function PaymentModal({
           }
         });
       } catch {
-        window.open(buildWompiCheckoutUrl(wompiIntent, onboardingPath), "_blank");
+        const fallbackUrl = buildWompiCheckoutUrl(
+          wompiIntent,
+          typeof window !== "undefined" ? window.location.origin : undefined,
+          onboardingPath
+        );
+        window.open(fallbackUrl, "_blank");
       }
     } else {
-      window.open(buildWompiCheckoutUrl(wompiIntent, onboardingPath), "_blank");
+      const fallbackUrl = buildWompiCheckoutUrl(
+        wompiIntent,
+        typeof window !== "undefined" ? window.location.origin : undefined,
+        onboardingPath
+      );
+      window.open(fallbackUrl, "_blank");
     }
   };
 
@@ -236,7 +224,7 @@ export function PaymentModal({
                       Monto total de la oferta seleccionada
                     </p>
                     <p className="mt-1 text-3xl font-extrabold text-slate-900">
-                      {formatAmountInCents(wompiIntent.amountInCents)}
+                      {formatWompiAmount(wompiIntent.amountInCents)}
                     </p>
                     <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-slate-100 px-3 py-1 text-xs font-mono text-slate-700">
                       <span>Referencia: {wompiIntent.reference}</span>
@@ -246,21 +234,21 @@ export function PaymentModal({
                   {wompiStatus === "PENDING" && (
                     <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 flex items-center justify-center gap-2">
                       <RefreshCw className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
-                      <span>Procesando en Wompi Sandbox. Completa el pago en el widget o pasarela.</span>
+                      <span>Procesando en Wompi Sandbox. Completa el pago en la pasarela.</span>
                     </div>
                   )}
 
                   {wompiStatus === "APPROVED" && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 font-semibold flex items-center justify-center gap-2">
                       <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span>¡Pago Aprobado en Wompi Sandbox! Tu transacción se ha registrado.</span>
+                      <span>¡Pago Aprobado en Wompi Sandbox! Tu transacción se ha verificado.</span>
                     </div>
                   )}
 
                   {wompiStatus === "DECLINED" && (
                     <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-center justify-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
-                      <span>Transacción rechazada en la prueba. Reintenta o cambia a transferencia directa.</span>
+                      <span>Transacción rechazada. Puedes reintentar o usar transferencia directa.</span>
                     </div>
                   )}
 
@@ -276,7 +264,11 @@ export function PaymentModal({
                     <button
                       onClick={() =>
                         copyToClipboard(
-                          buildWompiCheckoutUrl(wompiIntent, onboardingPath),
+                          buildWompiCheckoutUrl(
+                            wompiIntent,
+                            typeof window !== "undefined" ? window.location.origin : undefined,
+                            onboardingPath
+                          ),
                           "wompi-intent-link"
                         )
                       }
@@ -290,64 +282,42 @@ export function PaymentModal({
                       ) : (
                         <>
                           <Copy className="h-4 w-4" />
-                          Copiar link
+                          Copiar link de pago
                         </>
                       )}
                     </button>
                   </div>
 
-                  {onboardingPath && (
-                    <div className="pt-3 border-t border-slate-100">
+                  {onboardingPath && isOnboardingAllowed(wompiStatus, "wompi") && (
+                    <div className="pt-3 border-t border-slate-100 animate-in fade-in duration-200">
                       <button
                         onClick={() => {
                           onClose();
                           router.push(onboardingPath);
                         }}
-                        className="inline-flex items-center justify-center gap-2 text-sm font-bold text-cyan-700 hover:text-cyan-900 hover:underline"
+                        className="inline-flex items-center justify-center gap-2 text-sm font-bold text-emerald-700 hover:text-emerald-900 hover:underline"
                       >
-                        <span>Continuar al Onboarding de Configuración</span>
+                        <span>Pago Confirmado — Continuar al Onboarding de Configuración</span>
                         <ArrowRight className="h-4 w-4" />
                       </button>
                     </div>
                   )}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-slate-200 bg-white p-5 text-center shadow-sm">
-                  <p className="text-xs uppercase tracking-wider text-slate-500 font-semibold">
-                    Monto total a pagar
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-6 text-center shadow-sm space-y-3">
+                  <AlertTriangle className="mx-auto h-8 w-8 text-amber-600" />
+                  <p className="text-sm font-semibold text-amber-900">
+                    No se encontró una intención de pago activa de Wompi Sandbox.
                   </p>
-                  <p className="mt-1 text-3xl font-extrabold text-slate-900">
-                    {PAYMENT_CONFIG.amount}
+                  <p className="text-xs text-amber-800">
+                    Por favor regresa al formulario para reintentar la conexión o selecciona la pestaña de Transferencia Directa / Bre-b.
                   </p>
-
-                  <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:justify-center">
-                    <a
-                      href={PAYMENT_CONFIG.wompi.checkoutUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-cyan-600 to-blue-600 px-6 py-3.5 text-base font-semibold text-white shadow-lg transition hover:from-cyan-500 hover:to-blue-500 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:ring-offset-2"
-                    >
-                      Ir al checkout seguro de Wompi
-                      <ExternalLink className="h-4 w-4" />
-                    </a>
-
+                  <div className="pt-2">
                     <button
-                      onClick={() =>
-                        copyToClipboard(PAYMENT_CONFIG.wompi.checkoutUrl, "wompi-link")
-                      }
-                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-5 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-100"
+                      onClick={() => setActiveTab("direct")}
+                      className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-xs font-bold text-white hover:bg-slate-800"
                     >
-                      {copiedKey === "wompi-link" ? (
-                        <>
-                          <Check className="h-4 w-4 text-emerald-600" />
-                          Link copiado
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4" />
-                          Copiar link
-                        </>
-                      )}
+                      Ver Opciones de Transferencia Directa
                     </button>
                   </div>
                 </div>
