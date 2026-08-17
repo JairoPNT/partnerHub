@@ -1,8 +1,10 @@
 "use client";
 
+import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, CheckCircle2, Clock3, Gift, ShieldCheck } from "lucide-react";
-import { ActivationForm, FormDataState } from "@/components/beta-landing/ActivationForm";
+import { ActivationForm, FormDataState, WompiIntentData } from "@/components/beta-landing/ActivationForm";
+import { PaymentModal } from "@/components/beta-landing/PaymentModal";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 
 const includedItems = [
@@ -13,8 +15,23 @@ const includedItems = [
 ];
 
 export default function DirectActivationPage() {
-  const handleFormSubmit = (_data: FormDataState) => {
-    // ActivationForm handles the redirect to the resumable onboarding URL.
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [submittedData, setSubmittedData] = useState<FormDataState | undefined>(undefined);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"wompi" | "direct">("wompi");
+  const [onboardingPath, setOnboardingPath] = useState<string | undefined>(undefined);
+  const [wompiIntent, setWompiIntent] = useState<WompiIntentData | undefined>(undefined);
+
+  const handleFormSubmit = (
+    data: FormDataState,
+    onboardingPath?: string,
+    _leadId?: string,
+    wompiIntent?: WompiIntentData
+  ) => {
+    setSubmittedData(data);
+    setSelectedPaymentMethod(data.paymentMethod);
+    setOnboardingPath(onboardingPath);
+    setWompiIntent(wompiIntent);
+    setIsModalOpen(true);
   };
 
   return (
@@ -92,6 +109,23 @@ export default function DirectActivationPage() {
       </section>
 
       <ActivationForm onFormSubmit={handleFormSubmit} />
+
+      <PaymentModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        selectedMethod={selectedPaymentMethod}
+        userFormData={
+          submittedData
+            ? {
+                fullName: submittedData.fullName,
+                whatsapp: submittedData.whatsapp,
+                brandName: submittedData.brandName,
+              }
+            : undefined
+        }
+        wompiIntent={wompiIntent}
+        onboardingPath={onboardingPath}
+      />
     </main>
   );
 }
