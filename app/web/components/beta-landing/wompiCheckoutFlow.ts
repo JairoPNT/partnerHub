@@ -1,4 +1,4 @@
-export type WompiCheckoutStatus = "INITIAL" | "PENDING" | "APPROVED" | "DECLINED" | "ERROR";
+export type WompiCheckoutStatus = "INITIAL" | "PENDING" | "APPROVED" | "DECLINED" | "VOIDED" | "ERROR" | "EXPIRED";
 
 export interface WompiIntentData {
   intentId: string;
@@ -12,9 +12,37 @@ export interface WompiIntentData {
   idempotent?: boolean;
 }
 
-export function isOnboardingAllowed(status: WompiCheckoutStatus, paymentMethod: "wompi" | "direct"): boolean {
+export interface WompiStatusResponse {
+  intentId: string;
+  reference: string;
+  status: WompiCheckoutStatus;
+  amountInCents: number;
+  currency: string;
+  activationLeadId: string;
+  paymentRecorded: boolean;
+  error?: string;
+}
+
+export interface WompiReturnUrlParams {
+  transactionId?: string;
+  environment?: string;
+  reference?: string;
+  activationLeadId?: string;
+  intentId?: string;
+}
+
+/**
+ * Checks if the onboarding path can be accessed.
+ * CRITICAL SECURITY RULE:
+ * For Wompi payments, onboarding is allowed ONLY when status === "APPROVED" AND paymentRecorded === true.
+ */
+export function isOnboardingAllowed(
+  status: WompiCheckoutStatus,
+  paymentMethod: "wompi" | "direct",
+  paymentRecorded?: boolean
+): boolean {
   if (paymentMethod === "direct") return true;
-  return status === "APPROVED";
+  return status === "APPROVED" && Boolean(paymentRecorded);
 }
 
 /**
@@ -28,7 +56,6 @@ export function buildWompiCheckoutUrl(
   baseUrl?: string,
   resultPath: string = "/oferta-beta"
 ): string {
-  // Sanitize resultPath to prevent any accidental onboarding token leakage into Wompi query params
   const safeResultPath = resultPath.includes("/onboarding/") ? "/oferta-beta" : resultPath;
   const normalizedPath = safeResultPath.startsWith("/") ? safeResultPath : `/${safeResultPath}`;
 
@@ -45,6 +72,40 @@ export function buildWompiCheckoutUrl(
   }
 
   return `https://checkout.wompi.co/p/?${params.toString()}`;
+}
+
+export function buildWompiStatusQueryUrl(
+  activationLeadId: string,
+  params: { reference?: string; intentId?: string }
+): string {
+  const query = new URLSearchParams({ activationLeadId });
+  if (params.intentId) {
+    query.append("intentId", params.intentId);
+  } else if (params.reference) {
+    query.append("reference", params.reference);
+  }
+  return `/api/public/payments/wompi/status?${query.toString()}`;
+}
+
+export function parseWompiReturnParams(searchParamsString: string): WompiReturnUrlParams | null {
+  const params = new URLSearchParams(searchParamsString);
+  const transactionId = params.get("id") ?? undefined;
+  const environment = params.get("env") ?? undefined;
+  const reference = params.get("reference") ?? params.get("ref") ?? undefined;
+  const activationLeadId = params.get("activationLeadId") ?? params.get("leadId") ?? undefined;
+  const intentId = params.get("intentId") ?? undefined;
+
+  if (!transactionId && !reference && !activationLeadId && !intentId) {
+    return null;
+  }
+
+  return {
+    transactionId,
+    environment,
+    reference,
+    activationLeadId,
+    intentId
+  };
 }
 
 export function formatWompiAmount(cents: number): string {

@@ -15,11 +15,18 @@ import {
 } from "lucide-react";
 import { PAYMENT_CONFIG } from "@/lib/config/payment-methods";
 import type { WompiIntentData } from "@/components/beta-landing/ActivationForm";
-import { isOnboardingAllowed, buildWompiCheckoutUrl, formatWompiAmount } from "@/components/beta-landing/wompiCheckoutFlow";
+import {
+  isOnboardingAllowed,
+  buildWompiCheckoutUrl,
+  buildWompiStatusQueryUrl,
+  formatWompiAmount,
+  type WompiCheckoutStatus,
+  type WompiStatusResponse
+} from "@/components/beta-landing/wompiCheckoutFlow";
 
 interface WompiWidgetResult {
   transaction?: {
-    status?: "INITIAL" | "PENDING" | "APPROVED" | "DECLINED" | "ERROR";
+    status?: WompiCheckoutStatus;
   };
 }
 
@@ -64,7 +71,10 @@ export function PaymentModal({
     selectedMethod === "wompi" || wompiIntent ? "wompi" : "direct"
   );
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [wompiStatus, setWompiStatus] = useState<"INITIAL" | "PENDING" | "APPROVED" | "DECLINED" | "ERROR">("INITIAL");
+  const [wompiStatus, setWompiStatus] = useState<WompiCheckoutStatus>("INITIAL");
+  const [statusResponse, setStatusResponse] = useState<WompiStatusResponse | null>(null);
+  const [isPolling, setIsPolling] = useState(false);
+  const [manualCheckLoading, setManualCheckLoading] = useState(false);
 
   useEffect(() => {
     if (selectedMethod === "wompi" || wompiIntent) {
@@ -84,12 +94,65 @@ export function PaymentModal({
     }
   }, [isOpen]);
 
+  const pollStatus = async () => {
+    if (!wompiIntent) return;
+    const leadId = wompiIntent.activationLeadId;
+    if (!leadId) return;
+    try {
+      setIsPolling(true);
+      const url = buildWompiStatusQueryUrl(leadId, {
+        reference: wompiIntent.reference,
+        intentId: wompiIntent.intentId
+      });
+      const res = await fetch(url, { cache: "no-store" });
+      if (res.ok) {
+        const data: WompiStatusResponse = await res.json();
+        setStatusResponse(data);
+        setWompiStatus(data.status);
+      }
+    } catch {
+      // Ignore transient errors
+    } finally {
+      setIsPolling(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isOpen || !wompiIntent || activeTab !== "wompi") return;
+
+    let cancelled = false;
+    let attempts = 0;
+    let timer: NodeJS.Timeout | null = null;
+
+    const runPoll = async () => {
+      if (cancelled) return;
+      await pollStatus();
+      attempts += 1;
+      if (!cancelled && attempts < 20 && (wompiStatus === "INITIAL" || wompiStatus === "PENDING")) {
+        timer = setTimeout(runPoll, 3000);
+      }
+    };
+
+    runPoll();
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
+  }, [isOpen, wompiIntent?.intentId, wompiIntent?.reference, activeTab]);
+
   if (!isOpen) return null;
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text);
     setCopiedKey(key);
     setTimeout(() => setCopiedKey(null), 2500);
+  };
+
+  const triggerManualStatusCheck = async () => {
+    setManualCheckLoading(true);
+    await pollStatus();
+    setManualCheckLoading(false);
   };
 
   const openWompiWidget = () => {
@@ -114,6 +177,7 @@ export function PaymentModal({
         checkout.open((result?: WompiWidgetResult) => {
           if (result?.transaction?.status) {
             setWompiStatus(result.transaction.status);
+            pollStatus();
           }
         });
       } catch {
@@ -234,24 +298,38 @@ export function PaymentModal({
                     </div>
                   </div>
 
-                  {wompiStatus === "PENDING" && (
+                  {(wompiStatus === "PENDING" || isPolling) && (
                     <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 flex items-center justify-center gap-2">
                       <RefreshCw className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
-                      <span>Procesando en Wompi Sandbox. Completa el pago en la pasarela.</span>
+                      <span>Verificando estado con Wompi Sandbox en tiempo real...</span>
                     </div>
                   )}
 
-                  {wompiStatus === "APPROVED" && (
+                  {wompiStatus === "APPROVED" && statusResponse?.paymentRecorded && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 font-semibold flex items-center justify-center gap-2">
                       <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span>¡Pago Aprobado en Wompi Sandbox! Tu transacción se ha verificado.</span>
+                      <span>¡Pago Aprobado y Confirmado por Servidor! Tu transacción está asentada.</span>
                     </div>
                   )}
 
-                  {wompiStatus === "DECLINED" && (
+                  {wompiStatus === "APPROVED" && !statusResponse?.paymentRecorded && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center justify-center gap-2">
+                      <RefreshCw className="h-4 w-4 animate-spin text-amber-600 shrink-0" />
+                      <span>Pago Aprobado por Wompi Sandbox. Confirmando asentamiento financiero en servidor...</span>
+                    </div>
+                  )}
+
+                  {(wompiStatus === "DECLINED" || wompiStatus === "VOIDED" || wompiStatus === "EXPIRED") && (
                     <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-center justify-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
-                      <span>Transacción rechazada. Puedes reintentar o usar transferencia directa.</span>
+                      <span>Transacción {wompiStatus.toLowerCase()}. Reintenta el pago o usa transferencia directa.</span>
+                    </div>
+                  )}
+
+                  {wompiStatus === "ERROR" && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center justify-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>No pudimos obtener la actualización automática. Usa el botón de verificación manual.</span>
                     </div>
                   )}
 
@@ -262,6 +340,15 @@ export function PaymentModal({
                     >
                       <CreditCard className="h-5 w-5" />
                       Pagar con Wompi Sandbox
+                    </button>
+
+                    <button
+                      onClick={triggerManualStatusCheck}
+                      disabled={manualCheckLoading}
+                      className="inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-slate-50 px-5 py-3.5 text-sm font-semibold text-slate-700 hover:bg-slate-100 disabled:opacity-50"
+                    >
+                      <RefreshCw className={`h-4 w-4 ${manualCheckLoading ? "animate-spin" : ""}`} />
+                      Verificar Estado
                     </button>
 
                     <button
@@ -291,7 +378,7 @@ export function PaymentModal({
                     </button>
                   </div>
 
-                  {onboardingPath && isOnboardingAllowed(wompiStatus, "wompi") && (
+                  {onboardingPath && isOnboardingAllowed(wompiStatus, "wompi", statusResponse?.paymentRecorded) && (
                     <div className="pt-3 border-t border-slate-100 animate-in fade-in duration-200">
                       <button
                         onClick={() => {

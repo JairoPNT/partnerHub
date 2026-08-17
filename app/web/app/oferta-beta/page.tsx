@@ -11,6 +11,7 @@ import { BetaOfferSection } from "@/components/beta-landing/BetaOfferSection";
 import { ActivationForm, FormDataState, WompiIntentData } from "@/components/beta-landing/ActivationForm";
 import { PaymentSection } from "@/components/beta-landing/PaymentSection";
 import { PaymentModal } from "@/components/beta-landing/PaymentModal";
+import { parseWompiReturnParams } from "@/components/beta-landing/wompiCheckoutFlow";
 import { FaqSection } from "@/components/beta-landing/FaqSection";
 import Link from "next/link";
 import { FinalCtaSection } from "@/components/beta-landing/FinalCtaSection";
@@ -23,6 +24,30 @@ export default function OfertaBetaPage() {
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<"wompi" | "direct">("wompi");
   const [onboardingPath, setOnboardingPath] = useState<string | undefined>(undefined);
   const [wompiIntent, setWompiIntent] = useState<WompiIntentData | undefined>(undefined);
+
+  React.useEffect(() => {
+    if (typeof window === "undefined") return;
+    const searchStr = window.location.search;
+    if (!searchStr) return;
+
+    const params = parseWompiReturnParams(searchStr);
+    if (params && (params.activationLeadId || params.reference || params.transactionId)) {
+      const leadId = params.activationLeadId || "";
+      const ref = params.reference || (params.transactionId ? `PH-${params.transactionId}` : "");
+      if (leadId || ref) {
+        setWompiIntent({
+          intentId: params.intentId || "",
+          reference: ref,
+          amountInCents: 15000000,
+          currency: "COP",
+          publicKey: "",
+          signature: { integrity: "" }
+        });
+        setSelectedPaymentMethod("wompi");
+        setIsModalOpen(true);
+      }
+    }
+  }, []);
 
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);

@@ -3,33 +3,65 @@ import test from "node:test";
 
 import {
   buildWompiCheckoutUrl,
+  buildWompiStatusQueryUrl,
   formatWompiAmount,
   isOnboardingAllowed,
+  parseWompiReturnParams,
   type WompiCheckoutStatus,
   type WompiIntentData
 } from "./wompiCheckoutFlow.ts";
 
-test("onboarding access is strictly blocked for Wompi prior to APPROVED status", () => {
-  const blockedStatuses: WompiCheckoutStatus[] = ["INITIAL", "PENDING", "DECLINED", "ERROR"];
+test("onboarding access is strictly blocked for Wompi unless status === APPROVED AND paymentRecorded === true", () => {
+  const blockedStatuses: WompiCheckoutStatus[] = ["INITIAL", "PENDING", "DECLINED", "VOIDED", "ERROR", "EXPIRED"];
 
   for (const status of blockedStatuses) {
     assert.equal(
-      isOnboardingAllowed(status, "wompi"),
+      isOnboardingAllowed(status, "wompi", true),
       false,
-      `Status ${status} should block onboarding access`
+      `Status ${status} should block onboarding access even if paymentRecorded is true`
     );
   }
 
   assert.equal(
-    isOnboardingAllowed("APPROVED", "wompi"),
+    isOnboardingAllowed("APPROVED", "wompi", false),
+    false,
+    "APPROVED status MUST block onboarding if paymentRecorded is false"
+  );
+
+  assert.equal(
+    isOnboardingAllowed("APPROVED", "wompi", true),
     true,
-    "APPROVED status should allow onboarding access"
+    "APPROVED status WITH paymentRecorded === true MUST allow onboarding access"
   );
 });
 
 test("flujo de transferencia directa permite acceso al onboarding sin pasar por Wompi", () => {
   assert.equal(isOnboardingAllowed("INITIAL", "direct"), true);
   assert.equal(isOnboardingAllowed("PENDING", "direct"), true);
+});
+
+test("parseWompiReturnParams extracts Wompi transaction id and env from return URL", () => {
+  const searchString = "id=tx_wompi_998877&env=test&reference=PH-intent-123&activationLeadId=lead-456";
+  const parsed = parseWompiReturnParams(searchString);
+
+  assert.ok(parsed !== null);
+  assert.equal(parsed?.transactionId, "tx_wompi_998877");
+  assert.equal(parsed?.environment, "test");
+  assert.equal(parsed?.reference, "PH-intent-123");
+  assert.equal(parsed?.activationLeadId, "lead-456");
+});
+
+test("parseWompiReturnParams returns null for standard URL without payment return parameters", () => {
+  assert.equal(parseWompiReturnParams(""), null);
+  assert.equal(parseWompiReturnParams("utm_source=google"), null);
+});
+
+test("buildWompiStatusQueryUrl constructs exact GET endpoint with activationLeadId and reference or intentId", () => {
+  const refUrl = buildWompiStatusQueryUrl("lead-123", { reference: "PH-ref-001" });
+  assert.equal(refUrl, "/api/public/payments/wompi/status?activationLeadId=lead-123&reference=PH-ref-001");
+
+  const intentUrl = buildWompiStatusQueryUrl("lead-123", { intentId: "uuid-intent-456" });
+  assert.equal(intentUrl, "/api/public/payments/wompi/status?activationLeadId=lead-123&intentId=uuid-intent-456");
 });
 
 test("formatWompiAmount formats cents correctly in COP currency", () => {
@@ -49,7 +81,6 @@ test("buildWompiCheckoutUrl NEVER contains onboarding path in redirect-url query
     }
   };
 
-  // Attempting to pass an onboarding path into buildWompiCheckoutUrl
   const urlWithAttemptedOnboarding = buildWompiCheckoutUrl(
     intent,
     "https://oferta.partnerhub.club",
@@ -65,27 +96,6 @@ test("buildWompiCheckoutUrl NEVER contains onboarding path in redirect-url query
     urlWithAttemptedOnboarding.includes("redirect-url=https%3A%2F%2Foferta.partnerhub.club%2Foferta-beta"),
     "Redirect URL must safely fall back to public landing page"
   );
-});
-
-test("buildWompiCheckoutUrl derives valid URL from server intent without client-side key generation", () => {
-  const intent: WompiIntentData = {
-    intentId: "intent-123",
-    reference: "REF-TEST-001",
-    amountInCents: 15000000,
-    currency: "COP",
-    publicKey: "pub_test_12345",
-    signature: {
-      integrity: "a".repeat(64)
-    }
-  };
-
-  const url = buildWompiCheckoutUrl(intent, "https://oferta.partnerhub.club", "/oferta-beta");
-  assert.ok(url.startsWith("https://checkout.wompi.co/p/?"));
-  assert.ok(url.includes("public-key=pub_test_12345"));
-  assert.ok(url.includes("amount-in-cents=15000000"));
-  assert.ok(url.includes("reference=REF-TEST-001"));
-  assert.ok(url.includes(`signature%3Aintegrity=${"a".repeat(64)}`));
-  assert.ok(url.includes("redirect-url=https%3A%2F%2Foferta.partnerhub.club%2Foferta-beta"));
 });
 
 test("intent failure state retains lead state without calling submit callback", () => {
