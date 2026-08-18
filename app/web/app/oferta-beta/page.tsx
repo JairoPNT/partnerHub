@@ -9,7 +9,6 @@ import { IncludesSection } from "@/components/beta-landing/IncludesSection";
 import { BetaOfferSection } from "@/components/beta-landing/BetaOfferSection";
 
 import { ActivationForm, FormDataState, WompiIntentData } from "@/components/beta-landing/ActivationForm";
-import { PaymentSection } from "@/components/beta-landing/PaymentSection";
 import { PaymentModal } from "@/components/beta-landing/PaymentModal";
 import { parseWompiReturnParams, type WompiReturnContext } from "@/components/beta-landing/wompiCheckoutFlow";
 import { FaqSection } from "@/components/beta-landing/FaqSection";
@@ -57,8 +56,6 @@ export default function OfertaBetaPage() {
     setOnboardingPath(onboardingPath);
     setWompiIntent(wompiIntent);
     setIsModalOpen(true);
-    // Smooth scroll to payment section on page as well
-    scrollToSection("metodos-pago");
   };
 
   return (
@@ -125,7 +122,6 @@ export default function OfertaBetaPage() {
         <IncludesSection />
         <BetaOfferSection onActivateClick={() => scrollToSection("registro")} />
         <ActivationForm onFormSubmit={handleFormSubmit} />
-        <PaymentSection />
         <FaqSection />
         <FinalCtaSection onActivateClick={() => scrollToSection("registro")} />
       </main>
