@@ -24,6 +24,7 @@
     "test:business-vsl-poster": "node --experimental-strip-types --test server/services/businessVslPoster.test.ts",
     "test:business-vsl-correlation": "node --experimental-strip-types --test server/services/businessProductHeroCorrelation.test.ts server/services/businessVslPoster.test.ts",
     "test:partner-entitlement": "node --experimental-strip-types --test server/services/partnerEcosystemEntitlementCore.test.ts",
+    "test:staged-upgrade-pricing": "node --experimental-strip-types --test server/services/stagedEcosystemUpgradePricingCore.test.ts",
     "test:wompi-observability": "node --experimental-strip-types --test server/services/wompiWebhookObservabilityCore.test.ts",
     "test:wompi-reconciliation": "node --experimental-strip-types --test server/services/wompiReconciliationCore.test.ts",
     "test:wompi-reconciliation-command": "node --experimental-strip-types --test server/services/wompiReconciliationCommandCore.test.ts && node --test scripts/wompi-reconcile-sandbox.test.mjs",
