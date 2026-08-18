@@ -35,4 +35,3 @@ Adaptar el comando `maintenance:wompi-reconcile` al runtime Node desplegado, que
 - APPLY bloqueado sin flag.
 - Pruebas focalizadas y regresiones.
 - ESLint backend/artefacto, build y `git diff --check`.
-
