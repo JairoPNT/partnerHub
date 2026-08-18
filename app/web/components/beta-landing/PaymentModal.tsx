@@ -65,7 +65,7 @@ export function PaymentModal({
   isOpen,
   onClose,
   selectedMethod = "wompi",
-  userFormData,
+  userFormData: _userFormData,
   wompiIntent,
   returnContext,
   onboardingPath
@@ -200,7 +200,7 @@ export function PaymentModal({
           typeof window !== "undefined" ? window.location.origin : undefined,
           resultPath
         );
-        window.open(fallbackUrl, "_blank");
+        window.location.href = fallbackUrl;
       }
     } else {
       const fallbackUrl = buildWompiCheckoutUrl(
@@ -208,7 +208,7 @@ export function PaymentModal({
         typeof window !== "undefined" ? window.location.origin : undefined,
         resultPath
       );
-      window.open(fallbackUrl, "_blank");
+      window.location.href = fallbackUrl;
     }
   };
 
@@ -230,13 +230,12 @@ export function PaymentModal({
             Activación Beta Confirmada
           </div>
 
-          <h3 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl">
-            Instrucciones de Pago
+          <h3 className="mt-3 font-heading text-2xl font-extrabold text-white">
+            Paso Final: Confirmación de Pago
           </h3>
+
           <p className="mt-1 text-sm text-slate-300">
-            {userFormData?.fullName ? `Hola ${userFormData.fullName}, ` : ""}
-            completa tu pago de{" "}
-            <span className="font-bold text-white">{PAYMENT_CONFIG.amount}</span> para activar tu Ecosistema de Producto.
+            Completa la activación seleccionando tu método de pago preferido.
           </p>
 
           <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-300">
@@ -321,35 +320,42 @@ export function PaymentModal({
                   {(wompiStatus === "PENDING" || isPolling) && (
                     <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-800 flex items-center justify-center gap-2">
                       <RefreshCw className="h-4 w-4 animate-spin text-blue-600 shrink-0" />
-                      <span>Verificando estado con Wompi Sandbox en tiempo real...</span>
+                      <span>Procesando / Pendiente — Verificando la transacción con Wompi Sandbox en tiempo real...</span>
                     </div>
                   )}
 
                   {wompiStatus === "APPROVED" && statusResponse?.paymentRecorded && (
                     <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-xs text-emerald-800 font-semibold flex items-center justify-center gap-2">
                       <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span>¡Pago Aprobado y Confirmado por Servidor! Tu transacción está asentada.</span>
+                      <span>Aprobado — ¡Pago Aprobado y Confirmado por Servidor! Tu transacción está asentada.</span>
                     </div>
                   )}
 
                   {wompiStatus === "APPROVED" && !statusResponse?.paymentRecorded && (
                     <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center justify-center gap-2">
                       <RefreshCw className="h-4 w-4 animate-spin text-amber-600 shrink-0" />
-                      <span>Pago Aprobado por Wompi Sandbox. Confirmando asentamiento financiero en servidor...</span>
+                      <span>Aprobado (Asentando) — Pago Aprobado por Wompi Sandbox. Confirmando asentamiento financiero en servidor...</span>
                     </div>
                   )}
 
-                  {(wompiStatus === "DECLINED" || wompiStatus === "VOIDED" || wompiStatus === "EXPIRED") && (
+                  {(wompiStatus === "DECLINED" || wompiStatus === "VOIDED") && (
                     <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-center justify-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-rose-600 shrink-0" />
-                      <span>Transacción {wompiStatus.toLowerCase()}. Reintenta el pago o usa transferencia directa.</span>
+                      <span>Rechazado — Transacción rechazada. Reintenta el pago o usa transferencia directa.</span>
+                    </div>
+                  )}
+
+                  {wompiStatus === "EXPIRED" && (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center justify-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>Tiempo agotado — La sesión de pago en Wompi expiró. Genera una nueva intención de pago.</span>
                     </div>
                   )}
 
                   {wompiStatus === "ERROR" && (
                     <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center justify-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                      <span>No pudimos obtener la actualización automática. Usa el botón de verificación manual.</span>
+                      <span>Error — No pudimos verificar automáticamente el estado. Usa el botón 'Verificar Estado' para reintentar.</span>
                     </div>
                   )}
 
