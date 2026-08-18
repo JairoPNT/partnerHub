@@ -8,6 +8,8 @@ Initial placeholder scripts are intentionally lightweight so the scaffold stays 
 
 The controlled command defaults to `DRY_RUN` and requires one authorized reference:
 
+The deployed runner uses Node 20. The command is a standalone `.mjs` artifact and does not require TypeScript support or experimental Node flags.
+
 ```powershell
 npm.cmd run maintenance:wompi-reconcile -- --reference PH-640eb48c-a676-48ca-baec-455b2170397e
 ```

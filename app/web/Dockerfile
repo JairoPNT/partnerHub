@@ -21,6 +21,7 @@ COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/standalone ./
 COPY --from=builder /app/.next/static ./.next/static
 COPY --from=builder /app/scripts/reconcile-claudia-heroes.mjs ./scripts/reconcile-claudia-heroes.mjs
+COPY --from=builder /app/scripts/wompi-reconcile-sandbox.mjs ./scripts/wompi-reconcile-sandbox.mjs
 
 EXPOSE 3000
 CMD ["node", "server.js"]
