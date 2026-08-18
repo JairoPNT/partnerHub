@@ -38,8 +38,8 @@ export const manualPaymentCreateSchema = z.object({
   ecosystemTypes: z.array(manualPaymentEcosystemSchema).min(1).optional(),
   pricingMode: manualPaymentPricingModeSchema.optional()
 }).superRefine((value, context) => {
-  if (value.method !== "WOMPI" && (!value.ecosystemTypes || !value.pricingMode)) {
-    context.addIssue({ code: z.ZodIssueCode.custom, message: "Manual payments require ecosystemTypes and pricingMode." });
+  if (Boolean(value.ecosystemTypes) !== Boolean(value.pricingMode)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "ecosystemTypes and pricingMode must be provided together." });
   }
   if (value.ecosystemTypes && new Set(value.ecosystemTypes).size !== value.ecosystemTypes.length) {
     context.addIssue({ code: z.ZodIssueCode.custom, path: ["ecosystemTypes"], message: "ecosystemTypes must not contain duplicates." });
@@ -163,6 +163,17 @@ export function createPaymentRecord(
     ...(commercialSnapshot ? { commercialSnapshot, regenerationRequired } : {}),
     createdAt: context.now,
     updatedAt: context.now
+  };
+}
+
+export function paymentEcosystemAssignmentState(payment: ManualPaymentRecord) {
+  const assigned = Boolean(payment.commercialSnapshot);
+  return {
+    ecosystemTypes: payment.commercialSnapshot?.ecosystemTypes ?? [],
+    commercialSnapshot: payment.commercialSnapshot ?? null,
+    commercialState: assigned ? "KNOWN" as const : "UNKNOWN" as const,
+    ecosystemAssignmentRequired: payment.method !== "WOMPI" && !assigned,
+    regenerationRequired: payment.regenerationRequired ?? false
   };
 }
 

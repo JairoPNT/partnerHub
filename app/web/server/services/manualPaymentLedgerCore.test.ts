@@ -10,6 +10,7 @@ import {
   listPaymentRecords,
   manualPaymentCreateSchema,
   paymentListFilterSchema,
+  paymentEcosystemAssignmentState,
   voidPaymentRecord,
   type ManualPaymentRecord
 } from "./manualPaymentLedgerCore.ts";
@@ -184,4 +185,29 @@ test("marks regeneration only for newly enabled ecosystems and never mutates his
   });
   assert.equal(repeated.regenerationRequired, false);
   assert.equal(JSON.stringify(historical), before);
+});
+
+test("accepts the legacy manual payload without inventing ecosystems or regeneration", () => {
+  const { ecosystemTypes: _ecosystems, pricingMode: _pricingMode, ...legacyInput } = baseInput;
+  const parsed = manualPaymentCreateSchema.parse(legacyInput);
+  const record = createPaymentRecord(parsed, {
+    id: "legacy-payment",
+    now: "2026-08-18T12:00:00.000Z",
+    siteId: "partner-test"
+  });
+  assert.equal(record.commercialSnapshot, undefined);
+  assert.equal(record.regenerationRequired, undefined);
+  assert.deepEqual(paymentEcosystemAssignmentState(record), {
+    ecosystemTypes: [],
+    commercialSnapshot: null,
+    commercialState: "UNKNOWN",
+    ecosystemAssignmentRequired: true,
+    regenerationRequired: false
+  });
+});
+
+test("rejects partial rollout payloads without changing complete new payload behavior", () => {
+  assert.equal(manualPaymentCreateSchema.safeParse({ ...baseInput, pricingMode: undefined }).success, false);
+  assert.equal(manualPaymentCreateSchema.safeParse({ ...baseInput, ecosystemTypes: undefined }).success, false);
+  assert.equal(manualPaymentCreateSchema.safeParse(baseInput).success, true);
 });

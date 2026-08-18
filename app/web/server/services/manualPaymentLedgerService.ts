@@ -11,6 +11,7 @@ import {
   listPaymentRecords,
   manualPaymentCreateSchema,
   paymentListFilterSchema,
+  paymentEcosystemAssignmentState,
   paymentVoidSchema,
   voidPaymentRecord,
   type ManualPaymentCreateInput,
@@ -60,9 +61,7 @@ async function createUnlocked(input: ManualPaymentCreateInput) {
   if (existing) return {
     payment: existing,
     paymentId: existing.id,
-    ecosystemTypes: existing.commercialSnapshot?.ecosystemTypes ?? [],
-    commercialSnapshot: existing.commercialSnapshot ?? null,
-    regenerationRequired: existing.regenerationRequired ?? false,
+    ...paymentEcosystemAssignmentState(existing),
     idempotent: true
   };
 
@@ -77,9 +76,7 @@ async function createUnlocked(input: ManualPaymentCreateInput) {
   return {
     payment,
     paymentId: payment.id,
-    ecosystemTypes: payment.commercialSnapshot?.ecosystemTypes ?? [],
-    commercialSnapshot: payment.commercialSnapshot ?? null,
-    regenerationRequired: payment.regenerationRequired ?? false,
+    ...paymentEcosystemAssignmentState(payment),
     idempotent: false
   };
 }
