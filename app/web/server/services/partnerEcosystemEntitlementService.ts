@@ -5,6 +5,7 @@ import { z } from "zod";
 import { activationLeadService } from "@/server/services/activationLeadService";
 import { buildPartnerEcosystemEntitlement } from "@/server/services/partnerEcosystemEntitlementCore";
 import { partnerEcosystemTargetReader } from "@/server/services/partnerEcosystemTargetReader";
+import { manualPaymentLedgerService } from "@/server/services/manualPaymentLedgerService";
 
 export const partnerEcosystemEntitlementQuerySchema = z.object({
   activationLeadId: z.string().uuid().optional(),
@@ -20,15 +21,21 @@ export const partnerEcosystemEntitlementQuerySchema = z.object({
 
 async function get(rawQuery: unknown) {
   const query = partnerEcosystemEntitlementQuerySchema.parse(rawQuery);
-  const [leads, targets] = await Promise.all([
+  const [leads, targets, paymentResult] = await Promise.all([
     activationLeadService.list({ includeArchived: true }),
-    partnerEcosystemTargetReader.list()
+    partnerEcosystemTargetReader.list(),
+    manualPaymentLedgerService.list({ status: "CONFIRMED" })
   ]);
   const lead = query.activationLeadId
     ? leads.find((candidate) => candidate.id === query.activationLeadId)
     : leads.find((candidate) => candidate.siteId === query.siteId) ??
       leads.find((candidate) => candidate.id === targets.find((target) => target.siteId === query.siteId)?.ownerKey);
-  return lead ? buildPartnerEcosystemEntitlement(lead, targets) : null;
+  return lead ? buildPartnerEcosystemEntitlement({
+    ...lead,
+    additionalCommercialSnapshots: paymentResult.payments
+      .filter((payment) => payment.activationLeadId === lead.id)
+      .flatMap((payment) => payment.commercialSnapshot ? [payment.commercialSnapshot] : [])
+  }, targets) : null;
 }
 
 export const partnerEcosystemEntitlementService = { get };

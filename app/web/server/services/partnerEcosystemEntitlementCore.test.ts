@@ -126,3 +126,23 @@ test("the entitlement calculation does not mutate lead, snapshot, or targets", (
   buildPartnerEcosystemEntitlement(inputLead, targets);
   assert.equal(JSON.stringify({ inputLead, targets }), before);
 });
+
+test("confirmed manual payment snapshots extend entitlement without publishing", () => {
+  const inputLead = lead("PRODUCT_ONLY");
+  inputLead.additionalCommercialSnapshots = [{
+    version: 1,
+    offerCode: "NEGOTIATED_BUSINESS_BRAND",
+    ecosystemTypes: ["BUSINESS", "PERSONAL_BRAND"],
+    pricingMode: "MANUAL_NEGOTIATED",
+    amountCop: 200000,
+    currency: "COP",
+    selectedAt: "2026-08-18T13:00:00.000Z"
+  }];
+  const result = buildPartnerEcosystemEntitlement(inputLead, [target("PRODUCT", "product.partner.pro")]);
+  assert.deepEqual(result.includedEcosystems, ["PRODUCT", "BUSINESS", "PERSONAL_BRAND"]);
+  assert.equal(result.regenerationRequired, true);
+  assert.deepEqual(result.regenerationReasons, [
+    "TARGET_MISSING:BUSINESS",
+    "TARGET_MISSING:PERSONAL_BRAND"
+  ]);
+});

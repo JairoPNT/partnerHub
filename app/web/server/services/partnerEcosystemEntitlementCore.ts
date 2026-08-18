@@ -13,6 +13,16 @@ const entitlementSnapshotSchema = z.object({
   selectedAt: z.string().datetime({ offset: true })
 }).strict();
 
+const manualPaymentSnapshotSchema = z.object({
+  version: z.literal(1),
+  offerCode: z.string().nullable(),
+  ecosystemTypes: z.array(z.enum(["PRODUCT", "BUSINESS", "PERSONAL_BRAND"])).min(1),
+  pricingMode: z.enum(["CATALOG", "MANUAL_NEGOTIATED"]),
+  amountCop: z.number().int().positive(),
+  currency: z.literal("COP"),
+  selectedAt: z.string().datetime({ offset: true })
+}).strict();
+
 type EntitlementSnapshot = z.infer<typeof entitlementSnapshotSchema>;
 
 export type EntitlementLead = {
@@ -20,6 +30,7 @@ export type EntitlementLead = {
   siteId?: string | null;
   offerCode?: string;
   offerSnapshot?: unknown;
+  additionalCommercialSnapshots?: unknown[];
   onboardingData?: { domain?: string };
 };
 
@@ -65,11 +76,15 @@ function expectedHost(ecosystemType: EcosystemType, domain: string | null) {
 
 export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTargets: EntitlementTarget[]) {
   const parsedSnapshot = entitlementSnapshotSchema.safeParse(lead.offerSnapshot);
+  const manualSnapshots = (lead.additionalCommercialSnapshots ?? []).flatMap((snapshot) => {
+    const parsed = manualPaymentSnapshotSchema.safeParse(snapshot);
+    return parsed.success ? [parsed.data] : [];
+  });
   const existingTargets = allTargets
     .filter((target) => target.ownerKey === lead.id)
     .map((target) => ({ ...target }));
 
-  if (!parsedSnapshot.success) {
+  if (!parsedSnapshot.success && manualSnapshots.length === 0) {
     return {
       activationLeadId: lead.id,
       commercialState: "UNKNOWN" as const,
@@ -86,8 +101,13 @@ export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTarge
     };
   }
 
-  const snapshot: EntitlementSnapshot = parsedSnapshot.data;
-  const includedEcosystems = [...snapshot.ecosystemTypes];
+  const activationSnapshot: EntitlementSnapshot | null = parsedSnapshot.success ? parsedSnapshot.data : null;
+  const selectedSnapshot = manualSnapshots.at(-1) ?? activationSnapshot;
+  if (!selectedSnapshot) throw new Error("Commercial snapshot selection failed.");
+  const includedEcosystems = [...new Set([
+    ...(activationSnapshot?.ecosystemTypes ?? []),
+    ...manualSnapshots.flatMap((snapshot) => snapshot.ecosystemTypes)
+  ])];
   const root = rootEcosystem(includedEcosystems);
   const domain = baseDomain(lead, existingTargets);
   const expectedTargets: ExpectedEntitlementTarget[] = includedEcosystems.map((ecosystemType) => ({
@@ -115,8 +135,12 @@ export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTarge
   return {
     activationLeadId: lead.id,
     commercialState: "KNOWN" as const,
-    offerCode: snapshot.offerCode,
-    offerSnapshot: { ...snapshot, ecosystemTypes: [...snapshot.ecosystemTypes] },
+    offerCode: selectedSnapshot.offerCode,
+    offerSnapshot: { ...selectedSnapshot, ecosystemTypes: [...selectedSnapshot.ecosystemTypes] },
+    commercialSnapshots: [
+      ...(activationSnapshot ? [{ ...activationSnapshot, ecosystemTypes: [...activationSnapshot.ecosystemTypes] }] : []),
+      ...manualSnapshots.map((snapshot) => ({ ...snapshot, ecosystemTypes: [...snapshot.ecosystemTypes] }))
+    ],
     includedEcosystems,
     rootEcosystem: root,
     rootRedirectTarget,

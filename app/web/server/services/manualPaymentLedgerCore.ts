@@ -18,6 +18,8 @@ export const paymentMethodSchema = z.enum([
 ]);
 
 export const paymentStatusSchema = z.enum(["CONFIRMED", "VOIDED"]);
+export const manualPaymentEcosystemSchema = z.enum(["PRODUCT", "BUSINESS", "PERSONAL_BRAND"]);
+export const manualPaymentPricingModeSchema = z.enum(["CATALOG", "MANUAL_NEGOTIATED"]);
 
 const isoTimestampSchema = z.string().datetime({ offset: true });
 const optionalText = (max: number) => z.string().trim().min(1).max(max).optional();
@@ -31,8 +33,43 @@ export const manualPaymentCreateSchema = z.object({
   paidAt: isoTimestampSchema,
   reference: optionalText(160),
   notes: optionalText(2000),
-  idempotencyKey: optionalText(160)
+  idempotencyKey: optionalText(160),
+  offerCode: optionalText(80),
+  ecosystemTypes: z.array(manualPaymentEcosystemSchema).min(1).optional(),
+  pricingMode: manualPaymentPricingModeSchema.optional()
+}).superRefine((value, context) => {
+  if (Boolean(value.ecosystemTypes) !== Boolean(value.pricingMode)) {
+    context.addIssue({ code: z.ZodIssueCode.custom, message: "ecosystemTypes and pricingMode must be provided together." });
+  }
+  if (value.ecosystemTypes && new Set(value.ecosystemTypes).size !== value.ecosystemTypes.length) {
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ["ecosystemTypes"], message: "ecosystemTypes must not contain duplicates." });
+  }
+  if (value.pricingMode === "CATALOG") {
+    const catalog = {
+      PRODUCT_ONLY: { amountCop: 180000, ecosystemTypes: ["PRODUCT"] },
+      BUSINESS_ONLY: { amountCop: 180000, ecosystemTypes: ["BUSINESS"] },
+      PERSONAL_BRAND_ONLY: { amountCop: 100000, ecosystemTypes: ["PERSONAL_BRAND"] },
+      PLAN_360: { amountCop: 350000, ecosystemTypes: ["PRODUCT", "BUSINESS", "PERSONAL_BRAND"] }
+    } as const;
+    const offer = value.offerCode ? catalog[value.offerCode as keyof typeof catalog] : undefined;
+    const matchesEcosystems = offer && value.ecosystemTypes &&
+      value.ecosystemTypes.length === offer.ecosystemTypes.length &&
+      value.ecosystemTypes.every((ecosystem) => (offer.ecosystemTypes as readonly string[]).includes(ecosystem));
+    if (!offer || value.amountCop !== offer.amountCop || !matchesEcosystems) {
+      context.addIssue({ code: z.ZodIssueCode.custom, message: "CATALOG payment must match its server catalog offer." });
+    }
+  }
 });
+
+export type ManualPaymentCommercialSnapshot = {
+  version: 1;
+  offerCode: string | null;
+  ecosystemTypes: ReadonlyArray<z.infer<typeof manualPaymentEcosystemSchema>>;
+  pricingMode: z.infer<typeof manualPaymentPricingModeSchema>;
+  amountCop: number;
+  currency: "COP";
+  selectedAt: string;
+};
 
 export const paymentListFilterSchema = z.object({
   activationLeadId: z.string().trim().min(1).max(160).optional(),
@@ -67,6 +104,8 @@ export type ManualPaymentRecord = Omit<ManualPaymentCreateInput, "siteId"> & {
   updatedAt: string;
   voidedAt?: string;
   voidReason?: string;
+  commercialSnapshot?: ManualPaymentCommercialSnapshot;
+  regenerationRequired?: boolean;
 };
 
 export type PaymentListResult = {
@@ -96,16 +135,45 @@ export function normalizePaymentInput(input: ManualPaymentCreateInput) {
 
 export function createPaymentRecord(
   input: ManualPaymentCreateInput,
-  context: { siteId: string | null; now: string; id: string }
+  context: { siteId: string | null; now: string; id: string; existingRecords?: ManualPaymentRecord[] }
 ): ManualPaymentRecord {
   const parsed = normalizePaymentInput(input);
+  const commercialSnapshot = parsed.ecosystemTypes && parsed.pricingMode
+    ? Object.freeze({
+        version: 1 as const,
+        offerCode: parsed.offerCode ?? null,
+        ecosystemTypes: Object.freeze([...parsed.ecosystemTypes]),
+        pricingMode: parsed.pricingMode,
+        amountCop: parsed.amountCop,
+        currency: "COP" as const,
+        selectedAt: context.now
+      })
+    : undefined;
+  const previouslyConfirmed = new Set((context.existingRecords ?? [])
+    .filter((payment) => payment.status === "CONFIRMED")
+    .flatMap((payment) => payment.commercialSnapshot?.ecosystemTypes ?? []));
+  const regenerationRequired = commercialSnapshot
+    ? commercialSnapshot.ecosystemTypes.some((ecosystem) => !previouslyConfirmed.has(ecosystem))
+    : undefined;
   return {
     ...parsed,
     siteId: context.siteId,
     id: context.id,
     status: "CONFIRMED",
+    ...(commercialSnapshot ? { commercialSnapshot, regenerationRequired } : {}),
     createdAt: context.now,
     updatedAt: context.now
+  };
+}
+
+export function paymentEcosystemAssignmentState(payment: ManualPaymentRecord) {
+  const assigned = Boolean(payment.commercialSnapshot);
+  return {
+    ecosystemTypes: payment.commercialSnapshot?.ecosystemTypes ?? [],
+    commercialSnapshot: payment.commercialSnapshot ?? null,
+    commercialState: assigned ? "KNOWN" as const : "UNKNOWN" as const,
+    ecosystemAssignmentRequired: payment.method !== "WOMPI" && !assigned,
+    regenerationRequired: payment.regenerationRequired ?? false
   };
 }
 

@@ -10,6 +10,7 @@ import {
   listPaymentRecords,
   manualPaymentCreateSchema,
   paymentListFilterSchema,
+  paymentEcosystemAssignmentState,
   voidPaymentRecord,
   type ManualPaymentRecord
 } from "./manualPaymentLedgerCore.ts";
@@ -22,7 +23,9 @@ const baseInput = {
   method: "BANCOLOMBIA" as const,
   paidAt: "2026-08-11T02:30:00.000Z",
   reference: "REF-001",
-  notes: "Test payment"
+  notes: "Test payment",
+  ecosystemTypes: ["PRODUCT"] as ["PRODUCT"],
+  pricingMode: "MANUAL_NEGOTIATED" as const
 };
 
 function payment(overrides: Partial<ManualPaymentRecord> = {}): ManualPaymentRecord {
@@ -114,4 +117,97 @@ test("repeated voiding is idempotent and does not change the original audit time
 test("rejects inverted or invalid date bounds", () => {
   assert.equal(paymentListFilterSchema.safeParse({ from: "2026-08-12", to: "2026-08-11" }).success, false);
   assert.equal(paymentListFilterSchema.safeParse({ from: "2026-02-30" }).success, false);
+});
+
+test("persists one or multiple explicitly assigned ecosystems in an immutable server snapshot", () => {
+  const record = createPaymentRecord({
+    ...baseInput,
+    ecosystemTypes: ["PRODUCT", "BUSINESS"],
+    offerCode: "NEGOTIATED_DUAL"
+  }, {
+    id: "payment-commercial",
+    now: "2026-08-18T12:00:00.000Z",
+    siteId: "partner-test"
+  });
+  assert.deepEqual(record.commercialSnapshot, {
+    version: 1,
+    offerCode: "NEGOTIATED_DUAL",
+    ecosystemTypes: ["PRODUCT", "BUSINESS"],
+    pricingMode: "MANUAL_NEGOTIATED",
+    amountCop: 125000,
+    currency: "COP",
+    selectedAt: "2026-08-18T12:00:00.000Z"
+  });
+  assert.equal(record.regenerationRequired, true);
+  assert.equal(Object.isFrozen(record.commercialSnapshot), true);
+  assert.equal(Object.isFrozen(record.commercialSnapshot?.ecosystemTypes), true);
+});
+
+test("keeps a negotiated amount even when it differs from catalog pricing", () => {
+  const parsed = manualPaymentCreateSchema.parse({
+    ...baseInput,
+    amountCop: 73000,
+    ecosystemTypes: ["PERSONAL_BRAND"],
+    offerCode: "CUSTOM_BRAND",
+    pricingMode: "MANUAL_NEGOTIATED"
+  });
+  const record = createPaymentRecord(parsed, { id: "negotiated", now: "2026-08-18T12:00:00.000Z", siteId: null });
+  assert.equal(record.amountCop, 73000);
+  assert.equal(record.commercialSnapshot?.amountCop, 73000);
+});
+
+test("rejects empty, duplicate and catalog-inconsistent ecosystem assignments", () => {
+  assert.equal(manualPaymentCreateSchema.safeParse({ ...baseInput, ecosystemTypes: [] }).success, false);
+  assert.equal(manualPaymentCreateSchema.safeParse({ ...baseInput, ecosystemTypes: ["PRODUCT", "PRODUCT"] }).success, false);
+  assert.equal(manualPaymentCreateSchema.safeParse({
+    ...baseInput,
+    pricingMode: "CATALOG",
+    offerCode: "PRODUCT_ONLY",
+    amountCop: 1
+  }).success, false);
+  assert.equal(manualPaymentCreateSchema.safeParse({
+    ...baseInput,
+    pricingMode: "CATALOG",
+    offerCode: "PLAN_360",
+    amountCop: 350000,
+    ecosystemTypes: ["PERSONAL_BRAND", "PRODUCT", "BUSINESS"]
+  }).success, true);
+});
+
+test("marks regeneration only for newly enabled ecosystems and never mutates history", () => {
+  const historical = payment({ id: "historical" });
+  const before = JSON.stringify(historical);
+  const repeated = createPaymentRecord(baseInput, {
+    id: "repeated",
+    now: "2026-08-18T12:00:00.000Z",
+    siteId: "partner-test",
+    existingRecords: [historical]
+  });
+  assert.equal(repeated.regenerationRequired, false);
+  assert.equal(JSON.stringify(historical), before);
+});
+
+test("accepts the legacy manual payload without inventing ecosystems or regeneration", () => {
+  const { ecosystemTypes: _ecosystems, pricingMode: _pricingMode, ...legacyInput } = baseInput;
+  const parsed = manualPaymentCreateSchema.parse(legacyInput);
+  const record = createPaymentRecord(parsed, {
+    id: "legacy-payment",
+    now: "2026-08-18T12:00:00.000Z",
+    siteId: "partner-test"
+  });
+  assert.equal(record.commercialSnapshot, undefined);
+  assert.equal(record.regenerationRequired, undefined);
+  assert.deepEqual(paymentEcosystemAssignmentState(record), {
+    ecosystemTypes: [],
+    commercialSnapshot: null,
+    commercialState: "UNKNOWN",
+    ecosystemAssignmentRequired: true,
+    regenerationRequired: false
+  });
+});
+
+test("rejects partial rollout payloads without changing complete new payload behavior", () => {
+  assert.equal(manualPaymentCreateSchema.safeParse({ ...baseInput, pricingMode: undefined }).success, false);
+  assert.equal(manualPaymentCreateSchema.safeParse({ ...baseInput, ecosystemTypes: undefined }).success, false);
+  assert.equal(manualPaymentCreateSchema.safeParse(baseInput).success, true);
 });

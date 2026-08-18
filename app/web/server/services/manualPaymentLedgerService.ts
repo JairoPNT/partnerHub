@@ -11,6 +11,7 @@ import {
   listPaymentRecords,
   manualPaymentCreateSchema,
   paymentListFilterSchema,
+  paymentEcosystemAssignmentState,
   paymentVoidSchema,
   voidPaymentRecord,
   type ManualPaymentCreateInput,
@@ -57,12 +58,27 @@ async function createUnlocked(input: ManualPaymentCreateInput) {
 
   const payments = await readPayments();
   const existing = findIdempotentPayment(payments, parsed);
-  if (existing) return { payment: existing, idempotent: true };
+  if (existing) return {
+    payment: existing,
+    paymentId: existing.id,
+    ...paymentEcosystemAssignmentState(existing),
+    idempotent: true
+  };
 
   const now = new Date().toISOString();
-  const payment = createPaymentRecord(parsed, { id: randomUUID(), now, siteId: lead.siteId ?? null });
+  const payment = createPaymentRecord(parsed, {
+    id: randomUUID(),
+    now,
+    siteId: lead.siteId ?? null,
+    existingRecords: payments.filter((record) => record.activationLeadId === parsed.activationLeadId)
+  });
   await writePayments([...payments, payment]);
-  return { payment, idempotent: false };
+  return {
+    payment,
+    paymentId: payment.id,
+    ...paymentEcosystemAssignmentState(payment),
+    idempotent: false
+  };
 }
 
 async function create(input: ManualPaymentCreateInput) {
