@@ -452,7 +452,11 @@
       items = Array.from({ length: 4 }, (_, index) => `${baseUrl}business-0${index + 1}.mp4`);
     }
 
-    const doubleVideos = [...items, ...items];
+    let baseItems = [...items];
+    while (baseItems.length < 12) {
+      baseItems = [...baseItems, ...items];
+    }
+    const doubleVideos = [...baseItems, ...baseItems];
 
     testimonialsGrid.className = 'business-video-carousel';
     testimonialsGrid.textContent = ''; // Limpieza segura

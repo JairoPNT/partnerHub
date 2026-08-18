@@ -1529,7 +1529,7 @@ body {
   display: flex;
   width: max-content;
   gap: 18px;
-  animation: business-video-marquee 28s linear infinite;
+  animation: business-video-marquee 42s linear infinite;
 }
 
 .business-video-carousel:hover .business-video-track {
