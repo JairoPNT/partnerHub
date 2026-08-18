@@ -146,9 +146,10 @@ const CONFIG = {
     subtitle: 'Escucha experiencias, aprendizajes y puntos de vista de personas que han conocido el sistema, los productos y la forma de trabajo del equipo.',
     videoCarousel: {
       items: [
-        // Se usarán URLs fallback a producto/v1 si está vacío, pero se pueden configurar aquí
-        // Asegurarse de usar HTTPS siempre
-        // 'https://media.partnerhub.club/comunes/producto/v1/videos/v01.mp4'
+        'https://media.partnerhub.club/comunes/business/v1/testimonials/business-01.mp4',
+        'https://media.partnerhub.club/comunes/business/v1/testimonials/business-02.mp4',
+        'https://media.partnerhub.club/comunes/business/v1/testimonials/business-03.mp4',
+        'https://media.partnerhub.club/comunes/business/v1/testimonials/business-04.mp4'
       ]
     },
     items: [] // Se mantiene la propiedad vacía para compatibilidad si alguna lógica lo revisa

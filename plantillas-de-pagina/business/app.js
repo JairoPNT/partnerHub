@@ -448,8 +448,8 @@
 
     // Fallback if empty or all filtered out
     if (items.length === 0) {
-      const baseUrl = 'https://media.partnerhub.club/comunes/producto/v1/';
-      items = Array.from({ length: 10 }, (_, index) => `${baseUrl}videos/v${String(index + 1).padStart(2, '0')}.mp4`);
+      const baseUrl = 'https://media.partnerhub.club/comunes/business/v1/testimonials/';
+      items = Array.from({ length: 4 }, (_, index) => `${baseUrl}business-0${index + 1}.mp4`);
     }
 
     const doubleVideos = [...items, ...items];
