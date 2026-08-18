@@ -35,18 +35,20 @@ export type EntitlementTarget = {
 
 export type ExpectedEntitlementTarget = {
   ecosystemType: EcosystemType;
-  role: "ROOT" | "SUBDOMAIN";
+  role: "SUBDOMAIN";
   publicHost: string | null;
 };
 
-const labels: Partial<Record<EcosystemType, string>> = {
-  PRODUCT: "producto",
-  BUSINESS: "negocio"
+const labels: Record<EcosystemType, string> = {
+  PRODUCT: "product",
+  BUSINESS: "business",
+  PERSONAL_BRAND: "brand"
 };
 
 function rootEcosystem(included: EcosystemType[]) {
+  if (included.length === 1) return included[0] ?? null;
   if (included.includes("PERSONAL_BRAND")) return "PERSONAL_BRAND" as const;
-  return included.length === 1 ? included[0] ?? null : null;
+  return included.includes("PRODUCT") ? "PRODUCT" as const : null;
 }
 
 function baseDomain(lead: EntitlementLead, targets: EntitlementTarget[]) {
@@ -56,11 +58,9 @@ function baseDomain(lead: EntitlementLead, targets: EntitlementTarget[]) {
   return domains.length === 1 ? domains[0] : null;
 }
 
-function expectedHost(ecosystemType: EcosystemType, root: EcosystemType | null, domain: string | null) {
+function expectedHost(ecosystemType: EcosystemType, domain: string | null) {
   if (!domain) return null;
-  if (ecosystemType === root) return domain;
-  const label = labels[ecosystemType];
-  return label ? `${label}.${domain}` : null;
+  return `${labels[ecosystemType]}.${domain}`;
 }
 
 export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTargets: EntitlementTarget[]) {
@@ -77,6 +77,7 @@ export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTarge
       offerSnapshot: null,
       includedEcosystems: [] as EcosystemType[],
       rootEcosystem: null,
+      rootRedirectTarget: null,
       expectedTargets: [] as ExpectedEntitlementTarget[],
       existingTargets,
       missingTargets: [] as ExpectedEntitlementTarget[],
@@ -91,9 +92,13 @@ export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTarge
   const domain = baseDomain(lead, existingTargets);
   const expectedTargets: ExpectedEntitlementTarget[] = includedEcosystems.map((ecosystemType) => ({
     ecosystemType,
-    role: ecosystemType === root ? "ROOT" : "SUBDOMAIN",
-    publicHost: expectedHost(ecosystemType, root, domain)
+    role: "SUBDOMAIN",
+    publicHost: expectedHost(ecosystemType, domain)
   }));
+  const rootRedirectHost = root === null ? null : expectedHost(root, domain);
+  const rootRedirectTarget = root === null || rootRedirectHost === null
+    ? null
+    : { ecosystemType: root, publicHost: rootRedirectHost };
   const missingTargets = expectedTargets.filter((expected) => !existingTargets.some((existing) =>
     existing.ecosystemType === expected.ecosystemType &&
     (expected.publicHost === null || existing.publicHost === expected.publicHost)
@@ -114,6 +119,7 @@ export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTarge
     offerSnapshot: { ...snapshot, ecosystemTypes: [...snapshot.ecosystemTypes] },
     includedEcosystems,
     rootEcosystem: root,
+    rootRedirectTarget,
     expectedTargets,
     existingTargets,
     missingTargets,
