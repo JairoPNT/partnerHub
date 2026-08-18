@@ -68,7 +68,7 @@ export function resolveWompiSandboxConfig(source: NodeJS.ProcessEnv) {
   ) {
     throw new Error("Wompi Sandbox credentials are invalid for the configured environment.");
   }
-  return { publicKey, integritySecret, eventsSecret };
+  return { publicKey, privateKey, integritySecret, eventsSecret };
 }
 
 export function copToAmountInCents(amountCop: number) {

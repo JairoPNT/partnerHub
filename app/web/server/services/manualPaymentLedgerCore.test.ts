@@ -64,6 +64,19 @@ test("returns the existing payment for a repeated idempotency key", () => {
   assert.equal(findIdempotentPayment([original], input), null);
 });
 
+test("prevents two WOMPI payments for the same lead and reference", () => {
+  const wompiInput = { ...baseInput, method: "WOMPI" as const };
+  const first = createPaymentRecord(wompiInput, {
+    id: "payment-1",
+    now: "2026-08-11T12:00:00.000Z",
+    siteId: null
+  });
+  assert.equal(findIdempotentPayment([first], {
+    ...wompiInput,
+    idempotencyKey: "wompi:different-transaction"
+  })?.id, "payment-1");
+});
+
 test("filters by lead and Bogota calendar dates, and totals only confirmed records", () => {
   const records = [
     payment(),

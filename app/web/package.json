@@ -21,6 +21,8 @@
     "test:dashboard-metrics": "node --experimental-strip-types --test server/services/dashboardFinancialMetricsCore.test.ts",
     "test:wompi-sandbox": "node --experimental-strip-types --test server/services/wompiSandboxCore.test.ts",
     "test:wompi-status": "node --experimental-strip-types --test server/services/wompiIntentStatusCore.test.ts",
+    "test:wompi-observability": "node --experimental-strip-types --test server/services/wompiWebhookObservabilityCore.test.ts",
+    "test:wompi-reconciliation": "node --experimental-strip-types --test server/services/wompiReconciliationCore.test.ts",
     "test:claudia-hero-reconciliation": "node --test scripts/reconcile-claudia-heroes.test.mjs",
     "test:referral-cleanup": "node --test scripts/cleanup-jairo-pinto-test-referrals.test.mjs",
     "maintenance:cleanup-test-referrals": "node scripts/cleanup-jairo-pinto-test-referrals.mjs",

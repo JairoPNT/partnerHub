@@ -44,7 +44,9 @@ async function writePayments(payments: ManualPaymentRecord[]) {
   await rename(temporary, target);
 }
 
-async function create(input: ManualPaymentCreateInput) {
+let createQueue: Promise<void> = Promise.resolve();
+
+async function createUnlocked(input: ManualPaymentCreateInput) {
   const parsed = manualPaymentCreateSchema.parse(input);
   const lead = await activationLeadService.getById(parsed.activationLeadId);
   if (!lead) throw new Error(`Activation lead ${parsed.activationLeadId} was not found.`);
@@ -61,6 +63,12 @@ async function create(input: ManualPaymentCreateInput) {
   const payment = createPaymentRecord(parsed, { id: randomUUID(), now, siteId: lead.siteId ?? null });
   await writePayments([...payments, payment]);
   return { payment, idempotent: false };
+}
+
+async function create(input: ManualPaymentCreateInput) {
+  const operation = createQueue.then(() => createUnlocked(input));
+  createQueue = operation.then(() => undefined, () => undefined);
+  return operation;
 }
 
 async function list(filters: PaymentListFilter = {}) {
