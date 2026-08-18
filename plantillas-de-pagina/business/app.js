@@ -82,7 +82,7 @@
       if (cfg.site.title) document.title = cfg.site.title;
       const metaDesc = document.querySelector('meta[name="description"]');
       if (metaDesc && cfg.site.metaDescription) metaDesc.setAttribute('content', cfg.site.metaDescription);
-      
+
       const ogTitle = document.querySelector('meta[property="og:title"]');
       if (ogTitle && cfg.site.ogTitle) ogTitle.setAttribute('content', cfg.site.ogTitle);
 
@@ -114,7 +114,7 @@
     // 4. Social Proof Bar
     const proofAvatarsContainer = document.getElementById('proof-avatars');
     if (proofAvatarsContainer && cfg.socialProof?.avatars && Array.isArray(cfg.socialProof.avatars)) {
-      proofAvatarsContainer.innerHTML = cfg.socialProof.avatars.map((url, i) => 
+      proofAvatarsContainer.innerHTML = cfg.socialProof.avatars.map((url, i) =>
         `<img src="${url}" alt="Miembro ${i + 1}" class="proof-avatar-img">`
       ).join('');
     }
@@ -277,7 +277,7 @@
         btn.addEventListener('click', () => {
           const item = btn.closest('.faq-item');
           const isOpen = item.classList.contains('active');
-          
+
           // Cerrar otros
           faqContainer.querySelectorAll('.faq-item').forEach(other => {
             other.classList.remove('active');
@@ -313,7 +313,9 @@
     const container = document.getElementById('vsl-video-container');
     if (!container) return;
 
-    const embedUrl = vslCfg?.embedUrl || 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ';
+    const embedUrl = vslCfg?.embedUrl || '';
+    const videoUrl = vslCfg?.videoUrl || '';
+    const provider = vslCfg?.provider || 'youtube';
     const videoTitle = vslCfg?.videoTitle || 'Presentación de Negocio';
 
     if (vslCfg?.aspectRatio === '4:3') {
@@ -333,20 +335,39 @@
     // Reproducción al hacer click
     function playVideo() {
       if (container.classList.contains('playing')) return;
-      
-      const separator = embedUrl.includes('?') ? '&' : '?';
-      const autoPlayUrl = `${embedUrl}${separator}autoplay=1&rel=0&modestbranding=1`;
 
-      container.innerHTML = `
-        <iframe 
-          src="${autoPlayUrl}" 
-          title="${videoTitle}" 
-          frameborder="0" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-          allowfullscreen 
-          style="position: absolute; top:0; left:0; width:100%; height:100%; border:none; z-index: 20;">
-        </iframe>
-      `;
+      if (provider === 'custom' && videoUrl) {
+        const video = document.createElement('video');
+        video.src = videoUrl;
+        video.controls = true;
+        video.autoplay = true;
+        video.style.position = 'absolute';
+        video.style.top = '0';
+        video.style.left = '0';
+        video.style.width = '100%';
+        video.style.height = '100%';
+        video.style.border = 'none';
+        video.style.zIndex = '20';
+        video.style.backgroundColor = '#000';
+        video.innerHTML = `Tu navegador no soporta video. <a href="${videoUrl}">Descárgalo aquí</a>.`;
+
+        container.innerHTML = '';
+        container.appendChild(video);
+      } else {
+        const separator = embedUrl.includes('?') ? '&' : '?';
+        const autoPlayUrl = `${embedUrl}${separator}autoplay=1&rel=0&modestbranding=1`;
+
+        container.innerHTML = `
+          <iframe
+            src="${autoPlayUrl}"
+            title="${videoTitle}"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+            style="position: absolute; top:0; left:0; width:100%; height:100%; border:none; z-index: 20;">
+          </iframe>
+        `;
+      }
 
       container.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
       container.style.transition = 'transform 0.5s ease';
@@ -358,17 +379,17 @@
     // Efecto 3D Tilt interactivo
     container.addEventListener('mousemove', (e) => {
       if (container.classList.contains('playing')) return;
-      
+
       const rect = container.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      
+
       const xc = rect.width / 2;
       const yc = rect.height / 2;
-      
-      const angleX = -(y - yc) / 22; 
+
+      const angleX = -(y - yc) / 22;
       const angleY = (x - xc) / 22;
-      
+
       container.style.transform = `perspective(1000px) rotateX(${angleX}deg) rotateY(${angleY}deg) scale(1.015)`;
     });
 

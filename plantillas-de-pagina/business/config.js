@@ -57,14 +57,14 @@ const CONFIG = {
 
   // Presentación Principal en Video
   vsl: {
-    provider: 'youtube', // 'youtube' | 'vimeo' | 'wistia' | 'custom'
-    embedUrl: '',
+    provider: 'custom',
+    videoUrl: 'https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.mp4',
+    thumbnailUrl: 'https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.webp',
     videoTitle: 'Presentación del Modelo de Negocio',
-    aspectRatio: '16:9', // '16:9' | '4:3'
+    aspectRatio: '16:9',
     caption: 'Primero entiende el modelo. Luego decide si quieres una conversación personalizada.',
     durationText: 'Ver la información completa',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80',
-    autoPlay: true
+    autoPlay: false
   },
 
   // Comparativa: Modelo Tradicional vs Distribución Apalancada
