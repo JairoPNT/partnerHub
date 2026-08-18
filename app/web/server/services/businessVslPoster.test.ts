@@ -12,14 +12,16 @@ test("uses the partner Product desktop hero as the generated Business VSL thumbn
   const generated = applyBusinessVslPoster({
     ecosystemType: "BUSINESS",
     hero: {
-      desktop: heroDesktopUrl,
-      mobile: "https://media.partnerhub.club/partners/ana/product-hero-mobile.webp"
+      desktop: "https://media.partnerhub.club/partners/ana/business-only-hero.webp"
     },
     vsl: { provider: "youtube", embedUrl: "https://www.youtube-nocookie.com/embed/example" }
-  }, true);
+  }, true, {
+    desktop: heroDesktopUrl,
+    mobile: "https://media.partnerhub.club/partners/ana/product-hero-mobile.webp"
+  });
 
   assert.equal(generated.vsl?.thumbnailUrl, heroDesktopUrl);
-  assert.equal(generated.hero.desktop, heroDesktopUrl);
+  assert.notEqual(generated.hero.desktop, generated.vsl?.thumbnailUrl);
   assert.equal(generated.vsl?.embedUrl, "https://www.youtube-nocookie.com/embed/example");
 });
 
@@ -35,7 +37,7 @@ test("does not add a VSL poster to Product or Personal Brand configurations", ()
       ecosystemType,
       hero: { desktop: "https://media.partnerhub.club/partners/ana/product-hero-desktop.webp" }
     };
-    assert.equal(applyBusinessVslPoster(configuration, true), configuration);
+    assert.equal(applyBusinessVslPoster(configuration, true, configuration.hero), configuration);
     assert.equal("vsl" in configuration, false);
   }
 });
@@ -45,7 +47,7 @@ test("overrides a legacy Business thumbnail without changing other legacy VSL fi
     ecosystemType: "BUSINESS",
     hero: { desktop: "https://media.partnerhub.club/partners/ana/current-desktop.webp" },
     vsl: { thumbnailUrl: "https://legacy.example/poster.webp", autoPlay: true, durationText: "10 min" }
-  }, true);
+  }, true, { desktop: "https://media.partnerhub.club/partners/ana/current-desktop.webp" });
 
   assert.equal(generated.vsl?.thumbnailUrl, "https://media.partnerhub.club/partners/ana/current-desktop.webp");
   assert.equal(generated.vsl?.autoPlay, true);
@@ -58,6 +60,6 @@ test("does not alter the canonical Business master configuration", () => {
     hero: { desktop: "https://media.partnerhub.club/masters/business-desktop.webp" },
     vsl: { thumbnailUrl: "https://media.partnerhub.club/masters/business-vsl.webp" }
   };
-  assert.equal(applyBusinessVslPoster(configuration, false), configuration);
+  assert.equal(applyBusinessVslPoster(configuration, false, configuration.hero), configuration);
   assert.equal(configuration.vsl.thumbnailUrl, "https://media.partnerhub.club/masters/business-vsl.webp");
 });

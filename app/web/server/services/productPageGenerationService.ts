@@ -16,6 +16,7 @@ import {
 } from "@/server/services/ecosystemTemplateResolver";
 import { applyMetaPixelToHtml, metaPixelIdPattern } from "@/server/services/metaPixelHtml";
 import { applyBusinessVslPoster } from "@/server/services/businessVslPoster";
+import { businessProductHeroCorrelationService } from "@/server/services/businessProductHeroCorrelationService";
 
 const siteIdSchema = z
   .string()
@@ -308,7 +309,7 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
     mediaBaseUrl: input.mediaBaseUrl ?? "https://media.partnerhub.club/comunes/producto/v1/"
   };
 
-  return applyBusinessVslPoster(configuration, !isMasterSiteId(input.site.id));
+  return configuration;
 }
 
 function buildConfigSource(configuration: ReturnType<typeof normalizedConfiguration>) {
@@ -342,7 +343,12 @@ export const productPageGenerationService = {
     input: ProductPageGenerationInput,
     options?: ProductPageGenerationOptions
   ): Promise<ProductPageGenerationResult> {
-    const configuration = normalizedConfiguration(input);
+    const baseConfiguration = normalizedConfiguration(input);
+    const isPartnerBusiness = input.ecosystemType === "BUSINESS" && !isMasterSiteId(input.site.id);
+    const productHero = isPartnerBusiness
+      ? await businessProductHeroCorrelationService.resolveForBusinessSite(input.site.id)
+      : {};
+    const configuration = applyBusinessVslPoster(baseConfiguration, isPartnerBusiness, productHero);
     const templateDirectory = await resolveTemplateDirectory(
       configuration.site.id,
       configuration.ecosystemType,
