@@ -1,28 +1,50 @@
-import Link from "next/link";
-import { Bell, Search, User, Globe } from "lucide-react";
+"use client";
 
-export function Topbar() {
+import { Bell, Search, Globe, Menu } from "lucide-react";
+
+type TopbarProps = {
+  isMobileOpen?: boolean;
+  onToggleMobile?: () => void;
+};
+
+export function Topbar({ isMobileOpen = false, onToggleMobile }: TopbarProps) {
   return (
     <header className="border-b border-slate-200/80 bg-white/80 px-4 py-3.5 backdrop-blur-md sm:px-6 lg:px-8">
       <div className="flex items-center justify-between gap-4">
-        {/* Left Search / Action Area */}
-        <div className="relative hidden max-w-xs flex-1 sm:block">
-          <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Buscar en el sistema..."
-            className="w-full rounded-full border border-slate-200 bg-slate-50/70 py-1.5 pl-10 pr-4 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-400/20"
-          />
+        {/* Left Hamburger Button (Mobile < xl) + Search Area */}
+        <div className="flex items-center gap-3 flex-1">
+          {onToggleMobile && (
+            <button
+              onClick={onToggleMobile}
+              className="flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-slate-50/80 text-slate-600 hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-cyan-500 transition xl:hidden shrink-0"
+              aria-label="Abrir menú de navegación"
+              aria-expanded={isMobileOpen}
+            >
+              <Menu className="h-5 w-5" />
+            </button>
+          )}
+
+          <div className="relative hidden max-w-xs flex-1 sm:block">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Buscar en el sistema..."
+              className="w-full rounded-full border border-slate-200 bg-slate-50/70 py-1.5 pl-10 pr-4 text-xs text-slate-800 outline-none transition placeholder:text-slate-400 focus:border-cyan-400 focus:bg-white focus:ring-2 focus:ring-cyan-400/20"
+            />
+          </div>
         </div>
 
         {/* Right Info area */}
-        <div className="flex items-center gap-4 ml-auto">
+        <div className="flex items-center gap-3 sm:gap-4 ml-auto">
           <div className="hidden items-center gap-2 rounded-full border border-cyan-200/80 bg-cyan-50/80 px-3.5 py-1 text-[11px] font-semibold text-cyan-900 sm:flex">
             <Globe className="h-3.5 w-3.5 text-cyan-600" />
             <span>Multi-Tenant Sandbox</span>
           </div>
 
-          <button className="relative rounded-full border border-slate-200 p-2 text-slate-500 hover:bg-slate-100/70 hover:text-slate-900 transition">
+          <button
+            className="relative rounded-full border border-slate-200 p-2 text-slate-500 hover:bg-slate-100/70 hover:text-slate-900 transition focus:outline-none focus:ring-2 focus:ring-cyan-500"
+            aria-label="Notificaciones"
+          >
             <Bell className="h-4 w-4" />
             <span className="absolute right-1 top-1 h-1.5 w-1.5 rounded-full bg-cyan-500" />
           </button>
