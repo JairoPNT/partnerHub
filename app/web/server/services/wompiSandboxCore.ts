@@ -48,6 +48,7 @@ export type WompiPaymentIntent = {
   createdAt: string;
   updatedAt: string;
   transactionId?: string;
+  paymentRecorded?: boolean;
   processedEventChecksums: string[];
 };
 
