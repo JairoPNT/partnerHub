@@ -15,6 +15,8 @@ import {
   resolveMasterTemplateSiteId
 } from "@/server/services/ecosystemTemplateResolver";
 import { applyMetaPixelToHtml, metaPixelIdPattern } from "@/server/services/metaPixelHtml";
+import { applyBusinessVslPoster } from "@/server/services/businessVslPoster";
+import { businessProductHeroCorrelationService } from "@/server/services/businessProductHeroCorrelationService";
 
 const siteIdSchema = z
   .string()
@@ -118,12 +120,19 @@ export const productPageGenerationInputSchema = z.object({
     defaultMessage: z.string().trim().min(1).optional()
   }),
   hero: z.object({
-    desktop: httpsUrlSchema.default(DEFAULT_HERO_DESKTOP),
-    mobile: httpsUrlSchema.default(DEFAULT_HERO_MOBILE)
-  }).default({
-    desktop: DEFAULT_HERO_DESKTOP,
-    mobile: DEFAULT_HERO_MOBILE
-  }),
+    desktop: httpsUrlSchema.optional(),
+    mobile: httpsUrlSchema.optional()
+  }).default({}),
+  vsl: z.object({
+    provider: z.enum(["youtube", "vimeo", "wistia", "custom"]).optional(),
+    embedUrl: z.string().trim().min(1).optional(),
+    videoTitle: z.string().trim().min(1).optional(),
+    aspectRatio: z.enum(["16:9", "4:3"]).optional(),
+    caption: z.string().trim().min(1).optional(),
+    autoPlay: z.boolean().optional(),
+    thumbnailUrl: z.string().trim().min(1).optional(),
+    durationText: z.string().trim().min(1).optional()
+  }).optional(),
   analytics: z
     .object({
       measurementId: measurementIdSchema
@@ -255,7 +264,7 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
   const analyticsMeasurementId =
     input.analytics?.measurementId ?? input.integrations?.analytics?.measurementId;
 
-  return {
+  const configuration = {
     ecosystemType: input.ecosystemType,
     site: {
       id: input.site.id,
@@ -280,7 +289,13 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
         input.distributor.defaultMessage ??
         `Hola ${input.distributor.firstName}, vengo de tu página web y me gustaría recibir más información.`
     },
-    hero: input.hero,
+    hero: input.ecosystemType === "BUSINESS"
+      ? input.hero
+      : {
+          desktop: input.hero.desktop ?? DEFAULT_HERO_DESKTOP,
+          mobile: input.hero.mobile ?? DEFAULT_HERO_MOBILE
+        },
+    ...(input.ecosystemType === "BUSINESS" ? { vsl: input.vsl } : {}),
     analytics: analyticsMeasurementId
       ? { measurementId: analyticsMeasurementId }
       : undefined,
@@ -293,6 +308,8 @@ function normalizedConfiguration(input: ProductPageGenerationInput) {
       : undefined,
     mediaBaseUrl: input.mediaBaseUrl ?? "https://media.partnerhub.club/comunes/producto/v1/"
   };
+
+  return configuration;
 }
 
 function buildConfigSource(configuration: ReturnType<typeof normalizedConfiguration>) {
@@ -326,7 +343,12 @@ export const productPageGenerationService = {
     input: ProductPageGenerationInput,
     options?: ProductPageGenerationOptions
   ): Promise<ProductPageGenerationResult> {
-    const configuration = normalizedConfiguration(input);
+    const baseConfiguration = normalizedConfiguration(input);
+    const isPartnerBusiness = input.ecosystemType === "BUSINESS" && !isMasterSiteId(input.site.id);
+    const productHero = isPartnerBusiness
+      ? await businessProductHeroCorrelationService.resolveForBusinessSite(input.site.id)
+      : {};
+    const configuration = applyBusinessVslPoster(baseConfiguration, isPartnerBusiness, productHero);
     const templateDirectory = await resolveTemplateDirectory(
       configuration.site.id,
       configuration.ecosystemType,

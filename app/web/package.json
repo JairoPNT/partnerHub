@@ -21,6 +21,8 @@
     "test:dashboard-metrics": "node --experimental-strip-types --test server/services/dashboardFinancialMetricsCore.test.ts",
     "test:wompi-sandbox": "node --experimental-strip-types --test server/services/wompiSandboxCore.test.ts",
     "test:wompi-status": "node --experimental-strip-types --test server/services/wompiIntentStatusCore.test.ts",
+    "test:business-vsl-poster": "node --experimental-strip-types --test server/services/businessVslPoster.test.ts",
+    "test:business-vsl-correlation": "node --experimental-strip-types --test server/services/businessProductHeroCorrelation.test.ts server/services/businessVslPoster.test.ts",
     "test:wompi-observability": "node --experimental-strip-types --test server/services/wompiWebhookObservabilityCore.test.ts",
     "test:wompi-reconciliation": "node --experimental-strip-types --test server/services/wompiReconciliationCore.test.ts",
     "test:wompi-reconciliation-command": "node --experimental-strip-types --test server/services/wompiReconciliationCommandCore.test.ts && node --test scripts/wompi-reconcile-sandbox.test.mjs",
