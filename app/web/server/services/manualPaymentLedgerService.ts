@@ -57,12 +57,31 @@ async function createUnlocked(input: ManualPaymentCreateInput) {
 
   const payments = await readPayments();
   const existing = findIdempotentPayment(payments, parsed);
-  if (existing) return { payment: existing, idempotent: true };
+  if (existing) return {
+    payment: existing,
+    paymentId: existing.id,
+    ecosystemTypes: existing.commercialSnapshot?.ecosystemTypes ?? [],
+    commercialSnapshot: existing.commercialSnapshot ?? null,
+    regenerationRequired: existing.regenerationRequired ?? false,
+    idempotent: true
+  };
 
   const now = new Date().toISOString();
-  const payment = createPaymentRecord(parsed, { id: randomUUID(), now, siteId: lead.siteId ?? null });
+  const payment = createPaymentRecord(parsed, {
+    id: randomUUID(),
+    now,
+    siteId: lead.siteId ?? null,
+    existingRecords: payments.filter((record) => record.activationLeadId === parsed.activationLeadId)
+  });
   await writePayments([...payments, payment]);
-  return { payment, idempotent: false };
+  return {
+    payment,
+    paymentId: payment.id,
+    ecosystemTypes: payment.commercialSnapshot?.ecosystemTypes ?? [],
+    commercialSnapshot: payment.commercialSnapshot ?? null,
+    regenerationRequired: payment.regenerationRequired ?? false,
+    idempotent: false
+  };
 }
 
 async function create(input: ManualPaymentCreateInput) {

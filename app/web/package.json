@@ -18,6 +18,7 @@
     "test:ecosystem-templates": "node --experimental-strip-types --test server/services/ecosystemTemplateResolver.test.ts",
     "test:hero-sync": "node --experimental-strip-types --test server/services/productPageHeroSyncService.test.ts",
     "test:manual-payments": "node --experimental-strip-types --test server/services/manualPaymentLedgerCore.test.ts",
+    "test:manual-payment-ecosystems": "node --experimental-strip-types --test server/services/manualPaymentLedgerCore.test.ts server/services/partnerEcosystemEntitlementCore.test.ts",
     "test:dashboard-metrics": "node --experimental-strip-types --test server/services/dashboardFinancialMetricsCore.test.ts",
     "test:wompi-sandbox": "node --experimental-strip-types --test server/services/wompiSandboxCore.test.ts",
     "test:wompi-status": "node --experimental-strip-types --test server/services/wompiIntentStatusCore.test.ts",
