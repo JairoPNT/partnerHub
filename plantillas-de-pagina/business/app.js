@@ -213,46 +213,14 @@
       const items = cfg.benefits.slice(0, 4);
       items.forEach((benefit, idx) => {
         const card = document.createElement('div');
-        card.className = 'feature-dashed-card';
+        card.className = 'benefit-card';
         const iconSvg = getBenefitIconSvg(idx, benefit.title);
-
-        // Asignar colores según índice
-        const colors = [
-          { hex: '#FFAA00', rgb: '255, 170, 0' },
-          { hex: '#10B981', rgb: '16, 185, 129' },
-          { hex: '#00D2FF', rgb: '0, 210, 255' },
-          { hex: '#9B5DE5', rgb: '155, 93, 229' }
-        ];
-        const color = colors[idx % colors.length];
-        card.style.setProperty('--benefit-color', color.hex);
-        card.style.setProperty('--benefit-color-rgb', color.rgb);
-
-        // Patrones diferentes por tarjeta
-        const rx = 100 + (idx * 20);
-        const ry = 40 + (idx * 20);
-
         card.innerHTML = `
-          <div class="grid-pattern-overlay">
-            <svg class="grid-pattern-svg" aria-hidden="true">
-              <defs>
-                <pattern id="grid-pat-b${idx}" width="20" height="20" patternUnits="userSpaceOnUse" x="-12" y="4">
-                  <path d="M.5 20V.5H20" fill="none" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid-pat-b${idx})" />
-              <svg x="-12" y="4" class="overflow-visible" fill="rgba(255, 255, 255, 0.06)">
-                <rect width="21" height="21" x="${rx}" y="${ry}" />
-              </svg>
-            </svg>
+          <div class="benefit-icon-wrapper">
+            ${iconSvg}
           </div>
-          <div class="feature-card-content">
-            <div class="feature-card-header">
-              <div class="feature-icon">${iconSvg}</div>
-              <span class="feature-card-num">0${idx + 1}</span>
-            </div>
-            <h3 class="feature-title text-primary font-serif">${escapeHtml(benefit.title)}</h3>
-            <p class="feature-desc text-secondary">${escapeHtml(benefit.description)}</p>
-          </div>
+          <h3>${escapeHtml(benefit.title)}</h3>
+          <p>${escapeHtml(benefit.description)}</p>
         `;
         benefitsGrid.appendChild(card);
       });
@@ -469,10 +437,142 @@
     });
   }
 
+  function renderBusinessVideoCarousel(cfg) {
+    const testimonialsGrid = document.getElementById('testimonials-grid');
+    if (!testimonialsGrid) return;
+
+    let items = [];
+    if (cfg.testimonials && cfg.testimonials.videoCarousel && Array.isArray(cfg.testimonials.videoCarousel.items)) {
+      items = cfg.testimonials.videoCarousel.items.filter(url => url.startsWith('https://'));
+    }
+
+    // Fallback if empty or all filtered out
+    if (items.length === 0) {
+      const baseUrl = 'https://media.partnerhub.club/comunes/producto/v1/';
+      items = Array.from({ length: 10 }, (_, index) => `${baseUrl}videos/v${String(index + 1).padStart(2, '0')}.mp4`);
+    }
+
+    const doubleVideos = [...items, ...items];
+
+    testimonialsGrid.className = 'business-video-carousel';
+    testimonialsGrid.textContent = ''; // Limpieza segura
+
+    const track = document.createElement('div');
+    track.className = 'business-video-track';
+
+    doubleVideos.forEach((src, index) => {
+      const card = document.createElement('div');
+      card.className = 'business-video-card';
+      card.dataset.videoIndex = index + 1;
+
+      const video = document.createElement('video');
+      video.autoplay = true;
+      video.muted = true;
+      video.loop = true;
+      video.playsInline = true;
+      video.src = src; // Inserción DOM segura
+
+      const playOverlay = document.createElement('div');
+      playOverlay.className = 'business-video-play';
+      playOverlay.setAttribute('aria-hidden', 'true');
+      playOverlay.innerHTML = '<span>▶</span>';
+
+      card.appendChild(video);
+      card.appendChild(playOverlay);
+      track.appendChild(card);
+    });
+
+    testimonialsGrid.appendChild(track);
+
+    testimonialsGrid.querySelectorAll('video').forEach((video) => {
+      video.play().catch(() => {});
+    });
+  }
+
+  async function startDecisionMomentum(cfg) {
+    const dmConfig = cfg.decisionMomentum;
+    if (!dmConfig || !dmConfig.enabled) return;
+
+    let items = dmConfig.messages || [];
+
+    // Validar HTTPS en feedUrl y fallback
+    if (dmConfig.feedUrl && dmConfig.feedUrl.startsWith('https://')) {
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+        const response = await fetch(dmConfig.feedUrl, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
+        if (response.ok) {
+          const data = await response.json();
+          if (Array.isArray(data) && data.length > 0) {
+            items = data;
+          }
+        }
+      } catch (err) {
+        console.warn('Fallo al cargar feedUrl de Decision Momentum, usando fallback local.');
+      }
+    }
+
+    if (items.length === 0) return;
+
+    const toast = document.createElement('aside');
+    toast.className = 'momentum-toast';
+    toast.setAttribute('aria-live', 'polite');
+    toast.setAttribute('aria-atomic', 'true');
+    toast.innerHTML = `
+      <div class="momentum-toast-label"><span class="momentum-toast-dot"></span><span data-role="label"></span></div>
+      <div class="momentum-toast-text" data-role="text"></div>
+      <div class="momentum-toast-footnote">${escapeHtml(dmConfig.disclaimer || '')}</div>
+    `;
+    document.body.appendChild(toast);
+
+    const randomBetween = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
+    let lastIndex = -1;
+
+    const getNextItem = () => {
+      if (items.length === 1) return items[0];
+      let nextIndex = randomBetween(0, items.length - 1);
+      if (nextIndex === lastIndex) {
+        nextIndex = (nextIndex + 1) % items.length;
+      }
+      lastIndex = nextIndex;
+      return items[nextIndex];
+    };
+
+    const getNextDelay = () => {
+      if (Math.random() < (dmConfig.occasionalPauseChance || 0.22)) {
+        return randomBetween(dmConfig.occasionalPauseMinMs || 45000, dmConfig.occasionalPauseMaxMs || 90000);
+      }
+      return randomBetween(dmConfig.intervalMinMs || 12000, dmConfig.intervalMaxMs || 28000);
+    };
+
+    const showNext = () => {
+      if (document.hidden) {
+        window.setTimeout(showNext, getNextDelay());
+        return;
+      }
+
+      const item = getNextItem();
+      toast.querySelector('[data-role="label"]').textContent = item.label;
+      toast.querySelector('[data-role="text"]').textContent = item.text;
+      toast.classList.add('is-visible');
+
+      window.setTimeout(() => {
+        toast.classList.remove('is-visible');
+        window.setTimeout(showNext, getNextDelay());
+      }, dmConfig.visibleMs || 5200);
+    };
+
+    window.setTimeout(showNext, randomBetween(2500, 5000));
+  }
+
   // Inicialización
   document.addEventListener('DOMContentLoaded', function () {
     const config = window.CONFIG || {};
     applyTheme(config.theme);
     renderDynamicContent(config);
+    renderBusinessVideoCarousel(config);
+    startDecisionMomentum(config);
   });
 })();

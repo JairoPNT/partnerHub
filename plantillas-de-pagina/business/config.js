@@ -1,10 +1,10 @@
 /**
- * Configuración del Sitio - Plantilla Maestra de Negocio & VSL
+ * Configuración del Sitio - Plantilla Maestra de Negocio
  * Ecosistema: BUSINESS
  * Compatible con PartnerHub (PH-025, PH-033 y contratos tipados)
  *
  * NOTA: Esta plantilla lee toda su información dinámicamente desde este objeto CONFIG.
- * Permite personalizar cada sección del embudo de ventas sin tocar código HTML.
+ * Permite personalizar cada sección de la presentación sin tocar código HTML.
  */
 const CONFIG = {
   ecosystemType: 'BUSINESS',
@@ -12,80 +12,80 @@ const CONFIG = {
   // Configuración del sitio y SEO
   site: {
     id: 'ganomaster-business',
-    title: 'Emprende con un Modelo de Negocio Probado y Escalable — Presentación Oficial',
+    title: 'Conoce un modelo de negocio digital con productos de consumo diario',
     appName: 'ganomaster-business',
-    ogTitle: 'Construye Libertad Financiera con un Hábito Diario — Modelo de Distribución',
-    ogDescription: 'Descubre cómo asociarte con un socio comercial sólido para crear una red de consumo masivo de café saludable y generar ingresos residuales.',
-    metaDescription: 'Presentación oficial de la oportunidad de negocio y distribución estratégica en bienestar y consumo masivo.'
+    ogTitle: 'Conoce un modelo de negocio digital con productos de consumo diario',
+    ogDescription: 'Tienda virtual, logística corporativa y acompañamiento para evaluar la oportunidad con información completa.',
+    metaDescription: 'Evaluación de oportunidad de negocio digital con productos de consumo masivo y respaldo corporativo.'
   },
 
   // Datos del Distribuidor / Líder Comercial
   distributor: {
-    brandName: 'Nexus Team',
-    firstName: 'Jairo',
-    fullName: 'Jairo Pinto',
+    brandName: 'Sistema PartnerHub',
+    firstName: 'Tu Nombre',
+    fullName: 'Tu Nombre Apellido',
     role: 'Distribuidor Autorizado Independiente',
     whatsappNumber: '573000000000',
     phoneNumber: '',
     displayPhone: '',
     ctaUrl: 'https://wa.me/573000000000',
-    defaultMessage: 'Hola Jairo, vi la presentación del modelo de negocio en tu página web y quiero conocer cómo iniciar en tu equipo.'
+    defaultMessage: 'Hola, vi la presentación del modelo de negocio en tu página web y quiero conocer cómo iniciar.'
   },
 
   // Hero y Encabezado de Alto Impacto
   hero: {
-    badge: 'Oportunidad de Expansión Comercial',
-    headline: 'Construye Libertad Financiera con un Hábito Diario',
-    subheadline: 'Descubre cómo asociarte con un socio comercial de gran solidez para crear una red de consumo masivo de café saludable y generar ingresos residuales sostenibles.',
-    desktopBgUrl: 'https://media.partnerhub.club/comunes/business/v1/hero-desktop.webp',
-    mobileBgUrl: 'https://media.partnerhub.club/comunes/business/v1/hero-mobile.webp'
+    badge: 'Presentación completa de negocio',
+    headline: 'Conoce un modelo de negocio digital con productos de consumo diario',
+    subheadline: 'Tienda virtual, logística corporativa y acompañamiento para evaluar la oportunidad con información completa.',
+    desktopBgUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80',
+    mobileBgUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80'
   },
 
   // Prueba Social en Hero (Organización & Visión)
   socialProof: {
     enabled: true,
-    headline: 'Organización de Personas Libres',
-    subheadline: 'Meta: 10.000 personas para el 2030',
+    headline: 'Sistema de crecimiento empresarial',
+    subheadline: 'Productos + tienda virtual + soporte + comunidad',
     ratingStars: '★★★★★',
     avatars: [
-      'https://media.partnerhub.club/comunes/placeholders/avatar-1.webp',
-      'https://media.partnerhub.club/comunes/placeholders/avatar-2.webp',
-      'https://media.partnerhub.club/comunes/placeholders/avatar-3.webp',
-      'https://media.partnerhub.club/comunes/placeholders/avatar-4.webp'
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80'
     ]
   },
 
-  // Video Sales Letter (VSL)
+  // Presentación Principal en Video
   vsl: {
     provider: 'youtube', // 'youtube' | 'vimeo' | 'wistia' | 'custom'
-    embedUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
-    videoTitle: 'Presentación Oficial del Modelo de Negocio',
+    embedUrl: '',
+    videoTitle: 'Presentación del Modelo de Negocio',
     aspectRatio: '16:9', // '16:9' | '4:3'
-    caption: 'Duración aproximada: 10 minutos · Activa el sonido para mejor experiencia',
-    durationText: 'Ver Presentación de Negocio (10 min)',
-    thumbnailUrl: 'https://media.partnerhub.club/comunes/business/v1/vsl-thumbnail.webp',
+    caption: 'Primero entiende el modelo. Luego decide si quieres una conversación personalizada.',
+    durationText: 'Ver la información completa',
+    thumbnailUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80',
     autoPlay: true
   },
 
   // Comparativa: Modelo Tradicional vs Distribución Apalancada
   comparison: {
     enabled: true,
-    badge: 'El Dilema del Emprendimiento',
-    title: '¿Por qué el modelo tradicional ya no es suficiente?',
-    subtitle: 'Montar un negocio convencional o depender de un solo salario conlleva altos riesgos y costes fijos. El apalancamiento es la clave para la libertad en la nueva economía.',
-    traditionalTitle: 'Modelo Tradicional (Empleo o PYME)',
+    badge: 'Primero el desafío',
+    title: 'La mayoría no falla por falta de ganas, falla por empezar sin sistema',
+    subtitle: 'Emprender suele exigir dinero, tiempo, inventario, publicidad, logística y aprendizaje comercial. Esta presentación explica una alternativa más guiada: distribución independiente apoyada en productos de consumo recurrente e infraestructura corporativa.',
+    traditionalTitle: 'Cuando se emprende sin estructura',
     traditionalItems: [
-      'Cambias tiempo por dinero: si no estás presente o no trabajas, no facturas.',
-      'Altos costos fijos mensuales (arriendos de local, nóminas, servicios y stock).',
-      'Limitación geográfica: tu mercado se restringe a tu zona o ciudad inmediata.',
-      'Estrés constante por inventarios perecederos, cobranza y riesgo de capital.'
+      'Inversión alta antes de validar si el mercado responde.',
+      'Inventario, local, despacho y soporte quedan sobre una sola persona.',
+      'Se improvisa el mensaje comercial y se pierde confianza al presentar.',
+      'El crecimiento depende de tiempo disponible, ubicación y contactos cercanos.'
     ],
-    opportunityTitle: 'Modelo de Distribución Apalancado',
+    opportunityTitle: 'Cuando existe un sistema de apoyo',
     opportunityItems: [
-      'Ingresos residuales continuos: generas comisiones cada vez que alguien toma café.',
-      'Cero inventarios ni nóminas: la compañía multinacional asume 100% de la operación.',
-      'Negocio global y escalable: expande tu red de consumo en más de 10 países de América.',
-      'Plan de formación integral y mentoría de equipo incluida desde el primer día sin costo.'
+      'Punto de entrada accesible para conocer el modelo con producto real.',
+      'Tienda virtual, bodega y logística gestionadas por infraestructura existente.',
+      'Marketing relacional, material de apoyo y acompañamiento del equipo.',
+      'Posibilidad de expansión por países según reglas de la compañía y actividad personal.'
     ]
   },
 
@@ -93,114 +93,137 @@ const CONFIG = {
   benefits: [
     {
       id: 'b1',
-      title: 'Socio Comercial Sólido',
-      description: 'Multinacional fundada en 1995 con presencia en más de 70 países. Opera con sedes corporativas propias, respaldo legal bajo la Ley 1700 de 2013 y solidez financiera.'
+      title: 'Mercados con demanda existente',
+      description: 'Café, bienestar, bebidas funcionales y cuidado personal son categorías conocidas; la conversación no parte de vender algo abstracto.'
     },
     {
       id: 'b2',
-      title: 'Hábito de Consumo Masivo',
-      description: 'Café, té y chocolate enriquecidos con extracto 100% soluble de Ganoderma Lucidum. Productos de alta rotación diaria y retención natural sin ventas forzadas.'
+      title: 'Producto físico y recompra',
+      description: 'El modelo se apoya en consumo real de productos, no en intercambio de dinero por dinero ni promesas especulativas.'
     },
     {
       id: 'b3',
-      title: 'Operación & Logística Cubierta',
-      description: 'La compañía multinacional se encarga de las importaciones, registros sanitarios INVIMA, almacenamiento, facturación y despacho directo a domicilio.'
+      title: 'Infraestructura que reduce fricción',
+      description: 'Tienda virtual, bodega, facturación y despacho ayudan a que el partner se enfoque en aprender, compartir y acompañar.'
     },
     {
       id: 'b4',
-      title: 'Mentoría & Sistema Educativo',
-      description: 'Acompañamiento paso a paso con el sistema de duplicación del equipo. Acceso a plataformas digitales, entrenamientos semanales y liderazgo empresarial.'
+      title: 'Sistema para no avanzar solo',
+      description: 'Guías, material promocional, entrenamiento, estructura de pauta y mentoría ayudan a convertir interés en acción ordenada.'
     }
   ],
 
   // Metodología en 3 Pasos
   methodology: {
     enabled: true,
-    badge: 'Metodología de Trabajo',
-    title: 'Tu camino en 3 sencillos pasos',
-    subtitle: 'Un sistema duplicable y comprobado diseñado para que comiences a generar resultados desde las primeras semanas de integración.',
+    badge: 'Secuencia de decisión',
+    title: 'Del interés a una conversación seria',
+    subtitle: 'La página debe llevar a la persona por una ruta clara: entender el problema, ver el mecanismo, resolver objeciones y decidir el siguiente paso.',
     steps: [
       {
         number: '01',
-        title: 'Consume y Conecta',
-        description: 'Te registras en la compañía, seleccionas tus productos para consumo personal y familiar, y validas personalmente sus beneficios en energía y bienestar integral.'
+        title: 'Mira la información completa',
+        description: 'La presentación explica inversión, productos, tienda virtual, logística, expansión, soporte y forma de trabajo.'
       },
       {
         number: '02',
-        title: 'Capacítate en Equipo',
-        description: 'Te integras a nuestras sesiones de mentoría y entrenamiento digital. Aprendes a presentar profesionalmente la oportunidad y a utilizar herramientas de prospección.'
+        title: 'Valida tus objeciones',
+        description: 'Revisa si te hace sentido el tiempo, el acompañamiento, el tipo de producto y la forma de compartirlo.'
       },
       {
         number: '03',
-        title: 'Expande y Gana',
-        description: 'Construyes una comunidad de socios y clientes en diferentes ciudades. Recibes comisiones semanales y regalías residuales basadas en el volumen de consumo de tu red.'
+        title: 'Agenda orientación',
+        description: 'Si el modelo encaja, conversa por WhatsApp para recibir una guía de inicio según tu país, perfil y disponibilidad.'
       }
     ]
   },
 
-  // Casos de Éxito / Testimonios Reales
+  // Casos de Éxito / Prueba Visual
   testimonials: {
     enabled: true,
-    badge: 'Casos de Éxito',
-    title: 'Historias de Éxito en Nuestro Equipo',
-    subtitle: 'Emprendedores reales que tomaron la decisión de construir su libertad financiera con nuestro sistema de apalancamiento.',
-    items: [
-      {
-        id: 't1',
-        name: 'Diana Ramos',
-        role: 'Socio de Negocio · Cali',
-        quote: 'Emprender siempre me dio miedo por las deudas y los costos fijos. Con este modelo inteligente y el apoyo del equipo he construido un ingreso residual estable que supera mi antiguo sueldo profesional, y lo mejor es que manejo mi propio tiempo.',
-        avatarUrl: 'https://media.partnerhub.club/comunes/placeholders/avatar-3.webp'
-      },
-      {
-        id: 't2',
-        name: 'Carlos Mendoza',
-        role: 'Empresario Asociado · Bogotá',
-        quote: 'Tenía un negocio tradicional de calzado con jornadas extenuantes. Decidí diversificar con el café saludable y gracias a la mentoría, en menos de un año creé una red de consumo que me permite recibir ingresos automáticos todas las semanas.',
-        avatarUrl: 'https://media.partnerhub.club/comunes/placeholders/avatar-2.webp'
-      }
-    ]
+    badge: 'Prueba visual',
+    title: 'Historias reales para ver el modelo desde adentro',
+    subtitle: 'Escucha experiencias, aprendizajes y puntos de vista de personas que han conocido el sistema, los productos y la forma de trabajo del equipo.',
+    videoCarousel: {
+      items: [
+        // Se usarán URLs fallback a producto/v1 si está vacío, pero se pueden configurar aquí
+        // Asegurarse de usar HTTPS siempre
+        // 'https://media.partnerhub.club/comunes/producto/v1/videos/v01.mp4'
+      ]
+    },
+    items: [] // Se mantiene la propiedad vacía para compatibilidad si alguna lógica lo revisa
   },
 
-  // Preguntas Frecuentes (Manejo de Objeciones)
+  // Preguntas Frecuentes (Objeciones clave)
   faq: {
     enabled: true,
-    badge: 'Preguntas Frecuentes',
-    title: 'Resolvemos tus Dudas',
-    subtitle: 'Respuestas claras a las preguntas más comunes sobre el modelo de negocio, tiempos y sistema de comisiones.',
+    badge: 'Objeciones clave',
+    title: 'Antes de escribir, resuelve estas preguntas',
+    subtitle: 'Las mejores páginas de decisión reducen dudas antes del contacto. Esta sección prepara una conversación más calificada por WhatsApp.',
     items: [
       {
         id: 'f1',
-        question: '¿Necesito tener experiencia previa en ventas o negocios?',
-        answer: 'No. La gran mayoría de personas en nuestro equipo comenzaron sin experiencia comercial previa. Contamos con un sistema educativo estructurado y mentoría continua que te enseña paso a paso desde el primer día cómo posicionar la marca de forma profesional.'
+        question: '¿Esto garantiza dinero?',
+        answer: 'No. Es una oportunidad de distribución independiente. Cualquier resultado depende de actividad, constancia, habilidades comerciales, tiempo dedicado, mercado y cumplimiento del sistema.'
       },
       {
         id: 'f2',
-        question: '¿Cuánto tiempo debo dedicarle a la semana?',
-        answer: 'El modelo está diseñado para desarrollarse a tiempo parcial (8 a 12 horas por semana) de manera flexible, permitiéndote construir una fuente secundaria de ingresos sin abandonar tu empleo, profesión o negocio actual.'
+        question: '¿Por qué hablar de inversión accesible?',
+        answer: 'Porque permite evaluar el modelo con un punto de entrada claro. La inversión no debe presentarse como garantía de retorno, sino como acceso a productos, herramientas y sistema.'
       },
       {
         id: 'f3',
-        question: '¿Cómo se generan las comisiones y cuándo se pagan?',
-        answer: 'Las comisiones se generan por el volumen de producto que se mueve en tu red (a través de consumo personal, clientes preferenciales y nuevos distribuidores). La compañía realiza liquidaciones semanales y deposita directamente en tu cuenta bancaria.'
+        question: '¿Tengo que manejar inventario o entregas?',
+        answer: 'La presentación explica la tienda virtual, bodega central y logística corporativa. Las condiciones pueden variar por país y deben aclararse antes de iniciar.'
       },
       {
         id: 'f4',
-        question: '¿Tengo que endeudarme o acumular grandes inventarios en casa?',
-        answer: 'Absolutamente no. Este modelo no requiere bodegaje ni compra excesiva de inventarios. Te asocias con una compra inicial de producto para tu consumo y muestras, y la multinacional se encarga de la logística y envíos para tus clientes y socios.'
+        question: '¿Qué genera urgencia real?',
+        answer: 'La urgencia correcta no es prometer ganancias rápidas. Es la disponibilidad de acompañamiento, la ventana de decisión y el costo de seguir postergando una alternativa comercial seria.'
+      },
+      {
+        id: 'f5',
+        question: '¿Cuál es la decisión esperada?',
+        answer: 'No es comprar por impulso. Es ver la presentación, entender el modelo y pedir orientación si realmente quieres evaluarlo con más detalle.'
       }
     ]
   },
 
   // Llamados a la Acción y Registro
   cta: {
-    primaryText: 'Quiero Participar y Registrarme',
+    headerBtnText: 'Hablar',
+    primaryText: 'Evaluar modelo',
     primaryUrl: 'https://col.ganoexcel.com/GrupoMomentumStarter',
-    secondaryText: 'Más Información por WhatsApp',
+    secondaryText: 'Preguntar',
     secondaryUrl: 'https://wa.me/573000000000',
-    guaranteeText: 'Cupos limitados por zona para acompañamiento personalizado.',
-    directRegisterText: 'Quiero Participar y Registrarme',
+    guaranteeText: 'Cupos de acompañamiento sujetos a disponibilidad del equipo y zona. Sin promesas de ingresos.',
+    directRegisterText: 'Evaluar modelo',
     directRegisterUrl: 'https://col.ganoexcel.com/GrupoMomentumStarter'
+  },
+
+  // Decision Momentum (FOMO Seguro)
+  decisionMomentum: {
+    enabled: true,
+    feedUrl: '', // Opcional, endpoint JSON externo
+    intervalMinMs: 12000,
+    intervalMaxMs: 28000,
+    visibleMs: 5200,
+    occasionalPauseChance: 0.22,
+    occasionalPauseMinMs: 45000,
+    occasionalPauseMaxMs: 90000,
+    messages: [
+      { label: 'Interés reciente', text: 'Una persona pasó de ver la presentación a solicitar orientación inicial.' },
+      { label: 'Paso de decisión', text: 'Alguien está revisando la ruta de inicio antes de registrarse.' },
+      { label: 'Movimiento del sistema', text: 'Nuevo interesado evaluando tienda virtual, productos y acompañamiento.' },
+      { label: 'Avance de proceso', text: 'Una persona está resolviendo objeciones antes de tomar una decisión.' },
+      { label: 'Orientación solicitada', text: 'Un interesado pidió claridad sobre inversión, productos y forma de trabajo.' },
+      { label: 'Decisión informada', text: 'Alguien volvió a la presentación para revisar si el modelo encaja con su perfil.' },
+      { label: 'Validación de producto', text: 'Un interesado está revisando las líneas de producto antes de avanzar.' },
+      { label: 'Tienda virtual', text: 'Una persona está entendiendo cómo funciona la tienda y la logística.' },
+      { label: 'Acompañamiento', text: 'Alguien está revisando qué apoyo recibe durante sus primeros pasos.' },
+      { label: 'Expectativas claras', text: 'Un visitante está leyendo qué depende de su actividad y qué no está garantizado.' }
+    ],
+    disclaimer: 'Señales informativas del proceso. No representan ingresos ni resultados garantizados.'
   },
 
   // Tema Visual (PH-025)
@@ -211,7 +234,7 @@ const CONFIG = {
 
   // Textos Legales y Disclaimers
   legal: {
-    disclaimer: 'Descargo de Responsabilidad: La empresa aliada provee productos registrados y legalizados ante las entidades de salud de cada país en donde opera (INVIMA, FDA, etc.). El negocio de distribución independiente se sustenta estrictamente en el movimiento real de productos mediante consumo y comercialización; bajo ninguna circunstancia se intercambia dinero por dinero. Los resultados financieros, de libertad de tiempo y de crecimiento empresarial mencionados en esta página representan metas y proyecciones basadas en la experiencia práctica y no constituyen garantías de ingresos automáticos. El éxito en este proyecto depende al 100% del esfuerzo personal, la constancia, el liderazgo y la dedicación de cada participante. El acompañamiento, mentorías y sistemas educativos se ofrecen como guías prácticas desde la experiencia en el desarrollo del negocio.',
+    disclaimer: 'Esta es una oportunidad de distribución independiente basada en comercialización y consumo de productos. No existen ingresos garantizados, automáticos ni universales. Los resultados dependen del esfuerzo personal, habilidades comerciales, constancia, tiempo dedicado, mercado, cumplimiento del sistema y condiciones de la compañía. La información de esta página es educativa y comercial.',
     privacyPolicyText: 'En cumplimiento de la Ley 1581 de 2012 y normas de Habeas Data, le informamos que los únicos datos recopilados son los suministrados voluntariamente al contactarnos vía WhatsApp para brindarle asesoría personalizada.',
     termsText: 'Este portal web es una vitrina informativa de negocio independiente. Los enlaces de afiliación redirigen directamente a la plataforma de inscripción corporativa oficial de la multinacional aliada bajo la Ley 1700 de 2013 en Colombia.'
   },
