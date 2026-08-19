@@ -25,6 +25,7 @@ import {
   Save,
   Sparkles,
   Lock,
+  Gift,
   Image as ImageIcon
 } from "lucide-react";
 import { FontSelector, PaletteSelector } from "@/components/ui/theme-selectors";
@@ -38,6 +39,12 @@ import { VerificationBadge,
   ProductPageSiteSummary
 } from "@/components/ui/verification-status-panel";
 import { ModalPortal } from "@/components/ui/modal-portal";
+import {
+  validateComplimentaryGrantForm,
+  buildComplimentaryGrantPayload,
+  type ComplimentaryGrantFormState,
+  type ComplimentaryGrantResult
+} from "@/components/complimentaryGrantHelpers";
 
 export type ActivationLeadStatus = "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
 export type EcosystemType = "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND";
@@ -199,6 +206,19 @@ export function EntrepreneurOperationsView() {
     onboardingPath: string;
   } | null>(null);
   const [copiedLink, setCopiedLink] = useState(false);
+
+  // Complimentary Grant Modal State
+  const [showGrantModal, setShowGrantModal] = useState(false);
+  const [grantForm, setGrantForm] = useState<ComplimentaryGrantFormState>({
+    ecosystemTypes: ["PRODUCT"],
+    grantReason: "",
+    effectiveDate: new Date().toISOString().slice(0, 10),
+    cutoffDate: "",
+    notes: ""
+  });
+  const [isSubmittingGrant, setIsSubmittingGrant] = useState(false);
+  const [grantError, setGrantError] = useState<string | null>(null);
+  const [grantSuccessResult, setGrantSuccessResult] = useState<ComplimentaryGrantResult | null>(null);
 
   const [createForm, setCreateForm] = useState({
     fullName: "",
@@ -664,6 +684,66 @@ export function EntrepreneurOperationsView() {
       setActionError((err as Error).message);
     } finally {
       setIsSubmittingPatch(false);
+    }
+  };
+
+  const toggleGrantEcosystem = (type: EcosystemType) => {
+    setGrantForm((prev) => ({
+      ...prev,
+      ecosystemTypes: prev.ecosystemTypes.includes(type)
+        ? prev.ecosystemTypes.filter((t) => t !== type)
+        : [...prev.ecosystemTypes, type]
+    }));
+  };
+
+  const handleOpenGrantModal = () => {
+    if (!selectedLead) return;
+    const initialEco = selectedLead.ecosystemType || "PRODUCT";
+    setGrantForm({
+      ecosystemTypes: [initialEco],
+      grantReason: "",
+      effectiveDate: new Date().toISOString().slice(0, 10),
+      cutoffDate: "",
+      notes: ""
+    });
+    setGrantError(null);
+    setGrantSuccessResult(null);
+    setShowGrantModal(true);
+  };
+
+  const handleSubmitComplimentaryGrant = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedLead) return;
+
+    const validationMsg = validateComplimentaryGrantForm(grantForm);
+    if (validationMsg) {
+      setGrantError(validationMsg);
+      return;
+    }
+
+    setIsSubmittingGrant(true);
+    setGrantError(null);
+
+    try {
+      const payload = buildComplimentaryGrantPayload(grantForm);
+      const res = await fetch(`/api/internal/activation-leads/${selectedLead.id}/complimentary-grant`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      const resData = await res.json();
+      if (!res.ok) {
+        throw new Error(resData.error || "No se pudo asignar la cortesía de ecosistema.");
+      }
+
+      setGrantSuccessResult(resData as ComplimentaryGrantResult);
+      setSuccessMessage(`Cortesía asignada con éxito para ${selectedLead.fullName}.`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+    } catch (err: unknown) {
+      setGrantError(err instanceof Error ? err.message : "Error desconocido al procesar la cortesía.");
+    } finally {
+      setIsSubmittingGrant(false);
     }
   };
 
@@ -1675,6 +1755,29 @@ export function EntrepreneurOperationsView() {
                     )}
                   </div>
                 </div>
+
+                {/* 4. Asignar Cortesía de Ecosistemas */}
+                <div className="rounded-2xl border border-purple-200 bg-purple-50/40 p-5 space-y-3 md:col-span-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
+                        <Gift className="h-4 w-4 text-purple-600" />
+                        Asignar Cortesía de Ecosistemas
+                      </h4>
+                      <p className="mt-1 text-xs text-slate-600">
+                        Otorga acceso gratuito a Producto, Negocio VSL o Marca Personal para este partner sin registrar pagos.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleOpenGrantModal}
+                      className="inline-flex items-center gap-2 rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2 text-xs font-bold text-white shadow transition shrink-0"
+                    >
+                      <Gift className="h-4 w-4" />
+                      <span>Asignar cortesía</span>
+                    </button>
+                  </div>
+                </div>
               </div>
 
               {/* ONBOARDING COMPLETENESS & MISSING FIELDS CHECKLIST */}
@@ -2464,6 +2567,202 @@ export function EntrepreneurOperationsView() {
               >
                 Cerrar Detalle
               </button>
+            </div>
+          </div>
+        </ModalPortal>
+      )}
+
+      {/* MODAL ASIGNAR CORTESÍA DE ECOSISTEMAS */}
+      {showGrantModal && selectedLead && (
+        <ModalPortal>
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
+            <div className="relative w-full max-w-lg rounded-3xl border border-slate-200 bg-white p-6 shadow-2xl space-y-5 my-8">
+              <div className="flex items-center justify-between border-b border-slate-200 pb-4">
+                <div className="flex items-center gap-2">
+                  <Gift className="h-5 w-5 text-purple-600" />
+                  <div>
+                    <h3 className="font-heading text-lg font-bold text-slate-900">
+                      Asignar Cortesía de Ecosistemas
+                    </h3>
+                    <p className="text-xs text-slate-500">
+                      Partner: <strong className="text-slate-900">{selectedLead.fullName}</strong> ({selectedLead.brandName})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowGrantModal(false)}
+                  className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {grantError && (
+                <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-800 flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-rose-600 shrink-0" />
+                  <span>{grantError}</span>
+                </div>
+              )}
+
+              {grantSuccessResult ? (
+                <div className="rounded-2xl border border-emerald-300 bg-emerald-50 p-5 space-y-4">
+                  <div className="flex items-center gap-2 text-emerald-900 text-sm font-bold">
+                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    <span>¡Cortesía Asignada Exitosamente!</span>
+                  </div>
+
+                  <div className="space-y-2 text-xs text-slate-700">
+                    <p>
+                      Ecosistemas otorgados:{" "}
+                      <span className="font-bold text-slate-900">
+                        {grantSuccessResult.grant.ecosystemTypes.join(", ")}
+                      </span>
+                    </p>
+                    <p>Motivo: <strong>{grantSuccessResult.grant.grantReason}</strong></p>
+                    <p>Fecha Efectiva: <strong>{grantSuccessResult.grant.effectiveDate}</strong></p>
+                    {grantSuccessResult.grant.cutoffDate && (
+                      <p>Fecha de Corte: <strong>{grantSuccessResult.grant.cutoffDate}</strong></p>
+                    )}
+                  </div>
+
+                  {grantSuccessResult.grant.regenerationRequired && (
+                    <div className="rounded-xl border border-blue-200 bg-blue-50 p-3 text-xs text-blue-900 flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-blue-600 shrink-0" />
+                      <span>
+                        <strong>Nota:</strong> Se requiere regenerar la landing del partner para aplicar la nueva cortesía (regenerationRequired: true).
+                      </span>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowGrantModal(false);
+                      setGrantSuccessResult(null);
+                    }}
+                    className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-bold text-white shadow hover:bg-slate-800 transition"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmitComplimentaryGrant} className="space-y-4">
+                  {/* Ecosystem Selection Checkboxes */}
+                  <div className="space-y-1.5">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Ecosistemas a Otorgar *
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                      {[
+                        { type: "PRODUCT" as const, label: "Producto", desc: "Landing de producto" },
+                        { type: "BUSINESS" as const, label: "Negocio VSL", desc: "Negocio y VSL" },
+                        { type: "PERSONAL_BRAND" as const, label: "Marca Personal", desc: "Marca del líder" }
+                      ].map((eco) => {
+                        const checked = grantForm.ecosystemTypes.includes(eco.type);
+                        return (
+                          <label
+                            key={eco.type}
+                            className={`flex flex-col p-2.5 rounded-xl border text-xs cursor-pointer transition ${
+                              checked
+                                ? "border-purple-500 bg-purple-50 text-purple-950 font-bold"
+                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="checkbox"
+                                checked={checked}
+                                onChange={() => toggleGrantEcosystem(eco.type)}
+                                className="rounded border-slate-300 text-purple-600 focus:ring-purple-500"
+                              />
+                              <span>{eco.label}</span>
+                            </div>
+                            <span className="text-[10px] text-slate-500 mt-1 font-normal">
+                              {eco.desc}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {/* Grant Reason */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Motivo de la Cortesía *
+                    </label>
+                    <input
+                      required
+                      type="text"
+                      value={grantForm.grantReason}
+                      onChange={(e) => setGrantForm({ ...grantForm, grantReason: e.target.value })}
+                      placeholder="Ej. Promoción especial de lanzamiento / Bonificación por liderazgo"
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+
+                  {/* Dates Grid */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                        Fecha Efectiva *
+                      </label>
+                      <input
+                        required
+                        type="date"
+                        value={grantForm.effectiveDate}
+                        onChange={(e) => setGrantForm({ ...grantForm, effectiveDate: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-900 focus:border-purple-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                        Fecha de Corte (Opcional)
+                      </label>
+                      <input
+                        type="date"
+                        value={grantForm.cutoffDate}
+                        onChange={(e) => setGrantForm({ ...grantForm, cutoffDate: e.target.value })}
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-900 focus:border-purple-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Notes */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                      Notas Internas (Opcionales)
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={grantForm.notes}
+                      onChange={(e) => setGrantForm({ ...grantForm, notes: e.target.value })}
+                      placeholder="Detalles adicionales para registro del operador..."
+                      className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-medium text-slate-900 placeholder-slate-400 focus:border-purple-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                    <button
+                      type="button"
+                      onClick={() => setShowGrantModal(false)}
+                      disabled={isSubmittingGrant}
+                      className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      Cancelar
+                    </button>
+                    <button
+                      type="submit"
+                      disabled={isSubmittingGrant || grantForm.ecosystemTypes.length === 0}
+                      className="rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2 text-xs font-bold text-white shadow transition disabled:opacity-50"
+                    >
+                      {isSubmittingGrant ? "Asignando..." : "Confirmar Asignación"}
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </ModalPortal>
