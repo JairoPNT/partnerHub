@@ -31,6 +31,7 @@ export type EntitlementLead = {
   offerCode?: string;
   offerSnapshot?: unknown;
   additionalCommercialSnapshots?: unknown[];
+  complimentaryGrantEcosystems?: EcosystemType[];
   onboardingData?: { domain?: string };
 };
 
@@ -80,11 +81,12 @@ export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTarge
     const parsed = manualPaymentSnapshotSchema.safeParse(snapshot);
     return parsed.success ? [parsed.data] : [];
   });
+  const complimentaryGrantEcosystems = [...new Set(lead.complimentaryGrantEcosystems ?? [])];
   const existingTargets = allTargets
     .filter((target) => target.ownerKey === lead.id)
     .map((target) => ({ ...target }));
 
-  if (!parsedSnapshot.success && manualSnapshots.length === 0) {
+  if (!parsedSnapshot.success && manualSnapshots.length === 0 && complimentaryGrantEcosystems.length === 0) {
     return {
       activationLeadId: lead.id,
       commercialState: "UNKNOWN" as const,
@@ -103,10 +105,10 @@ export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTarge
 
   const activationSnapshot: EntitlementSnapshot | null = parsedSnapshot.success ? parsedSnapshot.data : null;
   const selectedSnapshot = manualSnapshots.at(-1) ?? activationSnapshot;
-  if (!selectedSnapshot) throw new Error("Commercial snapshot selection failed.");
   const includedEcosystems = [...new Set([
     ...(activationSnapshot?.ecosystemTypes ?? []),
-    ...manualSnapshots.flatMap((snapshot) => snapshot.ecosystemTypes)
+    ...manualSnapshots.flatMap((snapshot) => snapshot.ecosystemTypes),
+    ...complimentaryGrantEcosystems
   ])];
   const root = rootEcosystem(includedEcosystems);
   const domain = baseDomain(lead, existingTargets);
@@ -135,12 +137,13 @@ export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTarge
   return {
     activationLeadId: lead.id,
     commercialState: "KNOWN" as const,
-    offerCode: selectedSnapshot.offerCode,
-    offerSnapshot: { ...selectedSnapshot, ecosystemTypes: [...selectedSnapshot.ecosystemTypes] },
+    offerCode: selectedSnapshot?.offerCode ?? null,
+    offerSnapshot: selectedSnapshot ? { ...selectedSnapshot, ecosystemTypes: [...selectedSnapshot.ecosystemTypes] } : null,
     commercialSnapshots: [
       ...(activationSnapshot ? [{ ...activationSnapshot, ecosystemTypes: [...activationSnapshot.ecosystemTypes] }] : []),
       ...manualSnapshots.map((snapshot) => ({ ...snapshot, ecosystemTypes: [...snapshot.ecosystemTypes] }))
     ],
+    complimentaryGrantEcosystems,
     includedEcosystems,
     rootEcosystem: root,
     rootRedirectTarget,
