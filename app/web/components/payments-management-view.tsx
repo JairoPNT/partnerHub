@@ -100,7 +100,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
   const [regenerationAlert, setRegenerationAlert] = useState<string | null>(null);
 
   // Commercial Pricing Mode & Ecosystem State
-  const [pricingMode, setPricingMode] = useState<ManualPaymentPricingMode | "NONE">("CATALOG");
+  const [pricingMode, setPricingMode] = useState<ManualPaymentPricingMode>("CATALOG");
   const [selectedOfferKey, setSelectedOfferKey] = useState<keyof typeof CATALOG_OFFERS>("PLAN_360");
   const [selectedEcosystems, setSelectedEcosystems] = useState<ManualPaymentEcosystem[]>([
     "PRODUCT",
@@ -296,7 +296,8 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
         offerCode: offer.offerCode,
         ecosystemTypes: [...offer.ecosystems]
       };
-    } else if (pricingMode === "MANUAL_NEGOTIATED") {
+    } else {
+      // MANUAL_NEGOTIATED mode
       finalAmount = parseInt(negotiatedAmountInput, 10);
       if (isNaN(finalAmount) || finalAmount <= 0) {
         alert("El monto negociado debe ser un número entero positivo.");
@@ -312,17 +313,6 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
         amountCop: finalAmount,
         pricingMode: "MANUAL_NEGOTIATED",
         ecosystemTypes: uniqueEcosystems
-      };
-    } else {
-      // Legacy Mode (without pricingMode / ecosystemTypes)
-      finalAmount = parseInt(registerForm.amountCop, 10);
-      if (isNaN(finalAmount) || finalAmount <= 0) {
-        alert("El monto debe ser un entero positivo.");
-        return;
-      }
-      payload = {
-        ...payload,
-        amountCop: finalAmount
       };
     }
 
@@ -894,7 +884,7 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
                       Modo de Cotización / Asignación Comercial *
                     </Label>
 
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
                         onClick={() => {
@@ -925,18 +915,6 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
                         }`}
                       >
                         Negociado Manual
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => setPricingMode("NONE")}
-                        className={`py-2 px-2 rounded-md text-xs font-semibold border transition-all text-center ${
-                          pricingMode === "NONE"
-                            ? "border-slate-400 bg-slate-200 text-slate-900 shadow-sm"
-                            : "border-slate-200 bg-white text-slate-500 hover:bg-slate-50"
-                        }`}
-                      >
-                        Legacy (Simple)
                       </button>
                     </div>
 
@@ -1058,21 +1036,6 @@ export function PaymentsManagementView({ record }: PaymentsManagementViewProps) 
                       </select>
                     </div>
                   </div>
-
-                  {pricingMode === "NONE" && (
-                    <div className="space-y-1">
-                      <Label>Monto (COP) *</Label>
-                      <Input
-                        required
-                        type="number"
-                        min="1"
-                        step="1"
-                        value={registerForm.amountCop}
-                        onChange={(e) => setRegisterForm({ ...registerForm, amountCop: e.target.value })}
-                        placeholder="180000"
-                      />
-                    </div>
-                  )}
 
                   <div className="space-y-1">
                     <Label>Fecha y Hora del Pago *</Label>

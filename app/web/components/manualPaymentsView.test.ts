@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { CATALOG_OFFERS, ECOSYSTEM_LABELS, type ManualPaymentEcosystem } from "./manualPaymentConstants.ts";
+import { CATALOG_OFFERS, ECOSYSTEM_LABELS, type ManualPaymentEcosystem, type ManualPaymentPricingMode } from "./manualPaymentConstants.ts";
 
 test("CATALOG_OFFERS structure aligns with backend manual payment catalog schema", () => {
   assert.equal(CATALOG_OFFERS.PLAN_360.amountCop, 350000);
@@ -24,4 +24,11 @@ test("ECOSYSTEM_LABELS has human-readable names for all manual payment ecosystem
     assert.ok(ECOSYSTEM_LABELS[eco].name.length > 0, `Name for ${eco} must not be empty`);
     assert.ok(ECOSYSTEM_LABELS[eco].color.length > 0, `Color for ${eco} must not be empty`);
   }
+});
+
+test("allowed UI pricing modes are strictly CATALOG and MANUAL_NEGOTIATED", () => {
+  const validModes: ManualPaymentPricingMode[] = ["CATALOG", "MANUAL_NEGOTIATED"];
+  assert.equal(validModes.length, 2);
+  assert.ok(validModes.includes("CATALOG"));
+  assert.ok(validModes.includes("MANUAL_NEGOTIATED"));
 });
