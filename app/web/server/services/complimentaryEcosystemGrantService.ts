@@ -10,6 +10,7 @@ import {
   type ComplimentaryEcosystemGrant
 } from "@/server/services/complimentaryEcosystemGrantCore";
 import { manualPaymentLedgerService } from "@/server/services/manualPaymentLedgerService";
+import { listComplimentaryGrantsByLead } from "@/server/services/complimentaryGrantReadbackCore";
 import { buildPartnerEcosystemEntitlement, type EcosystemType } from "@/server/services/partnerEcosystemEntitlementCore";
 import { partnerEcosystemTargetReader } from "@/server/services/partnerEcosystemTargetReader";
 
@@ -88,4 +89,8 @@ async function listActiveEcosystems(activationLeadId: string, effectiveDate = bo
   return activeComplimentaryGrantEcosystems(await readRecords(), activationLeadId, effectiveDate);
 }
 
-export const complimentaryEcosystemGrantService = { create, listActiveEcosystems };
+async function listByLead(activationLeadId: string) {
+  return listComplimentaryGrantsByLead(await readRecords(), activationLeadId);
+}
+
+export const complimentaryEcosystemGrantService = { create, listActiveEcosystems, listByLead };
