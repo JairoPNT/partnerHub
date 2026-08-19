@@ -146,3 +146,17 @@ test("confirmed manual payment snapshots extend entitlement without publishing",
     "TARGET_MISSING:PERSONAL_BRAND"
   ]);
 });
+
+test("complimentary grants create entitlement without a payment or priced offer snapshot", () => {
+  const result = buildPartnerEcosystemEntitlement({
+    id: leadId,
+    onboardingData: { domain: "partner.pro" },
+    complimentaryGrantEcosystems: ["PRODUCT", "BUSINESS"]
+  }, []);
+  assert.equal(result.commercialState, "KNOWN");
+  assert.equal(result.offerCode, null);
+  assert.equal(result.offerSnapshot, null);
+  assert.deepEqual(result.complimentaryGrantEcosystems, ["PRODUCT", "BUSINESS"]);
+  assert.deepEqual(result.includedEcosystems, ["PRODUCT", "BUSINESS"]);
+  assert.equal(result.regenerationRequired, true);
+});

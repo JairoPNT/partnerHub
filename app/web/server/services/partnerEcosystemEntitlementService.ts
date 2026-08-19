@@ -3,6 +3,7 @@ import "server-only";
 import { z } from "zod";
 
 import { activationLeadService } from "@/server/services/activationLeadService";
+import { complimentaryEcosystemGrantService } from "@/server/services/complimentaryEcosystemGrantService";
 import { buildPartnerEcosystemEntitlement } from "@/server/services/partnerEcosystemEntitlementCore";
 import { partnerEcosystemTargetReader } from "@/server/services/partnerEcosystemTargetReader";
 import { manualPaymentLedgerService } from "@/server/services/manualPaymentLedgerService";
@@ -30,12 +31,15 @@ async function get(rawQuery: unknown) {
     ? leads.find((candidate) => candidate.id === query.activationLeadId)
     : leads.find((candidate) => candidate.siteId === query.siteId) ??
       leads.find((candidate) => candidate.id === targets.find((target) => target.siteId === query.siteId)?.ownerKey);
-  return lead ? buildPartnerEcosystemEntitlement({
+  if (!lead) return null;
+  const complimentaryGrantEcosystems = await complimentaryEcosystemGrantService.listActiveEcosystems(lead.id);
+  return buildPartnerEcosystemEntitlement({
     ...lead,
+    complimentaryGrantEcosystems,
     additionalCommercialSnapshots: paymentResult.payments
       .filter((payment) => payment.activationLeadId === lead.id)
       .flatMap((payment) => payment.commercialSnapshot ? [payment.commercialSnapshot] : [])
-  }, targets) : null;
+  }, targets);
 }
 
 export const partnerEcosystemEntitlementService = { get };
