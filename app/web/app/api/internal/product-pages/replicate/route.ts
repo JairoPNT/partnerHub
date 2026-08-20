@@ -5,6 +5,7 @@ import {
   productPageReplicationInputSchema,
   productPageReplicationService
 } from "@/server/services/productPageReplicationService";
+import { PartnerEcosystemGenerationError } from "@/server/services/partnerEcosystemGenerationGuard";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,9 @@ export async function POST(request: Request) {
     const result = await productPageReplicationService.replicate(productPageReplicationInputSchema.parse(body));
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
+    if (error instanceof PartnerEcosystemGenerationError) {
+      return NextResponse.json({ error: error.code, details: error.details }, { status: 409 });
+    }
     if (error instanceof ZodError) {
       return NextResponse.json(
         { error: "Invalid product page replication request", issues: error.flatten() },
