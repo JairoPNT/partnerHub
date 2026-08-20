@@ -36,6 +36,24 @@ export type ComplimentaryEcosystemGrant = ComplimentaryGrantInput & {
   createdAt: string;
 };
 
+export type ComplimentaryGrantConflictSource = "CONFIRMED_PAYMENT" | "ACTIVE_COMPLIMENTARY_GRANT";
+
+export type ComplimentaryGrantConflict = {
+  ecosystemType: EcosystemType;
+  sources: ComplimentaryGrantConflictSource[];
+};
+
+export class ComplimentaryGrantConflictError extends Error {
+  readonly code = "ECOSYSTEM_ALREADY_GRANTED";
+  readonly conflicts: ComplimentaryGrantConflict[];
+
+  constructor(conflicts: ComplimentaryGrantConflict[]) {
+    super("One or more ecosystems are already covered by a confirmed payment or active complimentary grant.");
+    this.name = "ComplimentaryGrantConflictError";
+    this.conflicts = conflicts;
+  }
+}
+
 const order: Record<EcosystemType, number> = { PRODUCT: 0, BUSINESS: 1, PERSONAL_BRAND: 2 };
 
 export function normalizeComplimentaryGrantInput(input: unknown) {
@@ -59,13 +77,22 @@ export function createComplimentaryGrant(
     operatorSubject: string;
     operatorEmail?: string;
     existingEntitlements: ReadonlyArray<EcosystemType>;
+    confirmedPaymentEcosystems?: ReadonlyArray<EcosystemType>;
+    activeComplimentaryGrantEcosystems?: ReadonlyArray<EcosystemType>;
     now: string;
   }
 ) {
   const normalized = normalizeComplimentaryGrantInput(input);
+  const paid = new Set(context.confirmedPaymentEcosystems ?? []);
+  const complimentary = new Set(context.activeComplimentaryGrantEcosystems ?? []);
+  const conflicts = normalized.ecosystemTypes.flatMap((ecosystemType) => {
+    const sources: ComplimentaryGrantConflictSource[] = [];
+    if (paid.has(ecosystemType)) sources.push("CONFIRMED_PAYMENT");
+    if (complimentary.has(ecosystemType)) sources.push("ACTIVE_COMPLIMENTARY_GRANT");
+    return sources.length > 0 ? [{ ecosystemType, sources }] : [];
+  });
+  if (conflicts.length > 0) throw new ComplimentaryGrantConflictError(conflicts);
   const id = complimentaryGrantIdentity(activationLeadId, normalized);
-  const existing = records.find((record) => record.id === id);
-  if (existing) return { records, grant: existing, idempotent: true };
   const entitled = new Set(context.existingEntitlements);
   const grant: ComplimentaryEcosystemGrant = {
     id,
