@@ -42,8 +42,11 @@ import { ModalPortal } from "@/components/ui/modal-portal";
 import {
   validateComplimentaryGrantForm,
   buildComplimentaryGrantPayload,
+  ECOSYSTEM_NAMES,
+  LIFECYCLE_STATUS_LABELS,
   type ComplimentaryGrantFormState,
-  type ComplimentaryGrantResult
+  type ComplimentaryGrantResult,
+  type ComplimentaryGrantReadback
 } from "@/components/complimentaryGrantHelpers";
 
 export type ActivationLeadStatus = "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
@@ -219,6 +222,11 @@ export function EntrepreneurOperationsView() {
   const [isSubmittingGrant, setIsSubmittingGrant] = useState(false);
   const [grantError, setGrantError] = useState<string | null>(null);
   const [grantSuccessResult, setGrantSuccessResult] = useState<ComplimentaryGrantResult | null>(null);
+
+  // Complimentary Grant Readback State
+  const [readbackData, setReadbackData] = useState<ComplimentaryGrantReadback | null>(null);
+  const [isReadbackLoading, setIsReadbackLoading] = useState(false);
+  const [readbackError, setReadbackError] = useState<string | null>(null);
 
   const [createForm, setCreateForm] = useState({
     fullName: "",
@@ -711,6 +719,36 @@ export function EntrepreneurOperationsView() {
     setShowGrantModal(true);
   };
 
+  const fetchComplimentaryGrantReadback = async (leadId: string) => {
+    setIsReadbackLoading(true);
+    setReadbackError(null);
+    try {
+      const res = await fetch(`/api/internal/activation-leads/${leadId}/complimentary-grant`);
+      if (!res.ok) {
+        if (res.status === 404) {
+          setReadbackData(null);
+          return;
+        }
+        throw new Error("No se pudo cargar la información de cortesías del partner.");
+      }
+      const data = await res.json();
+      setReadbackData(data as ComplimentaryGrantReadback);
+    } catch (err: unknown) {
+      setReadbackError(err instanceof Error ? err.message : "Error al consultar cortesías del partner.");
+    } finally {
+      setIsReadbackLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedLead?.id) {
+      fetchComplimentaryGrantReadback(selectedLead.id);
+    } else {
+      setReadbackData(null);
+      setReadbackError(null);
+    }
+  }, [selectedLead?.id]);
+
   const handleSubmitComplimentaryGrant = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedLead) return;
@@ -740,6 +778,7 @@ export function EntrepreneurOperationsView() {
       setGrantSuccessResult(resData as ComplimentaryGrantResult);
       setSuccessMessage(`Cortesía asignada con éxito para ${selectedLead.fullName}.`);
       setTimeout(() => setSuccessMessage(null), 5000);
+      await fetchComplimentaryGrantReadback(selectedLead.id);
     } catch (err: unknown) {
       setGrantError(err instanceof Error ? err.message : "Error desconocido al procesar la cortesía.");
     } finally {
@@ -1756,16 +1795,16 @@ export function EntrepreneurOperationsView() {
                   </div>
                 </div>
 
-                {/* 4. Asignar Cortesía de Ecosistemas */}
-                <div className="rounded-2xl border border-purple-200 bg-purple-50/40 p-5 space-y-3 md:col-span-2">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
+                {/* 4. Ecosistemas de Cortesía & Historial Persistido */}
+                <div className="rounded-2xl border border-purple-200 bg-purple-50/40 p-5 space-y-4 md:col-span-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-purple-100 pb-3">
                     <div>
                       <h4 className="text-xs font-bold uppercase tracking-wider text-purple-900 flex items-center gap-1.5">
                         <Gift className="h-4 w-4 text-purple-600" />
-                        Asignar Cortesía de Ecosistemas
+                        Ecosistemas de Cortesía & Entitlement
                       </h4>
-                      <p className="mt-1 text-xs text-slate-600">
-                        Otorga acceso gratuito a Producto, Negocio VSL o Marca Personal para este partner sin registrar pagos.
+                      <p className="mt-0.5 text-xs text-slate-600">
+                        Gestiona y consulta el acceso gratuito asignado a Producto, Negocio VSL o Marca Personal.
                       </p>
                     </div>
                     <button
@@ -1777,6 +1816,138 @@ export function EntrepreneurOperationsView() {
                       <span>Asignar cortesía</span>
                     </button>
                   </div>
+
+                  {/* Estado de Carga / Error */}
+                  {isReadbackLoading ? (
+                    <div className="flex items-center gap-2 py-3 text-xs text-purple-700 font-medium">
+                      <RefreshCw className="h-4 w-4 animate-spin text-purple-600" />
+                      <span>Consultando cortesías persistidas del partner...</span>
+                    </div>
+                  ) : readbackError ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>{readbackError}</span>
+                    </div>
+                  ) : readbackData ? (
+                    <div className="space-y-4">
+                      {/* Entitlement Summary Card */}
+                      <div className="rounded-xl border border-purple-200/80 bg-white p-3.5 space-y-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                            Ecosistemas Incluidos en Entitlement
+                          </span>
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                              readbackData.entitlement.commercialState === "KNOWN"
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                                : "bg-amber-50 text-amber-700 border-amber-200"
+                            }`}>
+                              {readbackData.entitlement.commercialState === "KNOWN" ? "COMERCIAL CONOCIDO" : "ESTADO DESCONOCIDO"}
+                            </span>
+                            {readbackData.entitlement.regenerationRequired && (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300" title={readbackData.entitlement.regenerationReasons.join(", ")}>
+                                <Sparkles className="h-3 w-3 text-amber-600" />
+                                REGENERACIÓN REQUERIDA
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-1.5">
+                          {readbackData.entitlement.includedEcosystems.length > 0 ? (
+                            readbackData.entitlement.includedEcosystems.map((eco) => (
+                              <span
+                                key={eco}
+                                className="inline-flex items-center gap-1 rounded-lg border border-purple-200 bg-purple-50 px-2.5 py-1 text-xs font-bold text-purple-900"
+                              >
+                                <Check className="h-3.5 w-3.5 text-purple-600" />
+                                {ECOSYSTEM_NAMES[eco] || eco}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">No hay ecosistemas habilitados aún</span>
+                          )}
+                        </div>
+
+                        {readbackData.entitlement.rootRedirectTarget && (
+                          <div className="text-[11px] text-slate-600 font-medium pt-1 border-t border-slate-100 flex items-center gap-1">
+                            <Globe className="h-3.5 w-3.5 text-purple-500 shrink-0" />
+                            <span>
+                              Redirección principal ({ECOSYSTEM_NAMES[readbackData.entitlement.rootRedirectTarget.ecosystemType]}):{" "}
+                              <strong className="font-mono text-purple-900">{readbackData.entitlement.rootRedirectTarget.publicHost}</strong>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Historial de Cortesías Persistidas */}
+                      <div className="space-y-2">
+                        <h5 className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                          Cortesías Asignadas Persistidas ({readbackData.grants.length})
+                        </h5>
+
+                        {readbackData.grants.length === 0 ? (
+                          <div className="rounded-xl border border-dashed border-slate-300 bg-white/60 p-4 text-center text-xs text-slate-500">
+                            Este partner no posee cortesías de ecosistema asignadas actualmente.
+                          </div>
+                        ) : (
+                          <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                            {readbackData.grants.map((grant) => {
+                              const statusConfig = LIFECYCLE_STATUS_LABELS[grant.lifecycleStatus] || {
+                                label: grant.lifecycleStatus,
+                                colorClass: "bg-slate-100 text-slate-700 border-slate-300"
+                              };
+                              return (
+                                <div
+                                  key={grant.id}
+                                  className="rounded-xl border border-slate-200 bg-white p-3 space-y-2 text-xs text-slate-800 shadow-sm"
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex flex-wrap items-center gap-1.5">
+                                      {grant.ecosystemTypes.map((eco) => (
+                                        <span
+                                          key={eco}
+                                          className="inline-flex items-center rounded-md bg-purple-100 px-2 py-0.5 text-[10px] font-bold text-purple-900"
+                                        >
+                                          {ECOSYSTEM_NAMES[eco] || eco}
+                                        </span>
+                                      ))}
+                                    </div>
+                                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold border ${statusConfig.colorClass}`}>
+                                      {statusConfig.label}
+                                    </span>
+                                  </div>
+
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-600">
+                                    <p>
+                                      <strong>Motivo:</strong> {grant.grantReason}
+                                    </p>
+                                    <p>
+                                      <strong>Efectiva:</strong> {grant.effectiveDate}
+                                    </p>
+                                    <p>
+                                      <strong>Corte:</strong> {grant.cutoffDate || "Sin límite (Permanente)"}
+                                    </p>
+                                    {grant.operator.email && (
+                                      <p className="truncate">
+                                        <strong>Operador:</strong> {grant.operator.email}
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  {grant.notes && (
+                                    <p className="text-[11px] text-slate-500 bg-slate-50 p-2 rounded-lg italic">
+                                      "{grant.notes}"
+                                    </p>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ) : null}
                 </div>
               </div>
 

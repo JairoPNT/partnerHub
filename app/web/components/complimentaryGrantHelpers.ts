@@ -1,4 +1,5 @@
 export type EcosystemType = "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND";
+export type GrantLifecycleStatus = "ACTIVE" | "SCHEDULED" | "EXPIRED";
 
 export interface ComplimentaryGrantFormState {
   ecosystemTypes: EcosystemType[];
@@ -24,6 +25,47 @@ export interface ComplimentaryGrantResult {
   };
   idempotent: boolean;
 }
+
+export interface ComplimentaryGrantItem {
+  id: string;
+  ecosystemTypes: EcosystemType[];
+  grantReason: string;
+  effectiveDate: string;
+  cutoffDate: string | null;
+  notes: string | null;
+  operator: {
+    subject: string;
+    email: string | null;
+  };
+  regenerationRequired: boolean;
+  lifecycleStatus: GrantLifecycleStatus;
+  createdAt: string;
+}
+
+export interface ComplimentaryGrantReadback {
+  activationLeadId: string;
+  effectiveDate: string;
+  grants: ComplimentaryGrantItem[];
+  entitlement: {
+    commercialState: "KNOWN" | "UNKNOWN";
+    includedEcosystems: EcosystemType[];
+    regenerationRequired: boolean;
+    regenerationReasons: string[];
+    rootRedirectTarget: { ecosystemType: EcosystemType; publicHost: string } | null;
+  };
+}
+
+export const ECOSYSTEM_NAMES: Record<EcosystemType, string> = {
+  PRODUCT: "Producto",
+  BUSINESS: "Negocio VSL",
+  PERSONAL_BRAND: "Marca Personal"
+};
+
+export const LIFECYCLE_STATUS_LABELS: Record<GrantLifecycleStatus, { label: string; colorClass: string }> = {
+  ACTIVE: { label: "Activa", colorClass: "bg-emerald-50 text-emerald-800 border-emerald-300" },
+  SCHEDULED: { label: "Programada", colorClass: "bg-blue-50 text-blue-800 border-blue-300" },
+  EXPIRED: { label: "Expirada", colorClass: "bg-slate-100 text-slate-600 border-slate-300" }
+};
 
 export function validateComplimentaryGrantForm(form: ComplimentaryGrantFormState): string | null {
   if (!form.ecosystemTypes || form.ecosystemTypes.length === 0) {
