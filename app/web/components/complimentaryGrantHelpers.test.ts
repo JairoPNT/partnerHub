@@ -6,7 +6,12 @@ import {
   buildComplimentaryGrantPayload,
   ECOSYSTEM_NAMES,
   LIFECYCLE_STATUS_LABELS,
-  type ComplimentaryGrantFormState
+  isEcosystemCovered,
+  getAvailableEcosystems,
+  formatComplimentaryGrantConflictError,
+  type ComplimentaryGrantFormState,
+  type ComplimentaryGrantReadback,
+  type ComplimentaryGrantConflictResponse
 } from "./complimentaryGrantHelpers.ts";
 
 test("validateComplimentaryGrantForm fails if no ecosystems selected", () => {
@@ -72,4 +77,70 @@ test("LIFECYCLE_STATUS_LABELS maps lifecycle states correctly", () => {
   assert.equal(LIFECYCLE_STATUS_LABELS.ACTIVE.label, "Activa");
   assert.equal(LIFECYCLE_STATUS_LABELS.SCHEDULED.label, "Programada");
   assert.equal(LIFECYCLE_STATUS_LABELS.EXPIRED.label, "Expirada");
+});
+
+test("isEcosystemCovered identifies covered ecosystems from readback entitlement", () => {
+  const readback: ComplimentaryGrantReadback = {
+    activationLeadId: "lead-1",
+    effectiveDate: "2026-08-20",
+    grants: [],
+    entitlement: {
+      commercialState: "KNOWN",
+      includedEcosystems: ["PRODUCT", "BUSINESS"],
+      regenerationRequired: false,
+      regenerationReasons: [],
+      rootRedirectTarget: null
+    }
+  };
+
+  assert.equal(isEcosystemCovered("PRODUCT", readback), true);
+  assert.equal(isEcosystemCovered("BUSINESS", readback), true);
+  assert.equal(isEcosystemCovered("PERSONAL_BRAND", readback), false);
+  assert.equal(isEcosystemCovered("PRODUCT", null), false);
+});
+
+test("getAvailableEcosystems returns only uncovered ecosystems", () => {
+  const readbackAllCovered: ComplimentaryGrantReadback = {
+    activationLeadId: "claudia-lead",
+    effectiveDate: "2026-08-20",
+    grants: [],
+    entitlement: {
+      commercialState: "KNOWN",
+      includedEcosystems: ["PRODUCT", "BUSINESS", "PERSONAL_BRAND"],
+      regenerationRequired: false,
+      regenerationReasons: [],
+      rootRedirectTarget: null
+    }
+  };
+
+  assert.deepEqual(getAvailableEcosystems(readbackAllCovered), []);
+
+  const readbackPartial: ComplimentaryGrantReadback = {
+    activationLeadId: "partial-lead",
+    effectiveDate: "2026-08-20",
+    grants: [],
+    entitlement: {
+      commercialState: "KNOWN",
+      includedEcosystems: ["PRODUCT"],
+      regenerationRequired: false,
+      regenerationReasons: [],
+      rootRedirectTarget: null
+    }
+  };
+
+  assert.deepEqual(getAvailableEcosystems(readbackPartial), ["BUSINESS", "PERSONAL_BRAND"]);
+});
+
+test("formatComplimentaryGrantConflictError formats HTTP 409 conflict messages clearly", () => {
+  const conflictResp: ComplimentaryGrantConflictResponse = {
+    error: "ECOSYSTEM_ALREADY_GRANTED",
+    conflicts: [
+      { ecosystemType: "PRODUCT", sources: ["CONFIRMED_PAYMENT"] },
+      { ecosystemType: "BUSINESS", sources: ["ACTIVE_COMPLIMENTARY_GRANT"] }
+    ]
+  };
+
+  const message = formatComplimentaryGrantConflictError(conflictResp);
+  assert.ok(message.includes("Producto (cubierto por pago confirmado)"));
+  assert.ok(message.includes("Negocio VSL (cubierto por cortesía activa)"));
 });
