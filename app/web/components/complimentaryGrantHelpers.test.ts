@@ -4,6 +4,8 @@ import test from "node:test";
 import {
   validateComplimentaryGrantForm,
   buildComplimentaryGrantPayload,
+  ECOSYSTEM_NAMES,
+  LIFECYCLE_STATUS_LABELS,
   type ComplimentaryGrantFormState
 } from "./complimentaryGrantHelpers.ts";
 
@@ -58,4 +60,16 @@ test("buildComplimentaryGrantPayload constructs valid backend payload without pa
   assert.equal(payload.effectiveDate, "2026-08-19");
   assert.equal(payload.cutoffDate, "2026-12-31");
   assert.equal(payload.notes, "Aprobado por dirección comercial");
+});
+
+test("ECOSYSTEM_NAMES maps ecosystem types to Spanish labels", () => {
+  assert.equal(ECOSYSTEM_NAMES.PRODUCT, "Producto");
+  assert.equal(ECOSYSTEM_NAMES.BUSINESS, "Negocio VSL");
+  assert.equal(ECOSYSTEM_NAMES.PERSONAL_BRAND, "Marca Personal");
+});
+
+test("LIFECYCLE_STATUS_LABELS maps lifecycle states correctly", () => {
+  assert.equal(LIFECYCLE_STATUS_LABELS.ACTIVE.label, "Activa");
+  assert.equal(LIFECYCLE_STATUS_LABELS.SCHEDULED.label, "Programada");
+  assert.equal(LIFECYCLE_STATUS_LABELS.EXPIRED.label, "Expirada");
 });
