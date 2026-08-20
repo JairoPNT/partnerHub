@@ -17,6 +17,8 @@ import {
 import { applyMetaPixelToHtml, metaPixelIdPattern } from "@/server/services/metaPixelHtml";
 import { applyBusinessVslPoster } from "@/server/services/businessVslPoster";
 import { businessProductHeroCorrelationService } from "@/server/services/businessProductHeroCorrelationService";
+import { partnerEcosystemEntitlementService } from "@/server/services/partnerEcosystemEntitlementService";
+import { assertPartnerEcosystemGenerationAllowed } from "@/server/services/partnerEcosystemGenerationGuard";
 
 const siteIdSchema = z
   .string()
@@ -344,7 +346,17 @@ export const productPageGenerationService = {
     options?: ProductPageGenerationOptions
   ): Promise<ProductPageGenerationResult> {
     const baseConfiguration = normalizedConfiguration(input);
-    const isPartnerBusiness = input.ecosystemType === "BUSINESS" && !isMasterSiteId(input.site.id);
+    const masterSite = isMasterSiteId(input.site.id);
+    const entitlement = masterSite
+      ? null
+      : await partnerEcosystemEntitlementService.get({ siteId: input.site.id });
+    assertPartnerEcosystemGenerationAllowed({
+      siteId: input.site.id,
+      ecosystemType: input.ecosystemType,
+      masterSite,
+      entitlement
+    });
+    const isPartnerBusiness = input.ecosystemType === "BUSINESS" && !masterSite;
     const productHero = isPartnerBusiness
       ? await businessProductHeroCorrelationService.resolveForBusinessSite(input.site.id)
       : {};

@@ -5,6 +5,7 @@ import {
   productPageGenerationInputSchema,
   productPageGenerationService
 } from "@/server/services/productPageGenerationService";
+import { PartnerEcosystemGenerationError } from "@/server/services/partnerEcosystemGenerationGuard";
 
 export const runtime = "nodejs";
 
@@ -67,6 +68,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ...result, previewPath, previewUrl }, { status: 201 });
   } catch (error) {
+    if (error instanceof PartnerEcosystemGenerationError) {
+      return NextResponse.json({ error: error.code, details: error.details }, { status: 409 });
+    }
     if (error instanceof ZodError) {
       const firstIssue = error.issues[0];
       const field = firstIssue?.path.join(".");

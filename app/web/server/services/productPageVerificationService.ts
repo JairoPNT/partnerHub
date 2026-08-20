@@ -12,6 +12,7 @@ import { getMasterSiteDomainBySiteId } from "@/server/services/ecosystemService"
 import { productPageSourceService } from "@/server/services/productPageSourceService";
 import { getPublishingTarget } from "@/server/services/subdomainProvisioningService";
 import { resolveVerificationHost } from "@/server/services/publicationTargetResolver";
+import { requiresProductCommerceVerification } from "@/server/services/productPageVerificationContract";
 
 const siteIdSchema = z
   .string()
@@ -287,7 +288,7 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
     addMatchCheck(checks, "hero_mobile_matches", expected.hero.mobile, publicConfig.hero?.mobile);
   }
 
-  if (homepage.ok) {
+  if (homepage.ok && requiresProductCommerceVerification(expected.ecosystemType)) {
     addPresenceCheck(
       checks,
       "no_static_comprar_fallback",
@@ -318,7 +319,7 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
     );
   }
 
-  if (appResponse.ok) {
+  if (appResponse.ok && requiresProductCommerceVerification(expected.ecosystemType)) {
     addPresenceCheck(
       checks,
       "app_uses_dynamic_purchase_links",

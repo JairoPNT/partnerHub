@@ -16,6 +16,7 @@
     "test:domain-inventory": "node --experimental-strip-types --test server/services/domainInventoryBuilder.test.ts",
     "test:meta-pixel": "node --experimental-strip-types --test server/services/metaPixelHtml.test.ts",
     "test:ecosystem-templates": "node --experimental-strip-types --test server/services/ecosystemTemplateResolver.test.ts",
+    "test:ecosystem-generation-contract": "node --experimental-strip-types --test server/services/ecosystemTemplateResolver.test.ts server/services/partnerEcosystemGenerationGuard.test.ts server/services/productPageVerificationContract.test.ts",
     "test:hero-sync": "node --experimental-strip-types --test server/services/productPageHeroSyncService.test.ts",
     "test:manual-payments": "node --experimental-strip-types --test server/services/manualPaymentLedgerCore.test.ts",
     "test:manual-payment-ecosystems": "node --experimental-strip-types --test server/services/manualPaymentLedgerCore.test.ts server/services/partnerEcosystemEntitlementCore.test.ts",

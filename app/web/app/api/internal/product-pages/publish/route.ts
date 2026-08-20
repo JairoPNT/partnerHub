@@ -8,6 +8,7 @@ import {
 import { activationLeadService } from "@/server/services/activationLeadService";
 import { productPageGenerationService } from "@/server/services/productPageGenerationService";
 import { productPageLeadSyncService } from "@/server/services/productPageLeadSyncService";
+import { PartnerEcosystemGenerationError } from "@/server/services/partnerEcosystemGenerationGuard";
 
 export const runtime = "nodejs";
 
@@ -29,6 +30,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result, { status: 201 });
   } catch (error) {
+    if (error instanceof PartnerEcosystemGenerationError) {
+      return NextResponse.json({ error: error.code, details: error.details }, { status: 409 });
+    }
     if (error instanceof ZodError) {
       return NextResponse.json(
         { error: "Invalid product page publication request", issues: error.flatten() },
