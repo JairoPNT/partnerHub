@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   activeComplimentaryGrantEcosystems,
+  ComplimentaryGrantConflictError,
   complimentaryGrantInputSchema,
   createComplimentaryGrant,
   type ComplimentaryEcosystemGrant
@@ -35,15 +36,59 @@ test("creates an auditable grant without financial fields and marks new entitlem
   assert.equal("paymentId" in result.grant, false);
 });
 
-test("repeating the same assignment is idempotent and does not duplicate entitlements", () => {
+test("rejects a repeated assignment even when reason, date, or notes change", () => {
   const first = createComplimentaryGrant([], leadId, input, context);
-  const second = createComplimentaryGrant(first.records, leadId, {
+  const active = activeComplimentaryGrantEcosystems(first.records, leadId, "2026-08-20");
+  assert.throws(() => createComplimentaryGrant(first.records, leadId, {
     ...input,
-    ecosystemTypes: ["PRODUCT", "PERSONAL_BRAND"]
-  }, { ...context, now: "2026-08-19T16:00:00.000Z" });
-  assert.equal(second.idempotent, true);
-  assert.equal(second.records.length, 1);
-  assert.equal(second.grant.createdAt, context.now);
+    grantReason: "Motivo distinto",
+    effectiveDate: "2026-08-20",
+    notes: "Notas distintas"
+  }, { ...context, activeComplimentaryGrantEcosystems: active }), (error) => {
+    assert.ok(error instanceof ComplimentaryGrantConflictError);
+    assert.deepEqual(error.conflicts, [
+      { ecosystemType: "PRODUCT", sources: ["ACTIVE_COMPLIMENTARY_GRANT"] },
+      { ecosystemType: "PERSONAL_BRAND", sources: ["ACTIVE_COMPLIMENTARY_GRANT"] }
+    ]);
+    return true;
+  });
+});
+
+test("allows a distinct ecosystem for the same partner", () => {
+  const first = createComplimentaryGrant([], leadId, { ...input, ecosystemTypes: ["PRODUCT"] }, context);
+  const second = createComplimentaryGrant(first.records, leadId, { ...input, ecosystemTypes: ["BUSINESS"] }, {
+    ...context,
+    activeComplimentaryGrantEcosystems: ["PRODUCT"]
+  });
+  assert.equal(second.records.length, 2);
+  assert.deepEqual(second.grant.ecosystemTypes, ["BUSINESS"]);
+});
+
+test("rejects the complete request when any ecosystem is covered by a confirmed payment", () => {
+  assert.throws(() => createComplimentaryGrant([], leadId, { ...input, ecosystemTypes: ["PRODUCT", "BUSINESS"] }, {
+    ...context,
+    confirmedPaymentEcosystems: ["PRODUCT"]
+  }), (error) => {
+    assert.ok(error instanceof ComplimentaryGrantConflictError);
+    assert.deepEqual(error.conflicts, [{ ecosystemType: "PRODUCT", sources: ["CONFIRMED_PAYMENT"] }]);
+    return true;
+  });
+});
+
+test("allows a new grant after the previous complimentary grant expired", () => {
+  const expired = createComplimentaryGrant([], leadId, {
+    ...input,
+    ecosystemTypes: ["BUSINESS"],
+    cutoffDate: "2026-08-19"
+  }, context);
+  const active = activeComplimentaryGrantEcosystems(expired.records, leadId, "2026-08-20");
+  const replacement = createComplimentaryGrant(expired.records, leadId, {
+    ...input,
+    ecosystemTypes: ["BUSINESS"],
+    effectiveDate: "2026-08-20",
+    cutoffDate: null
+  }, { ...context, activeComplimentaryGrantEcosystems: active });
+  assert.equal(replacement.records.length, 2);
 });
 
 test("does not request regeneration when all granted ecosystems are already entitled", () => {
@@ -57,6 +102,8 @@ test("validates unique supported ecosystems, dates, and strict payload fields", 
   assert.equal(complimentaryGrantInputSchema.safeParse({ ...input, ecosystemTypes: ["UNKNOWN"] }).success, false);
   assert.equal(complimentaryGrantInputSchema.safeParse({ ...input, cutoffDate: "2026-08-18" }).success, false);
   assert.equal(complimentaryGrantInputSchema.safeParse({ ...input, amountCop: 0 }).success, false);
+  assert.equal(complimentaryGrantInputSchema.safeParse({ ...input, monthlyCredits: 1 }).success, false);
+  assert.equal(complimentaryGrantInputSchema.safeParse({ ...input, recurringMonths: 1 }).success, false);
 });
 
 test("effective and cutoff dates determine active complimentary entitlements", () => {

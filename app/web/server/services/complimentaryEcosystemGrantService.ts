@@ -63,6 +63,14 @@ async function createUnlocked(
     partnerEcosystemTargetReader.list()
   ]);
   const activeGrants = activeComplimentaryGrantEcosystems(records, activationLeadId, bogotaDate());
+  const commerciallyActiveLead = ["PAID", "CONVERTED"].includes(lead.status)
+    ? lead
+    : { ...lead, offerSnapshot: undefined };
+  const commercialEntitlement = buildPartnerEcosystemEntitlement({
+    ...commerciallyActiveLead,
+    additionalCommercialSnapshots: paymentResult.payments
+      .flatMap((payment) => payment.commercialSnapshot ? [payment.commercialSnapshot] : [])
+  }, targets);
   const entitlement = buildPartnerEcosystemEntitlement({
     ...lead,
     additionalCommercialSnapshots: paymentResult.payments
@@ -73,6 +81,8 @@ async function createUnlocked(
     operatorSubject: operator.subject,
     operatorEmail: operator.email,
     existingEntitlements: entitlement.includedEcosystems as EcosystemType[],
+    confirmedPaymentEcosystems: commercialEntitlement.includedEcosystems as EcosystemType[],
+    activeComplimentaryGrantEcosystems: activeGrants,
     now: new Date().toISOString()
   });
   if (!result.idempotent) await writeRecords(result.records);

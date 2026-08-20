@@ -7,6 +7,7 @@ import {
 } from "@/server/auth/cloudflareAccessAuth";
 import { activationLeadService } from "@/server/services/activationLeadService";
 import { complimentaryEcosystemGrantService } from "@/server/services/complimentaryEcosystemGrantService";
+import { ComplimentaryGrantConflictError } from "@/server/services/complimentaryEcosystemGrantCore";
 import { buildComplimentaryGrantReadback } from "@/server/services/complimentaryGrantReadbackCore";
 import { partnerEcosystemEntitlementService } from "@/server/services/partnerEcosystemEntitlementService";
 
@@ -59,6 +60,9 @@ export async function POST(request: Request, context: RouteContext) {
     }
     if (error instanceof ZodError) {
       return NextResponse.json({ error: "INVALID_COMPLIMENTARY_GRANT", issues: error.flatten() }, { status: 400 });
+    }
+    if (error instanceof ComplimentaryGrantConflictError) {
+      return NextResponse.json({ error: error.code, conflicts: error.conflicts }, { status: 409 });
     }
     return NextResponse.json({ error: "COMPLIMENTARY_GRANT_FAILED" }, { status: 500 });
   }
