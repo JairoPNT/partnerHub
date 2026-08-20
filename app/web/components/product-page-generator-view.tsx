@@ -43,6 +43,14 @@ import {
   ProductPageSiteSummary
 } from "@/components/ui/verification-status-panel";
 import { ProductPageHistoryPanel } from "@/components/product-page-history-panel";
+import {
+  isEcosystemEntitledForPartner,
+  getCanonicalHostForEcosystem,
+  getDefaultSelectedEcosystem,
+  ECOSYSTEM_CONFIGS,
+  type PartnerEntitlementData,
+  type EcosystemType
+} from "@/components/landingBuilderEcosystemHelpers";
 
 type ProductPageGeneratorViewProps = {
   record?: ModuleRecord;
@@ -303,6 +311,33 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
   const safePreviewUrl = getSafePreviewUrl(result?.siteId, result?.previewUrl, result?.previewPath);
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
 
+  // Estados de Entitlement y Ecosistema
+  const [partnerEntitlement, setPartnerEntitlement] = useState<PartnerEntitlementData | null>(null);
+  const [isEntitlementLoading, setIsEntitlementLoading] = useState(false);
+  const [selectedEcosystem, setSelectedEcosystem] = useState<EcosystemType>("PRODUCT");
+
+  const fetchPartnerEntitlement = async (leadId: string) => {
+    setIsEntitlementLoading(true);
+    try {
+      const res = await fetch(`/api/internal/partner-ecosystem-entitlement?activationLeadId=${leadId}`);
+      if (res.ok) {
+        const data: PartnerEntitlementData = await res.json();
+        setPartnerEntitlement(data);
+        if (data.includedEcosystems && data.includedEcosystems.length > 0) {
+          setSelectedEcosystem((prev) =>
+            data.includedEcosystems.includes(prev) ? prev : getDefaultSelectedEcosystem(data)
+          );
+        }
+      } else {
+        setPartnerEntitlement(null);
+      }
+    } catch {
+      setPartnerEntitlement(null);
+    } finally {
+      setIsEntitlementLoading(false);
+    }
+  };
+
   const triggerHistoryRefresh = () => {
     setHistoryRefreshKey((prev) => prev + 1);
   };
@@ -465,6 +500,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     const brandName = pickFirst(lead.brandName, stringValue(savedDistributor.brandName));
     const fullName = pickFirst(lead.fullName, stringValue(savedDistributor.fullName));
 
+    fetchPartnerEntitlement(lead.id);
+
     setForm({
       siteId: effectiveSiteId,
       domain: domain,
@@ -545,6 +582,8 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
   const resetForm = () => {
     setSelectedLead(null);
+    setPartnerEntitlement(null);
+    setSelectedEcosystem("PRODUCT");
     setForm(INITIAL_FORM);
     setErrorMessage(null);
     setSuccessMessage(null);
@@ -633,6 +672,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
     setIsSubmitting(true);
 
     const payload = {
+      ecosystemType: selectedEcosystem,
       site: {
         id: form.siteId.trim(),
         domain: form.domain.trim().toLowerCase() || undefined,
@@ -684,6 +724,12 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       const data = await response.json();
 
       if (!response.ok) {
+        if (data.error === "ECOSYSTEM_NOT_ENTITLED") {
+          throw new Error(`El partner no tiene asignado el ecosistema ${ECOSYSTEM_CONFIGS[selectedEcosystem].name} en su plan comercial.`);
+        }
+        if (data.error === "PARTNER_ENTITLEMENT_NOT_FOUND") {
+          throw new Error("No se encontró el registro de entitlement comercial para este partner.");
+        }
         if (data.issues && data.issues.fieldErrors) {
           const parsedErrors: Record<string, string[]> = {};
           const fieldMap: Record<string, keyof FormState> = {
@@ -727,11 +773,12 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
       setResult(data as GenerationResult);
       triggerHistoryRefresh();
 
-      // Actualizar publicationState a GENERATED localmente
+      // Actualizar publicationState a GENERATED localmente y refrescar entitlement
       if (selectedLead) {
         const updated = { ...selectedLead, publicationState: "GENERATED" as const, lastVerification: null };
         setSelectedLead(updated);
         setLeads((prev) => prev.map((l) => (l.id === updated.id ? updated : l)));
+        fetchPartnerEntitlement(selectedLead.id);
       }
 
       // Desplazamiento automático al resultado para abrir preview o publicar sin perder contexto.
@@ -783,7 +830,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
 
       const finalState = data.publicationState || (data.verificationStatus === "VERIFIED" ? "VERIFIED" : "VERIFY_FAILED");
 
-      // Actualizar publicationState y lastVerification localmente
+      // Actualizar publicationState, lastVerification y entitlement localmente
       if (selectedLead) {
         const updatedLead: ActivationLeadRecord = {
           ...selectedLead,
@@ -798,6 +845,7 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
         };
         setSelectedLead(updatedLead);
         setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+        fetchPartnerEntitlement(selectedLead.id);
       }
     } catch (err: unknown) {
       setPublishError(err instanceof Error ? err.message : "Ocurrió un error inesperado durante la publicación.");
@@ -1083,6 +1131,85 @@ export function ProductPageGeneratorView({ record }: ProductPageGeneratorViewPro
           {selectedLead.lastVerification?.checks && (
             <FailedChecksDetails checks={selectedLead.lastVerification.checks} />
           )}
+
+          {/* Selector de Ecosistema Comercial Entitled */}
+          <div className="rounded-2xl border border-slate-200 bg-white p-4 space-y-3 shadow-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-purple-600" />
+                <span className="text-xs font-bold uppercase tracking-wider text-slate-700">
+                  Ecosistema a Generar / Publicar *
+                </span>
+              </div>
+
+              {isEntitlementLoading ? (
+                <span className="text-xs text-slate-400 flex items-center gap-1.5 font-medium">
+                  <RefreshCw className="h-3 w-3 animate-spin text-cyan-500" />
+                  Cargando plan comercial...
+                </span>
+              ) : partnerEntitlement ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {partnerEntitlement.regenerationRequired && (
+                    <span className="rounded-full bg-amber-100 text-amber-900 border border-amber-300 px-2.5 py-0.5 text-[10px] font-bold uppercase flex items-center gap-1">
+                      <AlertTriangle className="h-3 w-3 text-amber-600" />
+                      Regeneración Requerida
+                    </span>
+                  )}
+                  <span className="text-[11px] font-bold text-slate-600 bg-slate-100 px-2.5 py-0.5 rounded-full border border-slate-200">
+                    Plan: {partnerEntitlement.offerCode || "Habilitado"} ({partnerEntitlement.includedEcosystems.length} ecosistema(s))
+                  </span>
+                </div>
+              ) : null}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {(["PRODUCT", "BUSINESS", "PERSONAL_BRAND"] as const).map((type) => {
+                const config = ECOSYSTEM_CONFIGS[type];
+                const isEntitled = isEcosystemEntitledForPartner(type, partnerEntitlement);
+                const isSelected = selectedEcosystem === type;
+                const baseDomain = selectedLead.onboardingData?.domain || form.domain;
+                const canonicalHost = getCanonicalHostForEcosystem(type, baseDomain);
+
+                return (
+                  <button
+                    key={type}
+                    type="button"
+                    disabled={!isEntitled}
+                    onClick={() => isEntitled && setSelectedEcosystem(type)}
+                    className={`flex flex-col text-left p-3.5 rounded-xl border transition ${
+                      !isEntitled
+                        ? "border-slate-200 bg-slate-100/70 text-slate-400 cursor-not-allowed opacity-75"
+                        : isSelected
+                        ? "border-purple-500 bg-purple-50/80 text-purple-950 font-bold ring-2 ring-purple-500/20 shadow-sm"
+                        : "border-slate-200 bg-white text-slate-700 hover:bg-slate-50 cursor-pointer"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-1">
+                      <span className="text-xs font-bold">{config.name}</span>
+                      {!isEntitled ? (
+                        <span className="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 px-1.5 py-0.5 rounded">
+                          No en plan
+                        </span>
+                      ) : isSelected ? (
+                        <span className="text-[10px] font-bold text-purple-800 bg-purple-100 px-1.5 py-0.5 rounded">
+                          Seleccionado
+                        </span>
+                      ) : null}
+                    </div>
+
+                    <span className="text-[10px] text-slate-500 mt-1 font-normal leading-relaxed">
+                      {config.desc}
+                    </span>
+
+                    <div className="mt-2.5 pt-2 border-t border-slate-200/80 text-[10px] font-mono text-slate-500 space-y-0.5">
+                      <div>Maestra: <span className="font-semibold text-slate-800">{config.masterDomain}</span></div>
+                      <div>Host Canónico: <span className="font-semibold text-purple-700">{canonicalHost}</span></div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         </Card>
       )}
 
