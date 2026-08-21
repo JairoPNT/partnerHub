@@ -55,6 +55,14 @@ export interface ComplimentaryGrantReadback {
   };
 }
 
+export interface ComplimentaryGrantConflictResponse {
+  error: "ECOSYSTEM_ALREADY_GRANTED";
+  conflicts: Array<{
+    ecosystemType: EcosystemType;
+    sources: Array<"CONFIRMED_PAYMENT" | "ACTIVE_COMPLIMENTARY_GRANT">;
+  }>;
+}
+
 export const ECOSYSTEM_NAMES: Record<EcosystemType, string> = {
   PRODUCT: "Producto",
   BUSINESS: "Negocio VSL",
@@ -66,6 +74,37 @@ export const LIFECYCLE_STATUS_LABELS: Record<GrantLifecycleStatus, { label: stri
   SCHEDULED: { label: "Programada", colorClass: "bg-blue-50 text-blue-800 border-blue-300" },
   EXPIRED: { label: "Expirada", colorClass: "bg-slate-100 text-slate-600 border-slate-300" }
 };
+
+export function isEcosystemCovered(
+  ecosystemType: EcosystemType,
+  readbackData: ComplimentaryGrantReadback | null
+): boolean {
+  if (!readbackData || !readbackData.entitlement || !readbackData.entitlement.includedEcosystems) {
+    return false;
+  }
+  return readbackData.entitlement.includedEcosystems.includes(ecosystemType);
+}
+
+export function getAvailableEcosystems(
+  readbackData: ComplimentaryGrantReadback | null
+): EcosystemType[] {
+  const allEcosystems: EcosystemType[] = ["PRODUCT", "BUSINESS", "PERSONAL_BRAND"];
+  return allEcosystems.filter((eco) => !isEcosystemCovered(eco, readbackData));
+}
+
+export function formatComplimentaryGrantConflictError(conflictData: ComplimentaryGrantConflictResponse): string {
+  if (!conflictData.conflicts || conflictData.conflicts.length === 0) {
+    return "Conflicto en la asignación: Uno o más ecosistemas seleccionados ya se encuentran cubiertos por un pago confirmado o cortesía activa.";
+  }
+
+  const details = conflictData.conflicts.map((c) => {
+    const name = ECOSYSTEM_NAMES[c.ecosystemType] || c.ecosystemType;
+    const sourceLabels = c.sources.map((s) => s === "CONFIRMED_PAYMENT" ? "pago confirmado" : "cortesía activa").join(" y ");
+    return `${name} (cubierto por ${sourceLabels})`;
+  });
+
+  return `No se pudo asignar la cortesía: los siguientes ecosistemas ya están cubiertos: ${details.join("; ")}.`;
+}
 
 export function validateComplimentaryGrantForm(form: ComplimentaryGrantFormState): string | null {
   if (!form.ecosystemTypes || form.ecosystemTypes.length === 0) {

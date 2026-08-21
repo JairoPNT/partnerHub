@@ -44,6 +44,9 @@ import {
   buildComplimentaryGrantPayload,
   ECOSYSTEM_NAMES,
   LIFECYCLE_STATUS_LABELS,
+  isEcosystemCovered,
+  getAvailableEcosystems,
+  formatComplimentaryGrantConflictError,
   type ComplimentaryGrantFormState,
   type ComplimentaryGrantResult,
   type ComplimentaryGrantReadback
@@ -706,9 +709,10 @@ export function EntrepreneurOperationsView() {
 
   const handleOpenGrantModal = () => {
     if (!selectedLead) return;
-    const initialEco = selectedLead.ecosystemType || "PRODUCT";
+    const available = getAvailableEcosystems(readbackData);
+    const initialEco = available.length > 0 ? [available[0]] : [];
     setGrantForm({
-      ecosystemTypes: [initialEco],
+      ecosystemTypes: initialEco,
       grantReason: "",
       effectiveDate: new Date().toISOString().slice(0, 10),
       cutoffDate: "",
@@ -772,6 +776,12 @@ export function EntrepreneurOperationsView() {
 
       const resData = await res.json();
       if (!res.ok) {
+        if (res.status === 409 || resData.error === "ECOSYSTEM_ALREADY_GRANTED") {
+          const conflictMsg = formatComplimentaryGrantConflictError(resData);
+          setGrantError(conflictMsg);
+          await fetchComplimentaryGrantReadback(selectedLead.id);
+          return;
+        }
         throw new Error(resData.error || "No se pudo asignar la cortesía de ecosistema.");
       }
 
@@ -2817,123 +2827,151 @@ export function EntrepreneurOperationsView() {
                     Cerrar
                   </button>
                 </div>
-              ) : (
-                <form onSubmit={handleSubmitComplimentaryGrant} className="space-y-4">
-                  {/* Ecosystem Selection Checkboxes */}
-                  <div className="space-y-1.5">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Ecosistemas a Otorgar *
-                    </label>
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                      {[
-                        { type: "PRODUCT" as const, label: "Producto", desc: "Landing de producto" },
-                        { type: "BUSINESS" as const, label: "Negocio VSL", desc: "Negocio y VSL" },
-                        { type: "PERSONAL_BRAND" as const, label: "Marca Personal", desc: "Marca del líder" }
-                      ].map((eco) => {
-                        const checked = grantForm.ecosystemTypes.includes(eco.type);
-                        return (
-                          <label
-                            key={eco.type}
-                            className={`flex flex-col p-2.5 rounded-xl border text-xs cursor-pointer transition ${
-                              checked
-                                ? "border-purple-500 bg-purple-50 text-purple-950 font-bold"
-                                : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
-                            }`}
-                          >
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="checkbox"
-                                checked={checked}
-                                onChange={() => toggleGrantEcosystem(eco.type)}
-                                className="rounded border-slate-300 text-purple-600 focus:ring-purple-500"
-                              />
-                              <span>{eco.label}</span>
-                            </div>
-                            <span className="text-[10px] text-slate-500 mt-1 font-normal">
-                              {eco.desc}
-                            </span>
-                          </label>
-                        );
-                      })}
+              ) : (() => {
+                const availableEcosystems = getAvailableEcosystems(readbackData);
+                return (
+                  <form onSubmit={handleSubmitComplimentaryGrant} className="space-y-4">
+                    {/* Ecosystem Selection Checkboxes */}
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Ecosistemas a Otorgar *
+                        </label>
+                        <span className="text-[11px] font-bold text-slate-500">
+                          {availableEcosystems.length} disponible(s) de 3
+                        </span>
+                      </div>
+
+                      {availableEcosystems.length === 0 && (
+                        <div className="rounded-xl border border-amber-300 bg-amber-50 p-3 text-xs text-amber-900 flex items-start gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+                          <div>
+                            <strong>Ecosistemas completamente cubiertos:</strong> Este partner ya posee acceso confirmado (por pago o cortesía activa) a Producto, Negocio VSL y Marca Personal. No hay ecosistemas adicionales por asignar.
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        {[
+                          { type: "PRODUCT" as const, label: "Producto", desc: "Landing de producto" },
+                          { type: "BUSINESS" as const, label: "Negocio VSL", desc: "Negocio y VSL" },
+                          { type: "PERSONAL_BRAND" as const, label: "Marca Personal", desc: "Marca del líder" }
+                        ].map((eco) => {
+                          const isCovered = isEcosystemCovered(eco.type, readbackData);
+                          const checked = grantForm.ecosystemTypes.includes(eco.type);
+                          return (
+                            <label
+                              key={eco.type}
+                              className={`flex flex-col p-2.5 rounded-xl border text-xs transition ${
+                                isCovered
+                                  ? "border-slate-200 bg-slate-100/80 text-slate-400 cursor-not-allowed opacity-80"
+                                  : checked
+                                  ? "border-purple-500 bg-purple-50 text-purple-950 font-bold cursor-pointer"
+                                  : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50 cursor-pointer"
+                              }`}
+                            >
+                              <div className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  disabled={isCovered}
+                                  checked={checked && !isCovered}
+                                  onChange={() => !isCovered && toggleGrantEcosystem(eco.type)}
+                                  className="rounded border-slate-300 text-purple-600 focus:ring-purple-500 disabled:opacity-40"
+                                />
+                                <span className={isCovered ? "line-through text-slate-400 font-normal" : ""}>
+                                  {eco.label}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-500 mt-1 font-normal">
+                                {isCovered ? "✓ Cubierto (Pago / Cortesía)" : eco.desc}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
 
-                  {/* Grant Reason */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Motivo de la Cortesía *
-                    </label>
-                    <input
-                      required
-                      type="text"
-                      value={grantForm.grantReason}
-                      onChange={(e) => setGrantForm({ ...grantForm, grantReason: e.target.value })}
-                      placeholder="Ej. Promoción especial de lanzamiento / Bonificación por liderazgo"
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:border-purple-500 focus:outline-none"
-                    />
-                  </div>
-
-                  {/* Dates Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {/* Grant Reason */}
                     <div className="space-y-1">
                       <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                        Fecha Efectiva *
+                        Motivo de la Cortesía *
                       </label>
                       <input
                         required
-                        type="date"
-                        value={grantForm.effectiveDate}
-                        onChange={(e) => setGrantForm({ ...grantForm, effectiveDate: e.target.value })}
-                        className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-900 focus:border-purple-500 focus:outline-none"
+                        type="text"
+                        disabled={availableEcosystems.length === 0}
+                        value={grantForm.grantReason}
+                        onChange={(e) => setGrantForm({ ...grantForm, grantReason: e.target.value })}
+                        placeholder="Ej. Promoción especial de lanzamiento / Bonificación por liderazgo"
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-900 placeholder-slate-400 focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
                       />
                     </div>
 
+                    {/* Dates Grid */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Fecha Efectiva *
+                        </label>
+                        <input
+                          required
+                          type="date"
+                          disabled={availableEcosystems.length === 0}
+                          value={grantForm.effectiveDate}
+                          onChange={(e) => setGrantForm({ ...grantForm, effectiveDate: e.target.value })}
+                          className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-900 focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
+                          Fecha de Corte (Opcional)
+                        </label>
+                        <input
+                          type="date"
+                          disabled={availableEcosystems.length === 0}
+                          value={grantForm.cutoffDate}
+                          onChange={(e) => setGrantForm({ ...grantForm, cutoffDate: e.target.value })}
+                          className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-900 focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Notes */}
                     <div className="space-y-1">
                       <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                        Fecha de Corte (Opcional)
+                        Notas Internas (Opcionales)
                       </label>
-                      <input
-                        type="date"
-                        value={grantForm.cutoffDate}
-                        onChange={(e) => setGrantForm({ ...grantForm, cutoffDate: e.target.value })}
-                        className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-semibold text-slate-900 focus:border-purple-500 focus:outline-none"
+                      <textarea
+                        rows={2}
+                        disabled={availableEcosystems.length === 0}
+                        value={grantForm.notes}
+                        onChange={(e) => setGrantForm({ ...grantForm, notes: e.target.value })}
+                        placeholder="Detalles adicionales para registro del operador..."
+                        className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-medium text-slate-900 placeholder-slate-400 focus:border-purple-500 focus:outline-none disabled:bg-slate-100 disabled:text-slate-400"
                       />
                     </div>
-                  </div>
 
-                  {/* Notes */}
-                  <div className="space-y-1">
-                    <label className="text-xs font-bold uppercase tracking-wider text-slate-600">
-                      Notas Internas (Opcionales)
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={grantForm.notes}
-                      onChange={(e) => setGrantForm({ ...grantForm, notes: e.target.value })}
-                      placeholder="Detalles adicionales para registro del operador..."
-                      className="w-full rounded-xl border border-slate-200 bg-white py-2 px-3 text-xs font-medium text-slate-900 placeholder-slate-400 focus:border-purple-500 focus:outline-none"
-                    />
-                  </div>
-
-                  <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
-                    <button
-                      type="button"
-                      onClick={() => setShowGrantModal(false)}
-                      disabled={isSubmittingGrant}
-                      className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
-                    >
-                      Cancelar
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={isSubmittingGrant || grantForm.ecosystemTypes.length === 0}
-                      className="rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2 text-xs font-bold text-white shadow transition disabled:opacity-50"
-                    >
-                      {isSubmittingGrant ? "Asignando..." : "Confirmar Asignación"}
-                    </button>
-                  </div>
-                </form>
-              )}
+                    <div className="flex items-center justify-end gap-3 pt-3 border-t border-slate-100">
+                      <button
+                        type="button"
+                        onClick={() => setShowGrantModal(false)}
+                        disabled={isSubmittingGrant}
+                        className="rounded-xl border border-slate-200 bg-white px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmittingGrant || grantForm.ecosystemTypes.length === 0 || availableEcosystems.length === 0}
+                        className="rounded-xl bg-purple-600 hover:bg-purple-500 px-4 py-2 text-xs font-bold text-white shadow transition disabled:opacity-50"
+                      >
+                        {isSubmittingGrant ? "Asignando..." : "Confirmar Asignación"}
+                      </button>
+                    </div>
+                  </form>
+                );
+              })()}
             </div>
           </div>
         </ModalPortal>
