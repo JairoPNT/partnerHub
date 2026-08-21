@@ -31,6 +31,18 @@ test("uses the isolated remote root and public host for a READY target", () => {
   });
 });
 
+test("accepts a canonical subdomain even when it is the semantic root redirect ecosystem", () => {
+  assert.deepEqual(resolvePublicationTarget("/legacy/public_html", {
+    ...readyTarget,
+    ecosystemType: "PRODUCT",
+    rootEcosystemType: "PRODUCT"
+  }), {
+    mode: "PROVISIONED",
+    remoteRoot: "/home/u123/domains/producto.lidacastaneda.pro/public_html",
+    publicHost: "producto.lidacastaneda.pro"
+  });
+});
+
 test("blocks publication when an explicit target is not READY", () => {
   assert.throws(
     () => resolvePublicationTarget("/legacy/public_html", { ...readyTarget, provisioningState: "SSL_PENDING" }),
