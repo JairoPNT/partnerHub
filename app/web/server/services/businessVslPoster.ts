@@ -1,4 +1,5 @@
-export const INTERNAL_VSL_POSTER_PLACEHOLDER = "favicon.svg";
+import { resolveBusinessVslThumbnail } from "../../shared/business-vsl-poster-contract.mjs";
+export { INTERNAL_VSL_POSTER_PLACEHOLDER, resolveBusinessVslThumbnail } from "../../shared/business-vsl-poster-contract.mjs";
 
 type HeroUrls = {
   desktop?: string;
@@ -10,10 +11,6 @@ type BusinessVslConfiguration = {
   hero: HeroUrls;
   vsl?: Record<string, unknown>;
 };
-
-export function resolveBusinessVslThumbnail(hero: HeroUrls) {
-  return hero.desktop || hero.mobile || INTERNAL_VSL_POSTER_PLACEHOLDER;
-}
 
 export function applyBusinessVslPoster<T extends BusinessVslConfiguration>(
   configuration: T,

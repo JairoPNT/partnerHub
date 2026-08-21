@@ -1,3 +1,5 @@
+export { extractProductHero } from "../../shared/business-vsl-poster-contract.mjs";
+
 type EcosystemType = "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND";
 
 export type PartnerPublishingTargetIdentity = {
@@ -5,20 +7,6 @@ export type PartnerPublishingTargetIdentity = {
   siteId: string;
   ecosystemType: EcosystemType;
 };
-
-type ProductSource = {
-  ecosystemType?: unknown;
-  hero?: { desktop?: unknown; mobile?: unknown };
-};
-
-function literalHttpsUrl(value: unknown) {
-  if (typeof value !== "string" || !value.trim()) return undefined;
-  try {
-    return new URL(value).protocol === "https:" ? value : undefined;
-  } catch {
-    return undefined;
-  }
-}
 
 export function findPartnerProductSiteId(
   businessSiteId: string,
@@ -32,12 +20,4 @@ export function findPartnerProductSiteId(
   return targets.find((target) =>
     target.ownerKey === business.ownerKey && target.ecosystemType === "PRODUCT"
   )?.siteId ?? null;
-}
-
-export function extractProductHero(source: ProductSource | null) {
-  if (!source || (source.ecosystemType !== undefined && source.ecosystemType !== "PRODUCT")) return {};
-  return {
-    desktop: literalHttpsUrl(source.hero?.desktop),
-    mobile: literalHttpsUrl(source.hero?.mobile)
-  };
 }
