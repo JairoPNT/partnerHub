@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -22,6 +22,13 @@ async function fixture() {
     expectedSourceHash: hash(original), expectedProjectedProductHash: hash(product), expectedProjectedBrandHash: hash(brand), expectedVerificationHash: hash(verification), expectedHistoryHash: hash(history) };
   const manifestPath = resolve(root, "manifest.json"); await writeFile(manifestPath, JSON.stringify({ confirmation: "GUARDED_APPLY_JAIRO_SOURCE_IDENTITY", allowlist: [entry] }));
   return { sources, audit, manifestPath, original, product, brand, verification, history };
+}
+
+async function previewAndApply(fx, extra = {}) {
+  const preview = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit });
+  const result = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit,
+    mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash, ...extra });
+  return { preview, result };
 }
 
 test("preview is unchanged and produces a reviewable plan hash", async () => {
@@ -46,13 +53,72 @@ test("APPLY requires confirmation and reviewed preview hash", async () => {
 });
 
 test("atomic APPLY separates identities and dependent evidence", async () => {
-  const fx = await fixture(); const preview = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit });
-  const result = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit, mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash });
+  const fx = await fixture(); const { result } = await previewAndApply(fx);
   assert.equal(result.changed, true); assert.equal(result.postVerification, "PASSED");
   assert.equal(await readFile(resolve(fx.sources, "jairo-pinto-product.json"), "utf8"), fx.product);
   assert.equal(await readFile(resolve(fx.sources, "jairo-pinto.json"), "utf8"), fx.brand);
   assert.equal(await readFile(resolve(fx.sources, ".verifications", "jairo-pinto-product.json"), "utf8"), fx.verification);
   assert.equal(await readFile(resolve(fx.sources, ".history", "jairo-pinto-product.json"), "utf8"), fx.history);
+});
+
+test("a sequential rerun validates terminal state and returns ALREADY_APPLIED unchanged", async () => {
+  const fx = await fixture(); const { preview } = await previewAndApply(fx);
+  const rerun = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit,
+    mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash });
+  assert.equal(rerun.outcome, "ALREADY_APPLIED"); assert.equal(rerun.changed, false); assert.equal(rerun.blocked, false);
+});
+
+test("an existing journal with final-state drift blocks instead of reporting idempotency", async () => {
+  const fx = await fixture(); await previewAndApply(fx); await writeFile(resolve(fx.sources, "jairo-pinto.json"), "{}\n");
+  const result = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit });
+  assert.equal(result.outcome, "BLOCKED_APPLIED_STATE"); assert.equal(result.blocked, true);
+  assert.ok(result.blockedReasons.includes("APPLIED_BRAND_HASH_DRIFT"));
+  assert.ok(result.blockedReasons.includes("APPLIED_BRAND_IDENTITY_DRIFT"));
+});
+
+test("journal hash drift blocks fail closed even when final files are intact", async () => {
+  const fx = await fixture(); await previewAndApply(fx); const journalPath = resolve(fx.audit, "apply.json");
+  const journal = JSON.parse(await readFile(journalPath, "utf8")); journal.planHash = "0".repeat(64); await writeFile(journalPath, JSON.stringify(journal));
+  const result = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit });
+  assert.equal(result.outcome, "BLOCKED_APPLIED_STATE"); assert.ok(result.blockedReasons.includes("APPLY_JOURNAL_DRIFT"));
+});
+
+test("exclusive claim permits one concurrent mutator and the loser cannot roll it back", async () => {
+  const fx = await fixture(); const preview = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit });
+  let releaseFirst; let claimAcquired;
+  const acquired = new Promise((resolvePromise) => { claimAcquired = resolvePromise; });
+  const gate = new Promise((resolvePromise) => { releaseFirst = resolvePromise; });
+  const first = runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit,
+    mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash,
+    onClaimAcquired: async () => { claimAcquired(); await gate; } });
+  await acquired;
+  await assert.rejects(runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit,
+    mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash }), /APPLY_CLAIM_ACTIVE/);
+  releaseFirst(); const winner = await first;
+  assert.equal(winner.changed, true); assert.equal(winner.postVerification, "PASSED");
+  assert.equal(await readFile(resolve(fx.sources, "jairo-pinto-product.json"), "utf8"), fx.product);
+  assert.equal(await readFile(resolve(fx.sources, "jairo-pinto.json"), "utf8"), fx.brand);
+});
+
+test("incomplete and stale claims block fail closed without automatic cleanup", async () => {
+  const fx = await fixture(); const claim = resolve(fx.audit, ".apply-claim"); await mkdir(claim);
+  const incomplete = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit });
+  assert.ok(incomplete.blockedReasons.includes("APPLY_CLAIM_INCOMPLETE")); assert.equal(await readFile(resolve(fx.sources, "jairo-pinto.json"), "utf8"), fx.original);
+  await writeFile(resolve(claim, "owner.json"), JSON.stringify({ token: "stale-owner", acquiredAt: "2020-01-01T00:00:00.000Z" }));
+  const stale = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit });
+  assert.ok(stale.blockedReasons.includes("APPLY_CLAIM_STALE")); assert.equal(await readFile(resolve(claim, "owner.json"), "utf8"), JSON.stringify({ token: "stale-owner", acquiredAt: "2020-01-01T00:00:00.000Z" }));
+});
+
+test("a process never removes a claim whose ownership token changed", async () => {
+  const fx = await fixture(); const preview = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit });
+  const foreign = JSON.stringify({ token: "foreign-owner", acquiredAt: new Date().toISOString() });
+  await assert.rejects(runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit,
+    mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash,
+    onClaimAcquired: async () => { await writeFile(resolve(fx.audit, ".apply-claim", "owner.json"), foreign); } }), /APPLY_CLAIM_OWNERSHIP_LOST/);
+  assert.equal(await readFile(resolve(fx.audit, ".apply-claim", "owner.json"), "utf8"), foreign);
+  assert.equal(await readFile(resolve(fx.sources, "jairo-pinto.json"), "utf8"), fx.original);
+  await assert.rejects(readFile(resolve(fx.sources, "jairo-pinto-product.json")), /ENOENT/);
+  await rm(resolve(fx.audit, ".apply-claim"), { recursive: true });
 });
 
 test("rolls back every committed step after an injected failure", async () => {
