@@ -37,8 +37,8 @@ const CONFIG = {
     badge: 'Oportunidad de Expansión Comercial',
     headline: 'Construye Libertad Financiera con un Hábito Diario',
     subheadline: 'Descubre cómo asociarte con un socio comercial de gran solidez para crear una red de consumo masivo de café saludable y generar ingresos residuales sostenibles.',
-    desktopBgUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1600&q=80',
-    mobileBgUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=800&q=80'
+    desktopBgUrl: 'https://media.partnerhub.club/comunes/business/v1/hero-desktop.webp',
+    mobileBgUrl: 'https://media.partnerhub.club/comunes/business/v1/hero-mobile.webp'
   },
 
   // Prueba Social en Hero (Organización & Visión)
@@ -48,22 +48,22 @@ const CONFIG = {
     subheadline: 'Meta: 10.000 personas para el 2030',
     ratingStars: '★★★★★',
     avatars: [
-      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
-      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80',
-      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80'
+      'https://media.partnerhub.club/comunes/placeholders/avatar-1.webp',
+      'https://media.partnerhub.club/comunes/placeholders/avatar-2.webp',
+      'https://media.partnerhub.club/comunes/placeholders/avatar-3.webp',
+      'https://media.partnerhub.club/comunes/placeholders/avatar-4.webp'
     ]
   },
 
   // Video Sales Letter (VSL)
   vsl: {
-    provider: 'youtube', // 'youtube' | 'vimeo' | 'wistia' | 'custom'
-    embedUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+    provider: 'custom', // 'youtube' | 'vimeo' | 'wistia' | 'custom'
+    embedUrl: 'https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.mp4',
     videoTitle: 'Presentación Oficial del Modelo de Negocio',
     aspectRatio: '16:9', // '16:9' | '4:3'
     caption: 'Duración aproximada: 10 minutos · Activa el sonido para mejor experiencia',
     durationText: 'Ver Presentación de Negocio (10 min)',
-    thumbnailUrl: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&w=1200&q=80',
+    thumbnailUrl: 'https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.webp',
     autoPlay: true
   },
 
@@ -150,14 +150,14 @@ const CONFIG = {
         name: 'Diana Ramos',
         role: 'Socio de Negocio · Cali',
         quote: 'Emprender siempre me dio miedo por las deudas y los costos fijos. Con este modelo inteligente y el apoyo del equipo he construido un ingreso residual estable que supera mi antiguo sueldo profesional, y lo mejor es que manejo mi propio tiempo.',
-        avatarUrl: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=200&q=80'
+        avatarUrl: 'https://media.partnerhub.club/comunes/placeholders/avatar-3.webp'
       },
       {
         id: 't2',
         name: 'Carlos Mendoza',
         role: 'Empresario Asociado · Bogotá',
         quote: 'Tenía un negocio tradicional de calzado con jornadas extenuantes. Decidí diversificar con el café saludable y gracias a la mentoría, en menos de un año creé una red de consumo que me permite recibir ingresos automáticos todas las semanas.',
-        avatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80'
+        avatarUrl: 'https://media.partnerhub.club/comunes/placeholders/avatar-2.webp'
       }
     ]
   },
@@ -195,12 +195,12 @@ const CONFIG = {
   // Llamados a la Acción y Registro
   cta: {
     primaryText: 'Quiero Participar y Registrarme',
-    primaryUrl: 'https://col.ganoexcel.com/GrupoMomentumStarter',
+    primaryUrl: '',
     secondaryText: 'Más Información por WhatsApp',
     secondaryUrl: 'https://wa.me/573000000000',
     guaranteeText: 'Cupos limitados por zona para acompañamiento personalizado.',
     directRegisterText: 'Quiero Participar y Registrarme',
-    directRegisterUrl: 'https://col.ganoexcel.com/GrupoMomentumStarter'
+    directRegisterUrl: ''
   },
 
   // Tema Visual (PH-025)

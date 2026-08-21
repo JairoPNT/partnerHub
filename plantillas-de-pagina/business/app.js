@@ -130,15 +130,20 @@
     // 6. WhatsApp & CTA Links
     const rawNumber = (cfg.distributor?.whatsappNumber || '').replace(/\D/g, '');
     const defaultMsg = cfg.distributor?.defaultMessage || 'Hola, vi la presentación del modelo de negocio en tu página web y quiero conocer cómo iniciar.';
-    const waUrl = rawNumber ? `https://wa.me/${rawNumber}?text=${encodeURIComponent(defaultMsg)}` : (cfg.distributor?.ctaUrl || '#');
-    const directRegisterUrl = cfg.cta?.directRegisterUrl || cfg.cta?.primaryUrl || waUrl;
+    const waUrl = rawNumber ? `https://wa.me/${rawNumber}?text=${encodeURIComponent(defaultMsg)}` : (cfg.distributor?.ctaUrl || '#contacto');
+    const directRegisterUrl = cfg.cta?.directRegisterUrl || cfg.cta?.primaryUrl || waUrl || '#contacto';
 
     // CTAs Primarios (Registro Directo o WhatsApp)
     const ctaPrimaryLinks = document.querySelectorAll('.bind-cta-primary');
     ctaPrimaryLinks.forEach(link => {
       link.setAttribute('href', directRegisterUrl);
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
+      if (directRegisterUrl.startsWith('#')) {
+        link.removeAttribute('target');
+        link.removeAttribute('rel');
+      } else {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+      }
     });
 
     const ctaPrimaryTextEls = document.querySelectorAll('[data-bind="cta.primaryText"]');
@@ -150,8 +155,13 @@
     const ctaSecondaryLinks = document.querySelectorAll('.bind-cta-secondary');
     ctaSecondaryLinks.forEach(link => {
       link.setAttribute('href', waUrl);
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
+      if (waUrl.startsWith('#')) {
+        link.removeAttribute('target');
+        link.removeAttribute('rel');
+      } else {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+      }
     });
 
     const ctaSecondaryTextEls = document.querySelectorAll('[data-bind="cta.secondaryText"]');
@@ -213,14 +223,46 @@
       const items = cfg.benefits.slice(0, 4);
       items.forEach((benefit, idx) => {
         const card = document.createElement('div');
-        card.className = 'benefit-card';
+        card.className = 'feature-dashed-card';
         const iconSvg = getBenefitIconSvg(idx, benefit.title);
+
+        // Asignar colores según índice
+        const colors = [
+          { hex: '#FFAA00', rgb: '255, 170, 0' },
+          { hex: '#10B981', rgb: '16, 185, 129' },
+          { hex: '#00D2FF', rgb: '0, 210, 255' },
+          { hex: '#9B5DE5', rgb: '155, 93, 229' }
+        ];
+        const color = colors[idx % colors.length];
+        card.style.setProperty('--benefit-color', color.hex);
+        card.style.setProperty('--benefit-color-rgb', color.rgb);
+
+        // Patrones diferentes por tarjeta
+        const rx = 100 + (idx * 20);
+        const ry = 40 + (idx * 20);
+
         card.innerHTML = `
-          <div class="benefit-icon-wrapper">
-            ${iconSvg}
+          <div class="grid-pattern-overlay">
+            <svg class="grid-pattern-svg" aria-hidden="true">
+              <defs>
+                <pattern id="grid-pat-b${idx}" width="20" height="20" patternUnits="userSpaceOnUse" x="-12" y="4">
+                  <path d="M.5 20V.5H20" fill="none" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid-pat-b${idx})" />
+              <svg x="-12" y="4" class="overflow-visible" fill="rgba(255, 255, 255, 0.06)">
+                <rect width="21" height="21" x="${rx}" y="${ry}" />
+              </svg>
+            </svg>
           </div>
-          <h3>${escapeHtml(benefit.title)}</h3>
-          <p>${escapeHtml(benefit.description)}</p>
+          <div class="feature-card-content">
+            <div class="feature-card-header">
+              <div class="feature-icon">${iconSvg}</div>
+              <span class="feature-card-num">0${idx + 1}</span>
+            </div>
+            <h3 class="feature-title text-primary font-serif">${escapeHtml(benefit.title)}</h3>
+            <p class="feature-desc text-secondary">${escapeHtml(benefit.description)}</p>
+          </div>
         `;
         benefitsGrid.appendChild(card);
       });
@@ -309,11 +351,18 @@
     setupModals();
   }
 
+  function isDirectVideoUrl(provider, url) {
+    if (provider === 'custom' || provider === 'mp4' || provider === 'video') return true;
+    if (!url) return false;
+    return /\.(mp4|webm|ogg|m4v)($|\?)/i.test(url);
+  }
+
   function setupVslPlayer(vslCfg) {
     const container = document.getElementById('vsl-video-container');
     if (!container) return;
 
-    const embedUrl = vslCfg?.embedUrl || 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ';
+    const provider = vslCfg?.provider || 'custom';
+    const embedUrl = vslCfg?.embedUrl || '';
     const videoTitle = vslCfg?.videoTitle || 'Presentación de Negocio';
 
     if (vslCfg?.aspectRatio === '4:3') {
@@ -333,20 +382,38 @@
     // Reproducción al hacer click
     function playVideo() {
       if (container.classList.contains('playing')) return;
-      
-      const separator = embedUrl.includes('?') ? '&' : '?';
-      const autoPlayUrl = `${embedUrl}${separator}autoplay=1&rel=0&modestbranding=1`;
+      if (!embedUrl) return;
 
-      container.innerHTML = `
-        <iframe 
-          src="${autoPlayUrl}" 
-          title="${videoTitle}" 
-          frameborder="0" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-          allowfullscreen 
-          style="position: absolute; top:0; left:0; width:100%; height:100%; border:none; z-index: 20;">
-        </iframe>
-      `;
+      if (isDirectVideoUrl(provider, embedUrl)) {
+        container.innerHTML = `
+          <video
+            src="${embedUrl}"
+            ${vslCfg?.thumbnailUrl ? `poster="${vslCfg.thumbnailUrl}"` : ''}
+            controls
+            autoplay
+            playsinline
+            style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain; background: #000; z-index: 20; border-radius: inherit;">
+          </video>
+        `;
+        const videoEl = container.querySelector('video');
+        if (videoEl) {
+          videoEl.play().catch(() => {});
+        }
+      } else {
+        const separator = embedUrl.includes('?') ? '&' : '?';
+        const autoPlayUrl = `${embedUrl}${separator}autoplay=1&rel=0&modestbranding=1`;
+
+        container.innerHTML = `
+          <iframe
+            src="${autoPlayUrl}"
+            title="${escapeHtml(videoTitle)}"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+            style="position: absolute; top:0; left:0; width:100%; height:100%; border:none; z-index: 20;">
+          </iframe>
+        `;
+      }
 
       container.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
       container.style.transition = 'transform 0.5s ease';
@@ -358,17 +425,17 @@
     // Efecto 3D Tilt interactivo
     container.addEventListener('mousemove', (e) => {
       if (container.classList.contains('playing')) return;
-      
+
       const rect = container.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      
+
       const xc = rect.width / 2;
       const yc = rect.height / 2;
-      
-      const angleX = -(y - yc) / 22; 
+
+      const angleX = -(y - yc) / 22;
       const angleY = (x - xc) / 22;
-      
+
       container.style.transform = `perspective(1000px) rotateX(${angleX}deg) rotateY(${angleY}deg) scale(1.015)`;
     });
 

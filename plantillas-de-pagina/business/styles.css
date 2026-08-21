@@ -340,6 +340,19 @@ a {
   padding-top: 75%;
 }
 
+.vsl-video-container iframe,
+.vsl-video-container video {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border: none;
+  z-index: 20;
+  border-radius: inherit;
+  background-color: #000000;
+}
+
 .vsl-video-container:hover {
   border-color: rgba(255, 255, 255, 0.3);
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.9), 0 0 50px var(--accent-glow);
@@ -712,7 +725,7 @@ a {
   }
 }
 
-/* 8. Benefits & 4 Pillars Grid */
+/* 8. Benefits & 4 Pillars Grid (Estilo Dashed Grid) */
 .benefits-section {
   background: var(--bg-primary);
 }
@@ -720,51 +733,118 @@ a {
 .benefits-grid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 24px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.12);
+  border-left: 1px dashed rgba(255, 255, 255, 0.12);
+  margin-top: 40px;
 }
 
-.benefit-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: 32px 28px;
-  transition: var(--transition);
+.feature-dashed-card {
+  position: relative;
+  padding: 40px 32px;
+  border-right: 1px dashed rgba(255, 255, 255, 0.12);
+  border-bottom: 1px dashed rgba(255, 255, 255, 0.12);
+  overflow: hidden;
+  background: transparent;
+  transition: background-color 0.3s ease;
+}
+
+.feature-dashed-card:hover {
+  background-color: rgba(255, 255, 255, 0.015);
+}
+
+.grid-pattern-overlay {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  height: 100%;
+  width: 100%;
+  pointer-events: none;
+  opacity: 0.15;
+  -webkit-mask-image: radial-gradient(farthest-side at top, white, transparent);
+  mask-image: radial-gradient(farthest-side at top, white, transparent);
+  z-index: 0;
+}
+
+.grid-pattern-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  mix-blend-mode: overlay;
+}
+
+.feature-card-content {
+  position: relative;
+  z-index: 1;
+}
+
+.feature-card-header {
   display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.benefit-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--border-focus);
-  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
-}
-
-.benefit-icon-wrapper {
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-sm);
-  background: var(--accent-subtle);
-  border: 1px solid var(--border-focus);
-  color: var(--accent-color);
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  justify-content: center;
+  margin-bottom: 30px;
 }
 
-.benefit-card h3 {
+.feature-icon {
+  width: 42px;
+  height: 42px;
+  color: var(--benefit-color, var(--accent-color));
+  stroke-width: 1.25;
+  filter: drop-shadow(0 0 4px rgba(var(--benefit-color-rgb, 6, 182, 212), 0.2));
+  transition: transform 0.4s ease, filter 0.4s ease, color 0.4s ease;
+}
+
+.feature-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.feature-dashed-card:hover .feature-icon {
+  transform: scale(1.1);
+  filter: drop-shadow(0 0 10px rgba(var(--benefit-color-rgb, 6, 182, 212), 0.6));
+  color: #FFFFFF;
+}
+
+.feature-card-num {
+  font-family: var(--font-title);
+  font-style: italic;
+  font-size: 1.25rem;
+  color: rgba(255, 255, 255, 0.25);
+  font-weight: 300;
+  transition: color 0.4s ease;
+}
+
+.feature-dashed-card:hover .feature-card-num {
+  color: var(--benefit-color, var(--accent-color));
+}
+
+.feature-title {
   font-size: 19px;
   font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 12px;
+  transition: color 0.3s ease;
 }
 
-.benefit-card p {
+.feature-dashed-card:hover .feature-title {
+  color: var(--benefit-color, var(--accent-color));
+}
+
+.feature-desc {
   font-size: 14.5px;
+  color: var(--text-secondary);
   line-height: 1.6;
 }
 
 @media (max-width: 700px) {
   .benefits-grid {
     grid-template-columns: 1fr;
+    border-left: none;
+  }
+  .feature-dashed-card {
+    border-right: none;
+    padding: 32px 16px;
   }
 }
 
