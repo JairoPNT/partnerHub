@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 import process from "node:process";
-import { pathToFileURL, URL } from "node:url";
+import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 import { extractProductHero, resolveBusinessVslThumbnail } from "../shared/business-vsl-poster-contract.mjs";
 
@@ -55,14 +55,13 @@ function parseCanonicalConfig(source, filename) {
 }
 
 function nonempty(value) { return typeof value === "string" && value.trim().length > 0; }
-function https(value) { try { return new URL(value).protocol === "https:"; } catch { return false; } }
 function digits(value) { return typeof value === "string" ? value.replace(/\D/g, "") : ""; }
 
 function missingProfileFields(profile) {
   const fields = [
     "role", "siteTitle", "ogTitle", "ogDescription", "metaDescription", "defaultMessage",
     "hero.badge", "hero.headline", "hero.subheadline",
-    "cta.primaryText", "cta.directRegisterUrl", "cta.secondaryText", "cta.guaranteeText"
+    "cta.primaryText", "cta.secondaryText", "cta.guaranteeText"
   ];
   return fields.filter((field) => {
     const value = field.split(".").reduce((current, part) => current?.[part], profile);
@@ -109,7 +108,9 @@ export function buildJairoBusinessProjection({ canonical, lead, entitlement, pro
   if (profile?.vsl !== undefined || profile?.hero?.desktopBgUrl !== undefined || profile?.hero?.mobileBgUrl !== undefined) {
     blockedReasons.push("BUSINESS_MASTER_MEDIA_MUST_BE_CANONICAL");
   }
-  if (nonempty(profile?.cta?.directRegisterUrl) && !https(profile.cta.directRegisterUrl)) blockedReasons.push("BUSINESS_REGISTRATION_URL_INVALID");
+  if (profile?.cta && Object.prototype.hasOwnProperty.call(profile.cta, "directRegisterUrl")) {
+    blockedReasons.push("BUSINESS_DIRECT_REGISTER_URL_NOT_ALLOWED");
+  }
 
   let projectedBusiness = null;
   if (canonical && lead && profile && missing.length === 0) {
@@ -123,8 +124,9 @@ export function buildJairoBusinessProjection({ canonical, lead, entitlement, pro
     projectedBusiness.hero = { ...projectedBusiness.hero, ...profile.hero };
     projectedBusiness.vsl = { ...projectedBusiness.vsl,
       thumbnailUrl: resolveBusinessVslThumbnail(extractProductHero(productSource)) };
-    projectedBusiness.cta = { ...projectedBusiness.cta, ...profile.cta, primaryUrl: profile.cta?.directRegisterUrl,
-      secondaryUrl: `https://wa.me/${whatsapp}`, directRegisterText: profile.cta?.primaryText };
+    const whatsappUrl = `https://wa.me/${whatsapp}?text=${encodeURIComponent(profile.defaultMessage)}`;
+    projectedBusiness.cta = { ...projectedBusiness.cta, ...profile.cta, primaryUrl: whatsappUrl,
+      directRegisterUrl: "", secondaryUrl: whatsappUrl, directRegisterText: profile.cta?.primaryText };
     projectedBusiness.socialProof = { enabled: false, avatars: [] };
     projectedBusiness.testimonials = { enabled: false, items: [] };
     projectedBusiness.analytics = lead.onboardingData?.analyticsMeasurementId ? { measurementId: lead.onboardingData.analyticsMeasurementId } : undefined;

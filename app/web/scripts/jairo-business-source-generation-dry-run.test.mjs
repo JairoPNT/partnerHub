@@ -19,13 +19,13 @@ async function fixture() {
     vsl: { provider: "custom", embedUrl: "https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.mp4", videoTitle: "Presentación", durationText: "Ver presentación", autoPlay: true }, socialProof: { enabled: true, avatars: ["placeholder"] },
     testimonials: { enabled: true, items: [{ name: "Diana Ramos" }] }, cta: {}, theme: { fontPreset: "executive", palettePreset: "cobalt-cyan" }, benefits: [{ id: "b1", title: "Real canonical copy", description: "Approved generic content" }] };
   const lead = { id: "f403f29e-95c8-4825-9320-967376443020", siteId: "jairo-pinto", fullName: "Jairo Pinto", brandName: "Equipo Jairo Pinto", whatsapp: "+57 310 555 1111",
-    onboardingData: { domain: "jairopinto.pro", whatsapp: "+57 310 555 1111", phone: "+57 310 555 1111", analyticsMeasurementId: "G-REAL123", fontPreset: "executive", palettePreset: "cobalt-cyan" } };
+    onboardingData: { domain: "jairopinto.pro", whatsapp: "+57 310 555 1111", phone: "+57 310 555 1111", purchaseUrl: "https://store.example/jairo-product", analyticsMeasurementId: "G-REAL123", fontPreset: "executive", palettePreset: "cobalt-cyan" } };
   const entitlement = { activationLeadId: lead.id, commercialState: "KNOWN", includedEcosystems: ["PRODUCT", "BUSINESS", "PERSONAL_BRAND"],
     expectedTargets: [{ ecosystemType: "BUSINESS", role: "SUBDOMAIN", publicHost: "negocio.jairopinto.pro" }] };
   const profile = { role: "Líder de Negocio", siteTitle: "Negocio con Jairo Pinto", ogTitle: "Conoce el negocio de Jairo", ogDescription: "Presentación autorizada del modelo.",
     metaDescription: "Información autorizada para conocer el negocio.", defaultMessage: "Hola Jairo, quiero conocer tu proyecto de negocio.",
     hero: { badge: "Presentación de negocio", headline: "Construye un proyecto acompañado", subheadline: "Conoce el sistema y evalúa si es para ti." },
-    cta: { primaryText: "Quiero conocer el negocio", directRegisterUrl: "https://example.com/jairo/registro", secondaryText: "Hablar con Jairo", guaranteeText: "Información sin compromiso." } };
+    cta: { primaryText: "Quiero conocer el negocio", secondaryText: "Hablar con Jairo", guaranteeText: "Información sin compromiso." } };
   const brand = stringify({ ecosystemType: "PERSONAL_BRAND", site: { id: "jairo-pinto" } });
   const product = stringify({ ecosystemType: "PRODUCT", site: { id: "jairo-pinto-product" }, hero: {
     desktop: "https://cdn.example/jairo/product-desktop.webp", mobile: "https://cdn.example/jairo/product-mobile.webp" } });
@@ -50,6 +50,16 @@ async function replaceProduct(fx, product) {
   await writeFile(fx.manifestPath, stringify({ confirmation: "DRY_RUN_JAIRO_BUSINESS_SOURCE", allowlist: [fx.entry] }));
 }
 
+function resolveBusinessRuntimeLinks(configuration) {
+  const rawNumber = String(configuration.distributor?.whatsappNumber ?? "").replace(/\D/g, "");
+  const defaultMessage = configuration.distributor?.defaultMessage ?? "";
+  const customWaUrl = configuration.cta?.secondaryUrl || configuration.distributor?.ctaUrl || "";
+  const waUrl = rawNumber ? `https://wa.me/${rawNumber}?text=${encodeURIComponent(defaultMessage)}`
+    : (customWaUrl.startsWith("http") ? customWaUrl : "#contacto");
+  const primary = configuration.cta?.directRegisterUrl || configuration.cta?.primaryUrl || (waUrl !== "#contacto" ? waUrl : "#contacto");
+  return { primary, secondary: waUrl };
+}
+
 test("uses the packaged runtime Business config path", () => {
   assert.equal(resolveCanonicalBusinessConfigPath({}), resolve("/app/runtime-assets/business-config.js"));
 });
@@ -64,6 +74,12 @@ test("projects canonical Business identity from entitled real partner inputs wit
   assert.equal(projected.hero.desktopBgUrl, "https://media.partnerhub.club/comunes/business/v1/hero-desktop.webp");
   assert.equal(projected.vsl.embedUrl, "https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.mp4");
   assert.equal(projected.vsl.thumbnailUrl, "https://cdn.example/jairo/product-desktop.webp");
+  const expectedWhatsApp = `https://wa.me/573105551111?text=${encodeURIComponent(fx.profile.defaultMessage)}`;
+  assert.equal(projected.cta.primaryUrl, expectedWhatsApp);
+  assert.equal(projected.cta.secondaryUrl, expectedWhatsApp);
+  assert.equal(projected.cta.directRegisterUrl, "");
+  assert.deepEqual(resolveBusinessRuntimeLinks(projected), { primary: expectedWhatsApp, secondary: expectedWhatsApp });
+  assert.doesNotMatch(JSON.stringify(projected.cta), /store\.example|jairo-product/);
   assert.equal(projected.socialProof.enabled, false); assert.deepEqual(projected.testimonials.items, []);
   assert.doesNotMatch(JSON.stringify(projected), /dQw4w9WgXcQ|573000000000|Nexus Team|Diana Ramos|ganomaster-business/);
   assert.equal(await readFile(resolve(fx.sources, "jairo-pinto.json"), "utf8"), fx.brand);
@@ -111,6 +127,20 @@ test("manual Business media is rejected and cannot overwrite canonical media or 
   const projected = JSON.parse(await readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json"), "utf8"));
   assert.equal(projected.vsl.thumbnailUrl, "https://cdn.example/jairo/product-desktop.webp");
   assert.notEqual(projected.vsl.thumbnailUrl, fx.profile.vsl.thumbnailUrl);
+});
+
+test("rejects a supplied registration or store URL instead of linking Business to Product", async () => {
+  const fx = await fixture(); fx.profile.cta.directRegisterUrl = fx.lead.onboardingData.purchaseUrl; const source = stringify(fx.profile);
+  await writeFile(resolve(fx.inputs, "business-profile.json"), source); fx.entry.expectedBusinessProfileHash = hash(source);
+  await writeFile(fx.manifestPath, stringify({ confirmation: "DRY_RUN_JAIRO_BUSINESS_SOURCE", allowlist: [fx.entry] }));
+  const result = await run(fx);
+  assert.ok(result.blockedReasons.includes("BUSINESS_DIRECT_REGISTER_URL_NOT_ALLOWED"));
+  const projected = JSON.parse(await readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json"), "utf8"));
+  const expectedWhatsApp = `https://wa.me/573105551111?text=${encodeURIComponent(fx.profile.defaultMessage)}`;
+  assert.equal(projected.cta.primaryUrl, expectedWhatsApp);
+  assert.equal(projected.cta.secondaryUrl, expectedWhatsApp);
+  assert.deepEqual(resolveBusinessRuntimeLinks(projected), { primary: expectedWhatsApp, secondary: expectedWhatsApp });
+  assert.doesNotMatch(JSON.stringify(projected.cta), /store\.example|jairo-product/);
 });
 
 test("an incorrectly identified Product source blocks the projection", async () => {
