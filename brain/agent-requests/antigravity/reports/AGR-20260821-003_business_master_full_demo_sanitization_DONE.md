@@ -22,6 +22,7 @@ AGR-20260821-003_business_master_full_demo_sanitization
 
 3. **Resiliencia de Renderizado y Fallbacks Seguros en `app.js`**:
    - Se eliminaron los fallbacks hardcodeados a `'Nexus Team'` y `'Jairo Pinto'`.
+   - Se corrigió trailing whitespace en la invocación de `map` de avatares.
    - Se añadió control de visibilidad para ocultar gracefully el badge del header, la información de contacto y el brand del footer cuando los campos de distribuidor están vacíos en el master sin personalizar.
    - Se aseguró que los enlaces secundarios a WhatsApp y primarios de registro hagan fallback seguro a `#contacto` sin abrir pestañas en blanco ni generar URLs rotas.
    - Se ocultó condicionalmente `#hero-social-proof` cuando `socialProof.enabled === false` o no hay avatares.

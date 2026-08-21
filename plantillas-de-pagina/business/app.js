@@ -151,7 +151,7 @@
         proofContainer.style.display = '';
         const proofAvatarsContainer = document.getElementById('proof-avatars');
         if (proofAvatarsContainer) {
-          proofAvatarsContainer.innerHTML = cfg.socialProof.avatars.map((url, i) => 
+          proofAvatarsContainer.innerHTML = cfg.socialProof.avatars.map((url, i) =>
             `<img src="${url}" alt="Miembro ${i + 1}" class="proof-avatar-img">`
           ).join('');
         }
