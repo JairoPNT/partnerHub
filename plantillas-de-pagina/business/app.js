@@ -213,14 +213,46 @@
       const items = cfg.benefits.slice(0, 4);
       items.forEach((benefit, idx) => {
         const card = document.createElement('div');
-        card.className = 'benefit-card';
+        card.className = 'feature-dashed-card';
         const iconSvg = getBenefitIconSvg(idx, benefit.title);
+
+        // Asignar colores según índice
+        const colors = [
+          { hex: '#FFAA00', rgb: '255, 170, 0' },
+          { hex: '#10B981', rgb: '16, 185, 129' },
+          { hex: '#00D2FF', rgb: '0, 210, 255' },
+          { hex: '#9B5DE5', rgb: '155, 93, 229' }
+        ];
+        const color = colors[idx % colors.length];
+        card.style.setProperty('--benefit-color', color.hex);
+        card.style.setProperty('--benefit-color-rgb', color.rgb);
+
+        // Patrones diferentes por tarjeta
+        const rx = 100 + (idx * 20);
+        const ry = 40 + (idx * 20);
+
         card.innerHTML = `
-          <div class="benefit-icon-wrapper">
-            ${iconSvg}
+          <div class="grid-pattern-overlay">
+            <svg class="grid-pattern-svg" aria-hidden="true">
+              <defs>
+                <pattern id="grid-pat-b${idx}" width="20" height="20" patternUnits="userSpaceOnUse" x="-12" y="4">
+                  <path d="M.5 20V.5H20" fill="none" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#grid-pat-b${idx})" />
+              <svg x="-12" y="4" class="overflow-visible" fill="rgba(255, 255, 255, 0.06)">
+                <rect width="21" height="21" x="${rx}" y="${ry}" />
+              </svg>
+            </svg>
           </div>
-          <h3>${escapeHtml(benefit.title)}</h3>
-          <p>${escapeHtml(benefit.description)}</p>
+          <div class="feature-card-content">
+            <div class="feature-card-header">
+              <div class="feature-icon">${iconSvg}</div>
+              <span class="feature-card-num">0${idx + 1}</span>
+            </div>
+            <h3 class="feature-title text-primary font-serif">${escapeHtml(benefit.title)}</h3>
+            <p class="feature-desc text-secondary">${escapeHtml(benefit.description)}</p>
+          </div>
         `;
         benefitsGrid.appendChild(card);
       });
