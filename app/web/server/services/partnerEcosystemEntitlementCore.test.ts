@@ -32,29 +32,34 @@ function target(ecosystemType: EcosystemType, publicHost: string, publicationSta
   };
 }
 
-test("maps each individual offer to its canonical subdomain and root redirect", () => {
+test("maps each individual offer to its published canonical subdomain and root redirect", () => {
   const cases = [
     ["PRODUCT_ONLY", "PRODUCT", "producto.partner.pro"],
     ["BUSINESS_ONLY", "BUSINESS", "negocio.partner.pro"],
     ["PERSONAL_BRAND_ONLY", "PERSONAL_BRAND", "brand.partner.pro"]
   ] as const;
   for (const [offerCode, ecosystem, publicHost] of cases) {
-    const result = buildPartnerEcosystemEntitlement(lead(offerCode), []);
+    const result = buildPartnerEcosystemEntitlement(lead(offerCode), [target(ecosystem, publicHost)]);
     assert.deepEqual(result.includedEcosystems, [ecosystem]);
     assert.equal(result.rootEcosystem, ecosystem);
     assert.deepEqual(result.rootRedirectTarget, { ecosystemType: ecosystem, publicHost });
+    assert.equal(result.redirectStatus, "READY_PRIMARY");
+    assert.equal(result.rootRedirectFallbackReason, null);
+    assert.deepEqual(result.rootRedirectApex, { preserved: true, isPublishingTarget: false });
     assert.deepEqual(result.expectedTargets, [{ ecosystemType: ecosystem, role: "SUBDOMAIN", publicHost }]);
   }
 });
 
-test("maps PLAN_360 to three subdomains and redirects the root to Personal Brand", () => {
-  const result = buildPartnerEcosystemEntitlement(lead("PLAN_360"), []);
+test("uses published Brand as the primary redirect for multiple ecosystems", () => {
+  const result = buildPartnerEcosystemEntitlement(lead("PLAN_360"), [target("PERSONAL_BRAND", "brand.partner.pro")]);
   assert.deepEqual(result.includedEcosystems, ["PRODUCT", "BUSINESS", "PERSONAL_BRAND"]);
   assert.equal(result.rootEcosystem, "PERSONAL_BRAND");
   assert.deepEqual(result.rootRedirectTarget, {
     ecosystemType: "PERSONAL_BRAND",
     publicHost: "brand.partner.pro"
   });
+  assert.equal(result.redirectStatus, "READY_PRIMARY");
+  assert.equal(result.rootRedirectFallbackReason, null);
   assert.deepEqual(result.expectedTargets, [
     { ecosystemType: "PRODUCT", role: "SUBDOMAIN", publicHost: "producto.partner.pro" },
     { ecosystemType: "BUSINESS", role: "SUBDOMAIN", publicHost: "negocio.partner.pro" },
@@ -62,14 +67,14 @@ test("maps PLAN_360 to three subdomains and redirects the root to Personal Brand
   ]);
 });
 
-test("redirects a multi-ecosystem entitlement without Personal Brand to Product", () => {
+test("falls back to published Product when Brand is not entitled", () => {
   const productAndBusiness = lead("PLAN_360");
   productAndBusiness.offerSnapshot = {
     ...(productAndBusiness.offerSnapshot as object),
     ecosystemTypes: ["PRODUCT", "BUSINESS"],
     ecosystemType: null
   };
-  const result = buildPartnerEcosystemEntitlement(productAndBusiness, []);
+  const result = buildPartnerEcosystemEntitlement(productAndBusiness, [target("PRODUCT", "producto.partner.pro")]);
   assert.deepEqual(result.expectedTargets, [
     { ecosystemType: "PRODUCT", role: "SUBDOMAIN", publicHost: "producto.partner.pro" },
     { ecosystemType: "BUSINESS", role: "SUBDOMAIN", publicHost: "negocio.partner.pro" }
@@ -79,6 +84,25 @@ test("redirects a multi-ecosystem entitlement without Personal Brand to Product"
     ecosystemType: "PRODUCT",
     publicHost: "producto.partner.pro"
   });
+  assert.equal(result.redirectStatus, "READY_FALLBACK");
+  assert.equal(result.rootRedirectFallbackReason, "PERSONAL_BRAND_NOT_ENTITLED");
+});
+
+test("falls back to published Business when Brand and Product are unavailable", () => {
+  const result = buildPartnerEcosystemEntitlement(lead("PLAN_360"), [target("BUSINESS", "negocio.partner.pro")]);
+  assert.equal(result.rootEcosystem, "BUSINESS");
+  assert.deepEqual(result.rootRedirectTarget, { ecosystemType: "BUSINESS", publicHost: "negocio.partner.pro" });
+  assert.equal(result.redirectStatus, "READY_FALLBACK");
+  assert.equal(result.rootRedirectFallbackReason, "PERSONAL_BRAND_TARGET_UNAVAILABLE");
+});
+
+test("blocks redirect when no entitled target is published and never invents a host", () => {
+  const result = buildPartnerEcosystemEntitlement(lead("PLAN_360"), [target("PRODUCT", "producto.partner.pro", "PENDING")]);
+  assert.equal(result.rootEcosystem, null);
+  assert.equal(result.rootRedirectTarget, null);
+  assert.equal(result.redirectStatus, "BLOCKED_NO_PUBLISHED_TARGET");
+  assert.equal(result.rootRedirectFallbackReason, "NO_PUBLISHED_TARGET_AVAILABLE");
+  assert.deepEqual(result.rootRedirectApex, { preserved: true, isPublishingTarget: false });
 });
 
 test("returns UNKNOWN for a legacy partner without inventing ecosystems", () => {
