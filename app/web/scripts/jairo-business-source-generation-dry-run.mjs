@@ -17,6 +17,11 @@ const EXPECTED = {
   publicHost: "negocio.jairopinto.pro"
 };
 const HASH = /^[0-9a-f]{64}$/i;
+const APPROVED_BUSINESS_MEDIA = {
+  heroDesktop: "https://media.partnerhub.club/comunes/business/v1/hero-desktop.webp",
+  heroMobile: "https://media.partnerhub.club/comunes/business/v1/hero-mobile.webp",
+  vsl: "https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.mp4"
+};
 const FORBIDDEN = ["dQw4w9WgXcQ", "573000000000", "contacto@tudominio.com", "ganomaster-business", "Nexus Team", "Diana Ramos", "Carlos Mendoza", "GrupoMomentumStarter"];
 
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
@@ -56,8 +61,7 @@ function digits(value) { return typeof value === "string" ? value.replace(/\D/g,
 function missingProfileFields(profile) {
   const fields = [
     "role", "siteTitle", "ogTitle", "ogDescription", "metaDescription", "defaultMessage",
-    "hero.badge", "hero.headline", "hero.subheadline", "hero.desktopBgUrl", "hero.mobileBgUrl",
-    "vsl.provider", "vsl.embedUrl", "vsl.videoTitle", "vsl.durationText",
+    "hero.badge", "hero.headline", "hero.subheadline",
     "cta.primaryText", "cta.directRegisterUrl", "cta.secondaryText", "cta.guaranteeText"
   ];
   return fields.filter((field) => {
@@ -85,6 +89,11 @@ export function buildJairoBusinessProjection({ canonical, lead, entitlement, pro
   ]) if (actual !== expected) blockedReasons.push(reason);
   if (destinationExists) blockedReasons.push("BUSINESS_SOURCE_COLLISION");
   if (canonical?.ecosystemType !== "BUSINESS") blockedReasons.push("CANONICAL_BUSINESS_TEMPLATE_INVALID");
+  if (canonical?.hero?.desktopBgUrl !== APPROVED_BUSINESS_MEDIA.heroDesktop ||
+      canonical?.hero?.mobileBgUrl !== APPROVED_BUSINESS_MEDIA.heroMobile ||
+      canonical?.vsl?.provider !== "custom" || canonical?.vsl?.embedUrl !== APPROVED_BUSINESS_MEDIA.vsl) {
+    blockedReasons.push("CANONICAL_BUSINESS_MEDIA_INVALID");
+  }
   if (productSource?.ecosystemType !== "PRODUCT" || productSource?.site?.id !== EXPECTED.productSiteId) blockedReasons.push("PRODUCT_SOURCE_IDENTITY_INVALID");
   if (lead?.id !== EXPECTED.activationLeadId || lead?.siteId !== EXPECTED.ownerSiteId) blockedReasons.push("ACTIVATION_LEAD_IDENTITY_INVALID");
   if (lead?.onboardingData?.domain !== EXPECTED.baseDomain) blockedReasons.push("ACTIVATION_LEAD_DOMAIN_INVALID");
@@ -97,11 +106,10 @@ export function buildJairoBusinessProjection({ canonical, lead, entitlement, pro
   if (expectedBusinessTarget?.role !== "SUBDOMAIN" || expectedBusinessTarget?.publicHost !== EXPECTED.publicHost) blockedReasons.push("BUSINESS_ENTITLEMENT_TARGET_INVALID");
   const missing = missingProfileFields(profile);
   blockedReasons.push(...missing.map((field) => `BUSINESS_DATA_MISSING:${field}`));
-  if (profile?.vsl && Object.prototype.hasOwnProperty.call(profile.vsl, "thumbnailUrl")) blockedReasons.push("BUSINESS_VSL_THUMBNAIL_MUST_BE_DERIVED");
-  if (profile?.vsl?.provider && !["youtube", "vimeo", "wistia", "custom"].includes(profile.vsl.provider)) blockedReasons.push("BUSINESS_VSL_PROVIDER_INVALID");
-  for (const [value, reason] of [[profile?.hero?.desktopBgUrl, "BUSINESS_HERO_DESKTOP_INVALID"], [profile?.hero?.mobileBgUrl, "BUSINESS_HERO_MOBILE_INVALID"],
-    [profile?.vsl?.embedUrl, "BUSINESS_VSL_EMBED_INVALID"],
-    [profile?.cta?.directRegisterUrl, "BUSINESS_REGISTRATION_URL_INVALID"]]) if (nonempty(value) && !https(value)) blockedReasons.push(reason);
+  if (profile?.vsl !== undefined || profile?.hero?.desktopBgUrl !== undefined || profile?.hero?.mobileBgUrl !== undefined) {
+    blockedReasons.push("BUSINESS_MASTER_MEDIA_MUST_BE_CANONICAL");
+  }
+  if (nonempty(profile?.cta?.directRegisterUrl) && !https(profile.cta.directRegisterUrl)) blockedReasons.push("BUSINESS_REGISTRATION_URL_INVALID");
 
   let projectedBusiness = null;
   if (canonical && lead && profile && missing.length === 0) {
@@ -113,7 +121,7 @@ export function buildJairoBusinessProjection({ canonical, lead, entitlement, pro
       fullName: lead.fullName, role: profile.role, whatsappNumber: whatsapp, phoneNumber: digits(lead.onboardingData?.phone) || whatsapp,
       displayPhone: lead.onboardingData?.phone || lead.onboardingData?.whatsapp || lead.whatsapp, ctaUrl: `https://wa.me/${whatsapp}`, defaultMessage: profile.defaultMessage };
     projectedBusiness.hero = { ...projectedBusiness.hero, ...profile.hero };
-    projectedBusiness.vsl = { ...projectedBusiness.vsl, ...profile.vsl, autoPlay: Boolean(profile.vsl?.autoPlay),
+    projectedBusiness.vsl = { ...projectedBusiness.vsl,
       thumbnailUrl: resolveBusinessVslThumbnail(extractProductHero(productSource)) };
     projectedBusiness.cta = { ...projectedBusiness.cta, ...profile.cta, primaryUrl: profile.cta?.directRegisterUrl,
       secondaryUrl: `https://wa.me/${whatsapp}`, directRegisterText: profile.cta?.primaryText };

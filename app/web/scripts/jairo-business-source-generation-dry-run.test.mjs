@@ -15,7 +15,8 @@ async function fixture() {
   const inputs = resolve(root, "inputs"); const audits = resolve(root, "audits"); await mkdir(sources); await mkdir(inputs);
   const canonicalPath = resolve(root, "business-config.js");
   const canonical = { ecosystemType: "BUSINESS", site: { id: "ganomaster-business" }, distributor: { brandName: "Nexus Team", whatsappNumber: "573000000000" },
-    hero: {}, vsl: { embedUrl: "https://youtube.com/embed/dQw4w9WgXcQ" }, socialProof: { enabled: true, avatars: ["placeholder"] },
+    hero: { desktopBgUrl: "https://media.partnerhub.club/comunes/business/v1/hero-desktop.webp", mobileBgUrl: "https://media.partnerhub.club/comunes/business/v1/hero-mobile.webp" },
+    vsl: { provider: "custom", embedUrl: "https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.mp4", videoTitle: "Presentación", durationText: "Ver presentación", autoPlay: true }, socialProof: { enabled: true, avatars: ["placeholder"] },
     testimonials: { enabled: true, items: [{ name: "Diana Ramos" }] }, cta: {}, theme: { fontPreset: "executive", palettePreset: "cobalt-cyan" }, benefits: [{ id: "b1", title: "Real canonical copy", description: "Approved generic content" }] };
   const lead = { id: "f403f29e-95c8-4825-9320-967376443020", siteId: "jairo-pinto", fullName: "Jairo Pinto", brandName: "Equipo Jairo Pinto", whatsapp: "+57 310 555 1111",
     onboardingData: { domain: "jairopinto.pro", whatsapp: "+57 310 555 1111", phone: "+57 310 555 1111", analyticsMeasurementId: "G-REAL123", fontPreset: "executive", palettePreset: "cobalt-cyan" } };
@@ -23,10 +24,7 @@ async function fixture() {
     expectedTargets: [{ ecosystemType: "BUSINESS", role: "SUBDOMAIN", publicHost: "negocio.jairopinto.pro" }] };
   const profile = { role: "Líder de Negocio", siteTitle: "Negocio con Jairo Pinto", ogTitle: "Conoce el negocio de Jairo", ogDescription: "Presentación autorizada del modelo.",
     metaDescription: "Información autorizada para conocer el negocio.", defaultMessage: "Hola Jairo, quiero conocer tu proyecto de negocio.",
-    hero: { badge: "Presentación de negocio", headline: "Construye un proyecto acompañado", subheadline: "Conoce el sistema y evalúa si es para ti.",
-      desktopBgUrl: "https://cdn.example/jairo/business-desktop.webp", mobileBgUrl: "https://cdn.example/jairo/business-mobile.webp" },
-    vsl: { provider: "youtube", embedUrl: "https://www.youtube-nocookie.com/embed/real-jairo-video", videoTitle: "Presentación de Jairo Pinto",
-      durationText: "Ver presentación", autoPlay: false },
+    hero: { badge: "Presentación de negocio", headline: "Construye un proyecto acompañado", subheadline: "Conoce el sistema y evalúa si es para ti." },
     cta: { primaryText: "Quiero conocer el negocio", directRegisterUrl: "https://example.com/jairo/registro", secondaryText: "Hablar con Jairo", guaranteeText: "Información sin compromiso." } };
   const brand = stringify({ ecosystemType: "PERSONAL_BRAND", site: { id: "jairo-pinto" } });
   const product = stringify({ ecosystemType: "PRODUCT", site: { id: "jairo-pinto-product" }, hero: {
@@ -62,7 +60,9 @@ test("projects canonical Business identity from entitled real partner inputs wit
   assert.deepEqual(result.apex, { hostname: "jairopinto.pro", preserved: true, rewritten: false, isPublishingTarget: false });
   const projected = JSON.parse(await readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json"), "utf8"));
   assert.equal(projected.site.id, "jairo-pinto-business"); assert.equal(projected.site.domain, "negocio.jairopinto.pro"); assert.equal(projected.ecosystemType, "BUSINESS");
-  assert.equal(projected.distributor.fullName, "Jairo Pinto"); assert.equal(projected.vsl.embedUrl, fx.profile.vsl.embedUrl);
+  assert.equal(projected.distributor.fullName, "Jairo Pinto");
+  assert.equal(projected.hero.desktopBgUrl, "https://media.partnerhub.club/comunes/business/v1/hero-desktop.webp");
+  assert.equal(projected.vsl.embedUrl, "https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.mp4");
   assert.equal(projected.vsl.thumbnailUrl, "https://cdn.example/jairo/product-desktop.webp");
   assert.equal(projected.socialProof.enabled, false); assert.deepEqual(projected.testimonials.items, []);
   assert.doesNotMatch(JSON.stringify(projected), /dQw4w9WgXcQ|573000000000|Nexus Team|Diana Ramos|ganomaster-business/);
@@ -80,6 +80,15 @@ test("the repository canonical Business artifact produces a placeholder-free par
   assert.doesNotMatch(projected, /dQw4w9WgXcQ|573000000000|Nexus Team|Diana Ramos|Carlos Mendoza|GrupoMomentumStarter|ganomaster-business/);
 });
 
+test("blocks when the pinned canonical artifact does not contain the approved Business media", async () => {
+  const fx = await fixture();
+  const source = `const CONFIG = ${JSON.stringify({ ecosystemType: "BUSINESS", hero: {}, vsl: {} })};\n`;
+  await writeFile(fx.canonicalPath, source); fx.entry.expectedCanonicalTemplateHash = hash(source);
+  await writeFile(fx.manifestPath, stringify({ confirmation: "DRY_RUN_JAIRO_BUSINESS_SOURCE", allowlist: [fx.entry] }));
+  const result = await run(fx);
+  assert.ok(result.blockedReasons.includes("CANONICAL_BUSINESS_MEDIA_INVALID"));
+});
+
 test("Product hero mobile is the VSL poster fallback when desktop is absent", async () => {
   const fx = await fixture(); await replaceProduct(fx, { ecosystemType: "PRODUCT", site: { id: "jairo-pinto-product" }, hero: { mobile: "https://cdn.example/jairo/product-mobile-only.webp" } });
   const result = await run(fx); assert.equal(result.blocked, false);
@@ -94,11 +103,11 @@ test("favicon.svg is the internal VSL poster fallback when Product has no valid 
   assert.equal(projected.vsl.thumbnailUrl, "favicon.svg");
 });
 
-test("a manual Business VSL thumbnail is rejected and cannot overwrite Product hero", async () => {
-  const fx = await fixture(); fx.profile.vsl.thumbnailUrl = "https://cdn.example/jairo/manual-business-poster.webp"; const source = stringify(fx.profile);
+test("manual Business media is rejected and cannot overwrite canonical media or Product poster", async () => {
+  const fx = await fixture(); fx.profile.vsl = { thumbnailUrl: "https://cdn.example/jairo/manual-business-poster.webp" }; const source = stringify(fx.profile);
   await writeFile(resolve(fx.inputs, "business-profile.json"), source); fx.entry.expectedBusinessProfileHash = hash(source);
   await writeFile(fx.manifestPath, stringify({ confirmation: "DRY_RUN_JAIRO_BUSINESS_SOURCE", allowlist: [fx.entry] }));
-  const result = await run(fx); assert.ok(result.blockedReasons.includes("BUSINESS_VSL_THUMBNAIL_MUST_BE_DERIVED"));
+  const result = await run(fx); assert.ok(result.blockedReasons.includes("BUSINESS_MASTER_MEDIA_MUST_BE_CANONICAL"));
   const projected = JSON.parse(await readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json"), "utf8"));
   assert.equal(projected.vsl.thumbnailUrl, "https://cdn.example/jairo/product-desktop.webp");
   assert.notEqual(projected.vsl.thumbnailUrl, fx.profile.vsl.thumbnailUrl);
@@ -116,11 +125,11 @@ test("blocks when the current entitlement does not include BUSINESS", async () =
   const result = await run(fx); assert.ok(result.blockedReasons.includes("BUSINESS_NOT_ENTITLED"));
 });
 
-test("blocks missing authorized fields and does not emit an incomplete projection", async () => {
-  const fx = await fixture(); const profile = clone(fx.profile); delete profile.vsl.embedUrl; const source = stringify(profile);
+test("blocks missing authorized copy and does not emit an incomplete projection", async () => {
+  const fx = await fixture(); const profile = clone(fx.profile); delete profile.hero.headline; const source = stringify(profile);
   await writeFile(resolve(fx.inputs, "business-profile.json"), source); fx.entry.expectedBusinessProfileHash = hash(source);
   await writeFile(fx.manifestPath, stringify({ confirmation: "DRY_RUN_JAIRO_BUSINESS_SOURCE", allowlist: [fx.entry] }));
-  const result = await run(fx); assert.ok(result.blockedReasons.includes("BUSINESS_DATA_MISSING:vsl.embedUrl")); assert.equal(result.hashes.projectedBusiness, null);
+  const result = await run(fx); assert.ok(result.blockedReasons.includes("BUSINESS_DATA_MISSING:hero.headline")); assert.equal(result.hashes.projectedBusiness, null);
   await assert.rejects(readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json")), /ENOENT/);
 });
 
