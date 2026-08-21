@@ -53,17 +53,40 @@ export type ExpectedEntitlementTarget = {
   publicHost: string | null;
 };
 
-function rootEcosystem(included: EcosystemType[]) {
-  if (included.length === 1) return included[0] ?? null;
-  if (included.includes("PERSONAL_BRAND")) return "PERSONAL_BRAND" as const;
-  return included.includes("PRODUCT") ? "PRODUCT" as const : null;
-}
-
 function baseDomain(lead: EntitlementLead, targets: EntitlementTarget[]) {
   const onboardingDomain = lead.onboardingData?.domain?.trim().toLowerCase();
   if (onboardingDomain) return onboardingDomain;
   const domains = [...new Set(targets.map((target) => target.baseDomain))];
   return domains.length === 1 ? domains[0] : null;
+}
+
+function selectRootRedirect(included: EcosystemType[], targets: EntitlementTarget[], domain: string | null) {
+  const published = (ecosystemType: EcosystemType) => targets.find((target) =>
+    target.ecosystemType === ecosystemType &&
+    target.publicationState === "READY" &&
+    (domain === null || target.publicHost === expectedHost(ecosystemType, domain))
+  );
+  const preferred = included.length === 1
+    ? included
+    : ["PERSONAL_BRAND", "PRODUCT", "BUSINESS"].filter((item): item is EcosystemType => included.includes(item as EcosystemType));
+  const selected = preferred.map(published).find(Boolean) ?? null;
+  if (!selected) {
+    return {
+      rootEcosystem: null,
+      rootRedirectTarget: null,
+      redirectStatus: "BLOCKED_NO_PUBLISHED_TARGET" as const,
+      rootRedirectFallbackReason: "NO_PUBLISHED_TARGET_AVAILABLE" as const
+    };
+  }
+  const fallback = included.length > 1 && selected.ecosystemType !== "PERSONAL_BRAND";
+  return {
+    rootEcosystem: selected.ecosystemType,
+    rootRedirectTarget: { ecosystemType: selected.ecosystemType, publicHost: selected.publicHost },
+    redirectStatus: fallback ? "READY_FALLBACK" as const : "READY_PRIMARY" as const,
+    rootRedirectFallbackReason: fallback
+      ? (included.includes("PERSONAL_BRAND") ? "PERSONAL_BRAND_TARGET_UNAVAILABLE" as const : "PERSONAL_BRAND_NOT_ENTITLED" as const)
+      : null
+  };
 }
 
 function expectedHost(ecosystemType: EcosystemType, domain: string | null) {
@@ -91,6 +114,9 @@ export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTarge
       includedEcosystems: [] as EcosystemType[],
       rootEcosystem: null,
       rootRedirectTarget: null,
+      redirectStatus: "BLOCKED_NO_PUBLISHED_TARGET" as const,
+      rootRedirectFallbackReason: "COMMERCIAL_STATE_UNKNOWN" as const,
+      rootRedirectApex: { preserved: true, isPublishingTarget: false } as const,
       expectedTargets: [] as ExpectedEntitlementTarget[],
       existingTargets,
       missingTargets: [] as ExpectedEntitlementTarget[],
@@ -106,17 +132,13 @@ export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTarge
     ...manualSnapshots.flatMap((snapshot) => snapshot.ecosystemTypes),
     ...complimentaryGrantEcosystems
   ])];
-  const root = rootEcosystem(includedEcosystems);
   const domain = baseDomain(lead, existingTargets);
   const expectedTargets: ExpectedEntitlementTarget[] = includedEcosystems.map((ecosystemType) => ({
     ecosystemType,
     role: "SUBDOMAIN",
     publicHost: expectedHost(ecosystemType, domain)
   }));
-  const rootRedirectHost = root === null ? null : expectedHost(root, domain);
-  const rootRedirectTarget = root === null || rootRedirectHost === null
-    ? null
-    : { ecosystemType: root, publicHost: rootRedirectHost };
+  const rootRedirect = selectRootRedirect(includedEcosystems, existingTargets, domain);
   const missingTargets = expectedTargets.filter((expected) => !existingTargets.some((existing) =>
     existing.ecosystemType === expected.ecosystemType &&
     (expected.publicHost === null || existing.publicHost === expected.publicHost)
@@ -141,8 +163,8 @@ export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTarge
     ],
     complimentaryGrantEcosystems,
     includedEcosystems,
-    rootEcosystem: root,
-    rootRedirectTarget,
+    ...rootRedirect,
+    rootRedirectApex: { preserved: true, isPublishingTarget: false } as const,
     expectedTargets,
     existingTargets,
     missingTargets,
