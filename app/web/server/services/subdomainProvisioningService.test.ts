@@ -8,7 +8,7 @@ import { createSubdomainProvisioningService, ProvisioningError, provisionSubdoma
 
 const ownerKey = "cb841c76-4f50-4ee7-90bb-021094e5c1f7";
 const website = { username: "u658137804", domain: "jairopinto.pro", root_directory: "/hostinger/root-from-api" };
-const subdomain = (label: "producto" | "negocio") => ({ state: "EXISTING" as const, subdomain: { username: "u658137804", domain: `${label}.jairopinto.pro`, parent_domain: "jairopinto.pro", root_directory: `/hostinger/${label}-from-api`, subdomain: label } });
+const subdomain = (label: "producto" | "negocio" | "brand") => ({ state: "EXISTING" as const, subdomain: { username: "u658137804", domain: `${label}.jairopinto.pro`, parent_domain: "jairopinto.pro", root_directory: `/hostinger/${label}-from-api`, subdomain: label } });
 const dnsResult = (host: string) => ({ state: "EXISTING" as const, record: { id: `dns-${host}`, type: "A" as const, name: host, content: "82.29.157.103" } });
 async function isolated(run: (directory: string) => Promise<void>) { const directory = await mkdtemp(join(tmpdir(), "hostinger-only-")); try { await run(directory); } finally { await rm(directory, { recursive: true, force: true }); } }
 
@@ -18,7 +18,7 @@ function service(directory: string, options: { dnsReady?: boolean; sslReady?: bo
     storageDirectory: directory,
     hostingerClient: {
       getWebsite: async () => { calls.push("root"); if (options.fail) throw Object.assign(new Error("secret"), { code: "HOSTINGER_RATE_LIMITED" }); return website; },
-      ensure: async (_domain, label) => { calls.push(label); return subdomain(label as "producto" | "negocio"); }
+      ensure: async (_domain, label) => { calls.push(label); if (options.fail) throw Object.assign(new Error("secret"), { code: "HOSTINGER_RATE_LIMITED" }); return subdomain(label as "producto" | "negocio" | "brand"); }
     },
     dnsClient: { ensureARecord: async (_zone, host) => { calls.push(`dns:${host}`); return dnsResult(host); } },
     readinessProbe: { dnsResolves: async () => options.dnsReady ?? true, httpsReady: async () => options.sslReady ?? true },
@@ -26,11 +26,11 @@ function service(directory: string, options: { dnsReady?: boolean; sslReady?: bo
   }) };
 }
 
-test("persists PERSONAL_BRAND on root and uses Hostinger returned document root", async () => isolated(async (directory) => {
+test("persists PERSONAL_BRAND on its canonical brand subdomain", async () => isolated(async (directory) => {
   const { instance, calls } = service(directory);
   const target = await instance.provision({ ownerKey, siteId: "jairo-brand", ecosystemType: "PERSONAL_BRAND", rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" });
-  assert.equal(target.publicHost, "jairopinto.pro"); assert.equal(target.remoteRoot, website.root_directory); assert.equal(target.provisioningState, "READY");
-  assert.deepEqual(calls, ["root", "dns:jairopinto.pro"]);
+  assert.equal(target.publicHost, "brand.jairopinto.pro"); assert.equal(target.remoteRoot, "/hostinger/brand-from-api"); assert.equal(target.provisioningState, "READY");
+  assert.deepEqual(calls, ["brand", "dns:brand.jairopinto.pro"]);
 }));
 
 test("maps Plan 360 product and business to isolated Hostinger roots", async () => isolated(async (directory) => {
@@ -41,10 +41,10 @@ test("maps Plan 360 product and business to isolated Hostinger roots", async () 
   assert.equal(business.publicHost, "negocio.jairopinto.pro"); assert.equal(business.remoteRoot, "/hostinger/negocio-from-api");
 }));
 
-test("uses persisted fallback ecosystem at root for individual offers", async () => isolated(async (directory) => {
+test("keeps rootEcosystemType as redirect metadata without turning the target into apex", async () => isolated(async (directory) => {
   const { instance, calls } = service(directory);
   const target = await instance.provision({ ownerKey, siteId: "jairo-product", ecosystemType: "PRODUCT", rootEcosystemType: "PRODUCT", baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" });
-  assert.equal(target.publicHost, "jairopinto.pro"); assert.equal(target.rootEcosystemType, "PRODUCT"); assert.deepEqual(calls, ["root", "dns:jairopinto.pro"]);
+  assert.equal(target.publicHost, "producto.jairopinto.pro"); assert.equal(target.rootEcosystemType, "PRODUCT"); assert.deepEqual(calls, ["producto", "dns:producto.jairopinto.pro"]);
 }));
 
 test("retries DNS_PENDING and FAILED safely with idempotent provider calls", async () => isolated(async (directory) => {
@@ -86,6 +86,21 @@ test("migrates an unambiguous v1 root target to v2 without changing its persiste
   const migrated = await instance.get("jairo-product");
   assert.equal(migrated?.version, 2); assert.equal(migrated?.rootEcosystemType, "PRODUCT"); assert.equal(migrated?.remoteRoot, legacy.remoteRoot);
   assert.equal(JSON.parse(await readFile(join(directory, "jairo-product.json"), "utf8")).version, 2);
+}));
+
+test("preserves an existing v2 apex target and blocks silent canonical reprovisioning", async () => isolated(async (directory) => {
+  const existing = {
+    version: 2, ownerKey, siteId: "jairo-product", ecosystemType: "PRODUCT", rootEcosystemType: "PRODUCT",
+    baseDomain: "jairopinto.pro", publicHost: "jairopinto.pro", remoteRoot: "/legacy/hostinger-root",
+    provisioningState: "READY", hostingerState: "READY", dnsState: "RESOLVED", sslState: "READY",
+    publicationState: "READY", createdAt: "2026-08-07T12:00:00.000Z", updatedAt: "2026-08-07T12:00:00.000Z"
+  };
+  await writeFile(join(directory, "jairo-product.json"), JSON.stringify(existing));
+  const { instance, calls } = service(directory);
+  assert.equal((await instance.get("jairo-product"))?.publicHost, "jairopinto.pro");
+  await assert.rejects(() => instance.provision({ ownerKey, siteId: "jairo-product", ecosystemType: "PRODUCT", rootEcosystemType: "PRODUCT", baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" }), (error: unknown) => error instanceof ProvisioningError && error.code === "PROVISIONING_TARGET_CONFLICT");
+  assert.deepEqual(calls, []);
+  assert.equal(JSON.parse(await readFile(join(directory, "jairo-product.json"), "utf8")).publicHost, "jairopinto.pro");
 }));
 
 test("migrates a v1 subdomain only with explicit non-ambiguous root identity", async () => isolated(async (directory) => {

@@ -61,13 +61,6 @@ export function resolvePublicationTarget(
     );
   }
 
-  if (target.ecosystemType && target.rootEcosystemType && target.publicHost.indexOf(".") > -1) {
-    const usesRoot = target.ecosystemType === target.rootEcosystemType;
-    if (usesRoot && target.publicHost.split(".").length > 2) {
-      throw new PublicationTargetError("PUBLICATION_TARGET_INVALID", "Root ecosystem target must use the persisted base hostname.");
-    }
-  }
-
   return {
     mode: "PROVISIONED",
     remoteRoot: validRemoteRoot(target.remoteRoot),

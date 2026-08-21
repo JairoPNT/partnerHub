@@ -7,6 +7,7 @@ import { z } from "zod";
 
 import type { HostingerEnsureDnsResult } from "../integrations/hostingerDnsClient.ts";
 import type { HostingerEnsureSubdomainResult, HostingerWebsite } from "../integrations/hostingerSubdomainClient.ts";
+import { getPartnerPublicHost, PARTNER_HOST_LABELS } from "#partner-hostname-contract";
 
 const siteIdSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const ownerKeySchema = z.string().uuid();
@@ -83,7 +84,6 @@ export class ProvisioningError extends Error {
   }
 }
 
-const labels = { PRODUCT: "producto", BUSINESS: "negocio" } as const;
 function defaultStorageDirectory() { return resolve(process.env.PRODUCT_PAGE_SOURCE_DIR ?? "/data/generated-sites/.sources", ".publishing-targets"); }
 function targetPath(root: string, siteId: string) {
   const directory = resolve(root); const target = resolve(directory, `${siteIdSchema.parse(siteId)}.json`);
@@ -99,7 +99,7 @@ function migrateLegacyTarget(raw: unknown, rootEcosystemType?: z.infer<typeof pu
   const legacy = legacyPublishingTargetSchema.parse(raw);
   assertNotMaster(legacy.baseDomain);
   const isRoot = legacy.publicHost === legacy.baseDomain;
-  const expectedSubdomain = `${labels[legacy.ecosystemType]}.${legacy.baseDomain}`;
+  const expectedSubdomain = getPartnerPublicHost(legacy.baseDomain, legacy.ecosystemType);
   if (!isRoot && legacy.publicHost !== expectedSubdomain) {
     throw new ProvisioningError("PROVISIONING_MIGRATION_CONFLICT", "Legacy target hostname does not match its ecosystem identity.");
   }
@@ -136,7 +136,7 @@ export async function listPublishingTargets(root = defaultStorageDirectory()) {
     return values.filter((value): value is PublishingTarget => Boolean(value));
   } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return []; throw error; }
 }
-function publicHost(input: ProvisionSubdomainInput) { return input.ecosystemType === input.rootEcosystemType ? input.baseDomain : `${labels[input.ecosystemType as keyof typeof labels]}.${input.baseDomain}`; }
+function publicHost(input: ProvisionSubdomainInput) { return getPartnerPublicHost(input.baseDomain, input.ecosystemType); }
 function providerCode(error: unknown) { return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : "PROVISIONING_PROVIDER_FAILED"; }
 
 export function createSubdomainProvisioningService(deps: Dependencies) {
@@ -162,9 +162,7 @@ export function createSubdomainProvisioningService(deps: Dependencies) {
   async function provision(raw: ProvisionSubdomainInput) {
     const input = provisionSubdomainInputSchema.parse(raw); let target = await createOrLoad(input);
     try {
-      const rootTarget = input.ecosystemType === input.rootEcosystemType;
-      if (rootTarget && !deps.hostingerClient.getWebsite) throw Object.assign(new Error("Hostinger root lookup is unavailable."), { code: "HOSTINGER_ROOT_LOOKUP_UNAVAILABLE" });
-      const hosting = rootTarget ? await deps.hostingerClient.getWebsite!(input.baseDomain) : (await deps.hostingerClient.ensure(input.baseDomain, labels[input.ecosystemType as keyof typeof labels])).subdomain;
+      const hosting = (await deps.hostingerClient.ensure(input.baseDomain, PARTNER_HOST_LABELS[input.ecosystemType])).subdomain;
       if (target.remoteRoot && target.remoteRoot !== hosting.root_directory) {
         throw Object.assign(new Error("Hostinger returned a different document root for the persisted target."), { code: "HOSTINGER_SUBDOMAIN_CONFLICT" });
       }

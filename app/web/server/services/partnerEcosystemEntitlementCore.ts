@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { getPartnerPublicHost } from "#partner-hostname-contract";
+
 export type EcosystemType = "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND";
 
 const entitlementSnapshotSchema = z.object({
@@ -51,12 +53,6 @@ export type ExpectedEntitlementTarget = {
   publicHost: string | null;
 };
 
-const labels: Record<EcosystemType, string> = {
-  PRODUCT: "product",
-  BUSINESS: "business",
-  PERSONAL_BRAND: "brand"
-};
-
 function rootEcosystem(included: EcosystemType[]) {
   if (included.length === 1) return included[0] ?? null;
   if (included.includes("PERSONAL_BRAND")) return "PERSONAL_BRAND" as const;
@@ -72,7 +68,7 @@ function baseDomain(lead: EntitlementLead, targets: EntitlementTarget[]) {
 
 function expectedHost(ecosystemType: EcosystemType, domain: string | null) {
   if (!domain) return null;
-  return `${labels[ecosystemType]}.${domain}`;
+  return getPartnerPublicHost(domain, ecosystemType);
 }
 
 export function buildPartnerEcosystemEntitlement(lead: EntitlementLead, allTargets: EntitlementTarget[]) {

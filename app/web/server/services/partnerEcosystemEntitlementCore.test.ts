@@ -34,8 +34,8 @@ function target(ecosystemType: EcosystemType, publicHost: string, publicationSta
 
 test("maps each individual offer to its canonical subdomain and root redirect", () => {
   const cases = [
-    ["PRODUCT_ONLY", "PRODUCT", "product.partner.pro"],
-    ["BUSINESS_ONLY", "BUSINESS", "business.partner.pro"],
+    ["PRODUCT_ONLY", "PRODUCT", "producto.partner.pro"],
+    ["BUSINESS_ONLY", "BUSINESS", "negocio.partner.pro"],
     ["PERSONAL_BRAND_ONLY", "PERSONAL_BRAND", "brand.partner.pro"]
   ] as const;
   for (const [offerCode, ecosystem, publicHost] of cases) {
@@ -56,8 +56,8 @@ test("maps PLAN_360 to three subdomains and redirects the root to Personal Brand
     publicHost: "brand.partner.pro"
   });
   assert.deepEqual(result.expectedTargets, [
-    { ecosystemType: "PRODUCT", role: "SUBDOMAIN", publicHost: "product.partner.pro" },
-    { ecosystemType: "BUSINESS", role: "SUBDOMAIN", publicHost: "business.partner.pro" },
+    { ecosystemType: "PRODUCT", role: "SUBDOMAIN", publicHost: "producto.partner.pro" },
+    { ecosystemType: "BUSINESS", role: "SUBDOMAIN", publicHost: "negocio.partner.pro" },
     { ecosystemType: "PERSONAL_BRAND", role: "SUBDOMAIN", publicHost: "brand.partner.pro" }
   ]);
 });
@@ -71,13 +71,13 @@ test("redirects a multi-ecosystem entitlement without Personal Brand to Product"
   };
   const result = buildPartnerEcosystemEntitlement(productAndBusiness, []);
   assert.deepEqual(result.expectedTargets, [
-    { ecosystemType: "PRODUCT", role: "SUBDOMAIN", publicHost: "product.partner.pro" },
-    { ecosystemType: "BUSINESS", role: "SUBDOMAIN", publicHost: "business.partner.pro" }
+    { ecosystemType: "PRODUCT", role: "SUBDOMAIN", publicHost: "producto.partner.pro" },
+    { ecosystemType: "BUSINESS", role: "SUBDOMAIN", publicHost: "negocio.partner.pro" }
   ]);
   assert.equal(result.rootEcosystem, "PRODUCT");
   assert.deepEqual(result.rootRedirectTarget, {
     ecosystemType: "PRODUCT",
-    publicHost: "product.partner.pro"
+    publicHost: "producto.partner.pro"
   });
 });
 
@@ -94,8 +94,8 @@ test("returns UNKNOWN for a legacy partner without inventing ecosystems", () => 
 
 test("reports complete targets without regeneration", () => {
   const targets = [
-    target("PRODUCT", "product.partner.pro"),
-    target("BUSINESS", "business.partner.pro"),
+    target("PRODUCT", "producto.partner.pro"),
+    target("BUSINESS", "negocio.partner.pro"),
     target("PERSONAL_BRAND", "brand.partner.pro")
   ];
   const result = buildPartnerEcosystemEntitlement(lead("PLAN_360"), targets);
@@ -106,11 +106,11 @@ test("reports complete targets without regeneration", () => {
 
 test("reports missing and publication-pending targets deterministically", () => {
   const result = buildPartnerEcosystemEntitlement(lead("PLAN_360"), [
-    target("PRODUCT", "product.partner.pro", "PENDING"),
+    target("PRODUCT", "producto.partner.pro", "PENDING"),
     target("PERSONAL_BRAND", "brand.partner.pro")
   ]);
   assert.deepEqual(result.missingTargets, [
-    { ecosystemType: "BUSINESS", role: "SUBDOMAIN", publicHost: "business.partner.pro" }
+    { ecosystemType: "BUSINESS", role: "SUBDOMAIN", publicHost: "negocio.partner.pro" }
   ]);
   assert.equal(result.regenerationRequired, true);
   assert.deepEqual(result.regenerationReasons, [
@@ -121,7 +121,7 @@ test("reports missing and publication-pending targets deterministically", () => 
 
 test("the entitlement calculation does not mutate lead, snapshot, or targets", () => {
   const inputLead = lead("PLAN_360");
-  const targets = [target("PRODUCT", "product.partner.pro")];
+  const targets = [target("PRODUCT", "producto.partner.pro")];
   const before = JSON.stringify({ inputLead, targets });
   buildPartnerEcosystemEntitlement(inputLead, targets);
   assert.equal(JSON.stringify({ inputLead, targets }), before);
@@ -138,7 +138,7 @@ test("confirmed manual payment snapshots extend entitlement without publishing",
     currency: "COP",
     selectedAt: "2026-08-18T13:00:00.000Z"
   }];
-  const result = buildPartnerEcosystemEntitlement(inputLead, [target("PRODUCT", "product.partner.pro")]);
+  const result = buildPartnerEcosystemEntitlement(inputLead, [target("PRODUCT", "producto.partner.pro")]);
   assert.deepEqual(result.includedEcosystems, ["PRODUCT", "BUSINESS", "PERSONAL_BRAND"]);
   assert.equal(result.regenerationRequired, true);
   assert.deepEqual(result.regenerationReasons, [
