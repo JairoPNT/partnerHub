@@ -124,7 +124,7 @@ export function buildJairoBusinessProjection({ canonical, lead, entitlement, pro
     projectedBusiness.hero = { ...projectedBusiness.hero, ...profile.hero };
     projectedBusiness.vsl = { ...projectedBusiness.vsl,
       thumbnailUrl: resolveBusinessVslThumbnail(extractProductHero(productSource)) };
-    const whatsappUrl = `https://wa.me/${whatsapp}`;
+    const whatsappUrl = `https://wa.me/${whatsapp}?text=${encodeURIComponent(profile.defaultMessage)}`;
     projectedBusiness.cta = { ...projectedBusiness.cta, ...profile.cta, primaryUrl: whatsappUrl,
       directRegisterUrl: "", secondaryUrl: whatsappUrl, directRegisterText: profile.cta?.primaryText };
     projectedBusiness.socialProof = { enabled: false, avatars: [] };

@@ -4,8 +4,11 @@
 
 The Jairo Business preview no longer requires or accepts
 `cta.directRegisterUrl`. Both current Business conversion URLs are explicitly
-materialized as `https://wa.me/<validated activation-lead WhatsApp>` and the
-direct registration URL remains empty. Product `purchaseUrl` is ignored.
+materialized as the same
+`https://wa.me/<validated activation-lead WhatsApp>?text=<encoded defaultMessage>`
+URL and the direct registration URL remains empty. Product `purchaseUrl` is
+ignored. A contractual test reproduces the deployed `app.js` precedence and
+proves primary and secondary resolve identically.
 
 ## Safety and scope
 

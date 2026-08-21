@@ -50,6 +50,16 @@ async function replaceProduct(fx, product) {
   await writeFile(fx.manifestPath, stringify({ confirmation: "DRY_RUN_JAIRO_BUSINESS_SOURCE", allowlist: [fx.entry] }));
 }
 
+function resolveBusinessRuntimeLinks(configuration) {
+  const rawNumber = String(configuration.distributor?.whatsappNumber ?? "").replace(/\D/g, "");
+  const defaultMessage = configuration.distributor?.defaultMessage ?? "";
+  const customWaUrl = configuration.cta?.secondaryUrl || configuration.distributor?.ctaUrl || "";
+  const waUrl = rawNumber ? `https://wa.me/${rawNumber}?text=${encodeURIComponent(defaultMessage)}`
+    : (customWaUrl.startsWith("http") ? customWaUrl : "#contacto");
+  const primary = configuration.cta?.directRegisterUrl || configuration.cta?.primaryUrl || (waUrl !== "#contacto" ? waUrl : "#contacto");
+  return { primary, secondary: waUrl };
+}
+
 test("uses the packaged runtime Business config path", () => {
   assert.equal(resolveCanonicalBusinessConfigPath({}), resolve("/app/runtime-assets/business-config.js"));
 });
@@ -64,9 +74,11 @@ test("projects canonical Business identity from entitled real partner inputs wit
   assert.equal(projected.hero.desktopBgUrl, "https://media.partnerhub.club/comunes/business/v1/hero-desktop.webp");
   assert.equal(projected.vsl.embedUrl, "https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.mp4");
   assert.equal(projected.vsl.thumbnailUrl, "https://cdn.example/jairo/product-desktop.webp");
-  assert.equal(projected.cta.primaryUrl, "https://wa.me/573105551111");
-  assert.equal(projected.cta.secondaryUrl, "https://wa.me/573105551111");
+  const expectedWhatsApp = `https://wa.me/573105551111?text=${encodeURIComponent(fx.profile.defaultMessage)}`;
+  assert.equal(projected.cta.primaryUrl, expectedWhatsApp);
+  assert.equal(projected.cta.secondaryUrl, expectedWhatsApp);
   assert.equal(projected.cta.directRegisterUrl, "");
+  assert.deepEqual(resolveBusinessRuntimeLinks(projected), { primary: expectedWhatsApp, secondary: expectedWhatsApp });
   assert.doesNotMatch(JSON.stringify(projected.cta), /store\.example|jairo-product/);
   assert.equal(projected.socialProof.enabled, false); assert.deepEqual(projected.testimonials.items, []);
   assert.doesNotMatch(JSON.stringify(projected), /dQw4w9WgXcQ|573000000000|Nexus Team|Diana Ramos|ganomaster-business/);
@@ -124,7 +136,10 @@ test("rejects a supplied registration or store URL instead of linking Business t
   const result = await run(fx);
   assert.ok(result.blockedReasons.includes("BUSINESS_DIRECT_REGISTER_URL_NOT_ALLOWED"));
   const projected = JSON.parse(await readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json"), "utf8"));
-  assert.equal(projected.cta.primaryUrl, "https://wa.me/573105551111");
+  const expectedWhatsApp = `https://wa.me/573105551111?text=${encodeURIComponent(fx.profile.defaultMessage)}`;
+  assert.equal(projected.cta.primaryUrl, expectedWhatsApp);
+  assert.equal(projected.cta.secondaryUrl, expectedWhatsApp);
+  assert.deepEqual(resolveBusinessRuntimeLinks(projected), { primary: expectedWhatsApp, secondary: expectedWhatsApp });
   assert.doesNotMatch(JSON.stringify(projected.cta), /store\.example|jairo-product/);
 });
 
