@@ -29,6 +29,11 @@ Every input is SHA-256 pinned. Entitlement must be `KNOWN`, include `BUSINESS`
 and expose the canonical expected target. Historical filenames or inferred names
 are not evidence of entitlement.
 
+The Product source must declare `PRODUCT` / `jairo-pinto-product`. Business VSL
+poster selection reuses the deployed shared contract and is derived exclusively
+from Product hero desktop, then mobile, then the internal `favicon.svg` fallback.
+`business-profile.json` must not provide `vsl.thumbnailUrl`.
+
 ## Safety contract
 
 - `DRY_RUN` only; always `changed:false`; reject APPLY-like flags.
@@ -38,6 +43,9 @@ are not evidence of entitlement.
 - Preserve apex as non-PublishingTarget.
 - Never change Brand/Product sources, targets, DNS, Hostinger, SSL, publication,
   regeneration, redirects, payments, ledger or UI.
+
+`business-profile.json` is an operational input for the Jairo pilot only. It is
+not the general onboarding mechanism for future partner creation.
 
 ## Dependencies
 

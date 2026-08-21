@@ -26,10 +26,11 @@ async function fixture() {
     hero: { badge: "Presentación de negocio", headline: "Construye un proyecto acompañado", subheadline: "Conoce el sistema y evalúa si es para ti.",
       desktopBgUrl: "https://cdn.example/jairo/business-desktop.webp", mobileBgUrl: "https://cdn.example/jairo/business-mobile.webp" },
     vsl: { provider: "youtube", embedUrl: "https://www.youtube-nocookie.com/embed/real-jairo-video", videoTitle: "Presentación de Jairo Pinto",
-      thumbnailUrl: "https://cdn.example/jairo/business-vsl.webp", durationText: "Ver presentación", autoPlay: false },
+      durationText: "Ver presentación", autoPlay: false },
     cta: { primaryText: "Quiero conocer el negocio", directRegisterUrl: "https://example.com/jairo/registro", secondaryText: "Hablar con Jairo", guaranteeText: "Información sin compromiso." } };
   const brand = stringify({ ecosystemType: "PERSONAL_BRAND", site: { id: "jairo-pinto" } });
-  const product = stringify({ ecosystemType: "PRODUCT", site: { id: "jairo-pinto-product" } });
+  const product = stringify({ ecosystemType: "PRODUCT", site: { id: "jairo-pinto-product" }, hero: {
+    desktop: "https://cdn.example/jairo/product-desktop.webp", mobile: "https://cdn.example/jairo/product-mobile.webp" } });
   const sourcesByName = { "activation-lead.json": stringify(lead), "entitlement.json": stringify(entitlement), "business-profile.json": stringify(profile) };
   for (const [name, source] of Object.entries(sourcesByName)) await writeFile(resolve(inputs, name), source);
   await writeFile(resolve(sources, "jairo-pinto.json"), brand); await writeFile(resolve(sources, "jairo-pinto-product.json"), product);
@@ -45,6 +46,12 @@ async function fixture() {
 async function run(fx) { return runJairoBusinessSourceDryRun({ sourceDirectory: fx.sources, canonicalBusinessConfigPath: fx.canonicalPath,
   manifestPath: fx.manifestPath, auditDirectory: fx.audits, now: new Date("2026-08-21T18:00:00.000Z") }); }
 
+async function replaceProduct(fx, product) {
+  const source = stringify(product); await writeFile(resolve(fx.sources, "jairo-pinto-product.json"), source);
+  fx.entry.expectedProductSourceHash = hash(source);
+  await writeFile(fx.manifestPath, stringify({ confirmation: "DRY_RUN_JAIRO_BUSINESS_SOURCE", allowlist: [fx.entry] }));
+}
+
 test("uses the packaged runtime Business config path", () => {
   assert.equal(resolveCanonicalBusinessConfigPath({}), resolve("/app/runtime-assets/business-config.js"));
 });
@@ -56,6 +63,7 @@ test("projects canonical Business identity from entitled real partner inputs wit
   const projected = JSON.parse(await readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json"), "utf8"));
   assert.equal(projected.site.id, "jairo-pinto-business"); assert.equal(projected.site.domain, "negocio.jairopinto.pro"); assert.equal(projected.ecosystemType, "BUSINESS");
   assert.equal(projected.distributor.fullName, "Jairo Pinto"); assert.equal(projected.vsl.embedUrl, fx.profile.vsl.embedUrl);
+  assert.equal(projected.vsl.thumbnailUrl, "https://cdn.example/jairo/product-desktop.webp");
   assert.equal(projected.socialProof.enabled, false); assert.deepEqual(projected.testimonials.items, []);
   assert.doesNotMatch(JSON.stringify(projected), /dQw4w9WgXcQ|573000000000|Nexus Team|Diana Ramos|ganomaster-business/);
   assert.equal(await readFile(resolve(fx.sources, "jairo-pinto.json"), "utf8"), fx.brand);
@@ -70,6 +78,35 @@ test("the repository canonical Business artifact produces a placeholder-free par
   const result = await run(fx); assert.equal(result.blocked, false);
   const projected = await readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json"), "utf8");
   assert.doesNotMatch(projected, /dQw4w9WgXcQ|573000000000|Nexus Team|Diana Ramos|Carlos Mendoza|GrupoMomentumStarter|ganomaster-business/);
+});
+
+test("Product hero mobile is the VSL poster fallback when desktop is absent", async () => {
+  const fx = await fixture(); await replaceProduct(fx, { ecosystemType: "PRODUCT", site: { id: "jairo-pinto-product" }, hero: { mobile: "https://cdn.example/jairo/product-mobile-only.webp" } });
+  const result = await run(fx); assert.equal(result.blocked, false);
+  const projected = JSON.parse(await readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json"), "utf8"));
+  assert.equal(projected.vsl.thumbnailUrl, "https://cdn.example/jairo/product-mobile-only.webp");
+});
+
+test("favicon.svg is the internal VSL poster fallback when Product has no valid hero", async () => {
+  const fx = await fixture(); await replaceProduct(fx, { ecosystemType: "PRODUCT", site: { id: "jairo-pinto-product" }, hero: { desktop: "http://unsafe.example/hero.webp" } });
+  const result = await run(fx); assert.equal(result.blocked, false);
+  const projected = JSON.parse(await readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json"), "utf8"));
+  assert.equal(projected.vsl.thumbnailUrl, "favicon.svg");
+});
+
+test("a manual Business VSL thumbnail is rejected and cannot overwrite Product hero", async () => {
+  const fx = await fixture(); fx.profile.vsl.thumbnailUrl = "https://cdn.example/jairo/manual-business-poster.webp"; const source = stringify(fx.profile);
+  await writeFile(resolve(fx.inputs, "business-profile.json"), source); fx.entry.expectedBusinessProfileHash = hash(source);
+  await writeFile(fx.manifestPath, stringify({ confirmation: "DRY_RUN_JAIRO_BUSINESS_SOURCE", allowlist: [fx.entry] }));
+  const result = await run(fx); assert.ok(result.blockedReasons.includes("BUSINESS_VSL_THUMBNAIL_MUST_BE_DERIVED"));
+  const projected = JSON.parse(await readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json"), "utf8"));
+  assert.equal(projected.vsl.thumbnailUrl, "https://cdn.example/jairo/product-desktop.webp");
+  assert.notEqual(projected.vsl.thumbnailUrl, fx.profile.vsl.thumbnailUrl);
+});
+
+test("an incorrectly identified Product source blocks the projection", async () => {
+  const fx = await fixture(); await replaceProduct(fx, { ecosystemType: "BUSINESS", site: { id: "jairo-pinto-product" }, hero: { desktop: "https://cdn.example/wrong.webp" } });
+  const result = await run(fx); assert.ok(result.blockedReasons.includes("PRODUCT_SOURCE_IDENTITY_INVALID"));
 });
 
 test("blocks when the current entitlement does not include BUSINESS", async () => {
@@ -88,7 +125,7 @@ test("blocks missing authorized fields and does not emit an incomplete projectio
 });
 
 test("blocks placeholder input, destination collision and hash drift", async () => {
-  const fx = await fixture(); fx.profile.vsl.embedUrl = "https://youtube.com/embed/dQw4w9WgXcQ"; const source = stringify(fx.profile);
+  const fx = await fixture(); fx.profile.siteTitle = "Nexus Team"; const source = stringify(fx.profile);
   await writeFile(resolve(fx.inputs, "business-profile.json"), source); fx.entry.expectedBusinessProfileHash = hash(source);
   fx.entry.expectedProductSourceHash = "0".repeat(64); await writeFile(resolve(fx.sources, "jairo-pinto-business.json"), "collision");
   await writeFile(fx.manifestPath, stringify({ confirmation: "DRY_RUN_JAIRO_BUSINESS_SOURCE", allowlist: [fx.entry] }));

@@ -4,6 +4,7 @@ import { dirname, resolve } from "node:path";
 import process from "node:process";
 import { pathToFileURL, URL } from "node:url";
 import vm from "node:vm";
+import { extractProductHero, resolveBusinessVslThumbnail } from "../shared/business-vsl-poster-contract.mjs";
 
 const CONFIRMATION = "DRY_RUN_JAIRO_BUSINESS_SOURCE";
 const EXPECTED = {
@@ -56,7 +57,7 @@ function missingProfileFields(profile) {
   const fields = [
     "role", "siteTitle", "ogTitle", "ogDescription", "metaDescription", "defaultMessage",
     "hero.badge", "hero.headline", "hero.subheadline", "hero.desktopBgUrl", "hero.mobileBgUrl",
-    "vsl.provider", "vsl.embedUrl", "vsl.videoTitle", "vsl.thumbnailUrl", "vsl.durationText",
+    "vsl.provider", "vsl.embedUrl", "vsl.videoTitle", "vsl.durationText",
     "cta.primaryText", "cta.directRegisterUrl", "cta.secondaryText", "cta.guaranteeText"
   ];
   return fields.filter((field) => {
@@ -72,7 +73,7 @@ function forbiddenPaths(value, path = "projection") {
   return [];
 }
 
-export function buildJairoBusinessProjection({ canonical, lead, entitlement, profile, hashes, destinationExists }) {
+export function buildJairoBusinessProjection({ canonical, lead, entitlement, profile, productSource, hashes, destinationExists }) {
   const blockedReasons = [];
   for (const [actual, expected, reason] of [
     [hashes.activationLead, hashes.expectedActivationLead, "ACTIVATION_LEAD_HASH_DRIFT"],
@@ -84,6 +85,7 @@ export function buildJairoBusinessProjection({ canonical, lead, entitlement, pro
   ]) if (actual !== expected) blockedReasons.push(reason);
   if (destinationExists) blockedReasons.push("BUSINESS_SOURCE_COLLISION");
   if (canonical?.ecosystemType !== "BUSINESS") blockedReasons.push("CANONICAL_BUSINESS_TEMPLATE_INVALID");
+  if (productSource?.ecosystemType !== "PRODUCT" || productSource?.site?.id !== EXPECTED.productSiteId) blockedReasons.push("PRODUCT_SOURCE_IDENTITY_INVALID");
   if (lead?.id !== EXPECTED.activationLeadId || lead?.siteId !== EXPECTED.ownerSiteId) blockedReasons.push("ACTIVATION_LEAD_IDENTITY_INVALID");
   if (lead?.onboardingData?.domain !== EXPECTED.baseDomain) blockedReasons.push("ACTIVATION_LEAD_DOMAIN_INVALID");
   const whatsapp = digits(lead?.onboardingData?.whatsapp || lead?.whatsapp);
@@ -95,9 +97,10 @@ export function buildJairoBusinessProjection({ canonical, lead, entitlement, pro
   if (expectedBusinessTarget?.role !== "SUBDOMAIN" || expectedBusinessTarget?.publicHost !== EXPECTED.publicHost) blockedReasons.push("BUSINESS_ENTITLEMENT_TARGET_INVALID");
   const missing = missingProfileFields(profile);
   blockedReasons.push(...missing.map((field) => `BUSINESS_DATA_MISSING:${field}`));
+  if (profile?.vsl && Object.prototype.hasOwnProperty.call(profile.vsl, "thumbnailUrl")) blockedReasons.push("BUSINESS_VSL_THUMBNAIL_MUST_BE_DERIVED");
   if (profile?.vsl?.provider && !["youtube", "vimeo", "wistia", "custom"].includes(profile.vsl.provider)) blockedReasons.push("BUSINESS_VSL_PROVIDER_INVALID");
   for (const [value, reason] of [[profile?.hero?.desktopBgUrl, "BUSINESS_HERO_DESKTOP_INVALID"], [profile?.hero?.mobileBgUrl, "BUSINESS_HERO_MOBILE_INVALID"],
-    [profile?.vsl?.embedUrl, "BUSINESS_VSL_EMBED_INVALID"], [profile?.vsl?.thumbnailUrl, "BUSINESS_VSL_THUMBNAIL_INVALID"],
+    [profile?.vsl?.embedUrl, "BUSINESS_VSL_EMBED_INVALID"],
     [profile?.cta?.directRegisterUrl, "BUSINESS_REGISTRATION_URL_INVALID"]]) if (nonempty(value) && !https(value)) blockedReasons.push(reason);
 
   let projectedBusiness = null;
@@ -110,7 +113,8 @@ export function buildJairoBusinessProjection({ canonical, lead, entitlement, pro
       fullName: lead.fullName, role: profile.role, whatsappNumber: whatsapp, phoneNumber: digits(lead.onboardingData?.phone) || whatsapp,
       displayPhone: lead.onboardingData?.phone || lead.onboardingData?.whatsapp || lead.whatsapp, ctaUrl: `https://wa.me/${whatsapp}`, defaultMessage: profile.defaultMessage };
     projectedBusiness.hero = { ...projectedBusiness.hero, ...profile.hero };
-    projectedBusiness.vsl = { ...projectedBusiness.vsl, ...profile.vsl, autoPlay: Boolean(profile.vsl?.autoPlay) };
+    projectedBusiness.vsl = { ...projectedBusiness.vsl, ...profile.vsl, autoPlay: Boolean(profile.vsl?.autoPlay),
+      thumbnailUrl: resolveBusinessVslThumbnail(extractProductHero(productSource)) };
     projectedBusiness.cta = { ...projectedBusiness.cta, ...profile.cta, primaryUrl: profile.cta?.directRegisterUrl,
       secondaryUrl: `https://wa.me/${whatsapp}`, directRegisterText: profile.cta?.primaryText };
     projectedBusiness.socialProof = { enabled: false, avatars: [] };
@@ -152,7 +156,8 @@ export async function runJairoBusinessSourceDryRun({ sourceDirectory, canonicalB
     brandSource: brandFile.hash, expectedBrandSource: entry.expectedBrandSourceHash.toLowerCase(), productSource: productFile.hash,
     expectedProductSource: entry.expectedProductSourceHash.toLowerCase(), canonicalTemplate: canonicalFile.hash, expectedCanonicalTemplate: entry.expectedCanonicalTemplateHash.toLowerCase() };
   const plan = buildJairoBusinessProjection({ canonical: parseCanonicalConfig(canonicalFile.source, canonicalBusinessConfigPath),
-    lead: JSON.parse(leadFile.source), entitlement: JSON.parse(entitlementFile.source), profile: JSON.parse(profileFile.source), hashes, destinationExists: Boolean(destination) });
+    lead: JSON.parse(leadFile.source), entitlement: JSON.parse(entitlementFile.source), profile: JSON.parse(profileFile.source),
+    productSource: JSON.parse(productFile.source), hashes, destinationExists: Boolean(destination) });
   const backupDirectory = resolve(auditDirectory, `${now.toISOString().replaceAll(":", "-")}-jairo-business-source-dry-run`);
   await mkdir(resolve(backupDirectory, "inputs"), { recursive: true }); await mkdir(resolve(backupDirectory, "backup"), { recursive: true });
   const writes = [writeFile(resolve(backupDirectory, "manifest.json"), manifestFile.source), writeFile(resolve(backupDirectory, "inputs", "activation-lead.json"), leadFile.source),

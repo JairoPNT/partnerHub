@@ -39,12 +39,33 @@ Junto al manifest deben existir:
    `role`, `siteTitle`, `ogTitle`, `ogDescription`, `metaDescription`,
    `defaultMessage`; hero (`badge`, `headline`, `subheadline`,
    `desktopBgUrl`, `mobileBgUrl`); VSL (`provider`, `embedUrl`, `videoTitle`,
-   `thumbnailUrl`, `durationText`, opcional `autoPlay`); CTA (`primaryText`,
+   `durationText`, opcional `autoPlay`); CTA (`primaryText`,
    `directRegisterUrl`, `secondaryText`, `guaranteeText`).
 
 URLs visuales, VSL y registro deben ser HTTPS. Estos campos no se sustituyen
-por Product. Si falta cualquiera, se emite `BUSINESS_DATA_MISSING:<campo>` y no
+por Product. La única reutilización Product es el poster VSL exigido por el
+contrato desplegado. Si falta cualquiera, se emite `BUSINESS_DATA_MISSING:<campo>` y no
 se crea archivo proyectado.
+
+`business-profile.json` es un input operativo exclusivo del piloto Jairo. No se
+documenta como mecanismo definitivo de altas; la automatización general debe
+usar onboarding/config administrada en un ticket posterior.
+
+## Poster VSL correlacionado
+
+La fuente Product pinned se parsea y debe declarar `ecosystemType=PRODUCT` y
+`site.id=jairo-pinto-product`. El DRY_RUN comparte el mismo resolver utilizado
+por `businessProductHeroCorrelation` / `businessVslPoster`:
+
+```text
+Business.vsl.thumbnailUrl = Product.hero.desktop
+  || Product.hero.mobile
+  || "favicon.svg"
+```
+
+El Hero propio Business (`desktopBgUrl` / `mobileBgUrl`) permanece independiente.
+Un `vsl.thumbnailUrl` suministrado en el profile bloquea con
+`BUSINESS_VSL_THUMBNAIL_MUST_BE_DERIVED` y nunca sobrescribe el poster Product.
 
 ## Protección contra contenido demostrativo
 
@@ -92,13 +113,18 @@ No existe ni se debe solicitar comando APPLY en este ticket.
 
 - `app/web/scripts/jairo-business-source-generation-dry-run.mjs`
 - `app/web/scripts/jairo-business-source-generation-dry-run.test.mjs`
+- `app/web/shared/business-vsl-poster-contract.mjs` y declaración de tipos
+- `app/web/server/services/businessProductHeroCorrelation.ts`
+- `app/web/server/services/businessVslPoster.ts`
 - `app/web/package.json`
 - `Dockerfile` (solo transporta config Business mínimo y script al runner)
 - request/reporte CDX-013.
 
 ## Verificación
 
-- Tests focalizados: PASS 6/6.
+- Tests CDX-013: PASS 10/10 (incluye desktop, mobile, favicon, rechazo manual e
+  identidad Product inválida).
+- Regresión Business poster/correlation: PASS 9/9.
 - ESLint focalizado real con `--no-ignore --max-warnings=0`: PASS.
 - Build: PASS.
 - `git diff --check`: PASS.
