@@ -13,6 +13,10 @@ const EXPECTED = {
   baseDomain: "claudiacalero.pro"
 };
 
+export function resolveCanonicalBrandConfigPath(environment = process.env) {
+  return resolve(environment.PRODUCT_PAGE_BRAND_TEMPLATE_CONFIG ?? "/app/runtime-assets/personal-brand-config.js");
+}
+
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -137,10 +141,9 @@ async function main() {
   const manifestPath = argument("manifest");
   if (!manifestPath) throw new Error("--manifest=<path> is required.");
   const sourceDirectory = process.env.PRODUCT_PAGE_SOURCE_DIR ?? "/data/generated-sites/.sources";
-  const templateRoot = process.env.PRODUCT_PAGE_TEMPLATE_ROOT ?? "/app/plantillas-de-pagina";
   const result = await runSourceIdentityDryRun({
     sourceDirectory,
-    canonicalBrandConfigPath: resolve(templateRoot, "personal-brand", "config.js"),
+    canonicalBrandConfigPath: resolveCanonicalBrandConfigPath(),
     manifestPath,
     auditDirectory: process.env.PRODUCT_PAGE_MIGRATION_AUDIT_DIR ?? "/data/generated-sites/.migration-audits"
   });

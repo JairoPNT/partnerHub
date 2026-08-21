@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 
-import { buildSourceIdentityPlan, runSourceIdentityDryRun } from "./claudia-source-identity-dry-run.mjs";
+import { buildSourceIdentityPlan, resolveCanonicalBrandConfigPath, runSourceIdentityDryRun } from "./claudia-source-identity-dry-run.mjs";
 
 const source = { ecosystemType: "PRODUCT", site: { id: "claudia-calero", appName: "claudia_calero", domain: "claudiacalero.pro", title: "Claudia" }, distributor: { fullName: "Claudia Calero" } };
 const canonicalBrand = { ecosystemType: "PERSONAL_BRAND", site: { id: "ganomaster-personal-brand", appName: "ganomaster-personal-brand", title: "Brand" }, profile: { fullName: "Nombre del Profesional" } };
@@ -30,22 +30,30 @@ test("blocks hash drift, invalid source identity and an existing Product destina
   assert.deepEqual(plan.blockedReasons, ["SOURCE_HASH_MISMATCH", "SOURCE_IDENTITY_NOT_PRODUCT", "PRODUCT_DESTINATION_ALREADY_EXISTS"]);
 });
 
+test("resolves the packaged runtime artifact without a development templates directory", () => {
+  assert.equal(resolveCanonicalBrandConfigPath({}), resolve("/app/runtime-assets/personal-brand-config.js"));
+  assert.equal(
+    resolveCanonicalBrandConfigPath({ PRODUCT_PAGE_BRAND_TEMPLATE_CONFIG: "/runtime/canonical-brand.js" }),
+    resolve("/runtime/canonical-brand.js")
+  );
+});
+
 test("DRY_RUN writes backups and projections only under the audit directory", async () => {
   const root = await mkdtemp(resolve(tmpdir(), "claudia-source-dry-run-"));
   const sources = resolve(root, "sources");
-  const templates = resolve(root, "templates", "personal-brand");
+  const runtimeAssets = resolve(root, "runtime-assets");
   const audits = resolve(root, "audits");
   await mkdir(resolve(sources, ".verifications"), { recursive: true });
   await mkdir(resolve(sources, ".history"), { recursive: true });
-  await mkdir(templates, { recursive: true });
+  await mkdir(runtimeAssets, { recursive: true });
   await writeFile(resolve(sources, "claudia-calero.json"), sourceText);
   await writeFile(resolve(sources, ".verifications", "claudia-calero.json"), "{\"status\":\"VERIFIED\"}\n");
   await writeFile(resolve(sources, ".history", "claudia-calero.json"), "{\"entries\":[]}\n");
-  await writeFile(resolve(templates, "config.js"), `const CONFIG = ${JSON.stringify(canonicalBrand)};`);
+  await writeFile(resolve(runtimeAssets, "personal-brand-config.js"), `const CONFIG = ${JSON.stringify(canonicalBrand)};`);
   const manifest = { confirmation: "DRY_RUN_CLAUDIA_SOURCE_IDENTITY", allowlist: [{ sourceSiteId: "claudia-calero", productSiteId: "claudia-calero-product", brandSiteId: "claudia-calero", baseDomain: "claudiacalero.pro", expectedSourceHash: sourceHash }] };
   const manifestPath = resolve(root, "manifest.json");
   await writeFile(manifestPath, JSON.stringify(manifest));
-  const result = await runSourceIdentityDryRun({ sourceDirectory: sources, canonicalBrandConfigPath: resolve(templates, "config.js"), manifestPath, auditDirectory: audits, now: new Date("2026-08-20T21:00:00Z") });
+  const result = await runSourceIdentityDryRun({ sourceDirectory: sources, canonicalBrandConfigPath: resolve(runtimeAssets, "personal-brand-config.js"), manifestPath, auditDirectory: audits, now: new Date("2026-08-20T21:00:00Z") });
   assert.equal(result.changed, false);
   assert.equal(await readFile(resolve(sources, "claudia-calero.json"), "utf8"), sourceText);
   assert.equal(JSON.parse(await readFile(resolve(result.backupDirectory, "projected", "claudia-calero-product.json"), "utf8")).site.id, "claudia-calero-product");
