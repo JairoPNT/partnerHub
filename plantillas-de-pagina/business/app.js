@@ -130,15 +130,20 @@
     // 6. WhatsApp & CTA Links
     const rawNumber = (cfg.distributor?.whatsappNumber || '').replace(/\D/g, '');
     const defaultMsg = cfg.distributor?.defaultMessage || 'Hola, vi la presentación del modelo de negocio en tu página web y quiero conocer cómo iniciar.';
-    const waUrl = rawNumber ? `https://wa.me/${rawNumber}?text=${encodeURIComponent(defaultMsg)}` : (cfg.distributor?.ctaUrl || '#');
-    const directRegisterUrl = cfg.cta?.directRegisterUrl || cfg.cta?.primaryUrl || waUrl;
+    const waUrl = rawNumber ? `https://wa.me/${rawNumber}?text=${encodeURIComponent(defaultMsg)}` : (cfg.distributor?.ctaUrl || '#contacto');
+    const directRegisterUrl = cfg.cta?.directRegisterUrl || cfg.cta?.primaryUrl || waUrl || '#contacto';
 
     // CTAs Primarios (Registro Directo o WhatsApp)
     const ctaPrimaryLinks = document.querySelectorAll('.bind-cta-primary');
     ctaPrimaryLinks.forEach(link => {
       link.setAttribute('href', directRegisterUrl);
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
+      if (directRegisterUrl.startsWith('#')) {
+        link.removeAttribute('target');
+        link.removeAttribute('rel');
+      } else {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+      }
     });
 
     const ctaPrimaryTextEls = document.querySelectorAll('[data-bind="cta.primaryText"]');
@@ -150,8 +155,13 @@
     const ctaSecondaryLinks = document.querySelectorAll('.bind-cta-secondary');
     ctaSecondaryLinks.forEach(link => {
       link.setAttribute('href', waUrl);
-      link.setAttribute('target', '_blank');
-      link.setAttribute('rel', 'noopener noreferrer');
+      if (waUrl.startsWith('#')) {
+        link.removeAttribute('target');
+        link.removeAttribute('rel');
+      } else {
+        link.setAttribute('target', '_blank');
+        link.setAttribute('rel', 'noopener noreferrer');
+      }
     });
 
     const ctaSecondaryTextEls = document.querySelectorAll('[data-bind="cta.secondaryText"]');
@@ -341,11 +351,18 @@
     setupModals();
   }
 
+  function isDirectVideoUrl(provider, url) {
+    if (provider === 'custom' || provider === 'mp4' || provider === 'video') return true;
+    if (!url) return false;
+    return /\.(mp4|webm|ogg|m4v)($|\?)/i.test(url);
+  }
+
   function setupVslPlayer(vslCfg) {
     const container = document.getElementById('vsl-video-container');
     if (!container) return;
 
-    const embedUrl = vslCfg?.embedUrl || 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ';
+    const provider = vslCfg?.provider || 'custom';
+    const embedUrl = vslCfg?.embedUrl || '';
     const videoTitle = vslCfg?.videoTitle || 'Presentación de Negocio';
 
     if (vslCfg?.aspectRatio === '4:3') {
@@ -365,20 +382,38 @@
     // Reproducción al hacer click
     function playVideo() {
       if (container.classList.contains('playing')) return;
-      
-      const separator = embedUrl.includes('?') ? '&' : '?';
-      const autoPlayUrl = `${embedUrl}${separator}autoplay=1&rel=0&modestbranding=1`;
+      if (!embedUrl) return;
 
-      container.innerHTML = `
-        <iframe 
-          src="${autoPlayUrl}" 
-          title="${videoTitle}" 
-          frameborder="0" 
-          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
-          allowfullscreen 
-          style="position: absolute; top:0; left:0; width:100%; height:100%; border:none; z-index: 20;">
-        </iframe>
-      `;
+      if (isDirectVideoUrl(provider, embedUrl)) {
+        container.innerHTML = `
+          <video
+            src="${embedUrl}"
+            ${vslCfg?.thumbnailUrl ? `poster="${vslCfg.thumbnailUrl}"` : ''}
+            controls
+            autoplay
+            playsinline
+            style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain; background: #000; z-index: 20; border-radius: inherit;">
+          </video>
+        `;
+        const videoEl = container.querySelector('video');
+        if (videoEl) {
+          videoEl.play().catch(() => {});
+        }
+      } else {
+        const separator = embedUrl.includes('?') ? '&' : '?';
+        const autoPlayUrl = `${embedUrl}${separator}autoplay=1&rel=0&modestbranding=1`;
+
+        container.innerHTML = `
+          <iframe
+            src="${autoPlayUrl}"
+            title="${escapeHtml(videoTitle)}"
+            frameborder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+            allowfullscreen
+            style="position: absolute; top:0; left:0; width:100%; height:100%; border:none; z-index: 20;">
+          </iframe>
+        `;
+      }
 
       container.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
       container.style.transition = 'transform 0.5s ease';
@@ -390,17 +425,17 @@
     // Efecto 3D Tilt interactivo
     container.addEventListener('mousemove', (e) => {
       if (container.classList.contains('playing')) return;
-      
+
       const rect = container.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-      
+
       const xc = rect.width / 2;
       const yc = rect.height / 2;
-      
-      const angleX = -(y - yc) / 22; 
+
+      const angleX = -(y - yc) / 22;
       const angleY = (x - xc) / 22;
-      
+
       container.style.transform = `perspective(1000px) rotateX(${angleX}deg) rotateY(${angleY}deg) scale(1.015)`;
     });
 

@@ -1,8 +1,8 @@
-﻿# AGR-20260821-001 - Business Master Clean Integration
+# AGR-20260821-001 - Business Master Clean Integration
 
 ## Status
 
-In Progress.
+Superseded by AGR-20260821-002.
 
 ## Owner
 
@@ -29,10 +29,9 @@ Cleanly integrate the Business/VSL master template updates into the mainline bra
 ## Requirements
 
 - Update asset URLs in config.js and index.html to official CDN assets (https://media.partnerhub.club/...) instead of third-party Unsplash placeholders.
-- Apply modern dashed grid layout and card design in styles.css and dynamic card generator in pp.js for the 4 pillars / benefits section.
-- Ensure 	est:jairo-business-source-dry-run and all related test suites continue to pass.
-- Ensure 
-ext build passes cleanly.
+- Apply modern dashed grid layout and card design in styles.css and dynamic card generator in app.js for the 4 pillars / benefits section.
+- Ensure npm run test:jairo-business-source-dry-run and all related test suites continue to pass.
+- Ensure npm run build passes cleanly.
 
 ## Out of Scope
 
@@ -47,21 +46,15 @@ ext build passes cleanly.
 
 ## Verification Plan
 
-- Run 
-pm run test:jairo-business-source-dry-run.
-- Run 
-pm run test:business-vsl-correlation.
-- Run 
-pm run test:business-vsl-poster.
-- Run 
-pm run test:ecosystem-templates.
-- Run 
-pm run test:ecosystem-generation-contract.
-- Run 
-pm run build.
+- Run npm run test:jairo-business-source-dry-run.
+- Run npm run test:business-vsl-correlation.
+- Run npm run test:business-vsl-poster.
+- Run npm run test:ecosystem-templates.
+- Run npm run test:ecosystem-generation-contract.
+- Run npm run build.
 
 ## Required Completion Report
 
 Write the completion report to:
 
-rain/agent-requests/antigravity/reports/AGR-20260821-001_business_master_clean_integration_DONE.md
+brain/agent-requests/antigravity/reports/AGR-20260821-001_business_master_clean_integration_DONE.md

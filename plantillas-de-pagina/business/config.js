@@ -57,13 +57,13 @@ const CONFIG = {
 
   // Video Sales Letter (VSL)
   vsl: {
-    provider: 'youtube', // 'youtube' | 'vimeo' | 'wistia' | 'custom'
-    embedUrl: 'https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ',
+    provider: 'custom', // 'youtube' | 'vimeo' | 'wistia' | 'custom'
+    embedUrl: 'https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.mp4',
     videoTitle: 'Presentación Oficial del Modelo de Negocio',
     aspectRatio: '16:9', // '16:9' | '4:3'
     caption: 'Duración aproximada: 10 minutos · Activa el sonido para mejor experiencia',
     durationText: 'Ver Presentación de Negocio (10 min)',
-    thumbnailUrl: 'https://media.partnerhub.club/comunes/business/v1/vsl-thumbnail.webp',
+    thumbnailUrl: 'https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.webp',
     autoPlay: true
   },
 
@@ -195,12 +195,12 @@ const CONFIG = {
   // Llamados a la Acción y Registro
   cta: {
     primaryText: 'Quiero Participar y Registrarme',
-    primaryUrl: 'https://col.ganoexcel.com/GrupoMomentumStarter',
+    primaryUrl: '',
     secondaryText: 'Más Información por WhatsApp',
     secondaryUrl: 'https://wa.me/573000000000',
     guaranteeText: 'Cupos limitados por zona para acompañamiento personalizado.',
     directRegisterText: 'Quiero Participar y Registrarme',
-    directRegisterUrl: 'https://col.ganoexcel.com/GrupoMomentumStarter'
+    directRegisterUrl: ''
   },
 
   // Tema Visual (PH-025)
