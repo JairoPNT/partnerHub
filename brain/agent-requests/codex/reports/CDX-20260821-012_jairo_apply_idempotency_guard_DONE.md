@@ -33,6 +33,14 @@ El rerun válido devuelve `outcome:ALREADY_APPLIED`, `changed:false` y
 - El proceso comprueba el token antes de mutar y antes de retirar el claim.
 - Solo el propietario revierte sus pasos registrados; el perdedor del claim no
   crea temporales ni ejecuta rollback.
+- El token se valida antes de cada escritura, rename, remove y paso inverso del
+  rollback. Si cambia después de una mutación, el proceso devuelve
+  `APPLY_CLAIM_OWNERSHIP_LOST` sin tocar artefactos compartidos.
+- El journal establece el límite de commit. Un error posterior conserva journal
+  y estado final, mantiene el claim y devuelve
+  `APPLY_POST_COMMIT_CLEANUP_FAILED`; nunca inicia rollback post-commit.
+- El claim se libera como última mutación, después de eliminar el rollback
+  temporal y completar la post-verificación.
 
 ## Archivos
 
@@ -43,14 +51,18 @@ El rerun válido devuelve `outcome:ALREADY_APPLIED`, `changed:false` y
 
 ## Verificación
 
-- `npm run test:jairo-source-identity-guarded-apply`: PASS, 11/11.
-- ESLint focalizado sobre script y prueba con `--max-warnings=0`: PASS.
+- `npm run test:jairo-source-identity-guarded-apply`: PASS, 13/13.
+- ESLint focalizado sobre script y prueba con `--no-ignore --max-warnings=0`:
+  PASS. (`scripts/` está ignorado por la configuración general, por lo que se
+  fuerza su análisis para que el gate sea real.)
 - `npm run build`: PASS.
 - `git diff --check`: PASS.
 
 Casos focalizados: preview, drift/colisiones, confirmación/planHash, APPLY
 atómico, rerun secuencial, drift final, drift del journal, concurrencia
 determinista, claim incompleto/stale, pérdida de ownership y rollback inyectado.
+También se valida pérdida de ownership después de instalar Product y fallos
+inyectados al limpiar el source rollback o liberar el claim después del journal.
 
 ## Advertencias no bloqueantes
 

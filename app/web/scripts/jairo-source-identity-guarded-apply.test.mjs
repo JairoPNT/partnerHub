@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import assert from "node:assert/strict";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -119,6 +119,39 @@ test("a process never removes a claim whose ownership token changed", async () =
   assert.equal(await readFile(resolve(fx.sources, "jairo-pinto.json"), "utf8"), fx.original);
   await assert.rejects(readFile(resolve(fx.sources, "jairo-pinto-product.json")), /ENOENT/);
   await rm(resolve(fx.audit, ".apply-claim"), { recursive: true });
+});
+
+test("ownership loss after a mutation never removes or rolls back foreign artifacts", async () => {
+  const fx = await fixture(); const preview = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit });
+  const foreignOwner = JSON.stringify({ token: "foreign-after-product", acquiredAt: new Date().toISOString() });
+  await assert.rejects(runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit,
+    mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash,
+    onAfterMutation: async (step) => {
+      if (step !== "product") return;
+      await writeFile(resolve(fx.sources, "jairo-pinto-product.json"), "FOREIGN_ARTIFACT");
+      await writeFile(resolve(fx.audit, ".apply-claim", "owner.json"), foreignOwner);
+    } }), /APPLY_CLAIM_OWNERSHIP_LOST/);
+  assert.equal(await readFile(resolve(fx.sources, "jairo-pinto-product.json"), "utf8"), "FOREIGN_ARTIFACT");
+  assert.equal(await readFile(resolve(fx.audit, ".apply-claim", "owner.json"), "utf8"), foreignOwner);
+  assert.equal(await readFile(resolve(fx.sources, "jairo-pinto.json"), "utf8"), fx.original);
+  assert.equal(await readFile(resolve(fx.sources, ".verifications", "jairo-pinto.json"), "utf8"), fx.verification);
+  assert.equal(await readFile(resolve(fx.sources, ".history", "jairo-pinto.json"), "utf8"), fx.history);
+});
+
+test("post-journal cleanup failures preserve committed state and the exclusive claim", async () => {
+  for (const cleanupStep of ["source-rollback", "release-claim"]) {
+    const fx = await fixture(); const preview = await runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit });
+    await assert.rejects(runJairoSourceIdentityApply({ sourceDirectory: fx.sources, manifestPath: fx.manifestPath, expectedAuditPackage: fx.audit,
+      mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash, failCleanupStep: cleanupStep }), /APPLY_POST_COMMIT_CLEANUP_FAILED/);
+    assert.equal(await readFile(resolve(fx.sources, "jairo-pinto-product.json"), "utf8"), fx.product);
+    assert.equal(await readFile(resolve(fx.sources, "jairo-pinto.json"), "utf8"), fx.brand);
+    assert.equal(await readFile(resolve(fx.sources, ".verifications", "jairo-pinto-product.json"), "utf8"), fx.verification);
+    assert.equal(await readFile(resolve(fx.sources, ".history", "jairo-pinto-product.json"), "utf8"), fx.history);
+    assert.equal(JSON.parse(await readFile(resolve(fx.audit, "apply.json"), "utf8")).changed, true);
+    assert.ok((await readdir(resolve(fx.audit, ".apply-claim"))).includes("owner.json"));
+    const rollbackFiles = (await readdir(fx.sources)).filter((name) => name.includes(".rollback-"));
+    assert.equal(rollbackFiles.length, cleanupStep === "source-rollback" ? 1 : 0);
+  }
 });
 
 test("rolls back every committed step after an injected failure", async () => {

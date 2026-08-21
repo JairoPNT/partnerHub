@@ -217,11 +217,14 @@ async function releaseOwnedClaim(paths, owner) {
 }
 
 async function assertOwnedClaim(paths, owner) {
-  const persisted = JSON.parse(await readFile(paths.applyClaimOwner, "utf8"));
-  if (persisted.token !== owner.token) throw new Error("APPLY_CLAIM_OWNERSHIP_LOST");
+  try {
+    const persisted = JSON.parse(await readFile(paths.applyClaimOwner, "utf8"));
+    if (persisted.token !== owner.token) throw new Error("APPLY_CLAIM_OWNERSHIP_LOST");
+  } catch { throw new Error("APPLY_CLAIM_OWNERSHIP_LOST"); }
 }
 
-export async function runJairoSourceIdentityApply({ sourceDirectory, manifestPath, expectedAuditPackage, mode = "DRY_RUN", confirmation, expectedPlanHash, failAfterStep, onClaimAcquired }) {
+export async function runJairoSourceIdentityApply({ sourceDirectory, manifestPath, expectedAuditPackage, mode = "DRY_RUN", confirmation, expectedPlanHash,
+  failAfterStep, failCleanupStep, onClaimAcquired, onAfterMutation }) {
   if (mode !== "DRY_RUN" && mode !== APPLY_MODE) throw new Error(`Unsupported mode: ${mode}.`);
   const plan = await planJairoSourceIdentityApply({ sourceDirectory, manifestPath, expectedAuditPackage });
   const safe = { ...plan, files: undefined };
@@ -231,52 +234,76 @@ export async function runJairoSourceIdentityApply({ sourceDirectory, manifestPat
   if (plan.blocked) throw new Error(`APPLY blocked: ${plan.blockedReasons.join(", ")}.`);
   if (!HASH.test(expectedPlanHash ?? "") || expectedPlanHash !== plan.planHash) throw new Error("APPLY requires the reviewed DRY_RUN planHash.");
 
-  const owner = await acquireClaim(plan.paths);
-  if (onClaimAcquired) await onClaimAcquired(owner);
-  await assertOwnedClaim(plan.paths, owner);
-  const claimedPlan = await planJairoSourceIdentityApply({ sourceDirectory, manifestPath, expectedAuditPackage });
-  const claimedReasons = claimedPlan.blockedReasons ?? [];
-  const claimOnly = claimedReasons.filter((reason) => reason.startsWith("APPLY_CLAIM_"));
-  const otherBlocks = claimedReasons.filter((reason) => !reason.startsWith("APPLY_CLAIM_"));
-  if (claimedPlan.outcome || otherBlocks.length > 0 || claimOnly.length !== 1) {
-    await releaseOwnedClaim(plan.paths, owner);
-    throw new Error(`APPLY blocked after claim: ${claimedPlan.outcome ?? otherBlocks.join(", ")}.`);
-  }
-  const { paths, files } = claimedPlan;
-  const suffix = `${process.pid}-${owner.token}`;
-  const productTemp = await atomicWrite(paths.product, files.projectedProduct.source, `${owner.token}-product`);
-  const brandTemp = await atomicWrite(paths.source, files.projectedBrand.source, `${owner.token}-brand`);
-  const sourceRollback = `${paths.source}.rollback-${suffix}`;
-  const state = { product: false, verification: false, history: false, originalMoved: false, brand: false, journal: false };
+  const paths = plan.paths;
+  const owner = await acquireClaim(paths);
+  const state = { productTemp: false, brandTemp: false, product: false, verification: false, history: false,
+    originalMoved: false, brand: false, journalTemp: false, committed: false };
+  let productTemp; let brandTemp; let sourceRollback; let journalTemp;
   const maybeFail = (step) => { if (failAfterStep === step) throw new Error(`Injected failure after ${step}.`); };
+  const ownedMutation = async (step, action, mark) => {
+    await assertOwnedClaim(paths, owner);
+    await action();
+    if (mark) mark();
+    if (onAfterMutation) await onAfterMutation(step, { owner, paths });
+    maybeFail(step);
+  };
+  const rollbackMutation = async (action) => { await assertOwnedClaim(paths, owner); await action(); };
   try {
-    await rename(productTemp, paths.product); state.product = true; maybeFail("product");
-    await rename(paths.verification, paths.productVerification); state.verification = true; maybeFail("verification");
-    await rename(paths.history, paths.productHistory); state.history = true; maybeFail("history");
-    await rename(paths.source, sourceRollback); state.originalMoved = true; maybeFail("source-backup");
-    await rename(brandTemp, paths.source); state.brand = true; maybeFail("brand");
+    if (onClaimAcquired) await onClaimAcquired(owner);
+    await assertOwnedClaim(paths, owner);
+    const claimedPlan = await planJairoSourceIdentityApply({ sourceDirectory, manifestPath, expectedAuditPackage });
+    const claimedReasons = claimedPlan.blockedReasons ?? [];
+    const claimOnly = claimedReasons.filter((reason) => reason.startsWith("APPLY_CLAIM_"));
+    const otherBlocks = claimedReasons.filter((reason) => !reason.startsWith("APPLY_CLAIM_"));
+    if (claimedPlan.outcome || otherBlocks.length > 0 || claimOnly.length !== 1) {
+      throw new Error(`APPLY blocked after claim: ${claimedPlan.outcome ?? otherBlocks.join(", ")}.`);
+    }
+    const { files } = claimedPlan;
+    sourceRollback = `${paths.source}.rollback-${process.pid}-${owner.token}`;
+    productTemp = `${paths.product}.tmp-${owner.token}-product`;
+    brandTemp = `${paths.source}.tmp-${owner.token}-brand`;
+    await ownedMutation("product-temp", async () => { await atomicWrite(paths.product, files.projectedProduct.source, `${owner.token}-product`); }, () => { state.productTemp = true; });
+    await ownedMutation("brand-temp", async () => { await atomicWrite(paths.source, files.projectedBrand.source, `${owner.token}-brand`); }, () => { state.brandTemp = true; });
+    await ownedMutation("product", async () => { await rename(productTemp, paths.product); }, () => { state.product = true; state.productTemp = false; });
+    await ownedMutation("verification", async () => { await rename(paths.verification, paths.productVerification); }, () => { state.verification = true; });
+    await ownedMutation("history", async () => { await rename(paths.history, paths.productHistory); }, () => { state.history = true; });
+    await ownedMutation("source-backup", async () => { await rename(paths.source, sourceRollback); }, () => { state.originalMoved = true; });
+    await ownedMutation("brand", async () => { await rename(brandTemp, paths.source); }, () => { state.brand = true; state.brandTemp = false; });
+    await assertOwnedClaim(paths, owner);
     const [persistedProduct, persistedBrand, persistedVerification, persistedHistory] = await Promise.all([
       required(paths.product), required(paths.source), required(paths.productVerification), required(paths.productHistory)
     ]);
     if (persistedProduct.hash !== files.projectedProduct.hash || persistedBrand.hash !== files.projectedBrand.hash ||
         persistedVerification.hash !== files.verification.hash || persistedHistory.hash !== files.history.hash ||
         !(await absent(paths.verification)) || !(await absent(paths.history))) throw new Error("POST_VERIFICATION_FAILED");
+    await assertOwnedClaim(paths, owner);
     const journal = { mode: APPLY_MODE, changed: true, planHash: plan.planHash, appliedAt: new Date().toISOString(), hashes: plan.planMaterial };
     const journalPath = paths.applyJournal;
-    await mkdir(resolve(plan.planMaterial.auditPackage), { recursive: true });
-    const journalTemp = await atomicWrite(journalPath, json(journal), `${owner.token}-journal`);
-    await rename(journalTemp, journalPath); state.journal = true;
+    journalTemp = `${journalPath}.tmp-${owner.token}-journal`;
+    await ownedMutation("journal-temp", async () => { await atomicWrite(journalPath, json(journal), `${owner.token}-journal`); }, () => { state.journalTemp = true; });
+    await ownedMutation("journal", async () => { await rename(journalTemp, journalPath); }, () => { state.committed = true; state.journalTemp = false; });
+    await assertOwnedClaim(paths, owner);
+    if (failCleanupStep === "source-rollback") throw new Error("Injected cleanup failure at source-rollback.");
+    await rm(sourceRollback); state.originalMoved = false;
+    await assertOwnedClaim(paths, owner);
+    if (failCleanupStep === "release-claim") throw new Error("Injected cleanup failure at release-claim.");
     await releaseOwnedClaim(paths, owner);
-    await rm(sourceRollback, { force: true });
     return { ...safe, mode: APPLY_MODE, changed: true, journalPath, postVerification: "PASSED" };
   } catch (error) {
-    if (state.journal) await rm(paths.applyJournal, { force: true });
-    if (state.brand) await rm(paths.source, { force: true });
-    if (state.originalMoved) await rename(sourceRollback, paths.source);
-    if (state.history) await rename(paths.productHistory, paths.history);
-    if (state.verification) await rename(paths.productVerification, paths.verification);
-    if (state.product) await rm(paths.product, { force: true });
-    await rm(productTemp, { force: true }); await rm(brandTemp, { force: true });
+    if (state.committed) {
+      if (error.message === "APPLY_CLAIM_OWNERSHIP_LOST") throw error;
+      throw new Error(`APPLY_POST_COMMIT_CLEANUP_FAILED: ${error.message}`);
+    }
+    try { await assertOwnedClaim(paths, owner); } catch { throw new Error("APPLY_CLAIM_OWNERSHIP_LOST"); }
+    if (state.brand) await rollbackMutation(async () => { await rm(paths.source, { force: true }); });
+    if (state.originalMoved) await rollbackMutation(async () => { await rename(sourceRollback, paths.source); });
+    if (state.history) await rollbackMutation(async () => { await rename(paths.productHistory, paths.history); });
+    if (state.verification) await rollbackMutation(async () => { await rename(paths.productVerification, paths.verification); });
+    if (state.product) await rollbackMutation(async () => { await rm(paths.product, { force: true }); });
+    if (state.productTemp) await rollbackMutation(async () => { await rm(productTemp, { force: true }); });
+    if (state.brandTemp) await rollbackMutation(async () => { await rm(brandTemp, { force: true }); });
+    if (state.journalTemp) await rollbackMutation(async () => { await rm(journalTemp, { force: true }); });
+    await assertOwnedClaim(paths, owner);
     await releaseOwnedClaim(paths, owner);
     throw error;
   }
