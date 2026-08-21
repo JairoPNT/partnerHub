@@ -5,6 +5,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
 import { z } from "zod";
+import { assertPartnerWhatsappIdentity } from "@/shared/partner-whatsapp-identity.mjs";
 
 import {
   activationOfferCodeSchema,
@@ -198,6 +199,10 @@ function getStoragePath() {
   return resolve(getStorageDirectory(), "leads.json");
 }
 
+function assertWhatsappIdentityCoherent(leadWhatsapp: unknown, onboardingWhatsapp: unknown) {
+  assertPartnerWhatsappIdentity({ leadWhatsapp, onboardingWhatsapp });
+}
+
 async function readLeads() {
   try {
     return JSON.parse(await readFile(getStoragePath(), "utf8")) as ActivationLead[];
@@ -256,6 +261,7 @@ async function create(input: z.infer<typeof activationLeadSchema>) {
 
 async function createInternal(input: z.infer<typeof internalActivationLeadCreateSchema>) {
   const parsed = internalActivationLeadCreateSchema.parse(input);
+  assertWhatsappIdentityCoherent(parsed.whatsapp, parsed.onboardingData?.whatsapp);
   const leads = await readLeads();
   const now = new Date().toISOString();
   const onboardingToken = randomUUID();
@@ -339,6 +345,7 @@ async function updateOnboarding(token: string, input: z.infer<typeof onboardingD
   const leads = await readLeads();
   const existing = leads.find((lead) => lead.onboardingTokenHash === hashOnboardingToken(token));
   if (!existing) throw new Error("Onboarding link was not found or has expired.");
+  assertWhatsappIdentityCoherent(existing.whatsapp, parsed.whatsapp ?? existing.onboardingData.whatsapp);
 
   const now = new Date().toISOString();
   const next: ActivationLead = {
@@ -414,6 +421,11 @@ async function updateStatus(id: string, input: z.infer<typeof updateActivationLe
   if (!parsed.status && !hasEditableField) {
     throw new Error("At least one activation lead field must be provided.");
   }
+
+  assertWhatsappIdentityCoherent(
+    parsed.whatsapp ?? existing.whatsapp,
+    parsed.onboardingData?.whatsapp ?? existing.onboardingData.whatsapp
+  );
 
   const next: ActivationLead = {
     ...existing,
