@@ -32,6 +32,7 @@ COPY --from=builder /repo/plantillas-de-pagina/producto ./plantillas-de-pagina/p
 COPY --from=builder /repo/runtime-assets/personal-brand-config.js ./runtime-assets/personal-brand-config.js
 COPY --from=builder /repo/app/web/scripts/claudia-source-identity-dry-run.mjs ./scripts/claudia-source-identity-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-source-identity-dry-run.mjs ./scripts/jairo-source-identity-dry-run.mjs
+COPY --from=builder /repo/app/web/scripts/jairo-source-identity-guarded-apply.mjs ./scripts/jairo-source-identity-guarded-apply.mjs
 COPY --from=builder /repo/app/web/scripts/all-partner-source-identity-dry-run.mjs ./scripts/all-partner-source-identity-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/cleanup-jairo-pinto-test-referrals.mjs ./scripts/cleanup-jairo-pinto-test-referrals.mjs
 COPY --from=builder /repo/app/web/scripts/reconcile-claudia-heroes.mjs ./scripts/reconcile-claudia-heroes.mjs
