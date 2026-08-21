@@ -34,6 +34,7 @@
     "test:jairo-source-identity-dry-run": "node --test scripts/jairo-source-identity-dry-run.test.mjs",
     "test:jairo-source-identity-guarded-apply": "node --test scripts/jairo-source-identity-guarded-apply.test.mjs",
     "test:jairo-business-source-dry-run": "node --test scripts/jairo-business-source-generation-dry-run.test.mjs",
+    "test:partner-whatsapp-identity": "node --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test shared/partner-whatsapp-identity.test.mjs server/services/activationLeadWhatsappPersistence.test.ts server/services/publicOnboardingWhatsappRoute.test.ts",
     "test:all-partner-source-identity-dry-run": "node --test scripts/all-partner-source-identity-dry-run.test.mjs",
     "test:complimentary-grants": "node --experimental-strip-types --test server/services/complimentaryEcosystemGrantCore.test.ts server/services/complimentaryGrantReadbackCore.test.ts server/services/partnerEcosystemEntitlementCore.test.ts server/services/manualPaymentLedgerCore.test.ts server/services/dashboardFinancialMetricsCore.test.ts",
     "test:staged-upgrade-pricing": "node --experimental-strip-types --test server/services/stagedEcosystemUpgradePricingCore.test.ts",

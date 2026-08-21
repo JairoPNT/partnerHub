@@ -34,6 +34,10 @@ export async function PATCH(request: Request, context: RouteContext) {
       );
     }
 
+    if (error instanceof Error && error.message === "PARTNER_WHATSAPP_CONFLICT") {
+      return NextResponse.json({ error: "PARTNER_WHATSAPP_CONFLICT" }, { status: 409 });
+    }
+
     return NextResponse.json({ error: "Onboarding link was not found or has expired." }, { status: 404 });
   }
 }

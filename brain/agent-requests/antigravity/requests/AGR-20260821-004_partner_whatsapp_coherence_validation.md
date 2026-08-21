@@ -28,3 +28,6 @@ identity change.
 - Do not infer country codes, repair digits or silently prefer either field.
 - Exact regression: `+573188430283` versus `+5673188430283` must block.
 - Display phone remains a separate field and cannot resolve WhatsApp conflict.
+- Backend public onboarding responds HTTP `409` with stable JSON code
+  `PARTNER_WHATSAPP_CONFLICT`; render that as a field-level coherence error, not
+  as an expired-link message.

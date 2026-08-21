@@ -20,6 +20,10 @@ Excluded: production data, UI implementation and all production operations.
   apply the same guard before persistence.
 - Existing-partner inventory and any persisted correction require separate
   read-only/DRY_RUN and APPLY tickets.
+- Public onboarding maps the conflict to HTTP 409 with stable code
+  `PARTNER_WHATSAPP_CONFLICT`; invalid tokens remain 404.
+- Focused persistence tests must prove createInternal, updateOnboarding and
+  updateStatus reject before changing the storage file.
 
 ## Dependency / safety
 

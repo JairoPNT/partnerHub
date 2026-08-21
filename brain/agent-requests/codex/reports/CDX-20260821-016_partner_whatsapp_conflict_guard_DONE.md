@@ -9,6 +9,14 @@ separate display/call field and cannot resolve the conflict implicitly.
 
 The same shared guard now rejects incoherent internal creation, public
 onboarding updates and operator activation updates before persistence.
+Focused tests use an actual temporary `leads.json` and prove byte-for-byte
+non-mutation for all three rejected operations. Equivalent normalized values
+are persisted successfully, and a different display phone remains allowed.
+
+The public onboarding route now returns HTTP 409 with
+`{"error":"PARTNER_WHATSAPP_CONFLICT"}`. It no longer misreports the conflict as
+an expired link. The internal activation update route already returns 409 with
+the service error code and required no semantic change.
 
 ## Diagnosis
 
@@ -55,7 +63,7 @@ canonical snapshot hash remains external evidence only.
 
 ## Verification
 
-- Shared identity contract: PASS 3/3.
+- Focused identity/persistence/API command: PASS 5/5.
 - Focused Jairo Business: PASS 14/14.
 - Business correlation: PASS 9/9.
 - Ecosystem generation: PASS 14/14.
