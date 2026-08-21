@@ -19,17 +19,17 @@ const CONFIG = {
     metaDescription: 'Presentación oficial de la oportunidad de negocio y distribución estratégica en bienestar y consumo masivo.'
   },
 
-  // Datos del Distribuidor / Líder Comercial
+  // Datos del Distribuidor / Líder Comercial (Inyectados dinámicamente por partner)
   distributor: {
-    brandName: 'Nexus Team',
-    firstName: 'Jairo',
-    fullName: 'Jairo Pinto',
-    role: 'Distribuidor Autorizado Independiente',
-    whatsappNumber: '573000000000',
+    brandName: '',
+    firstName: '',
+    fullName: '',
+    role: '',
+    whatsappNumber: '',
     phoneNumber: '',
     displayPhone: '',
-    ctaUrl: 'https://wa.me/573000000000',
-    defaultMessage: 'Hola Jairo, vi la presentación del modelo de negocio en tu página web y quiero conocer cómo iniciar en tu equipo.'
+    ctaUrl: '',
+    defaultMessage: ''
   },
 
   // Hero y Encabezado de Alto Impacto
@@ -43,16 +43,11 @@ const CONFIG = {
 
   // Prueba Social en Hero (Organización & Visión)
   socialProof: {
-    enabled: true,
+    enabled: false,
     headline: 'Organización de Personas Libres',
     subheadline: 'Meta: 10.000 personas para el 2030',
     ratingStars: '★★★★★',
-    avatars: [
-      'https://media.partnerhub.club/comunes/placeholders/avatar-1.webp',
-      'https://media.partnerhub.club/comunes/placeholders/avatar-2.webp',
-      'https://media.partnerhub.club/comunes/placeholders/avatar-3.webp',
-      'https://media.partnerhub.club/comunes/placeholders/avatar-4.webp'
-    ]
+    avatars: []
   },
 
   // Video Sales Letter (VSL)
@@ -140,26 +135,11 @@ const CONFIG = {
 
   // Casos de Éxito / Testimonios Reales
   testimonials: {
-    enabled: true,
+    enabled: false,
     badge: 'Casos de Éxito',
     title: 'Historias de Éxito en Nuestro Equipo',
     subtitle: 'Emprendedores reales que tomaron la decisión de construir su libertad financiera con nuestro sistema de apalancamiento.',
-    items: [
-      {
-        id: 't1',
-        name: 'Diana Ramos',
-        role: 'Socio de Negocio · Cali',
-        quote: 'Emprender siempre me dio miedo por las deudas y los costos fijos. Con este modelo inteligente y el apoyo del equipo he construido un ingreso residual estable que supera mi antiguo sueldo profesional, y lo mejor es que manejo mi propio tiempo.',
-        avatarUrl: 'https://media.partnerhub.club/comunes/placeholders/avatar-3.webp'
-      },
-      {
-        id: 't2',
-        name: 'Carlos Mendoza',
-        role: 'Empresario Asociado · Bogotá',
-        quote: 'Tenía un negocio tradicional de calzado con jornadas extenuantes. Decidí diversificar con el café saludable y gracias a la mentoría, en menos de un año creé una red de consumo que me permite recibir ingresos automáticos todas las semanas.',
-        avatarUrl: 'https://media.partnerhub.club/comunes/placeholders/avatar-2.webp'
-      }
-    ]
+    items: []
   },
 
   // Preguntas Frecuentes (Manejo de Objeciones)
@@ -197,7 +177,7 @@ const CONFIG = {
     primaryText: 'Quiero Participar y Registrarme',
     primaryUrl: '',
     secondaryText: 'Más Información por WhatsApp',
-    secondaryUrl: 'https://wa.me/573000000000',
+    secondaryUrl: '',
     guaranteeText: 'Cupos limitados por zona para acompañamiento personalizado.',
     directRegisterText: 'Quiero Participar y Registrarme',
     directRegisterUrl: ''

@@ -91,15 +91,46 @@
     }
 
     // 2. Brand & Header Bindings
+    const brandName = cfg.distributor?.brandName || '';
+    const brandRole = cfg.distributor?.role || '';
+    const fullName = cfg.distributor?.fullName || '';
+
     document.querySelectorAll('[data-bind="distributor.brandName"]').forEach(el => {
-      el.textContent = cfg.distributor?.brandName || 'Nexus Team';
+      el.textContent = brandName;
     });
     document.querySelectorAll('[data-bind="distributor.role"]').forEach(el => {
-      el.textContent = cfg.distributor?.role || 'Distribuidor Autorizado Independiente';
+      el.textContent = brandRole;
     });
     document.querySelectorAll('[data-bind="distributor.fullName"]').forEach(el => {
-      el.textContent = cfg.distributor?.fullName || 'Jairo Pinto';
+      el.textContent = fullName;
     });
+
+    const brandBadge = document.querySelector('.brand-badge');
+    if (brandBadge) {
+      if (!brandName && !brandRole && !fullName) {
+        brandBadge.style.visibility = 'hidden';
+      } else {
+        brandBadge.style.visibility = 'visible';
+      }
+    }
+
+    const contactProfileInfo = document.querySelector('.contact-profile-info');
+    if (contactProfileInfo) {
+      if (!fullName && !brandRole) {
+        contactProfileInfo.style.display = 'none';
+      } else {
+        contactProfileInfo.style.display = '';
+      }
+    }
+
+    const footerBrand = document.querySelector('.footer-brand');
+    if (footerBrand) {
+      if (!fullName && !brandName) {
+        footerBrand.style.display = 'none';
+      } else {
+        footerBrand.style.display = '';
+      }
+    }
 
     // 3. Hero Bindings
     const heroBadgeEl = document.querySelector('[data-bind="hero.badge"]');
@@ -112,17 +143,25 @@
     if (heroSubheadlineEl && cfg.hero?.subheadline) heroSubheadlineEl.textContent = cfg.hero.subheadline;
 
     // 4. Social Proof Bar
-    const proofAvatarsContainer = document.getElementById('proof-avatars');
-    if (proofAvatarsContainer && cfg.socialProof?.avatars && Array.isArray(cfg.socialProof.avatars)) {
-      proofAvatarsContainer.innerHTML = cfg.socialProof.avatars.map((url, i) => 
-        `<img src="${url}" alt="Miembro ${i + 1}" class="proof-avatar-img">`
-      ).join('');
-    }
-    const proofHeadlineEl = document.querySelector('[data-bind="socialProof.headline"]');
-    if (proofHeadlineEl && cfg.socialProof?.headline) proofHeadlineEl.textContent = cfg.socialProof.headline;
+    const proofContainer = document.getElementById('hero-social-proof');
+    if (proofContainer) {
+      if (cfg.socialProof?.enabled === false || !Array.isArray(cfg.socialProof?.avatars) || cfg.socialProof.avatars.length === 0) {
+        proofContainer.style.display = 'none';
+      } else {
+        proofContainer.style.display = '';
+        const proofAvatarsContainer = document.getElementById('proof-avatars');
+        if (proofAvatarsContainer) {
+          proofAvatarsContainer.innerHTML = cfg.socialProof.avatars.map((url, i) =>
+            `<img src="${url}" alt="Miembro ${i + 1}" class="proof-avatar-img">`
+          ).join('');
+        }
+        const proofHeadlineEl = document.querySelector('[data-bind="socialProof.headline"]');
+        if (proofHeadlineEl && cfg.socialProof?.headline) proofHeadlineEl.textContent = cfg.socialProof.headline;
 
-    const proofSubheadlineEl = document.querySelector('[data-bind="socialProof.subheadline"]');
-    if (proofSubheadlineEl && cfg.socialProof?.subheadline) proofSubheadlineEl.textContent = cfg.socialProof.subheadline;
+        const proofSubheadlineEl = document.querySelector('[data-bind="socialProof.subheadline"]');
+        if (proofSubheadlineEl && cfg.socialProof?.subheadline) proofSubheadlineEl.textContent = cfg.socialProof.subheadline;
+      }
+    }
 
     // 5. VSL Player Setup & 3D Tilt
     setupVslPlayer(cfg.vsl);
@@ -130,8 +169,9 @@
     // 6. WhatsApp & CTA Links
     const rawNumber = (cfg.distributor?.whatsappNumber || '').replace(/\D/g, '');
     const defaultMsg = cfg.distributor?.defaultMessage || 'Hola, vi la presentación del modelo de negocio en tu página web y quiero conocer cómo iniciar.';
-    const waUrl = rawNumber ? `https://wa.me/${rawNumber}?text=${encodeURIComponent(defaultMsg)}` : (cfg.distributor?.ctaUrl || '#contacto');
-    const directRegisterUrl = cfg.cta?.directRegisterUrl || cfg.cta?.primaryUrl || waUrl || '#contacto';
+    const customWaUrl = cfg.cta?.secondaryUrl || cfg.distributor?.ctaUrl || '';
+    const waUrl = rawNumber ? `https://wa.me/${rawNumber}?text=${encodeURIComponent(defaultMsg)}` : (customWaUrl.startsWith('http') ? customWaUrl : '#contacto');
+    const directRegisterUrl = cfg.cta?.directRegisterUrl || cfg.cta?.primaryUrl || (waUrl !== '#contacto' ? waUrl : '#contacto');
 
     // CTAs Primarios (Registro Directo o WhatsApp)
     const ctaPrimaryLinks = document.querySelectorAll('.bind-cta-primary');
@@ -281,20 +321,28 @@
     }
 
     // 10. Testimonials
-    const testimonialsGrid = document.getElementById('testimonials-grid');
-    if (testimonialsGrid && cfg.testimonials?.items && Array.isArray(cfg.testimonials.items)) {
-      testimonialsGrid.innerHTML = cfg.testimonials.items.slice(0, 4).map(testi => `
-        <div class="testimonial-card">
-          <p class="testimonial-quote">${escapeHtml(testi.quote)}</p>
-          <div class="testimonial-user">
-            ${testi.avatarUrl ? `<img src="${testi.avatarUrl}" alt="${escapeHtml(testi.name)}" class="testimonial-avatar">` : ''}
-            <div class="testimonial-meta">
-              <span class="testimonial-name">${escapeHtml(testi.name)}</span>
-              <span class="testimonial-role">${escapeHtml(testi.role)}</span>
+    const testimonialsSection = document.getElementById('testimonios');
+    if (testimonialsSection) {
+      if (cfg.testimonials?.enabled === false || !Array.isArray(cfg.testimonials?.items) || cfg.testimonials.items.length === 0) {
+        testimonialsSection.style.display = 'none';
+      } else {
+        testimonialsSection.style.display = '';
+        const testimonialsGrid = document.getElementById('testimonials-grid');
+        if (testimonialsGrid) {
+          testimonialsGrid.innerHTML = cfg.testimonials.items.slice(0, 4).map(testi => `
+            <div class="testimonial-card">
+              <p class="testimonial-quote">${escapeHtml(testi.quote)}</p>
+              <div class="testimonial-user">
+                ${testi.avatarUrl ? `<img src="${testi.avatarUrl}" alt="${escapeHtml(testi.name)}" class="testimonial-avatar">` : ''}
+                <div class="testimonial-meta">
+                  <span class="testimonial-name">${escapeHtml(testi.name)}</span>
+                  <span class="testimonial-role">${escapeHtml(testi.role)}</span>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
-      `).join('');
+          `).join('');
+        }
+      }
     }
 
     // 11. FAQ Accordion
