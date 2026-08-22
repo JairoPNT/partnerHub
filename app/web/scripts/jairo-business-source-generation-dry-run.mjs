@@ -5,6 +5,7 @@ import process from "node:process";
 import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 import { extractProductHero, resolveBusinessVslThumbnail } from "../shared/business-vsl-poster-contract.mjs";
+import { normalizePartnerWhatsapp, resolvePartnerWhatsappIdentity } from "../shared/partner-whatsapp-identity.mjs";
 
 const CONFIRMATION = "DRY_RUN_JAIRO_BUSINESS_SOURCE";
 const EXPECTED = {
@@ -55,7 +56,9 @@ function parseCanonicalConfig(source, filename) {
 }
 
 function nonempty(value) { return typeof value === "string" && value.trim().length > 0; }
-function digits(value) { return typeof value === "string" ? value.replace(/\D/g, "") : ""; }
+export function resolveActivationLeadWhatsapp(lead) {
+  return resolvePartnerWhatsappIdentity({ leadWhatsapp: lead?.whatsapp, onboardingWhatsapp: lead?.onboardingData?.whatsapp });
+}
 
 function missingProfileFields(profile) {
   const fields = [
@@ -96,8 +99,10 @@ export function buildJairoBusinessProjection({ canonical, lead, entitlement, pro
   if (productSource?.ecosystemType !== "PRODUCT" || productSource?.site?.id !== EXPECTED.productSiteId) blockedReasons.push("PRODUCT_SOURCE_IDENTITY_INVALID");
   if (lead?.id !== EXPECTED.activationLeadId || lead?.siteId !== EXPECTED.ownerSiteId) blockedReasons.push("ACTIVATION_LEAD_IDENTITY_INVALID");
   if (lead?.onboardingData?.domain !== EXPECTED.baseDomain) blockedReasons.push("ACTIVATION_LEAD_DOMAIN_INVALID");
-  const whatsapp = digits(lead?.onboardingData?.whatsapp || lead?.whatsapp);
-  if (whatsapp.length < 10 || whatsapp.length > 15) blockedReasons.push("PARTNER_WHATSAPP_MISSING");
+  const whatsappResolution = resolveActivationLeadWhatsapp(lead);
+  const whatsapp = whatsappResolution.value ?? "";
+  if (whatsappResolution.conflict) blockedReasons.push("PARTNER_WHATSAPP_CONFLICT");
+  if (!whatsappResolution.conflict && (whatsapp.length < 10 || whatsapp.length > 15)) blockedReasons.push("PARTNER_WHATSAPP_MISSING");
   if (!nonempty(lead?.fullName) || !nonempty(lead?.brandName)) blockedReasons.push("PARTNER_IDENTITY_FIELDS_MISSING");
   if (entitlement?.activationLeadId !== EXPECTED.activationLeadId || entitlement?.commercialState !== "KNOWN") blockedReasons.push("ENTITLEMENT_IDENTITY_INVALID");
   if (!Array.isArray(entitlement?.includedEcosystems) || !entitlement.includedEcosystems.includes("BUSINESS")) blockedReasons.push("BUSINESS_NOT_ENTITLED");
@@ -113,13 +118,13 @@ export function buildJairoBusinessProjection({ canonical, lead, entitlement, pro
   }
 
   let projectedBusiness = null;
-  if (canonical && lead && profile && missing.length === 0) {
+  if (canonical && lead && profile && missing.length === 0 && !whatsappResolution.conflict && whatsapp.length >= 10 && whatsapp.length <= 15) {
     projectedBusiness = clone(canonical);
     projectedBusiness.ecosystemType = "BUSINESS";
     projectedBusiness.site = { ...projectedBusiness.site, id: EXPECTED.businessSiteId, appName: EXPECTED.businessSiteId,
       domain: EXPECTED.publicHost, title: profile.siteTitle, ogTitle: profile.ogTitle, ogDescription: profile.ogDescription, metaDescription: profile.metaDescription };
     projectedBusiness.distributor = { ...projectedBusiness.distributor, brandName: lead.brandName, firstName: String(lead.fullName ?? "").trim().split(/\s+/)[0],
-      fullName: lead.fullName, role: profile.role, whatsappNumber: whatsapp, phoneNumber: digits(lead.onboardingData?.phone) || whatsapp,
+      fullName: lead.fullName, role: profile.role, whatsappNumber: whatsapp, phoneNumber: normalizePartnerWhatsapp(lead.onboardingData?.phone) || whatsapp,
       displayPhone: lead.onboardingData?.phone || lead.onboardingData?.whatsapp || lead.whatsapp, ctaUrl: `https://wa.me/${whatsapp}`, defaultMessage: profile.defaultMessage };
     projectedBusiness.hero = { ...projectedBusiness.hero, ...profile.hero };
     projectedBusiness.vsl = { ...projectedBusiness.vsl,

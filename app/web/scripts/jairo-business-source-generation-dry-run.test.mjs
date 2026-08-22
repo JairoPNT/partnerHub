@@ -5,7 +5,7 @@ import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import process from "node:process";
 import test from "node:test";
-import { resolveCanonicalBusinessConfigPath, runJairoBusinessSourceDryRun } from "./jairo-business-source-generation-dry-run.mjs";
+import { resolveActivationLeadWhatsapp, resolveCanonicalBusinessConfigPath, runJairoBusinessSourceDryRun } from "./jairo-business-source-generation-dry-run.mjs";
 
 const hash = (value) => createHash("sha256").update(value).digest("hex");
 const stringify = (value) => `${JSON.stringify(value, null, 2)}\n`;
@@ -62,6 +62,40 @@ function resolveBusinessRuntimeLinks(configuration) {
 
 test("uses the packaged runtime Business config path", () => {
   assert.equal(resolveCanonicalBusinessConfigPath({}), resolve("/app/runtime-assets/business-config.js"));
+});
+
+test("fails closed when normalized lead and onboarding WhatsApp values conflict", async () => {
+  const fx = await fixture();
+  fx.lead.whatsapp = "+573188430283";
+  fx.lead.onboardingData.whatsapp = "+5673188430283";
+  fx.lead.onboardingData.phone = "+573188430283";
+  const source = stringify(fx.lead);
+  await writeFile(resolve(fx.inputs, "activation-lead.json"), source);
+  fx.entry.expectedActivationLeadHash = hash(source);
+  await writeFile(fx.manifestPath, stringify({ confirmation: "DRY_RUN_JAIRO_BUSINESS_SOURCE", allowlist: [fx.entry] }));
+
+  assert.deepEqual(resolveActivationLeadWhatsapp(fx.lead), {
+    value: null,
+    leadWhatsapp: "573188430283",
+    onboardingWhatsapp: "5673188430283",
+    conflict: true
+  });
+  const result = await run(fx);
+  assert.ok(result.blockedReasons.includes("PARTNER_WHATSAPP_CONFLICT"));
+  assert.equal(result.hashes.projectedBusiness, null);
+  await assert.rejects(readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json")), /ENOENT/);
+});
+
+test("accepts equivalent normalized WhatsApp values and does not treat phone as WhatsApp authority", () => {
+  assert.deepEqual(resolveActivationLeadWhatsapp({
+    whatsapp: "+57 318 843 0283",
+    onboardingData: { whatsapp: "573188430283", phone: "+57 601 555 0101" }
+  }), {
+    value: "573188430283",
+    leadWhatsapp: "573188430283",
+    onboardingWhatsapp: "573188430283",
+    conflict: false
+  });
 });
 
 test("projects canonical Business identity from entitled real partner inputs without placeholders", async () => {
