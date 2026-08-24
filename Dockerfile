@@ -37,6 +37,7 @@ COPY --from=builder /repo/app/web/scripts/jairo-source-identity-dry-run.mjs ./sc
 COPY --from=builder /repo/app/web/scripts/jairo-source-identity-guarded-apply.mjs ./scripts/jairo-source-identity-guarded-apply.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-source-generation-dry-run.mjs ./scripts/jairo-business-source-generation-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-source-guarded-apply.mjs ./scripts/jairo-business-source-guarded-apply.mjs
+COPY --from=builder /repo/app/web/scripts/jairo-business-publishing-preflight.mjs ./scripts/jairo-business-publishing-preflight.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-whatsapp-guarded-correction.mjs ./scripts/jairo-whatsapp-guarded-correction.mjs
 COPY --from=builder /repo/app/web/shared/business-vsl-poster-contract.mjs ./shared/business-vsl-poster-contract.mjs
 COPY --from=builder /repo/app/web/shared/partner-whatsapp-identity.mjs ./shared/partner-whatsapp-identity.mjs
