@@ -111,3 +111,16 @@ correction before proceeding.
 - Inventory accuracy is a point-in-time property of the printed source hash.
 - EasyPanel execution is still pending operator authorization/action. No JWT,
   API permission, secret or network access is required.
+
+## Productive inventory evidence
+
+The operator subsequently executed the approved stdout-only command and
+reported:
+
+- total linked partners: `6`
+- `COHERENT`: `6`
+- `CONFLICT`: `0`
+- `MISSING`: `0`
+
+The inventory is approved. No WhatsApp correction ticket is required from this
+snapshot, and the Jairo Business snapshot gates may resume after CDX-017.
