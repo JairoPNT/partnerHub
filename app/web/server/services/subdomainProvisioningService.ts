@@ -173,7 +173,7 @@ export function createSubdomainProvisioningService(deps: Dependencies) {
       if (!(await probe.dnsResolves(target.publicHost, input.ipv4))) return update(target, { provisioningState: "DNS_PENDING", lastCheckedAt: checked });
       target = await update(target, { dnsState: "RESOLVED", provisioningState: "SSL_PENDING", lastCheckedAt: checked });
       if (!(await probe.httpsReady(target.publicHost))) return target;
-      return update(target, { sslState: "READY", provisioningState: "READY", publicationState: "READY", lastCheckedAt: now().toISOString(), lastErrorCode: undefined });
+      return update(target, { sslState: "READY", provisioningState: "READY", publicationState: "PENDING", lastCheckedAt: now().toISOString(), lastErrorCode: undefined });
     } catch (error) {
       if (error instanceof ProvisioningError) throw error;
       const code = providerCode(error); await update(target, { provisioningState: "FAILED", lastErrorCode: code, lastCheckedAt: now().toISOString() });

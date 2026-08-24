@@ -1,31 +1,45 @@
 # CDX-20260824-005 — Guarded ecosystem publication contract
 
-## Status
+## Owner and objective
 
-FOLLOW-UP REQUIRED; not implemented by CDX-004.
+Codex Backend. Provide a generic PREVIEW and separately guarded publication
+transaction for one ecosystem/site/PublishingTarget v2. The first compiled
+allowlist is only Jairo Business.
 
-## Objective
+## Required contract
 
-Close the generic backend gaps that prevent an authorized Business publication
-from being safely executed through the current endpoints:
+- READY v2 target; destination is exclusively its persisted `remoteRoot`.
+- Never read or use `HOSTINGER_SFTP_REMOTE_ROOT` as a destination.
+- Provisioning readiness is not publication readiness.
+- PREVIEW is unchanged/read-only; APPLY requires mode, confirmation and planHash.
+- Exclusive remote claim with owner token.
+- Complete sibling staging package and remote hash readback before commit.
+- Recoverable two-rename commit: destination to backup, staging to destination.
+- Owner-only rollback before the final journal; never rollback post-journal.
+- Journal and final-package validation provide sequential idempotency.
+- Brand, Product and apex remain outside the mutation surface.
 
-- require a READY PublishingTarget and reject legacy remote-root fallback;
-- never read or use `HOSTINGER_SFTP_REMOTE_ROOT` as a publication destination;
-  consume only the immutable READY PublishingTarget v2 `remoteRoot` returned by
-  provisioning;
-- keep provisioning readiness distinct from publication readiness;
-- stage and commit a complete remote package with deterministic rollback/retry;
-- add claim/planHash/journal/idempotency around one allowlisted publication;
-- verify Business VSL, poster, both dynamic WhatsApp CTAs, required assets,
-  HTTPS/SSL and ecosystem isolation;
-- update PublishingTarget publication state only after public verification.
+## Honest SFTP guarantee
 
-## Boundaries
+SFTP does not expose an atomic directory exchange. The implementation therefore
+does not claim an atomic swap: it has a brief interval between two same-filesystem
+renames. APPLY is fail-closed unless a hash-pinned capability snapshot records
+that the actual server supports directory rename plus backup restoration and
+readback. Creating that evidence requires a separately authorized provider
+capability gate; it is not executed by this ticket.
 
-Generic backend publication/verification only. No UI, Landing Builder, Product
-or Brand source changes, apex redirects, payments, DNS/provider execution or
-production operations in the ticket implementation.
+## Business verification
 
-## Dependency
+Before the final journal, verify HTTPS/public assets, Business config identity,
+canonical host, MP4 VSL, source-derived poster, identical encoded-message
+WhatsApp CTAs, and absence of Product purchase URLs.
 
-Starts only after CDX-004 audit confirms the production PREVIEW contract.
+## Exclusions
+
+No provider calls or production execution during implementation/tests. No UI,
+Payments, Landing Builder, redirects, Product/Brand mutation, DNS provisioning
+or generalized onboarding automation.
+
+## Release gate
+
+No PR, deploy or production APPLY without a new orchestrator audit.
