@@ -1,4 +1,5 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
+import { Buffer } from "node:buffer";
 import { access, mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, posix, relative, resolve, sep } from "node:path";
 import process from "node:process";
@@ -246,7 +247,7 @@ export async function createSftpAdapter(environment = process.env) {
     remove: (path, recursive) => recursive ? client.rmdir(path, true) : client.delete(path), close: () => client.end() };
 }
 
-export async function verifyPublicPackage(entry, source, fetcher = fetch) {
+export async function verifyPublicPackage(entry, source, fetcher = globalThis.fetch) {
   const reasons = []; const base = `https://${entry.publicHost}`; const responses = {};
   for (const asset of REQUIRED_ASSETS) { try { const response = await fetcher(`${base}/${asset}`, { redirect: "manual" }); responses[asset] = response;
     if (!response.ok) reasons.push(`PUBLIC_ASSET_UNAVAILABLE:${asset}`); } catch { reasons.push(`PUBLIC_ASSET_UNAVAILABLE:${asset}`); } }

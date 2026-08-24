@@ -96,7 +96,7 @@ test("blocks a READY target whose provider remote root is absent", async () => {
 });
 
 test("rejects APPLY flags at the command contract level", async () => {
-  const source = await readFile(new URL("./jairo-business-publishing-preflight.mjs", import.meta.url), "utf8");
+  const source = await readFile(new globalThis.URL("./jairo-business-publishing-preflight.mjs", import.meta.url), "utf8");
   assert.match(source, /APPLY is not implemented by this PREVIEW command/);
   assert.doesNotMatch(source, /writeFile|mkdir|rename|rm\(/);
 });

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -92,7 +93,7 @@ test("capability is bound to host, port, fingerprint, username, parent and remot
     (value) => { value.scope.remoteRoot = "/hosting/other"; }
   ];
   for (const mutate of mutations) {
-    const fx = await fixture(); const capability = structuredClone(fx.capabilityValue); mutate(capability); const text = stringify(capability);
+    const fx = await fixture(); const capability = JSON.parse(JSON.stringify(fx.capabilityValue)); mutate(capability); const text = stringify(capability);
     await writeFile(resolve(fx.inputs, "sftp-capability.json"), text); fx.entry.expectedCapabilityHash = sha(text);
     await writeFile(fx.manifestPath, stringify({ confirmation: "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION", allowlist: [fx.entry] }));
     const preview = await planGuardedPublication(options(fx)); assert.equal(preview.blocked, true);
