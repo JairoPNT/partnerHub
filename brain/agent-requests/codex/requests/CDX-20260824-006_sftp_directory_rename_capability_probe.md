@@ -2,7 +2,7 @@
 
 ## Status
 
-REQUEST ONLY. Implementation and real execution are not authorized.
+IMPLEMENTED FOR AUDIT. Real execution remains unauthorized.
 
 ## Owner and dependency
 
