@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { access, mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, posix, relative, resolve, sep } from "node:path";
 import process from "node:process";
@@ -9,6 +9,9 @@ export const APPLY_MODE = "APPLY_GUARDED_ECOSYSTEM_PUBLICATION";
 export const APPLY_CONFIRMATION = "PUBLISH_ALLOWLISTED_ECOSYSTEM_PACKAGE";
 const MANIFEST_CONFIRMATION = "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION";
 const HASH = /^[0-9a-f]{64}$/;
+const HOST_KEY_FINGERPRINT = /^SHA256:[A-Za-z0-9+/]{43}=$/;
+const CAPABILITY_SCHEMA_VERSION = 1;
+const CAPABILITY_PROBE_VERSION = "partnerhub-sftp-sibling-rename-v1";
 const JAIRO_BUSINESS = Object.freeze({ ownerKey: "f403f29e-95c8-4825-9320-967376443020", ownerSiteId: "jairo-pinto",
   siteId: "jairo-pinto-business", ecosystemType: "BUSINESS", baseDomain: "jairopinto.pro", publicHost: "negocio.jairopinto.pro" });
 const REQUIRED_ASSETS = ["index.html", "app.js", "styles.css", "config.js", "favicon.svg"];
@@ -19,6 +22,35 @@ async function exists(path) { try { await access(path); return true; } catch (er
 async function required(path) { const source = await readFile(path); return { source, hash: sha256(source) }; }
 function inside(root, child) { const base = resolve(root); const target = resolve(base, child); if (!target.startsWith(`${base}${sep}`)) throw new Error("LOCAL_PATH_ESCAPE"); return target; }
 function remoteSibling(remoteRoot, suffix) { const root = posix.normalize(remoteRoot).replace(/\/+$/, ""); if (!root.startsWith("/") || root === "/") throw new Error("REMOTE_ROOT_INVALID"); return posix.join(posix.dirname(root), `.${basename(root)}.${suffix}`); }
+
+function connectionBinding(environment, reasons) {
+  const host = environment.HOSTINGER_SFTP_HOST?.trim().toLowerCase() ?? "";
+  const port = Number(environment.HOSTINGER_SFTP_PORT);
+  const username = environment.HOSTINGER_SFTP_USERNAME?.trim() ?? "";
+  const hostKeyFingerprintSha256 = environment.HOSTINGER_SFTP_HOST_KEY_SHA256?.trim() ?? "";
+  if (!host) reasons.push("SFTP_CAPABILITY_CONNECTION_HOST_MISSING");
+  if (!Number.isInteger(port) || port < 1 || port > 65535) reasons.push("SFTP_CAPABILITY_CONNECTION_PORT_INVALID");
+  if (!username) reasons.push("SFTP_CAPABILITY_CONNECTION_USERNAME_MISSING");
+  if (!HOST_KEY_FINGERPRINT.test(hostKeyFingerprintSha256)) reasons.push("SFTP_HOST_KEY_FINGERPRINT_UNAVAILABLE");
+  return { host, port, hostKeyFingerprintSha256, usernameHash: username ? sha256(username) : "" };
+}
+
+function validateCapability(capability, connection, remoteRoot, nowMs) {
+  const reasons = []; const normalizedRoot = posix.normalize(remoteRoot ?? "").replace(/\/+$/, ""); const parentDirectory = posix.dirname(normalizedRoot);
+  if (capability?.schemaVersion !== CAPABILITY_SCHEMA_VERSION || capability?.probeVersion !== CAPABILITY_PROBE_VERSION) reasons.push("SFTP_CAPABILITY_VERSION_INVALID");
+  for (const field of ["host", "port", "hostKeyFingerprintSha256", "usernameHash"]) if (capability?.connection?.[field] !== connection[field]) reasons.push(`SFTP_CAPABILITY_CONNECTION_MISMATCH:${field}`);
+  if (capability?.scope?.parentDirectory !== parentDirectory) reasons.push("SFTP_CAPABILITY_PARENT_MISMATCH");
+  if (capability?.scope?.remoteRoot !== normalizedRoot) reasons.push("SFTP_CAPABILITY_REMOTE_ROOT_MISMATCH");
+  const probePaths = [capability?.evidence?.stagePath, capability?.evidence?.destinationPath, capability?.evidence?.backupPath];
+  if (probePaths.some((path) => typeof path !== "string" || posix.dirname(posix.normalize(path)) !== parentDirectory) || new Set(probePaths).size !== 3) reasons.push("SFTP_CAPABILITY_SIBLING_EVIDENCE_INVALID");
+  if (capability?.evidence?.sameFilesystemDirectoryRename !== true || capability?.evidence?.backupRestoreReadback !== true) reasons.push("SFTP_DIRECTORY_SWAP_CAPABILITY_UNVERIFIED");
+  const verifiedAt = Date.parse(capability?.verifiedAt); const ttlSeconds = capability?.ttlSeconds;
+  if (!Number.isFinite(verifiedAt) || !Number.isInteger(ttlSeconds) || ttlSeconds < 60 || ttlSeconds > 86400) reasons.push("SFTP_CAPABILITY_TTL_INVALID");
+  else if (verifiedAt > nowMs) reasons.push("SFTP_CAPABILITY_FROM_FUTURE");
+  else if (nowMs > verifiedAt + ttlSeconds * 1000) reasons.push("SFTP_CAPABILITY_EXPIRED");
+  return { reasons, binding: { schemaVersion: capability?.schemaVersion, probeVersion: capability?.probeVersion, connection: capability?.connection,
+    scope: capability?.scope, evidence: capability?.evidence, verifiedAt: capability?.verifiedAt, ttlSeconds: capability?.ttlSeconds } };
+}
 
 async function localInventory(directory) {
   const files = [];
@@ -79,13 +111,13 @@ async function terminalJournal(journalPath, planHash, adapter, entry) {
   return { valid: reasons.length === 0, reasons, journal };
 }
 
-export async function planGuardedPublication({ manifestPath, sourceDirectory, outputDirectory, journalDirectory, adapter = null }) {
+export async function planGuardedPublication({ manifestPath, sourceDirectory, outputDirectory, journalDirectory, adapter = null, environment = process.env, now = new Date() }) {
   const manifest = JSON.parse(await readFile(resolve(manifestPath), "utf8")); const entry = validateManifest(manifest);
   const sourcePath = inside(sourceDirectory, `${entry.siteId}.json`); const targetPath = inside(resolve(sourceDirectory, ".publishing-targets"), `${entry.siteId}.json`);
   const packageDirectory = inside(outputDirectory, entry.siteId); const capabilityPath = resolve(dirname(resolve(manifestPath)), "sftp-capability.json");
   const [sourceFile, targetFile, capabilityFile] = await Promise.all([required(sourcePath), required(targetPath), required(capabilityPath)]);
   const source = JSON.parse(sourceFile.source); const target = JSON.parse(targetFile.source); const capability = JSON.parse(capabilityFile.source);
-  const inventory = await localInventory(packageDirectory); const reasons = [];
+  const inventory = await localInventory(packageDirectory); const reasons = []; const connection = connectionBinding(environment, reasons);
   if (sourceFile.hash !== entry.expectedSourceHash) reasons.push("SOURCE_HASH_DRIFT");
   if (targetFile.hash !== entry.expectedTargetHash) reasons.push("TARGET_HASH_DRIFT");
   if (inventory.hash !== entry.expectedPackageHash) reasons.push("PACKAGE_HASH_DRIFT");
@@ -95,7 +127,8 @@ export async function planGuardedPublication({ manifestPath, sourceDirectory, ou
   if (target?.provisioningState !== "READY") reasons.push("PUBLISHING_TARGET_NOT_READY");
   if (target?.publicationState === "READY") reasons.push("PUBLICATION_STATE_READY_WITHOUT_JOURNAL");
   if (typeof target?.remoteRoot !== "string" || !target.remoteRoot.startsWith("/") || target.remoteRoot === "/") reasons.push("PUBLISHING_TARGET_REMOTE_ROOT_INVALID");
-  if (capability?.status !== "VERIFIED" || capability?.sameFilesystemDirectoryRename !== true || capability?.backupRestoreReadback !== true || !Date.parse(capability?.verifiedAt)) reasons.push("SFTP_DIRECTORY_SWAP_CAPABILITY_UNVERIFIED");
+  if (capability?.status !== "VERIFIED") reasons.push("SFTP_DIRECTORY_SWAP_CAPABILITY_UNVERIFIED");
+  const capabilityValidation = validateCapability(capability, connection, target?.remoteRoot, now.getTime()); reasons.push(...capabilityValidation.reasons);
   for (const name of REQUIRED_ASSETS) if (!inventory.files.some((file) => file.path === name)) reasons.push(`PACKAGE_ASSET_MISSING:${name}`);
   let config; try { config = parseConfig((await readFile(resolve(packageDirectory, "config.js"), "utf8"))); } catch { reasons.push("PACKAGE_CONFIG_INVALID"); }
   if (config) reasons.push(...validateBusinessPackage(config, source, entry));
@@ -106,7 +139,7 @@ export async function planGuardedPublication({ manifestPath, sourceDirectory, ou
   }
   const material = { siteId: entry.siteId, ecosystemType: entry.ecosystemType, targetHash: entry.expectedTargetHash, sourceHash: entry.expectedSourceHash,
     packageHash: entry.expectedPackageHash, capabilityHash: entry.expectedCapabilityHash, expectedRemotePackageHash: entry.expectedRemotePackageHash,
-    remoteRoot: target.remoteRoot ?? null, publicHost: entry.publicHost };
+    remoteRoot: target.remoteRoot ?? null, publicHost: entry.publicHost, capabilityBinding: capabilityValidation.binding };
   const planHash = sha256(JSON.stringify(material)); const journalPath = resolve(journalDirectory, `${entry.siteId}.json`);
   const terminal = await terminalJournal(journalPath, planHash, adapter, entry);
   if (terminal) return { requestId: "CDX-20260824-005", mode: "PREVIEW", outcome: terminal.valid ? "ALREADY_APPLIED" : "BLOCKED_APPLIED_STATE",
@@ -159,9 +192,18 @@ export async function runGuardedPublication(options) {
     if (installed.hash !== preview.entry.expectedPackageHash) throw new Error("REMOTE_POST_COMMIT_HASH_MISMATCH");
     const verification = await options.verifyPublic(preview.entry, preview.source);
     if (!verification?.passed) throw new Error(`PUBLIC_VERIFICATION_FAILED:${verification?.reasons?.join(",") ?? "UNKNOWN"}`);
-    for (const item of preview.protectedState) if ((await required(item.path)).hash !== item.expectedHash) throw new Error("PROTECTED_LOCAL_ARTIFACT_DRIFT");
+    if (options.hooks?.beforePublicationCommit) await options.hooks.beforePublicationCommit({ claimPath, owner, remoteRoot, stagePath, backupPath });
     await assertOwner(adapter, claimPath, owner);
-    const finalTarget = { ...preview.target, publicationState: "READY", updatedAt: new Date().toISOString() };
+    const currentTargetFile = await required(preview.targetPath);
+    let currentTarget; try { currentTarget = JSON.parse(currentTargetFile.source); } catch { throw new Error("TARGET_DRIFT_BEFORE_PUBLICATION_COMMIT"); }
+    if (currentTargetFile.hash !== preview.entry.expectedTargetHash || currentTarget?.version !== 2 || currentTarget?.ownerKey !== preview.entry.ownerKey ||
+        currentTarget?.siteId !== preview.entry.siteId || currentTarget?.ecosystemType !== preview.entry.ecosystemType || currentTarget?.baseDomain !== preview.entry.baseDomain ||
+        currentTarget?.publicHost !== preview.entry.publicHost || currentTarget?.remoteRoot !== preview.target.remoteRoot || currentTarget?.provisioningState !== "READY" || currentTarget?.publicationState !== "PENDING") {
+      throw new Error("TARGET_DRIFT_BEFORE_PUBLICATION_COMMIT");
+    }
+    for (const item of preview.protectedState) if ((await required(item.path)).hash !== item.expectedHash) throw new Error("PROTECTED_LOCAL_ARTIFACT_DRIFT_AT_COMMIT");
+    await assertOwner(adapter, claimPath, owner);
+    const finalTarget = { ...currentTarget, publicationState: "READY", updatedAt: new Date().toISOString() };
     await atomicReplace(preview.targetPath, json(finalTarget), `${owner.token}-target`); targetUpdated = true;
     const finalTargetHash = sha256(json(finalTarget));
     if (options.hooks?.afterTargetUpdate) await options.hooks.afterTargetUpdate({ claimPath, owner, remoteRoot, stagePath, backupPath });
@@ -184,10 +226,14 @@ export async function runGuardedPublication(options) {
 }
 
 export async function createSftpAdapter(environment = process.env) {
-  for (const name of ["HOSTINGER_SFTP_HOST", "HOSTINGER_SFTP_PORT", "HOSTINGER_SFTP_USERNAME", "HOSTINGER_SFTP_PASSWORD"]) if (!environment[name]?.trim()) throw new Error(`SFTP_CONFIGURATION_MISSING:${name}`);
+  for (const name of ["HOSTINGER_SFTP_HOST", "HOSTINGER_SFTP_PORT", "HOSTINGER_SFTP_USERNAME", "HOSTINGER_SFTP_PASSWORD", "HOSTINGER_SFTP_HOST_KEY_SHA256"]) if (!environment[name]?.trim()) throw new Error(`SFTP_CONFIGURATION_MISSING:${name}`);
+  const expectedFingerprint = environment.HOSTINGER_SFTP_HOST_KEY_SHA256.trim(); if (!HOST_KEY_FINGERPRINT.test(expectedFingerprint)) throw new Error("SFTP_HOST_KEY_FINGERPRINT_INVALID");
   const { default: SftpClient } = await import("ssh2-sftp-client"); const client = new SftpClient();
   await client.connect({ host: environment.HOSTINGER_SFTP_HOST, port: Number(environment.HOSTINGER_SFTP_PORT), username: environment.HOSTINGER_SFTP_USERNAME,
-    password: environment.HOSTINGER_SFTP_PASSWORD, readyTimeout: 15000 });
+    password: environment.HOSTINGER_SFTP_PASSWORD, readyTimeout: 15000, hostVerifier: (key) => {
+      const actual = `SHA256:${createHash("sha256").update(key).digest("base64")}`; const left = Buffer.from(actual); const right = Buffer.from(expectedFingerprint);
+      return left.length === right.length && timingSafeEqual(left, right);
+    } });
   async function inventory(root) {
     if (!(await client.exists(root))) return { exists: false, files: [], hash: sha256("[]") };
     const files = [];

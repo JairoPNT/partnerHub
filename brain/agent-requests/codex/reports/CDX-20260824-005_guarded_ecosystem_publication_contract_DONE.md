@@ -36,6 +36,20 @@ exchange; a short availability gap can exist. APPLY blocks unless a pinned
 capability snapshot proves same-filesystem directory rename and backup restore
 readback on the actual SFTP server. No such probe was executed in this ticket.
 
+The evidence cannot be replayed across destinations. PREVIEW binds and hashes
+schema/probe version, normalized SFTP host/port, SHA-256 host-key fingerprint,
+hashed username, exact remoteRoot, canonical parent, three sibling probe paths,
+verifiedAt and bounded TTL. Future/expired evidence and every identity/scope
+mismatch block. The production adapter verifies the host key during SSH
+handshake and fails closed when the configured fingerprint is unavailable.
+
+The final publication-state commit has a second TOCTOU gate after remote install
+and public verification. It requires the original target byte hash, identity,
+READY provisioning, PENDING publication and exact remoteRoot, then rechecks
+Brand/Product. Drift returns `TARGET_DRIFT_BEFORE_PUBLICATION_COMMIT`, preserves
+the foreign target, restores the prior remote package under ownership and emits
+no final journal.
+
 ## Files
 
 - `app/web/scripts/guarded-ecosystem-publication.mjs`
@@ -48,7 +62,7 @@ readback on the actual SFTP server. No such probe was executed in this ticket.
 
 ## Verification
 
-- Guarded publication tests: PASS 14/14.
+- Guarded publication tests: PASS 18/18.
 - Provisioning regression: PASS 11/11.
 - Publication-target regression: PASS 6/6.
 - Ecosystem generation regression: PASS 14/14.

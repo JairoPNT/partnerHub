@@ -28,6 +28,19 @@ that the actual server supports directory rename plus backup restoration and
 readback. Creating that evidence requires a separately authorized provider
 capability gate; it is not executed by this ticket.
 
+Capability evidence is non-portable and expires. Schema/probe version,
+normalized host, port, verified SHA-256 host-key fingerprint, hashed username,
+exact remoteRoot, canonical sibling parent, three distinct sibling probe paths,
+verifiedAt and bounded TTL are compared with the current environment and v2
+target. The complete non-secret binding is included in planMaterial/planHash.
+The real SFTP adapter rejects a server whose host key does not match
+`HOSTINGER_SFTP_HOST_KEY_SHA256`.
+
+Immediately before publication-state commit, reread the target byte-for-byte and
+revalidate its identity, READY/PENDING state and remoteRoot. Recheck Brand and
+Product at the same gate. Concurrent drift must rollback the remote package
+under ownership without overwriting the foreign target.
+
 ## Business verification
 
 Before the final journal, verify HTTPS/public assets, Business config identity,

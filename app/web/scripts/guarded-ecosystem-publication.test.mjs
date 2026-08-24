@@ -47,7 +47,13 @@ async function fixture({ existingRemote = false } = {}) {
     rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", publicHost: "negocio.jairopinto.pro", remoteRoot: "/hosting/negocio",
     provisioningState: "READY", publicationState: "PENDING" };
   const targetText = stringify(target); await writeFile(resolve(sources, ".publishing-targets", "jairo-pinto-business.json"), targetText);
-  const capability = stringify({ status: "VERIFIED", sameFilesystemDirectoryRename: true, backupRestoreReadback: true, verifiedAt: "2026-08-24T20:00:00.000Z" });
+  const environment = { HOSTINGER_SFTP_HOST: "sftp.example.test", HOSTINGER_SFTP_PORT: "22", HOSTINGER_SFTP_USERNAME: "u123456789",
+    HOSTINGER_SFTP_PASSWORD: "not-used-by-tests", HOSTINGER_SFTP_HOST_KEY_SHA256: `SHA256:${"A".repeat(43)}=` };
+  const capabilityValue = { schemaVersion: 1, probeVersion: "partnerhub-sftp-sibling-rename-v1", status: "VERIFIED",
+    connection: { host: environment.HOSTINGER_SFTP_HOST, port: 22, hostKeyFingerprintSha256: environment.HOSTINGER_SFTP_HOST_KEY_SHA256, usernameHash: sha(environment.HOSTINGER_SFTP_USERNAME) },
+    scope: { parentDirectory: "/hosting", remoteRoot: "/hosting/negocio" }, evidence: { stagePath: "/hosting/.capability-stage", destinationPath: "/hosting/.capability-destination",
+      backupPath: "/hosting/.capability-backup", sameFilesystemDirectoryRename: true, backupRestoreReadback: true }, verifiedAt: "2026-08-24T20:00:00.000Z", ttlSeconds: 3600 };
+  const capability = stringify(capabilityValue);
   await writeFile(resolve(inputs, "sftp-capability.json"), capability);
   const oldRemote = new Map(existingRemote ? [["old.txt", "old package"]] : []); const expectedRemotePackageHash = existingRemote ? packageHash(oldRemote) : null;
   const entry = { ownerKey: target.ownerKey, ownerSiteId: "jairo-pinto", siteId: target.siteId, ecosystemType: "BUSINESS", baseDomain: target.baseDomain, publicHost: target.publicHost,
@@ -55,11 +61,11 @@ async function fixture({ existingRemote = false } = {}) {
     protectedLocalArtifacts: [{ siteId: "jairo-pinto", expectedHash: sha(brand) }, { siteId: "jairo-pinto-product", expectedHash: sha(product) }] };
   const manifestPath = resolve(inputs, "manifest.json"); await writeFile(manifestPath, stringify({ confirmation: "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION", allowlist: [entry] }));
   const initial = Object.fromEntries([...oldRemote].map(([name, value]) => [`/hosting/negocio/${name}`, value])); const remote = new MemoryRemote(initial); if (existingRemote) remote.directories.add("/hosting/negocio");
-  return { root, sources, output, inputs, journals, manifestPath, remote, entry, localFiles, brand, product };
+  return { root, sources, output, inputs, journals, manifestPath, remote, entry, localFiles, brand, product, environment, capabilityValue };
 }
 
 const options = (fx, extra = {}) => ({ manifestPath: fx.manifestPath, sourceDirectory: fx.sources, outputDirectory: fx.output, journalDirectory: fx.journals,
-  adapter: fx.remote, verifyPublic: async () => ({ passed: true, reasons: [], httpsVerified: true }), ...extra });
+  adapter: fx.remote, environment: fx.environment, now: new Date("2026-08-24T20:30:00.000Z"), verifyPublic: async () => ({ passed: true, reasons: [], httpsVerified: true }), ...extra });
 async function apply(fx, extra = {}) { const preview = await planGuardedPublication(options(fx)); return { preview,
   result: await runGuardedPublication(options(fx, { mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash, ...extra })) }; }
 
@@ -74,6 +80,39 @@ test("blocks unverified rename capability, target drift and non-READY target", a
   let preview = await planGuardedPublication(options(fx)); assert.ok(preview.blockedReasons.includes("SFTP_CAPABILITY_HASH_DRIFT")); assert.ok(preview.blockedReasons.includes("SFTP_DIRECTORY_SWAP_CAPABILITY_UNVERIFIED"));
   const other = await fixture(); const path = resolve(other.sources, ".publishing-targets", "jairo-pinto-business.json"); const target = JSON.parse(await readFile(path, "utf8")); target.provisioningState = "SSL_PENDING"; await writeFile(path, stringify(target));
   preview = await planGuardedPublication(options(other)); assert.ok(preview.blockedReasons.includes("TARGET_HASH_DRIFT")); assert.ok(preview.blockedReasons.includes("PUBLISHING_TARGET_NOT_READY"));
+});
+
+test("capability is bound to host, port, fingerprint, username, parent and remoteRoot", async () => {
+  const mutations = [
+    (value) => { value.connection.host = "other.example.test"; },
+    (value) => { value.connection.port = 2222; },
+    (value) => { value.connection.hostKeyFingerprintSha256 = `SHA256:${"B".repeat(43)}=`; },
+    (value) => { value.connection.usernameHash = "0".repeat(64); },
+    (value) => { value.scope.parentDirectory = "/other"; },
+    (value) => { value.scope.remoteRoot = "/hosting/other"; }
+  ];
+  for (const mutate of mutations) {
+    const fx = await fixture(); const capability = structuredClone(fx.capabilityValue); mutate(capability); const text = stringify(capability);
+    await writeFile(resolve(fx.inputs, "sftp-capability.json"), text); fx.entry.expectedCapabilityHash = sha(text);
+    await writeFile(fx.manifestPath, stringify({ confirmation: "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION", allowlist: [fx.entry] }));
+    const preview = await planGuardedPublication(options(fx)); assert.equal(preview.blocked, true);
+    assert.ok(preview.blockedReasons.some((reason) => reason.startsWith("SFTP_CAPABILITY_CONNECTION_MISMATCH") || reason === "SFTP_CAPABILITY_PARENT_MISMATCH" || reason === "SFTP_CAPABILITY_REMOTE_ROOT_MISMATCH"));
+  }
+});
+
+test("expired and future capability evidence block fail-closed", async () => {
+  for (const verifiedAt of ["2026-08-24T18:00:00.000Z", "2026-08-24T21:00:00.000Z"]) {
+    const fx = await fixture(); const capability = { ...fx.capabilityValue, verifiedAt, ttlSeconds: 3600 }; const text = stringify(capability);
+    await writeFile(resolve(fx.inputs, "sftp-capability.json"), text); fx.entry.expectedCapabilityHash = sha(text);
+    await writeFile(fx.manifestPath, stringify({ confirmation: "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION", allowlist: [fx.entry] }));
+    const preview = await planGuardedPublication(options(fx)); assert.ok(preview.blockedReasons.includes(verifiedAt.includes("18:00") ? "SFTP_CAPABILITY_EXPIRED" : "SFTP_CAPABILITY_FROM_FUTURE"));
+  }
+});
+
+test("valid capability is bound into plan material and passes", async () => {
+  const fx = await fixture(); const preview = await planGuardedPublication(options(fx)); assert.equal(preview.blocked, false);
+  assert.deepEqual(preview.material.capabilityBinding.connection, fx.capabilityValue.connection);
+  assert.equal(preview.material.capabilityBinding.scope.remoteRoot, "/hosting/negocio");
 });
 
 test("APPLY requires confirmation and exact planHash", async () => {
@@ -122,6 +161,16 @@ test("late pre-journal failure restores target state and previous remote package
   await assert.rejects(apply(fx, { hooks: { afterTargetUpdate: async () => { throw new Error("INJECTED_PRE_JOURNAL_FAILURE"); } } }), /INJECTED_PRE_JOURNAL_FAILURE/);
   assert.equal((await fx.remote.inventory("/hosting/negocio")).hash, fx.entry.expectedRemotePackageHash);
   assert.equal(JSON.parse(await readFile(resolve(fx.sources, ".publishing-targets", "jairo-pinto-business.json"), "utf8")).publicationState, "PENDING");
+});
+
+test("concurrent target drift at commit is not overwritten and restores the prior remote package", async () => {
+  const fx = await fixture({ existingRemote: true }); const targetPath = resolve(fx.sources, ".publishing-targets", "jairo-pinto-business.json");
+  const foreignTarget = stringify({ version: 2, ownerKey: "00000000-0000-4000-8000-000000000001", siteId: "foreign", ecosystemType: "BUSINESS",
+    baseDomain: "foreign.example", publicHost: "negocio.foreign.example", remoteRoot: "/foreign", provisioningState: "READY", publicationState: "PENDING" });
+  await assert.rejects(apply(fx, { hooks: { beforePublicationCommit: async () => { await writeFile(targetPath, foreignTarget); } } }), /TARGET_DRIFT_BEFORE_PUBLICATION_COMMIT/);
+  assert.equal(await readFile(targetPath, "utf8"), foreignTarget);
+  assert.equal((await fx.remote.inventory("/hosting/negocio")).hash, fx.entry.expectedRemotePackageHash);
+  await assert.rejects(readFile(resolve(fx.journals, "jairo-pinto-business.json")), /ENOENT/);
 });
 
 test("ownership loss after mutation never deletes or restores foreign artifacts", async () => {
