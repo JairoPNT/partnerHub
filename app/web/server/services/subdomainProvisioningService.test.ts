@@ -30,6 +30,7 @@ test("persists PERSONAL_BRAND on its canonical brand subdomain", async () => iso
   const { instance, calls } = service(directory);
   const target = await instance.provision({ ownerKey, siteId: "jairo-brand", ecosystemType: "PERSONAL_BRAND", rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" });
   assert.equal(target.publicHost, "brand.jairopinto.pro"); assert.equal(target.remoteRoot, "/hostinger/brand-from-api"); assert.equal(target.provisioningState, "READY");
+  assert.equal(target.publicationState, "PENDING");
   assert.deepEqual(calls, ["brand", "dns:brand.jairopinto.pro"]);
 }));
 
