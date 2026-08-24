@@ -25,6 +25,9 @@ allowlisted Business source and its canonical PublishingTarget identity.
 - Invalid/legacy targets, immutable identity conflicts, drift, missing
   entitlement, missing configuration or missing master package block.
 - Legacy SFTP-root fallback is prohibited.
+- `HOSTINGER_SFTP_REMOTE_ROOT` is neither required nor accepted as the Business
+  destination. The only valid destination is the provisioned v2
+  `PublishingTarget.remoteRoot`.
 - Apex is preserved and never a PublishingTarget. Product and Brand are excluded.
 
 The public repository intentionally omits production hashes, identifiers,

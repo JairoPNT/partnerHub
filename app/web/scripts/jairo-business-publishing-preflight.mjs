@@ -20,7 +20,7 @@ const HASH = /^[0-9a-f]{64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const REQUIRED_CONFIGURATION = [
   "HOSTINGER_API_TOKEN", "HOSTINGER_SFTP_USERNAME", "HOSTINGER_SFTP_HOST",
-  "HOSTINGER_SFTP_PORT", "HOSTINGER_SFTP_PASSWORD", "HOSTINGER_SFTP_REMOTE_ROOT",
+  "HOSTINGER_SFTP_PORT", "HOSTINGER_SFTP_PASSWORD",
   "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID", "PARTNERHUB_PROVISIONING_IPV4"
 ];
 const REQUIRED_PACKAGE_FILES = ["index.html", "app.js", "styles.css", "config.js", "favicon.svg"];
@@ -144,7 +144,8 @@ export async function runJairoBusinessPublishingPreflight({ sourceDirectory, out
     entitlement: { sha256: entitlementHash, businessConfirmed: !validateEntitlement(entitlement).some((reason) => reason.includes("BUSINESS")) },
     targetInventory: { parsedV2: inventory.targets.length, invalidFiles: inventory.invalid, disposition },
     configuration: { secretsExposed: false, providerCallsMade: false, missing: missingConfiguration, invalid: invalidConfiguration,
-      providerAvailability: "NOT_PROBED_IN_READ_ONLY_PREVIEW" },
+      providerAvailability: "NOT_PROBED_IN_READ_ONLY_PREVIEW", destinationRemoteRootSource: "PUBLISHING_TARGET_V2_ONLY",
+      legacyGlobalRemoteRootRequired: false },
     generator: { supportedEcosystem: "BUSINESS", sourceMode: "SAVED_SOURCE", templateMode: "PUBLISHED_MASTER",
       masterSiteId: "ganomaster-business", masterPackageDirectory: masterDirectory, missingRequiredFiles: missingMasterFiles },
     plan: ["PROVISION_BUSINESS_TARGET", "WAIT_DNS_AND_SSL_READY", "REGENERATE_BUSINESS_FROM_SAVED_SOURCE",

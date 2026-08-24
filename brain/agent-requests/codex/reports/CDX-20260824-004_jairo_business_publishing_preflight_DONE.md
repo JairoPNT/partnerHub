@@ -6,6 +6,9 @@ Implemented a runtime-packaged, read-only PREVIEW for exactly one Business
 identity. It reads the source, entitlement snapshot, raw PublishingTargets v2
 inventory, configuration presence and published Business master package. It
 never calls Hostinger, Cloudflare, DNS, HTTPS or SFTP and contains no write path.
+SFTP connection settings are checked independently from destination selection:
+the global legacy `HOSTINGER_SFTP_REMOTE_ROOT` is not required, and the future
+destination must come exclusively from a READY PublishingTarget v2 `remoteRoot`.
 
 The preview detects siteId/publicHost/owner+ecosystem conflicts, rejects all
 invalid or legacy target records, pins source and entitlement hashes, preserves
@@ -29,7 +32,9 @@ resume, or reuse for the isolated Business target.
 
 The current generic publication path is not approved for this operation:
 
-1. it accepts legacy remote-root fallback when no PublishingTarget exists;
+1. it accepts legacy remote-root fallback when no PublishingTarget exists; the
+   guarded follow-up must never read or use `HOSTINGER_SFTP_REMOTE_ROOT` as a
+   destination;
 2. SFTP replacement is atomic per file, not for the complete package, and does
    not provide transaction ownership/journal/idempotent package rollback;
 3. provisioning sets `publicationState=READY` before content publication;
@@ -50,7 +55,7 @@ Manual SFTP or direct API improvisation is explicitly rejected.
 
 ## Verification and state
 
-- Focused PREVIEW tests: PASS 6/6.
+- Focused PREVIEW tests: PASS 7/7.
 - Ecosystem generation regressions: PASS 14/14.
 - Hostname, entitlement, provisioning and target regressions: PASS 33/33.
 - Focused ESLint with `--no-ignore --max-warnings=0`: PASS.

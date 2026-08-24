@@ -26,7 +26,7 @@ async function fixture() {
     ownerSiteId: "jairo-pinto", siteId: "jairo-pinto-business", ecosystemType: "BUSINESS", rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro",
     publicHost: "negocio.jairopinto.pro", expectedSourceHash, expectedEntitlementHash: hash(entitlement) }] };
   const manifestPath = resolve(inputs, "manifest.json"); await writeFile(manifestPath, stringify(manifest));
-  const environment = Object.fromEntries(["HOSTINGER_API_TOKEN", "HOSTINGER_SFTP_USERNAME", "HOSTINGER_SFTP_HOST", "HOSTINGER_SFTP_PASSWORD", "HOSTINGER_SFTP_REMOTE_ROOT",
+  const environment = Object.fromEntries(["HOSTINGER_API_TOKEN", "HOSTINGER_SFTP_USERNAME", "HOSTINGER_SFTP_HOST", "HOSTINGER_SFTP_PASSWORD",
     "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID"].map((name) => [name, "configured"]));
   environment.HOSTINGER_SFTP_PORT = "22"; environment.PARTNERHUB_PROVISIONING_IPV4 = "82.29.157.103";
   return { root, sources, output, inputs, manifestPath, environment, source };
@@ -74,6 +74,15 @@ test("blocks missing provider configuration and missing Business master package"
     manifestPath: fx.manifestPath, environment: fx.environment });
   assert.ok(result.blockedReasons.includes("CONFIGURATION_MISSING:HOSTINGER_API_TOKEN"));
   assert.ok(result.blockedReasons.includes("BUSINESS_MASTER_PACKAGE_MISSING:index.html"));
+});
+
+test("does not require the legacy global remote root for an isolated v2 target", async () => {
+  const fx = await fixture();
+  assert.equal(fx.environment.HOSTINGER_SFTP_REMOTE_ROOT, undefined);
+  const result = await run(fx);
+  assert.equal(result.blockedReasons.includes("CONFIGURATION_MISSING:HOSTINGER_SFTP_REMOTE_ROOT"), false);
+  assert.equal(result.configuration.destinationRemoteRootSource, "PUBLISHING_TARGET_V2_ONLY");
+  assert.equal(result.configuration.legacyGlobalRemoteRootRequired, false);
 });
 
 test("blocks a READY target whose provider remote root is absent", async () => {
