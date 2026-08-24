@@ -31,6 +31,13 @@ async function apply(fx, extra = {}) { const preview = await planJairoBusinessPr
 
 test("PREVIEW validates source and entitlement without provider calls or writes", async () => { const fx = await fixture(); const result = await planJairoBusinessProvisioning(options(fx));
   assert.equal(result.blocked, false); assert.equal(result.changed, false); assert.equal(result.safety.providerCallsMade, false); assert.equal(fx.calls(), 0); });
+test("PREVIEW returns its plan when APPLY configuration is absent", async () => { const fx = await fixture(); const result = await planJairoBusinessProvisioning(options(fx, { environment: {} }));
+  assert.equal(result.blocked, false); assert.equal(result.applyReadiness.ready, false); assert.deepEqual(result.applyReadiness.missing.sort(), ["CF_Authorization", "HOSTINGER_API_TOKEN",
+    "HOSTINGER_API_USERNAME_OR_HOSTINGER_SFTP_USERNAME", "PARTNERHUB_INTERNAL_BASE_URL", "PARTNERHUB_PROVISIONING_IPV4"].sort()); assert.equal(fx.calls(), 0); });
+test("APPLY rejects missing or invalid configuration before claim and provider", async () => { const fx = await fixture(); const environment = { PARTNERHUB_PROVISIONING_IPV4: "not-an-ip", PARTNERHUB_INTERNAL_BASE_URL: "http://localhost" };
+  const preview = await planJairoBusinessProvisioning(options(fx, { environment })); assert.equal(preview.blocked, false);
+  await assert.rejects(() => runJairoBusinessProvisioning(options(fx, { environment, mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash })), /APPLY_CONFIGURATION_NOT_READY/);
+  assert.equal(fx.calls(), 0); await assert.rejects(() => readFile(resolve(fx.state, "claim", "owner.json")), /ENOENT/); });
 test("PREVIEW blocks source drift, entitlement drift and immutable target conflicts", async () => { const fx = await fixture(); await writeFile(resolve(fx.sources, "jairo-pinto-business.json"), `${sourceText} `);
   assert.ok((await planJairoBusinessProvisioning(options(fx))).blockedReasons.includes("SOURCE_HASH_DRIFT")); const fx2 = await fixture(); await writeFile(fx2.targetPath, text({ ...fx2.ready(), siteId: "foreign" }));
   assert.ok((await planJairoBusinessProvisioning(options(fx2))).blockedReasons.includes("PUBLISHING_TARGET_CONFLICT")); });

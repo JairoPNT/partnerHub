@@ -46,16 +46,18 @@ export async function planJairoBusinessProvisioning({ sourceDirectory, manifestP
   const existingRecord = candidates[0] ?? null; const existing = existingRecord?.value ?? null; if (existing && !["PENDING", "HOSTING_CREATED", "DNS_PENDING", "SSL_PENDING", "FAILED", "READY"].includes(existing.provisioningState)) reasons.push("TARGET_STATE_INVALID");
   if (existing?.provisioningState === "READY" && !finalTarget(existing)) reasons.push("READY_TARGET_INVALID");
   const required = ["HOSTINGER_API_TOKEN", "PARTNERHUB_PROVISIONING_IPV4", "CF_Authorization", "PARTNERHUB_INTERNAL_BASE_URL"];
-  for (const name of required) if (!environment[name]?.trim()) reasons.push(`CONFIGURATION_MISSING:${name}`);
-  if (!environment.HOSTINGER_API_USERNAME?.trim() && !environment.HOSTINGER_SFTP_USERNAME?.trim()) reasons.push("CONFIGURATION_MISSING:HOSTINGER_API_USERNAME_OR_HOSTINGER_SFTP_USERNAME");
-  if (environment.PARTNERHUB_PROVISIONING_IPV4 && isIP(environment.PARTNERHUB_PROVISIONING_IPV4) !== 4) reasons.push("CONFIGURATION_INVALID:PARTNERHUB_PROVISIONING_IPV4");
-  try { const endpoint = new URL(environment.PARTNERHUB_INTERNAL_BASE_URL); if (endpoint.protocol !== "https:") reasons.push("CONFIGURATION_INVALID:PARTNERHUB_INTERNAL_BASE_URL"); } catch { reasons.push("CONFIGURATION_INVALID:PARTNERHUB_INTERNAL_BASE_URL"); }
+  const missingConfiguration = required.filter((name) => !environment[name]?.trim());
+  if (!environment.HOSTINGER_API_USERNAME?.trim() && !environment.HOSTINGER_SFTP_USERNAME?.trim()) missingConfiguration.push("HOSTINGER_API_USERNAME_OR_HOSTINGER_SFTP_USERNAME");
+  const invalidConfiguration = [];
+  if (environment.PARTNERHUB_PROVISIONING_IPV4 && isIP(environment.PARTNERHUB_PROVISIONING_IPV4) !== 4) invalidConfiguration.push("PARTNERHUB_PROVISIONING_IPV4");
+  if (environment.PARTNERHUB_INTERNAL_BASE_URL) { try { const endpoint = new URL(environment.PARTNERHUB_INTERNAL_BASE_URL); if (endpoint.protocol !== "https:") invalidConfiguration.push("PARTNERHUB_INTERNAL_BASE_URL"); } catch { invalidConfiguration.push("PARTNERHUB_INTERNAL_BASE_URL"); } }
   const disposition = existing ? (finalTarget(existing) ? "ALREADY_READY" : "RESUME_SUPPORTED_SERVICE") : "CREATE_WITH_SUPPORTED_SERVICE";
   const material = { requestId: "CDX-20260824-007", identity: EXPECTED, sourceHash: entry.expectedSourceHash, entitlementHash: entry.expectedEntitlementHash,
     operation: "ENSURE_SUPPORTED_BUSINESS_TARGET_READY_PENDING", initialTargetHash: existingRecord ? sha(existingRecord.bytes) : "ABSENT", expectedFinalState: { provisioningState: "READY", publicationState: "PENDING" },
     apexMutationAllowed: false, publicationAllowed: false, providerContract: "POST_INTERNAL_PUBLISHING_TARGETS" };
   return { requestId: "CDX-20260824-007", mode: "PREVIEW", changed: false, blocked: reasons.length > 0, blockedReasons: [...new Set(reasons)], planHash: sha(JSON.stringify(material)), planMaterial: material,
     disposition, target: existing ? { siteId: existing.siteId, provisioningState: existing.provisioningState, publicationState: existing.publicationState, remoteRootPresent: Boolean(existing.remoteRoot) } : null,
+    applyReadiness: { ready: missingConfiguration.length === 0 && invalidConfiguration.length === 0, missing: missingConfiguration, invalid: invalidConfiguration, secretsExposed: false },
     safety: { providerCallsMade: false, localWritesMade: false, apexPreserved: true, contentPublicationAllowed: false } };
 }
 
@@ -66,6 +68,7 @@ async function atomicJson(path, value) { const temporary = `${path}.tmp-${random
 export async function runJairoBusinessProvisioning(options) {
   const preview = await planJairoBusinessProvisioning(options); if (options.mode !== APPLY_MODE) return preview;
   if (options.confirmation !== APPLY_CONFIRMATION) throw new Error(`APPLY_REQUIRES_CONFIRMATION:${APPLY_CONFIRMATION}`);
+  if (!preview.applyReadiness.ready) throw new Error(`APPLY_CONFIGURATION_NOT_READY:missing=${preview.applyReadiness.missing.join("|")}:invalid=${preview.applyReadiness.invalid.join("|")}`);
   const stateRoot = resolve(options.stateDirectory); const journalPath = inside(stateRoot, "apply.json"); const claimPath = inside(stateRoot, "claim");
   const targetPath = inside(inside(options.sourceDirectory, ".publishing-targets"), `${EXPECTED.siteId}.json`);
   if (await exists(journalPath)) { const journal = JSON.parse(await readFile(journalPath)); const target = JSON.parse(await readFile(targetPath));
