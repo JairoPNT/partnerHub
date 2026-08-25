@@ -3,7 +3,7 @@ import { access, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs
 import { isIP } from "node:net";
 import { dirname, resolve, sep } from "node:path";
 import process from "node:process";
-import { pathToFileURL, URL } from "node:url";
+import { pathToFileURL } from "node:url";
 
 export const APPLY_MODE = "APPLY_JAIRO_BUSINESS_PROVISIONING";
 export const APPLY_CONFIRMATION = "PROVISION_ALLOWLISTED_JAIRO_BUSINESS_TARGET";
@@ -45,16 +45,15 @@ export async function planJairoBusinessProvisioning({ sourceDirectory, manifestP
   if (candidates.some(({ value }) => !exactTarget(value)) || candidates.length > 1) reasons.push("PUBLISHING_TARGET_CONFLICT");
   const existingRecord = candidates[0] ?? null; const existing = existingRecord?.value ?? null; if (existing && !["PENDING", "HOSTING_CREATED", "DNS_PENDING", "SSL_PENDING", "FAILED", "READY"].includes(existing.provisioningState)) reasons.push("TARGET_STATE_INVALID");
   if (existing?.provisioningState === "READY" && !finalTarget(existing)) reasons.push("READY_TARGET_INVALID");
-  const required = ["HOSTINGER_API_TOKEN", "PARTNERHUB_PROVISIONING_IPV4", "CF_Authorization", "PARTNERHUB_INTERNAL_BASE_URL"];
+  const required = ["HOSTINGER_API_TOKEN", "PARTNERHUB_PROVISIONING_IPV4", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID"];
   const missingConfiguration = required.filter((name) => !environment[name]?.trim());
   if (!environment.HOSTINGER_API_USERNAME?.trim() && !environment.HOSTINGER_SFTP_USERNAME?.trim()) missingConfiguration.push("HOSTINGER_API_USERNAME_OR_HOSTINGER_SFTP_USERNAME");
   const invalidConfiguration = [];
   if (environment.PARTNERHUB_PROVISIONING_IPV4 && isIP(environment.PARTNERHUB_PROVISIONING_IPV4) !== 4) invalidConfiguration.push("PARTNERHUB_PROVISIONING_IPV4");
-  if (environment.PARTNERHUB_INTERNAL_BASE_URL) { try { const endpoint = new URL(environment.PARTNERHUB_INTERNAL_BASE_URL); if (endpoint.protocol !== "https:") invalidConfiguration.push("PARTNERHUB_INTERNAL_BASE_URL"); } catch { invalidConfiguration.push("PARTNERHUB_INTERNAL_BASE_URL"); } }
   const disposition = existing ? (finalTarget(existing) ? "ALREADY_READY" : "RESUME_SUPPORTED_SERVICE") : "CREATE_WITH_SUPPORTED_SERVICE";
   const material = { requestId: "CDX-20260824-007", identity: EXPECTED, sourceHash: entry.expectedSourceHash, entitlementHash: entry.expectedEntitlementHash,
     operation: "ENSURE_SUPPORTED_BUSINESS_TARGET_READY_PENDING", initialTargetHash: existingRecord ? sha(existingRecord.bytes) : "ABSENT", expectedFinalState: { provisioningState: "READY", publicationState: "PENDING" },
-    apexMutationAllowed: false, publicationAllowed: false, providerContract: "POST_INTERNAL_PUBLISHING_TARGETS" };
+    apexMutationAllowed: false, publicationAllowed: false, providerContract: "IN_PROCESS_SUPPORTED_PROVISIONING_SERVICE" };
   return { requestId: "CDX-20260824-007", mode: "PREVIEW", changed: false, blocked: reasons.length > 0, blockedReasons: [...new Set(reasons)], planHash: sha(JSON.stringify(material)), planMaterial: material,
     disposition, target: existing ? { siteId: existing.siteId, provisioningState: existing.provisioningState, publicationState: existing.publicationState, remoteRootPresent: Boolean(existing.remoteRoot) } : null,
     applyReadiness: { ready: missingConfiguration.length === 0 && invalidConfiguration.length === 0, missing: missingConfiguration, invalid: invalidConfiguration, secretsExposed: false },
@@ -94,13 +93,13 @@ export async function runJairoBusinessProvisioning(options) {
   }
 }
 
-export function createInternalProvisioner(environment = process.env, fetchImplementation = globalThis.fetch) {
-  return async (body) => { const url = new URL("/api/internal/publishing-targets", environment.PARTNERHUB_INTERNAL_BASE_URL); const response = await fetchImplementation(url, { method: "POST", redirect: "manual",
-    headers: { "Content-Type": "application/json", Cookie: `CF_Authorization=${environment.CF_Authorization}` }, body: JSON.stringify(body) });
-    if (response.status !== 200) throw new Error(`SUPPORTED_PROVISIONING_API_HTTP_${response.status}`); const value = await response.json(); if (!value?.target) throw new Error("SUPPORTED_PROVISIONING_API_INVALID_JSON"); return value.target; };
+export function createInProcessProvisioner(environment = process.env, importer = (url) => import(url)) {
+  return async (body) => { const modulePath = environment.PARTNERHUB_IN_PROCESS_PROVISIONER_PATH?.trim() || "/app/runtime-assets/jairo-business-in-process-provisioner.mjs";
+    const runtime = await importer(pathToFileURL(resolve(modulePath)).href); if (typeof runtime.provisionJairoBusinessInProcess !== "function") throw new Error("IN_PROCESS_PROVISIONER_EXPORT_INVALID");
+    return runtime.provisionJairoBusinessInProcess(body, environment); };
 }
 async function main() { const arg = (name) => process.argv.find((value) => value.startsWith(`--${name}=`))?.slice(name.length + 3); const manifestPath = arg("manifest"); if (!manifestPath) throw new Error("MANIFEST_REQUIRED");
   const result = await runJairoBusinessProvisioning({ sourceDirectory: process.env.PRODUCT_PAGE_SOURCE_DIR ?? "/data/generated-sites/.sources", manifestPath, environment: process.env,
-    stateDirectory: arg("state-dir"), mode: arg("mode") ?? "PREVIEW", confirmation: arg("confirm"), expectedPlanHash: arg("expected-plan-hash"), provisioner: createInternalProvisioner(process.env) });
+    stateDirectory: arg("state-dir"), mode: arg("mode") ?? "PREVIEW", confirmation: arg("confirm"), expectedPlanHash: arg("expected-plan-hash"), provisioner: createInProcessProvisioner(process.env) });
   process.stdout.write(json(result)); if (result.blocked) process.exitCode = 2; }
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main().catch((error) => { process.stderr.write(json({ error: error.message, providerStarted: error.providerStarted, recovery: error.recovery })); process.exitCode = 1; });
