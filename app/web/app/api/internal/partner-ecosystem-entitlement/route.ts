@@ -3,7 +3,8 @@ import { ZodError } from "zod";
 
 import {
   authenticateCloudflareAccessRequest,
-  CloudflareAccessAuthError
+  CloudflareAccessAuthError,
+  getCloudflareAccessConfig
 } from "@/server/auth/cloudflareAccessAuth";
 import { partnerEcosystemEntitlementService } from "@/server/services/partnerEcosystemEntitlementService";
 
@@ -11,7 +12,7 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
-    await authenticateCloudflareAccessRequest(request);
+    await authenticateCloudflareAccessRequest(request, getCloudflareAccessConfig(process.env, "CLOUDFLARE_ACCESS_ENTITLEMENT_AUD"));
     const search = new URL(request.url).searchParams;
     const result = await partnerEcosystemEntitlementService.get({
       activationLeadId: search.get("activationLeadId") || undefined,

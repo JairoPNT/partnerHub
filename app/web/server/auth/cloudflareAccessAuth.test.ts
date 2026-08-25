@@ -5,7 +5,8 @@ import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 
 import {
   authenticateCloudflareAccessRequest,
-  CloudflareAccessAuthError
+  CloudflareAccessAuthError,
+  getCloudflareAccessConfig
 } from "./cloudflareAccessAuth.ts";
 
 const configuration = {
@@ -67,4 +68,17 @@ test("rejects an expired Access token", async () => {
     authenticateCloudflareAccessRequest(request, configuration, keyResolver),
     (error) => error instanceof CloudflareAccessAuthError && error.code === "ACCESS_TOKEN_INVALID"
   );
+});
+
+test("selects a route-specific audience instead of silently accepting the default app audience", () => {
+  const source = {
+    CLOUDFLARE_ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com",
+    CLOUDFLARE_ACCESS_AUD: "default-app-audience",
+    CLOUDFLARE_ACCESS_ENTITLEMENT_AUD: "entitlement-path-audience"
+  };
+  assert.deepEqual(getCloudflareAccessConfig(source, "CLOUDFLARE_ACCESS_ENTITLEMENT_AUD"), {
+    teamDomain: "https://team.cloudflareaccess.com",
+    audience: "entitlement-path-audience"
+  });
+  assert.equal(getCloudflareAccessConfig(source).audience, "default-app-audience");
 });
