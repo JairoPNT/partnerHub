@@ -56,6 +56,19 @@ test("retries DNS_PENDING and FAILED safely with idempotent provider calls", asy
   await isolated(async (failedDirectory) => { const failed = service(failedDirectory, { fail: true }); await assert.rejects(() => failed.instance.provision(input), (error: unknown) => error instanceof ProvisioningError && error.code === "PROVISIONING_PROVIDER_FAILED"); assert.equal((await failed.instance.get(input.siteId))?.provisioningState, "FAILED"); });
 }));
 
+test("exposes only safe provider code and HTTP status for audited recovery", async () => isolated(async (directory) => {
+  const instance = createSubdomainProvisioningService({
+    storageDirectory: directory,
+    hostingerClient: { ensure: async () => subdomain("negocio") },
+    dnsClient: { ensureARecord: async () => { throw Object.assign(new Error("provider response secret"), { code: "HOSTINGER_DNS_PROVIDER_FAILED", status: 500 }); } },
+    readinessProbe: { dnsResolves: async () => false, httpsReady: async () => false }
+  });
+  await assert.rejects(
+    () => instance.provision({ ownerKey, siteId: "jairo-business", ecosystemType: "BUSINESS", rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" }),
+    (error: unknown) => error instanceof ProvisioningError && error.providerCode === "HOSTINGER_DNS_PROVIDER_FAILED" && error.providerStatus === 500 && !error.message.includes("secret")
+  );
+}));
+
 test("retries SSL_PENDING safely without changing the persisted identity or root", async () => isolated(async (directory) => {
   const input = { ownerKey, siteId: "jairo-brand", ecosystemType: "PERSONAL_BRAND" as const, rootEcosystemType: "PERSONAL_BRAND" as const, baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" as const };
   const pending = service(directory, { sslReady: false });
