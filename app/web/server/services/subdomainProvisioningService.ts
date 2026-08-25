@@ -79,8 +79,10 @@ type Dependencies = { hostingerClient: HostingerClient; dnsClient: DnsClient; re
 
 export class ProvisioningError extends Error {
   public readonly code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED";
-  constructor(code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED", message: string) {
-    super(message); this.name = "ProvisioningError"; this.code = code;
+  public readonly providerCode?: string;
+  public readonly providerStatus?: number | null;
+  constructor(code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED", message: string, provider: { code?: string; status?: number | null } = {}) {
+    super(message); this.name = "ProvisioningError"; this.code = code; this.providerCode = provider.code; this.providerStatus = provider.status;
   }
 }
 
@@ -138,6 +140,7 @@ export async function listPublishingTargets(root = defaultStorageDirectory()) {
 }
 function publicHost(input: ProvisionSubdomainInput) { return getPartnerPublicHost(input.baseDomain, input.ecosystemType); }
 function providerCode(error: unknown) { return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : "PROVISIONING_PROVIDER_FAILED"; }
+function providerStatus(error: unknown) { return error && typeof error === "object" && "status" in error && typeof error.status === "number" && error.status >= 100 && error.status <= 599 ? error.status : null; }
 
 export function createSubdomainProvisioningService(deps: Dependencies) {
   const root = resolve(deps.storageDirectory ?? defaultStorageDirectory()); const now = deps.now ?? (() => new Date());
@@ -176,8 +179,8 @@ export function createSubdomainProvisioningService(deps: Dependencies) {
       return update(target, { sslState: "READY", provisioningState: "READY", publicationState: "PENDING", lastCheckedAt: now().toISOString(), lastErrorCode: undefined });
     } catch (error) {
       if (error instanceof ProvisioningError) throw error;
-      const code = providerCode(error); await update(target, { provisioningState: "FAILED", lastErrorCode: code, lastCheckedAt: now().toISOString() });
-      throw new ProvisioningError("PROVISIONING_PROVIDER_FAILED", `Hostinger-only provisioning failed safely with code ${code}.`);
+      const code = providerCode(error); const status = providerStatus(error); await update(target, { provisioningState: "FAILED", lastErrorCode: code, lastCheckedAt: now().toISOString() });
+      throw new ProvisioningError("PROVISIONING_PROVIDER_FAILED", `Hostinger-only provisioning failed safely with code ${code}.`, { code, status });
     }
   }
   return { get, list, provision };

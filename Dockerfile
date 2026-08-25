@@ -46,6 +46,7 @@ COPY --from=builder /repo/app/web/scripts/jairo-business-guarded-provisioning.mj
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-provisioning-preview.mjs ./scripts/prepare-jairo-business-provisioning-preview.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-provisioning-recovery-diagnostic.mjs ./scripts/jairo-business-provisioning-recovery-diagnostic.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-provisioning-guarded-resume.mjs ./scripts/jairo-business-provisioning-guarded-resume.mjs
+COPY --from=builder /repo/app/web/scripts/jairo-business-provisioning-dynamic-recovery.mjs ./scripts/jairo-business-provisioning-dynamic-recovery.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-hostinger-dns-readonly-diagnostic.mjs ./scripts/jairo-hostinger-dns-readonly-diagnostic.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-hostinger-dns-payload-validation.mjs ./scripts/jairo-hostinger-dns-payload-validation.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-entitlement-snapshot.mjs ./scripts/prepare-jairo-business-entitlement-snapshot.mjs
