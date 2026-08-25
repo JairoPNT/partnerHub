@@ -19,5 +19,7 @@ Verification:
 - Dependency audit reported 12 pre-existing findings; dependencies were not changed.
 
 Branch: `codex/CDX-20260825-006-hostinger-dns-payload-validation`.
+Commit: `f3cf9cb`.
+PR: [#173](https://github.com/JairoPNT/partnerHub/pull/173), opened for review.
 
 No EasyPanel, Hostinger validation call, DNS mutation, provisioning resume or production operation was executed from this ticket.
