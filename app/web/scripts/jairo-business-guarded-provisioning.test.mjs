@@ -18,7 +18,7 @@ async function fixture() {
   const manifest = { confirmation: "PREVIEW_JAIRO_BUSINESS_PROVISIONING", allowlist: [{ ownerKey: entitlement.activationLeadId, siteId: "jairo-pinto-business", ecosystemType: "BUSINESS",
     rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", publicHost: "negocio.jairopinto.pro", expectedSourceHash: sha(sourceText), expectedEntitlementHash: sha(entitlementText) }] };
   const manifestPath = resolve(inputs, "manifest.json"); await writeFile(manifestPath, text(manifest));
-  const environment = { HOSTINGER_API_TOKEN: "secret", HOSTINGER_API_USERNAME: "u123", PARTNERHUB_PROVISIONING_IPV4: "82.29.157.103", CLOUDFLARE_API_TOKEN: "secret", CLOUDFLARE_ZONE_ID: "zone" };
+  const environment = { HOSTINGER_API_TOKEN: "secret", HOSTINGER_API_USERNAME: "u123", PARTNERHUB_PROVISIONING_IPV4: "82.29.157.103" };
   let calls = 0; const targetPath = resolve(sources, ".publishing-targets", "jairo-pinto-business.json");
   const ready = () => ({ version: 2, ownerKey: entitlement.activationLeadId, siteId: "jairo-pinto-business", ecosystemType: "BUSINESS", rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro",
     publicHost: "negocio.jairopinto.pro", remoteRoot: "/domains/jairopinto.pro/public_html/negocio", provisioningState: "READY", hostingerState: "READY", dnsState: "RESOLVED", sslState: "READY",
@@ -32,7 +32,7 @@ async function apply(fx, extra = {}) { const preview = await planJairoBusinessPr
 test("PREVIEW validates source and entitlement without provider calls or writes", async () => { const fx = await fixture(); const result = await planJairoBusinessProvisioning(options(fx));
   assert.equal(result.blocked, false); assert.equal(result.changed, false); assert.equal(result.safety.providerCallsMade, false); assert.equal(fx.calls(), 0); });
 test("PREVIEW returns its plan when APPLY configuration is absent", async () => { const fx = await fixture(); const result = await planJairoBusinessProvisioning(options(fx, { environment: {} }));
-  assert.equal(result.blocked, false); assert.equal(result.applyReadiness.ready, false); assert.deepEqual(result.applyReadiness.missing.sort(), ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID", "HOSTINGER_API_TOKEN",
+  assert.equal(result.blocked, false); assert.equal(result.applyReadiness.ready, false); assert.deepEqual(result.applyReadiness.missing.sort(), ["HOSTINGER_API_TOKEN",
     "HOSTINGER_API_USERNAME_OR_HOSTINGER_SFTP_USERNAME", "PARTNERHUB_PROVISIONING_IPV4"].sort()); assert.equal(fx.calls(), 0); });
 test("APPLY rejects missing or invalid configuration before claim and provider", async () => { const fx = await fixture(); const environment = { PARTNERHUB_PROVISIONING_IPV4: "not-an-ip" };
   const preview = await planJairoBusinessProvisioning(options(fx, { environment })); assert.equal(preview.blocked, false);

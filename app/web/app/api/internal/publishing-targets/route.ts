@@ -6,10 +6,7 @@ import {
   CloudflareAccessAuthError
 } from "@/server/auth/cloudflareAccessAuth";
 
-import {
-  createCloudflareDnsClient,
-  getCloudflareDnsConfig
-} from "@/server/integrations/cloudflareDnsClient";
+import { createHostingerDnsClient } from "@/server/integrations/hostingerDnsClient";
 import {
   createHostingerSubdomainClient,
   getHostingerSubdomainConfig
@@ -35,7 +32,10 @@ function requiredSecret(name: string) {
 function service() {
   return createSubdomainProvisioningService({
     hostingerClient: createHostingerSubdomainClient(getHostingerSubdomainConfig()),
-    dnsClient: createCloudflareDnsClient(getCloudflareDnsConfig())
+    dnsClient: createHostingerDnsClient({
+      apiToken: requiredSecret("HOSTINGER_API_TOKEN"),
+      baseUrl: process.env.HOSTINGER_API_BASE_URL
+    })
   });
 }
 
