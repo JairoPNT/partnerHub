@@ -3,7 +3,7 @@ import test from "node:test";
 import { createHostingerDnsClient, HostingerDnsError } from "./hostingerDnsClient.ts";
 
 const config = { apiToken: "test-token", baseUrl: "https://developers.hostinger.com" };
-const record = { type: "A" as const, name: "producto.jairopinto.pro", content: "82.29.157.103", ttl: 300 };
+const record = { id: "hostinger-zone:jairopinto.pro:producto.jairopinto.pro:A", type: "A" as const, name: "producto.jairopinto.pro", content: "82.29.157.103", ttl: 300 };
 const zone = (value = record) => [{ name: "producto", type: "A", ttl: value.ttl, records: [{ content: value.content, is_disabled: false }] }];
 const response = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
 

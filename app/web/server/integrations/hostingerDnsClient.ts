@@ -5,6 +5,7 @@ import { z } from "zod";
 const hostnameSchema = z.string().trim().toLowerCase().regex(/^(?:[a-z0-9-]+\.)+[a-z]{2,63}$/);
 const ipv4Schema = z.string().trim().refine((value) => isIP(value) === 4);
 const dnsRecordSchema = z.object({
+  id: z.string().min(1),
   type: z.literal("A"),
   name: hostnameSchema,
   content: ipv4Schema,
@@ -83,7 +84,7 @@ export function createHostingerDnsClient(
       const fqdn = entry.name === "@" ? domain : entry.name.endsWith(`.${domain}`) ? entry.name : `${entry.name}.${domain}`;
       for (const record of entry.records) {
         if (record.is_disabled) continue;
-        const candidate = dnsRecordSchema.safeParse({ type: "A", name: fqdn, content: record.content, ttl: entry.ttl });
+        const candidate = dnsRecordSchema.safeParse({ id: `hostinger-zone:${domain}:${fqdn}:A`, type: "A", name: fqdn, content: record.content, ttl: entry.ttl });
         if (!candidate.success) throw new HostingerDnsError("HOSTINGER_DNS_INVALID_RESPONSE", "Hostinger returned an invalid A record.", response.status);
         records.push(candidate.data);
       }
