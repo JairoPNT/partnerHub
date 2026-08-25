@@ -16,6 +16,7 @@ COPY plantillas-de-pagina/personal-brand/config.js ./runtime-assets/personal-bra
 COPY plantillas-de-pagina/business/config.js ./runtime-assets/business-config.js
 WORKDIR /repo/app/web
 RUN npm run build
+RUN npx esbuild server/runtime/jairoBusinessInProcessProvisioner.ts --bundle --platform=node --format=esm --target=node20 --outfile=/repo/runtime-assets/jairo-business-in-process-provisioner.mjs
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -32,6 +33,7 @@ COPY --from=builder /repo/app/web/.next/static ./.next/static
 COPY --from=builder /repo/plantillas-de-pagina/producto ./plantillas-de-pagina/producto
 COPY --from=builder /repo/runtime-assets/personal-brand-config.js ./runtime-assets/personal-brand-config.js
 COPY --from=builder /repo/runtime-assets/business-config.js ./runtime-assets/business-config.js
+COPY --from=builder /repo/runtime-assets/jairo-business-in-process-provisioner.mjs ./runtime-assets/jairo-business-in-process-provisioner.mjs
 COPY --from=builder /repo/app/web/scripts/claudia-source-identity-dry-run.mjs ./scripts/claudia-source-identity-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-source-identity-dry-run.mjs ./scripts/jairo-source-identity-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-source-identity-guarded-apply.mjs ./scripts/jairo-source-identity-guarded-apply.mjs

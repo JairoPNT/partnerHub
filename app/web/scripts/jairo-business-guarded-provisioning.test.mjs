@@ -4,7 +4,7 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
-import { APPLY_CONFIRMATION, APPLY_MODE, planJairoBusinessProvisioning, runJairoBusinessProvisioning } from "./jairo-business-guarded-provisioning.mjs";
+import { APPLY_CONFIRMATION, APPLY_MODE, createInProcessProvisioner, planJairoBusinessProvisioning, runJairoBusinessProvisioning } from "./jairo-business-guarded-provisioning.mjs";
 
 const text = (value) => `${JSON.stringify(value, null, 2)}\n`; const sha = (value) => createHash("sha256").update(value).digest("hex");
 const sourceText = text({ site: { id: "jairo-pinto-business", domain: "negocio.jairopinto.pro" }, ecosystemType: "BUSINESS" });
@@ -18,7 +18,7 @@ async function fixture() {
   const manifest = { confirmation: "PREVIEW_JAIRO_BUSINESS_PROVISIONING", allowlist: [{ ownerKey: entitlement.activationLeadId, siteId: "jairo-pinto-business", ecosystemType: "BUSINESS",
     rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", publicHost: "negocio.jairopinto.pro", expectedSourceHash: sha(sourceText), expectedEntitlementHash: sha(entitlementText) }] };
   const manifestPath = resolve(inputs, "manifest.json"); await writeFile(manifestPath, text(manifest));
-  const environment = { HOSTINGER_API_TOKEN: "secret", HOSTINGER_API_USERNAME: "u123", PARTNERHUB_PROVISIONING_IPV4: "82.29.157.103", CF_Authorization: "secret", PARTNERHUB_INTERNAL_BASE_URL: "https://app.partnerhub.club" };
+  const environment = { HOSTINGER_API_TOKEN: "secret", HOSTINGER_API_USERNAME: "u123", PARTNERHUB_PROVISIONING_IPV4: "82.29.157.103", CLOUDFLARE_API_TOKEN: "secret", CLOUDFLARE_ZONE_ID: "zone" };
   let calls = 0; const targetPath = resolve(sources, ".publishing-targets", "jairo-pinto-business.json");
   const ready = () => ({ version: 2, ownerKey: entitlement.activationLeadId, siteId: "jairo-pinto-business", ecosystemType: "BUSINESS", rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro",
     publicHost: "negocio.jairopinto.pro", remoteRoot: "/domains/jairopinto.pro/public_html/negocio", provisioningState: "READY", hostingerState: "READY", dnsState: "RESOLVED", sslState: "READY",
@@ -32,9 +32,9 @@ async function apply(fx, extra = {}) { const preview = await planJairoBusinessPr
 test("PREVIEW validates source and entitlement without provider calls or writes", async () => { const fx = await fixture(); const result = await planJairoBusinessProvisioning(options(fx));
   assert.equal(result.blocked, false); assert.equal(result.changed, false); assert.equal(result.safety.providerCallsMade, false); assert.equal(fx.calls(), 0); });
 test("PREVIEW returns its plan when APPLY configuration is absent", async () => { const fx = await fixture(); const result = await planJairoBusinessProvisioning(options(fx, { environment: {} }));
-  assert.equal(result.blocked, false); assert.equal(result.applyReadiness.ready, false); assert.deepEqual(result.applyReadiness.missing.sort(), ["CF_Authorization", "HOSTINGER_API_TOKEN",
-    "HOSTINGER_API_USERNAME_OR_HOSTINGER_SFTP_USERNAME", "PARTNERHUB_INTERNAL_BASE_URL", "PARTNERHUB_PROVISIONING_IPV4"].sort()); assert.equal(fx.calls(), 0); });
-test("APPLY rejects missing or invalid configuration before claim and provider", async () => { const fx = await fixture(); const environment = { PARTNERHUB_PROVISIONING_IPV4: "not-an-ip", PARTNERHUB_INTERNAL_BASE_URL: "http://localhost" };
+  assert.equal(result.blocked, false); assert.equal(result.applyReadiness.ready, false); assert.deepEqual(result.applyReadiness.missing.sort(), ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID", "HOSTINGER_API_TOKEN",
+    "HOSTINGER_API_USERNAME_OR_HOSTINGER_SFTP_USERNAME", "PARTNERHUB_PROVISIONING_IPV4"].sort()); assert.equal(fx.calls(), 0); });
+test("APPLY rejects missing or invalid configuration before claim and provider", async () => { const fx = await fixture(); const environment = { PARTNERHUB_PROVISIONING_IPV4: "not-an-ip" };
   const preview = await planJairoBusinessProvisioning(options(fx, { environment })); assert.equal(preview.blocked, false);
   await assert.rejects(() => runJairoBusinessProvisioning(options(fx, { environment, mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash })), /APPLY_CONFIGURATION_NOT_READY/);
   assert.equal(fx.calls(), 0); await assert.rejects(() => readFile(resolve(fx.state, "claim", "owner.json")), /ENOENT/); });
@@ -59,3 +59,20 @@ test("ownership loss before provider makes no provider mutation", async () => { 
   await writeFile(resolve(claimPath, "owner.json"), text({ token: "foreign" })); } } }), /PROVISIONING_CLAIM_OWNERSHIP_LOST/); assert.equal(fx.calls(), 0); });
 test("provider-started incomplete state is retained fail-closed for audited resume", async () => { const fx = await fixture(); fx.provisioner = async () => { await writeFile(fx.targetPath, text({ ...fx.ready(), remoteRoot: null, provisioningState: "FAILED", hostingerState: "PENDING", dnsState: "PENDING", sslState: "PENDING" })); throw new Error("PROVIDER_FAILED"); };
   await assert.rejects(() => apply(fx), (error) => error.message === "PROVIDER_FAILED" && error.providerStarted === true && error.recovery.includes("RETAIN_CLAIM")); assert.equal(JSON.parse(await readFile(fx.targetPath)).provisioningState, "FAILED"); });
+
+test("in-process adapter loads the compiled runtime and returns its target", async () => {
+  const calls = [];
+  const expected = { siteId: "jairo-pinto-business", provisioningState: "READY" };
+  const provision = createInProcessProvisioner(
+    { PARTNERHUB_IN_PROCESS_PROVISIONER_PATH: "/app/runtime-assets/provisioner.mjs" },
+    async (url) => ({ provisionJairoBusinessInProcess: async (body, environment) => { calls.push({ url, body, environment }); return expected; } })
+  );
+  assert.equal(await provision({ siteId: "jairo-pinto-business" }), expected);
+  assert.equal(calls.length, 1);
+  assert.match(calls[0].url, /provisioner\.mjs$/);
+});
+
+test("in-process adapter rejects a runtime without the required export", async () => {
+  const provision = createInProcessProvisioner({}, async () => ({}));
+  await assert.rejects(() => provision({}), /IN_PROCESS_PROVISIONER_EXPORT_INVALID/);
+});
