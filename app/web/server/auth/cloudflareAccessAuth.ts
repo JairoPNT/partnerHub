@@ -31,10 +31,10 @@ function normalizeTeamDomain(value: string) {
   return url.origin;
 }
 
-export function getCloudflareAccessConfig(source: NodeJS.ProcessEnv = process.env) {
+export function getCloudflareAccessConfig(source: NodeJS.ProcessEnv = process.env, audienceVariable = "CLOUDFLARE_ACCESS_AUD") {
   const parsed = configurationSchema.parse({
     teamDomain: source.CLOUDFLARE_ACCESS_TEAM_DOMAIN,
-    audience: source.CLOUDFLARE_ACCESS_AUD
+    audience: source[audienceVariable]
   });
   return {
     teamDomain: normalizeTeamDomain(parsed.teamDomain),

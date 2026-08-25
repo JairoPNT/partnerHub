@@ -3,21 +3,27 @@ import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
-import { OPERATOR_EXPORT_MODE, prepareJairoBusinessEntitlementSnapshot, SERVICE_TOKEN_MODE } from "./prepare-jairo-business-entitlement-snapshot.mjs";
+import { JAIRO_ENTITLEMENT_ENDPOINT, OPERATOR_EXPORT_MODE, prepareJairoBusinessEntitlementSnapshot, SERVICE_TOKEN_MODE } from "./prepare-jairo-business-entitlement-snapshot.mjs";
 
 const entitlement = () => ({ rootRedirectApex: { isPublishingTarget: false, preserved: true }, expectedTargets: [{ publicHost: "negocio.jairopinto.pro", role: "SUBDOMAIN", ecosystemType: "BUSINESS" }],
   includedEcosystems: ["PRODUCT", "BUSINESS", "PERSONAL_BRAND"], commercialState: "KNOWN", activationLeadId: "f403f29e-95c8-4825-9320-967376443020" });
 const response = (body, status = 200, contentType = "application/json") => ({ status, headers: { get: (name) => name.toLowerCase() === "content-type" ? contentType : null }, text: async () => body });
 async function root() { return mkdtemp(resolve(tmpdir(), "entitlement-snapshot-")); }
 test("service token uses only supported headers and persists no secret or cookie", async () => { const directory = await root(); let request;
-  const result = await prepareJairoBusinessEntitlementSnapshot({ mode: SERVICE_TOKEN_MODE, outputDirectory: resolve(directory, "stage"), endpoint: "https://app.partnerhub.club/api/internal/partner-ecosystem-entitlement?x=1",
+  const result = await prepareJairoBusinessEntitlementSnapshot({ mode: SERVICE_TOKEN_MODE, outputDirectory: resolve(directory, "stage"),
     environment: { CF_ACCESS_CLIENT_ID: "client-id", CF_ACCESS_CLIENT_SECRET: "client-secret" }, fetchImplementation: async (url, init) => { request = { url: String(url), init }; return response(JSON.stringify(entitlement())); } });
   assert.equal(request.init.redirect, "manual"); assert.equal(request.init.headers["CF-Access-Client-Id"], "client-id"); assert.equal(request.init.headers["CF-Access-Client-Secret"], "client-secret"); assert.equal("Cookie" in request.init.headers, false);
   const persisted = await readFile(result.entitlementPath, "utf8"); assert.equal(persisted.includes("client-secret"), false); assert.equal(JSON.stringify(result).includes("client-secret"), false); assert.equal(result.security.cookiesUsed, false); });
 test("service token redirect, non-json and missing credentials fail closed", async () => { const one = await root(); await assert.rejects(() => prepareJairoBusinessEntitlementSnapshot({ mode: SERVICE_TOKEN_MODE,
-  outputDirectory: resolve(one, "stage"), endpoint: "https://app.partnerhub.club/x", environment: {}, fetchImplementation: async () => response("") }), /SERVICE_TOKEN_CONFIGURATION_MISSING/);
+  outputDirectory: resolve(one, "stage"), environment: {}, fetchImplementation: async () => response("") }), /SERVICE_TOKEN_CONFIGURATION_MISSING/);
   const two = await root(); await assert.rejects(() => prepareJairoBusinessEntitlementSnapshot({ mode: SERVICE_TOKEN_MODE, outputDirectory: resolve(two, "stage"), endpoint: "https://app.partnerhub.club/x",
+    environment: { CF_ACCESS_CLIENT_ID: "id", CF_ACCESS_CLIENT_SECRET: "secret" }, fetchImplementation: async () => response("", 302, "text/html") }), /ENTITLEMENT_ENDPOINT_NOT_ALLOWLISTED/);
+  const three = await root(); await assert.rejects(() => prepareJairoBusinessEntitlementSnapshot({ mode: SERVICE_TOKEN_MODE, outputDirectory: resolve(three, "stage"),
     environment: { CF_ACCESS_CLIENT_ID: "id", CF_ACCESS_CLIENT_SECRET: "secret" }, fetchImplementation: async () => response("", 302, "text/html") }), /SERVICE_TOKEN_HTTP_302/); });
+test("markdown-rendered and lookalike endpoints are rejected before fetch", async () => { const directory = await root(); let called = false;
+  await assert.rejects(() => prepareJairoBusinessEntitlementSnapshot({ mode: SERVICE_TOKEN_MODE, outputDirectory: resolve(directory, "stage"),
+    endpoint: `[${JAIRO_ENTITLEMENT_ENDPOINT}](${JAIRO_ENTITLEMENT_ENDPOINT})`, environment: { CF_ACCESS_CLIENT_ID: "id", CF_ACCESS_CLIENT_SECRET: "secret" }, fetchImplementation: async () => { called = true; return response("{}"); } }), /ENTITLEMENT_ENDPOINT_NOT_ALLOWLISTED/);
+  assert.equal(called, false); });
 test("operator export is canonicalized and validated without Access cookies", async () => { const directory = await root(); const input = resolve(directory, "browser-export.json"); await writeFile(input, JSON.stringify(entitlement()));
   const result = await prepareJairoBusinessEntitlementSnapshot({ mode: OPERATOR_EXPORT_MODE, outputDirectory: resolve(directory, "stage"), operatorExportPath: input });
   assert.equal(result.authentication, "OPERATOR_AUTHENTICATED_BROWSER_EXPORT"); assert.equal(result.security.bindingCookieCopied, false); assert.match(await readFile(result.entitlementPath, "utf8"), /^\{\n {2}"activationLeadId"/); });
