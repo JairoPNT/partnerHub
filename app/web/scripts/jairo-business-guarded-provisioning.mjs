@@ -45,7 +45,7 @@ export async function planJairoBusinessProvisioning({ sourceDirectory, manifestP
   if (candidates.some(({ value }) => !exactTarget(value)) || candidates.length > 1) reasons.push("PUBLISHING_TARGET_CONFLICT");
   const existingRecord = candidates[0] ?? null; const existing = existingRecord?.value ?? null; if (existing && !["PENDING", "HOSTING_CREATED", "DNS_PENDING", "SSL_PENDING", "FAILED", "READY"].includes(existing.provisioningState)) reasons.push("TARGET_STATE_INVALID");
   if (existing?.provisioningState === "READY" && !finalTarget(existing)) reasons.push("READY_TARGET_INVALID");
-  const required = ["HOSTINGER_API_TOKEN", "PARTNERHUB_PROVISIONING_IPV4", "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID"];
+  const required = ["HOSTINGER_API_TOKEN", "PARTNERHUB_PROVISIONING_IPV4"];
   const missingConfiguration = required.filter((name) => !environment[name]?.trim());
   if (!environment.HOSTINGER_API_USERNAME?.trim() && !environment.HOSTINGER_SFTP_USERNAME?.trim()) missingConfiguration.push("HOSTINGER_API_USERNAME_OR_HOSTINGER_SFTP_USERNAME");
   const invalidConfiguration = [];
