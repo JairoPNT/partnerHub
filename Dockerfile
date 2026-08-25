@@ -43,6 +43,7 @@ COPY --from=builder /repo/app/web/scripts/jairo-business-publishing-preflight.mj
 COPY --from=builder /repo/app/web/scripts/guarded-ecosystem-publication.mjs ./scripts/guarded-ecosystem-publication.mjs
 COPY --from=builder /repo/app/web/scripts/sftp-directory-rename-capability-probe.mjs ./scripts/sftp-directory-rename-capability-probe.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-guarded-provisioning.mjs ./scripts/jairo-business-guarded-provisioning.mjs
+COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-provisioning-preview.mjs ./scripts/prepare-jairo-business-provisioning-preview.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-entitlement-snapshot.mjs ./scripts/prepare-jairo-business-entitlement-snapshot.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-whatsapp-guarded-correction.mjs ./scripts/jairo-whatsapp-guarded-correction.mjs
 COPY --from=builder /repo/app/web/shared/business-vsl-poster-contract.mjs ./shared/business-vsl-poster-contract.mjs
