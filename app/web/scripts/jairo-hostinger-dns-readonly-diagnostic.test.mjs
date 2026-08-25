@@ -50,3 +50,16 @@ test("reports network errors and fails closed when the token is absent", async (
   assert.equal(network.category, "NETWORK_ERROR");
   await assert.rejects(() => diagnoseHostingerDns({ env: {}, fetchImplementation: async () => jsonResponse([]) }), /HOSTINGER_API_TOKEN_MISSING/);
 });
+
+test("blocks a runtime base URL that differs from the official Hostinger API without calling it", async () => {
+  let called = false;
+  const result = await diagnoseHostingerDns({
+    env: { ...env, HOSTINGER_API_BASE_URL: "https://example.invalid" },
+    fetchImplementation: async () => { called = true; return jsonResponse([]); }
+  });
+  assert.equal(called, false);
+  assert.equal(result.category, "BASE_URL_MISMATCH");
+  assert.equal(result.providerCall, "NONE");
+  assert.equal(result.configuredBaseUrlMatchesOfficial, false);
+  assert.equal(JSON.stringify(result).includes("example.invalid"), false);
+});

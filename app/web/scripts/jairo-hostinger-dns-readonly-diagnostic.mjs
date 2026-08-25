@@ -47,6 +47,19 @@ export async function diagnoseHostingerDns({ fetchImplementation = globalThis.fe
   const token = env.HOSTINGER_API_TOKEN?.trim();
   if (!token) throw new Error("HOSTINGER_API_TOKEN_MISSING");
   const baseUrl = normalizeBaseUrl(env.HOSTINGER_API_BASE_URL);
+  if (baseUrl !== DEFAULT_BASE_URL) {
+    return {
+      requestId: REQUEST_ID,
+      mode: "READ_ONLY_PROVIDER_DIAGNOSTIC",
+      changed: false,
+      providerCall: "NONE",
+      category: "BASE_URL_MISMATCH",
+      httpStatus: null,
+      configuredBaseUrlMatchesOfficial: false,
+      secretsExposed: false,
+      writesMade: false
+    };
+  }
   const endpoint = `${baseUrl}/api/dns/v1/zones/${ZONE}`;
   let response;
   try {
@@ -64,6 +77,7 @@ export async function diagnoseHostingerDns({ fetchImplementation = globalThis.fe
       providerCall: "GET_ONLY",
       category: "NETWORK_ERROR",
       httpStatus: null,
+      configuredBaseUrlMatchesOfficial: true,
       secretsExposed: false,
       writesMade: false
     };
@@ -78,6 +92,7 @@ export async function diagnoseHostingerDns({ fetchImplementation = globalThis.fe
     providerCall: "GET_ONLY",
     category,
     httpStatus: response.status,
+    configuredBaseUrlMatchesOfficial: true,
     responseIsJson: /^application\/json(?:;|$)/i.test(contentType),
     secretsExposed: false,
     writesMade: false

@@ -3,6 +3,7 @@
 Implemented a production-safe, GET-only Hostinger DNS diagnostic for the retained Jairo Business provisioning incident.
 
 - Calls only the exact Hostinger zone read endpoint.
+- Blocks before network access if the runtime base URL differs from Hostinger's official API base.
 - Emits a redacted HTTP category without response body, token or unrelated DNS values.
 - On HTTP 200, reports only whether the approved `negocio` A record exists and matches the authoritative IPv4.
 - Performs no local or provider writes and does not read or mutate provisioning target, claim or journal.
@@ -10,7 +11,7 @@ Implemented a production-safe, GET-only Hostinger DNS diagnostic for the retaine
 
 Verification:
 
-- Focused diagnostic contract: PASS 5/5.
+- Focused diagnostic contract: PASS 6/6.
 - Hostinger-only regression: PASS 26/26.
 - Guarded resume regression: PASS 2/2.
 - ESLint `--no-ignore --max-warnings=0`: PASS.
