@@ -20,5 +20,7 @@ Verification:
 - Dependency audit reported 12 pre-existing findings; dependencies were not changed.
 
 Branch: `codex/CDX-20260825-005-hostinger-dns-readonly-diagnostic`.
+Commits: `68bf631b8564e918aa9b6b23d70d85c175088dda`, `08061c531017f33ccd9c3f335d796bee97a00dff`.
+PR: [#172](https://github.com/JairoPNT/partnerHub/pull/172), OPEN, CLEAN and MERGEABLE at handoff.
 
 No EasyPanel command, provider write, DNS mutation, provisioning resume, cleanup or production operation was executed.
