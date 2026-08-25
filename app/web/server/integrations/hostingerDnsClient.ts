@@ -5,13 +5,18 @@ import { z } from "zod";
 const hostnameSchema = z.string().trim().toLowerCase().regex(/^(?:[a-z0-9-]+\.)+[a-z]{2,63}$/);
 const ipv4Schema = z.string().trim().refine((value) => isIP(value) === 4);
 const dnsRecordSchema = z.object({
-  id: z.string().min(1),
   type: z.literal("A"),
   name: hostnameSchema,
   content: ipv4Schema,
   ttl: z.number().int().positive().optional()
 }).passthrough();
-const dnsCollectionSchema = z.array(dnsRecordSchema);
+const zoneEntrySchema = z.object({
+  name: z.string().trim().min(1),
+  type: z.string().trim().min(1),
+  ttl: z.number().int().positive().optional(),
+  records: z.array(z.object({ content: z.string().trim().min(1), is_disabled: z.boolean().optional() }).passthrough())
+}).passthrough();
+const zoneSchema = z.array(zoneEntrySchema);
 
 export type HostingerDnsRecord = z.infer<typeof dnsRecordSchema>;
 export type HostingerEnsureDnsResult = { state: "EXISTING" | "CREATED"; record: HostingerDnsRecord };
@@ -51,7 +56,7 @@ export function createHostingerDnsClient(
 
   async function request(zone: string, init?: RequestInit) {
     const domain = hostnameSchema.parse(zone);
-    const response = await fetchImplementation(`${root}/api/dns/v1/zones/${encodeURIComponent(domain)}/records`, {
+    const response = await fetchImplementation(`${root}/api/dns/v1/zones/${encodeURIComponent(domain)}`, {
       ...init,
       headers: {
         Accept: "application/json",
@@ -69,9 +74,21 @@ export function createHostingerDnsClient(
 
   async function list(zone: string) {
     const response = await request(zone);
-    const parsed = dnsCollectionSchema.safeParse(await json(response));
+    const domain = hostnameSchema.parse(zone);
+    const parsed = zoneSchema.safeParse(await json(response));
     if (!parsed.success) throw new HostingerDnsError("HOSTINGER_DNS_INVALID_RESPONSE", "Hostinger returned invalid DNS records.", response.status);
-    return parsed.data;
+    const records: HostingerDnsRecord[] = [];
+    for (const entry of parsed.data) {
+      if (entry.type !== "A") continue;
+      const fqdn = entry.name === "@" ? domain : entry.name.endsWith(`.${domain}`) ? entry.name : `${entry.name}.${domain}`;
+      for (const record of entry.records) {
+        if (record.is_disabled) continue;
+        const candidate = dnsRecordSchema.safeParse({ type: "A", name: fqdn, content: record.content, ttl: entry.ttl });
+        if (!candidate.success) throw new HostingerDnsError("HOSTINGER_DNS_INVALID_RESPONSE", "Hostinger returned an invalid A record.", response.status);
+        records.push(candidate.data);
+      }
+    }
+    return records;
   }
 
   async function ensureARecord(zone: string, hostname: string, ipv4: string): Promise<HostingerEnsureDnsResult> {
@@ -84,12 +101,11 @@ export function createHostingerDnsClient(
       throw new HostingerDnsError("HOSTINGER_DNS_CONFLICT", `Hostinger DNS has a conflicting A record for ${name}.`);
     }
     if (matches[0]) return { state: "EXISTING", record: matches[0] };
-    const response = await request(domain, { method: "POST", body: JSON.stringify({ type: "A", name, content }) });
-    const parsed = dnsRecordSchema.safeParse(await json(response));
-    if (!parsed.success || parsed.data.name !== name || parsed.data.content !== content) {
-      throw new HostingerDnsError("HOSTINGER_DNS_INVALID_RESPONSE", "Hostinger returned an invalid created DNS record.", response.status);
-    }
-    return { state: "CREATED", record: parsed.data };
+    const relativeName = name === domain ? "@" : name.slice(0, -(domain.length + 1));
+    await request(domain, { method: "PUT", body: JSON.stringify({ overwrite: false, zone: [{ type: "A", name: relativeName, records: [{ content }], ttl: 300 }] }) });
+    const created = (await list(domain)).filter((record) => record.type === "A" && record.name === name && record.content === content);
+    if (created.length !== 1) throw new HostingerDnsError("HOSTINGER_DNS_INVALID_RESPONSE", "Hostinger DNS write was not confirmed by readback.");
+    return { state: "CREATED", record: created[0] };
   }
 
   return { ensureARecord, list };
