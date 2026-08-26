@@ -4,12 +4,12 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
 
-import { createSubdomainProvisioningService, ProvisioningError, provisionSubdomainInputSchema } from "./subdomainProvisioningService.ts";
+import { createHostingerReadinessProbe, createSubdomainProvisioningService, ProvisioningError, provisionSubdomainInputSchema } from "./subdomainProvisioningService.ts";
 
 const ownerKey = "cb841c76-4f50-4ee7-90bb-021094e5c1f7";
 const website = { username: "u658137804", domain: "jairopinto.pro", root_directory: "/hostinger/root-from-api" };
 const subdomain = (label: "producto" | "negocio" | "brand") => ({ state: "EXISTING" as const, subdomain: { username: "u658137804", domain: `${label}.jairopinto.pro`, parent_domain: "jairopinto.pro", root_directory: `/hostinger/${label}-from-api`, subdomain: label } });
-const dnsResult = (host: string) => ({ state: "EXISTING" as const, record: { id: `dns-${host}`, type: "A" as const, name: host, content: "82.29.157.103" } });
+const dnsResult = (host: string) => ({ state: "EXISTING" as const, routingMode: "DIRECT_A" as const, record: { id: `dns-${host}`, type: "A" as const, name: host, content: "82.29.157.103" } });
 async function isolated(run: (directory: string) => Promise<void>) { const directory = await mkdtemp(join(tmpdir(), "hostinger-only-")); try { await run(directory); } finally { await rm(directory, { recursive: true, force: true }); } }
 
 function service(directory: string, options: { dnsReady?: boolean; sslReady?: boolean; fail?: boolean } = {}) {
@@ -41,6 +41,47 @@ test("maps Plan 360 product and business to isolated Hostinger roots", async () 
   assert.equal(product.publicHost, "producto.jairopinto.pro"); assert.equal(product.remoteRoot, "/hostinger/producto-from-api");
   assert.equal(business.publicHost, "negocio.jairopinto.pro"); assert.equal(business.remoteRoot, "/hostinger/negocio-from-api");
 }));
+
+test("accepts an exact Hostinger ALIAS route and passes its mode to readiness without DNS mutation", async () => isolated(async (directory) => {
+  const readiness: string[] = [];
+  const instance = createSubdomainProvisioningService({
+    storageDirectory: directory,
+    hostingerClient: { ensure: async () => subdomain("negocio") },
+    dnsClient: {
+      ensureARecord: async (_zone, host) => ({
+        state: "EXISTING_ALIAS",
+        routingMode: "HOSTINGER_ALIAS",
+        record: { id: `hostinger-alias-${host}`, type: "ALIAS", name: host }
+      })
+    },
+    readinessProbe: {
+      dnsResolves: async (_host, _ipv4, mode) => { readiness.push(`dns:${mode}`); return true; },
+      httpsReady: async (_host, mode) => { readiness.push(`https:${mode}`); return true; }
+    }
+  });
+  const target = await instance.provision({ ownerKey, siteId: "jairo-business", ecosystemType: "BUSINESS", rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" });
+  assert.equal(target.provisioningState, "READY");
+  assert.equal(target.publicationState, "PENDING");
+  assert.equal(target.dnsRecordId, "hostinger-alias-negocio.jairopinto.pro");
+  assert.deepEqual(readiness, ["dns:HOSTINGER_ALIAS", "https:HOSTINGER_ALIAS"]);
+}));
+
+test("requires Hostinger CDN HTTPS while allowing provider-managed ALIAS addresses", async () => {
+  const responses = [
+    new Response("", { status: 200, headers: { server: "hcdn" } }),
+    new Response("", { status: 200, headers: { server: "other" } }),
+    new Response("", { status: 500, headers: { server: "hcdn" } })
+  ];
+  const probe = createHostingerReadinessProbe({
+    resolve4: async () => ["2.57.91.138", "84.32.84.169"],
+    fetch: async () => responses.shift()!
+  });
+  assert.equal(await probe.dnsResolves("negocio.jairopinto.pro", "82.29.157.103", "HOSTINGER_ALIAS"), true);
+  assert.equal(await probe.dnsResolves("negocio.jairopinto.pro", "82.29.157.103", "DIRECT_A"), false);
+  assert.equal(await probe.httpsReady("negocio.jairopinto.pro", "HOSTINGER_ALIAS"), true);
+  assert.equal(await probe.httpsReady("negocio.jairopinto.pro", "HOSTINGER_ALIAS"), false);
+  assert.equal(await probe.httpsReady("negocio.jairopinto.pro", "HOSTINGER_ALIAS"), false);
+});
 
 test("keeps rootEcosystemType as redirect metadata without turning the target into apex", async () => isolated(async (directory) => {
   const { instance, calls } = service(directory);
