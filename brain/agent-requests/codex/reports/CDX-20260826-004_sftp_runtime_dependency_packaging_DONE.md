@@ -25,3 +25,7 @@ Production continuation:
 
 Branch: `codex/CDX-20260826-004-sftp-runtime-dependency-packaging`.
 
+## Post-deploy correction
+
+The bundled dependency loaded in production but `ssh2` then failed during module initialization because bundling changed its CommonJS `__dirname` semantics. No SFTP connection or remote mutation occurred. CDX-20260826-005 supersedes the bundle strategy with an isolated, lockfile-pinned runtime dependency tree and restores the original module files.
+

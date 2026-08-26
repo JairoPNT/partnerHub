@@ -7,6 +7,13 @@ WORKDIR /repo/app/web
 COPY app/web/package.json app/web/package-lock.json ./
 RUN npm ci
 
+FROM base AS sftp-runtime-deps
+WORKDIR /repo/sftp-runtime
+COPY app/web/runtime-deps/sftp/package.json app/web/runtime-deps/sftp/package-lock.json ./
+COPY app/web/runtime-deps/sftp/smoke.mjs ./smoke.mjs
+RUN npm ci --omit=dev --omit=optional --ignore-scripts
+RUN node smoke.mjs
+
 FROM base AS builder
 WORKDIR /repo
 COPY --from=deps /repo/app/web/node_modules ./app/web/node_modules
@@ -17,8 +24,6 @@ COPY plantillas-de-pagina/business/config.js ./runtime-assets/business-config.js
 WORKDIR /repo/app/web
 RUN npm run build
 RUN npx esbuild server/runtime/jairoBusinessInProcessProvisioner.ts --bundle --platform=node --format=esm --target=node20 --outfile=/repo/runtime-assets/jairo-business-in-process-provisioner.mjs
-RUN npx esbuild scripts/guarded-ecosystem-publication.mjs --bundle --platform=node --format=esm --target=node20 --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" --outfile=/repo/runtime-assets/guarded-ecosystem-publication.mjs
-RUN npx esbuild scripts/sftp-directory-rename-capability-probe.mjs --bundle --platform=node --format=esm --target=node20 --banner:js="import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);" --outfile=/repo/runtime-assets/sftp-directory-rename-capability-probe.mjs
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -32,6 +37,7 @@ COPY --from=builder /repo/app/web/package-lock.json ./package-lock.json
 COPY --from=builder /repo/app/web/public ./public
 COPY --from=builder /repo/app/web/.next/standalone ./
 COPY --from=builder /repo/app/web/.next/static ./.next/static
+COPY --from=sftp-runtime-deps /repo/sftp-runtime/node_modules ./scripts/node_modules
 COPY --from=builder /repo/plantillas-de-pagina/producto ./plantillas-de-pagina/producto
 COPY --from=builder /repo/runtime-assets/personal-brand-config.js ./runtime-assets/personal-brand-config.js
 COPY --from=builder /repo/runtime-assets/business-config.js ./runtime-assets/business-config.js
@@ -42,8 +48,8 @@ COPY --from=builder /repo/app/web/scripts/jairo-source-identity-guarded-apply.mj
 COPY --from=builder /repo/app/web/scripts/jairo-business-source-generation-dry-run.mjs ./scripts/jairo-business-source-generation-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-source-guarded-apply.mjs ./scripts/jairo-business-source-guarded-apply.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-publishing-preflight.mjs ./scripts/jairo-business-publishing-preflight.mjs
-COPY --from=builder /repo/runtime-assets/guarded-ecosystem-publication.mjs ./scripts/guarded-ecosystem-publication.mjs
-COPY --from=builder /repo/runtime-assets/sftp-directory-rename-capability-probe.mjs ./scripts/sftp-directory-rename-capability-probe.mjs
+COPY --from=builder /repo/app/web/scripts/guarded-ecosystem-publication.mjs ./scripts/guarded-ecosystem-publication.mjs
+COPY --from=builder /repo/app/web/scripts/sftp-directory-rename-capability-probe.mjs ./scripts/sftp-directory-rename-capability-probe.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-sftp-capability-preview.mjs ./scripts/prepare-jairo-business-sftp-capability-preview.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-guarded-provisioning.mjs ./scripts/jairo-business-guarded-provisioning.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-provisioning-preview.mjs ./scripts/prepare-jairo-business-provisioning-preview.mjs

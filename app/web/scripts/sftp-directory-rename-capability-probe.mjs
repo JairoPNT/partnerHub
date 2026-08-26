@@ -1,8 +1,9 @@
 import { Buffer } from "node:buffer";
 import { createHash, randomUUID } from "node:crypto";
 import { access, readFile, rename, writeFile } from "node:fs/promises";
-import { basename, posix, resolve, sep } from "node:path";
+import { posix, resolve, sep } from "node:path";
 import process from "node:process";
+import { pathToFileURL } from "node:url";
 import { createSftpAdapter } from "./guarded-ecosystem-publication.mjs";
 
 export const PROBE_MODE = "PROBE_SFTP_DIRECTORY_RENAME_CAPABILITY";
@@ -146,4 +147,4 @@ async function main() {
     outputDirectory: arg("output-dir"), mode, confirmation: arg("confirm"), expectedPlanHash: arg("expected-plan-hash"), adapterFactory: () => createSftpAdapter(process.env) });
   process.stdout.write(json(result)); if (result.blocked) process.exitCode = 2;
 }
-if (process.argv[1] && basename(resolve(process.argv[1])) === "sftp-directory-rename-capability-probe.mjs") main().catch((error) => { process.stderr.write(json({ error: error.message })); process.exitCode = 1; });
+if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main().catch((error) => { process.stderr.write(json({ error: error.message })); process.exitCode = 1; });

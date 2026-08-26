@@ -1,58 +1,30 @@
 import assert from "node:assert/strict";
-import { mkdtemp, readFile, rm } from "node:fs/promises";
-import { builtinModules } from "node:module";
-import { tmpdir } from "node:os";
+import { readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { spawnSync } from "node:child_process";
 import process from "node:process";
 import test from "node:test";
-import { build } from "esbuild";
 
 const root = resolve(import.meta.dirname, "../../..");
 const webRoot = resolve(import.meta.dirname, "..");
-const banner = "import { createRequire } from 'node:module'; const require = createRequire(import.meta.url);";
-const allowedOptionalImports = new Set(["cpu-features", "./crypto/build/Release/sshcrypto.node"]);
 
-test("Docker builds self-contained SFTP maintenance entrypoints", async () => {
+test("Docker installs an isolated locked SFTP runtime and validates module semantics", async () => {
   const dockerfile = await readFile(join(root, "Dockerfile"), "utf8");
-  for (const name of ["guarded-ecosystem-publication.mjs", "sftp-directory-rename-capability-probe.mjs"]) {
-    assert.ok(dockerfile.includes(`esbuild scripts/${name}`));
-    assert.ok(dockerfile.includes(`--outfile=/repo/runtime-assets/${name}`));
-    assert.ok(dockerfile.includes(`COPY --from=builder /repo/runtime-assets/${name} ./scripts/${name}`));
-  }
+  assert.match(dockerfile, /FROM base AS sftp-runtime-deps/);
+  assert.match(dockerfile, /npm ci --omit=dev --omit=optional --ignore-scripts/);
+  assert.match(dockerfile, /RUN node smoke\.mjs/);
+  assert.match(dockerfile, /COPY --from=sftp-runtime-deps \/repo\/sftp-runtime\/node_modules \.\/scripts\/node_modules/);
+  assert.doesNotMatch(dockerfile, /esbuild scripts\/(guarded-ecosystem-publication|sftp-directory-rename-capability-probe)\.mjs/);
 
-  const outputDirectory = await mkdtemp(join(tmpdir(), "partnerhub-sftp-runtime-"));
-  try {
-    for (const name of ["guarded-ecosystem-publication.mjs", "sftp-directory-rename-capability-probe.mjs"]) {
-      const outfile = join(outputDirectory, name);
-      const result = await build({
-        entryPoints: [join(webRoot, "scripts", name)],
-        outfile,
-        bundle: true,
-        platform: "node",
-        format: "esm",
-        target: "node20",
-        banner: { js: banner },
-        metafile: true,
-      });
-      const externalImports = Object.values(result.metafile.outputs)
-        .flatMap((output) => output.imports)
-        .filter((entry) => entry.external)
-        .filter((entry) => !entry.path.startsWith("node:"))
-        .filter((entry) => !builtinModules.includes(entry.path))
-        .filter((entry) => !allowedOptionalImports.has(entry.path));
-      assert.deepEqual(externalImports, [], `${name} must not require runtime npm packages`);
-    }
+  const runtimePackage = JSON.parse(await readFile(join(webRoot, "runtime-deps", "sftp", "package.json"), "utf8"));
+  const runtimeLock = JSON.parse(await readFile(join(webRoot, "runtime-deps", "sftp", "package-lock.json"), "utf8"));
+  assert.deepEqual(runtimePackage.dependencies, { "ssh2-sftp-client": "12.1.1" });
+  assert.equal(runtimeLock.packages[""].dependencies["ssh2-sftp-client"], "12.1.1");
+  assert.equal(runtimeLock.packages["node_modules/ssh2-sftp-client"].version, "12.1.1");
 
-    const probe = join(outputDirectory, "sftp-directory-rename-capability-probe.mjs");
-    const execution = spawnSync(process.execPath, [probe, "--manifest=missing.json", "--mode=PREVIEW"], {
-      cwd: outputDirectory,
-      encoding: "utf8",
-    });
-    assert.equal(execution.status, 1);
-    assert.equal((execution.stderr.match(/ENOENT/g) ?? []).length, 1, "bundled probe must execute exactly one CLI main");
-    assert.doesNotMatch(execution.stderr, /Cannot find package 'ssh2-sftp-client'/);
-  } finally {
-    await rm(outputDirectory, { recursive: true, force: true });
-  }
+  const execution = spawnSync(process.execPath, [join(webRoot, "runtime-deps", "sftp", "smoke.mjs")], {
+    encoding: "utf8",
+  });
+  assert.equal(execution.status, 0, execution.stderr);
+  assert.deepEqual(JSON.parse(execution.stdout), { status: "SFTP_RUNTIME_READY", providerCallsMade: false });
 });
