@@ -5,7 +5,7 @@ import { resolve, sep } from "node:path";
 
 import { z } from "zod";
 
-import type { HostingerEnsureDnsResult } from "../integrations/hostingerDnsClient.ts";
+import type { HostingerDnsRoutingMode, HostingerEnsureDnsResult } from "../integrations/hostingerDnsClient.ts";
 import type { HostingerEnsureSubdomainResult, HostingerWebsite } from "../integrations/hostingerSubdomainClient.ts";
 import { getPartnerPublicHost, PARTNER_HOST_LABELS } from "#partner-hostname-contract";
 
@@ -74,7 +74,10 @@ type HostingerClient = {
   getWebsite?(parentDomain: string): Promise<HostingerWebsite>;
 };
 type DnsClient = { ensureARecord(zone: string, hostname: string, ipv4: string): Promise<HostingerEnsureDnsResult> };
-type ReadinessProbe = { dnsResolves(hostname: string, ipv4: string): Promise<boolean>; httpsReady(hostname: string): Promise<boolean> };
+type ReadinessProbe = {
+  dnsResolves(hostname: string, ipv4: string, routingMode: HostingerDnsRoutingMode): Promise<boolean>;
+  httpsReady(hostname: string, routingMode: HostingerDnsRoutingMode): Promise<boolean>;
+};
 type Dependencies = { hostingerClient: HostingerClient; dnsClient: DnsClient; readinessProbe?: ReadinessProbe; storageDirectory?: string; now?: () => Date };
 
 export class ProvisioningError extends Error {
@@ -142,12 +145,34 @@ function publicHost(input: ProvisionSubdomainInput) { return getPartnerPublicHos
 function providerCode(error: unknown) { return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : "PROVISIONING_PROVIDER_FAILED"; }
 function providerStatus(error: unknown) { return error && typeof error === "object" && "status" in error && typeof error.status === "number" && error.status >= 100 && error.status <= 599 ? error.status : null; }
 
+export function createHostingerReadinessProbe(overrides: {
+  resolve4?: (hostname: string) => Promise<string[]>;
+  fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+} = {}): ReadinessProbe {
+  const resolve4 = overrides.resolve4 ?? ((hostname: string) => dns.resolve4(hostname));
+  const fetchImplementation = overrides.fetch ?? fetch;
+  return {
+    dnsResolves: async (host, ip, routingMode) => {
+      try {
+        const addresses = await resolve4(host);
+        return routingMode === "HOSTINGER_ALIAS" ? addresses.length > 0 : addresses.includes(ip);
+      } catch { return false; }
+    },
+    httpsReady: async (host, routingMode) => {
+      try {
+        const response = await fetchImplementation(`https://${host}/`, { redirect: "manual" });
+        if (routingMode === "HOSTINGER_ALIAS") {
+          return response.status >= 200 && response.status < 400 && response.headers.get("server")?.toLowerCase().includes("hcdn") === true;
+        }
+        return true;
+      } catch { return false; }
+    }
+  };
+}
+
 export function createSubdomainProvisioningService(deps: Dependencies) {
   const root = resolve(deps.storageDirectory ?? defaultStorageDirectory()); const now = deps.now ?? (() => new Date());
-  const probe = deps.readinessProbe ?? {
-    dnsResolves: async (host, ip) => { try { return (await dns.resolve4(host)).includes(ip); } catch { return false; } },
-    httpsReady: async (host) => { try { await fetch(`https://${host}/`, { redirect: "manual" }); return true; } catch { return false; } }
-  };
+  const probe = deps.readinessProbe ?? createHostingerReadinessProbe();
   async function save(target: PublishingTarget) { return persistTarget(root, publishingTargetSchema.parse(target)); }
   const get = (siteId: string) => getPublishingTarget(siteId, root); const list = () => listPublishingTargets(root);
   async function update(target: PublishingTarget, changes: Partial<PublishingTarget>) { return save({ ...target, ...changes, updatedAt: now().toISOString() }); }
@@ -173,9 +198,9 @@ export function createSubdomainProvisioningService(deps: Dependencies) {
       const record = await deps.dnsClient.ensureARecord(input.baseDomain, target.publicHost, input.ipv4);
       target = await update(target, { dnsRecordId: record.record.id, dnsState: "CREATED", provisioningState: "DNS_PENDING" });
       const checked = now().toISOString();
-      if (!(await probe.dnsResolves(target.publicHost, input.ipv4))) return update(target, { provisioningState: "DNS_PENDING", lastCheckedAt: checked });
+      if (!(await probe.dnsResolves(target.publicHost, input.ipv4, record.routingMode))) return update(target, { provisioningState: "DNS_PENDING", lastCheckedAt: checked });
       target = await update(target, { dnsState: "RESOLVED", provisioningState: "SSL_PENDING", lastCheckedAt: checked });
-      if (!(await probe.httpsReady(target.publicHost))) return target;
+      if (!(await probe.httpsReady(target.publicHost, record.routingMode))) return target;
       return update(target, { sslState: "READY", provisioningState: "READY", publicationState: "PENDING", lastCheckedAt: now().toISOString(), lastErrorCode: undefined });
     } catch (error) {
       if (error instanceof ProvisioningError) throw error;
