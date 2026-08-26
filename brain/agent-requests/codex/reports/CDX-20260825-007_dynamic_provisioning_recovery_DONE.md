@@ -23,3 +23,13 @@ Verification:
 Branch: `codex/CDX-20260825-007-dynamic-provisioning-recovery`.
 
 No EasyPanel, Hostinger write, DNS mutation, provisioning recovery, SFTP or publication was executed from this ticket.
+
+## Production outcome — 2026-08-26
+
+- Recovery plan: `7a21a55aa54f5c620feadc12f56ca29b70b0678d3c68d0d410daa0bbd1272ea3`.
+- Outcome: `APPLIED`, `changed:true`, `blocked:false`.
+- Final target hash: `1534dcf35cf7b4d7b2f6ea97aefa87a9db195545bcc7002d8eef5a3b8f04ae5b`.
+- Final state: `READY/PENDING`; provider-derived remote root present.
+- Retained claim removed only after terminal verification.
+- Terminal journal applied at `2026-08-26T14:12:56.026Z`.
+- The accepted route is the exact Hostinger-managed ALIAS contract delivered by PR #176; no ALIAS deletion or replacement occurred.
