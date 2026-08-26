@@ -40,6 +40,7 @@
     "test:jairo-business-publishing-preflight": "node --test scripts/jairo-business-publishing-preflight.test.mjs",
     "test:guarded-ecosystem-publication": "node --test scripts/guarded-ecosystem-publication.test.mjs",
     "test:sftp-directory-rename-capability-probe": "node --test scripts/sftp-directory-rename-capability-probe.test.mjs",
+    "test:sftp-runtime-packaging": "node --test scripts/sftp-runtime-packaging.test.mjs",
     "test:jairo-business-sftp-capability-preview": "node --test scripts/prepare-jairo-business-sftp-capability-preview.test.mjs",
     "test:jairo-business-guarded-provisioning": "node --test scripts/jairo-business-guarded-provisioning.test.mjs",
     "test:jairo-business-provisioning-preview-inputs": "node --test scripts/prepare-jairo-business-provisioning-preview.test.mjs",
