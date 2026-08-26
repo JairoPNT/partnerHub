@@ -3,7 +3,6 @@ import { Buffer } from "node:buffer";
 import { access, mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { basename, dirname, posix, relative, resolve, sep } from "node:path";
 import process from "node:process";
-import { pathToFileURL } from "node:url";
 import vm from "node:vm";
 
 export const APPLY_MODE = "APPLY_GUARDED_ECOSYSTEM_PUBLICATION";
@@ -265,4 +264,4 @@ async function main() {
     expectedPlanHash: arg("expected-plan-hash"), adapter, verifyPublic: verifyPublicPackage }); process.stdout.write(json(result)); if (result.blocked) process.exitCode = 2;
   } finally { await adapter?.close(); }
 }
-if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) main().catch((error) => { process.stderr.write(json({ error: error.message })); process.exitCode = 1; });
+if (process.argv[1] && basename(resolve(process.argv[1])) === "guarded-ecosystem-publication.mjs") main().catch((error) => { process.stderr.write(json({ error: error.message })); process.exitCode = 1; });
