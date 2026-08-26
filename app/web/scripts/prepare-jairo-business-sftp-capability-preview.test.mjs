@@ -50,6 +50,18 @@ test("creates the exact manifest and executes PREVIEW without an adapter or prov
   assert.equal("password" in manifest.allowlist[0], false);
 });
 
+test("creates the fixed local input parent when it is absent", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "business-sftp-preview-parent-"));
+  const sources = resolve(root, "sources");
+  const inputParent = resolve(root, "missing", "publication-inputs");
+  await mkdir(resolve(sources, ".publishing-targets"), { recursive: true });
+  await writeFile(resolve(sources, ".publishing-targets", "jairo-pinto-business.json"), `${JSON.stringify(target, null, 2)}\n`);
+  const result = await prepareJairoBusinessSftpCapabilityPreview({ sourceDirectory: sources, inputParent, environment });
+  assert.equal(result.changed, true);
+  assert.equal(result.preview.blocked, false);
+  assert.equal(JSON.parse(await readFile(resolve(result.inputs.directory, "manifest.json"))).allowlist[0].siteId, target.siteId);
+});
+
 test("reuses only the exact manifest and preserves the reviewed plan hash", async () => {
   const fx = await fixture();
   const first = await prepareJairoBusinessSftpCapabilityPreview({ sourceDirectory: fx.sources, inputParent: fx.inputParent, environment });
