@@ -73,6 +73,7 @@ export async function prepareJairoBusinessSftpCapabilityPreview(options = {}) {
   const target = validateTarget(targetBytes);
 
   let created = false;
+  await mkdir(inputParent, { recursive: true, mode: 0o700 });
   if (await exists(stagingDirectory)) throw new Error("CAPABILITY_STAGING_RESIDUE");
   if (await exists(inputDirectory)) {
     await assertReusableInput(inputDirectory);
