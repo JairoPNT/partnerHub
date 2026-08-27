@@ -19,6 +19,7 @@ WORKDIR /repo
 COPY --from=deps /repo/app/web/node_modules ./app/web/node_modules
 COPY app/web ./app/web
 COPY plantillas-de-pagina/producto ./plantillas-de-pagina/producto
+COPY plantillas-de-pagina/business ./plantillas-de-pagina/business
 COPY plantillas-de-pagina/personal-brand/config.js ./runtime-assets/personal-brand-config.js
 COPY plantillas-de-pagina/business/config.js ./runtime-assets/business-config.js
 WORKDIR /repo/app/web
@@ -40,6 +41,7 @@ COPY --from=builder /repo/app/web/.next/standalone ./
 COPY --from=builder /repo/app/web/.next/static ./.next/static
 COPY --from=sftp-runtime-deps /repo/sftp-runtime/node_modules ./scripts/node_modules
 COPY --from=builder /repo/plantillas-de-pagina/producto ./plantillas-de-pagina/producto
+COPY --from=builder /repo/plantillas-de-pagina/business ./plantillas-de-pagina/business
 COPY --from=builder /repo/runtime-assets/personal-brand-config.js ./runtime-assets/personal-brand-config.js
 COPY --from=builder /repo/runtime-assets/business-config.js ./runtime-assets/business-config.js
 COPY --from=builder /repo/runtime-assets/jairo-business-in-process-provisioner.mjs ./runtime-assets/jairo-business-in-process-provisioner.mjs
@@ -54,6 +56,7 @@ COPY --from=builder /repo/app/web/scripts/guarded-ecosystem-publication.mjs ./sc
 COPY --from=builder /repo/app/web/scripts/sftp-directory-rename-capability-probe.mjs ./scripts/sftp-directory-rename-capability-probe.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-sftp-capability-preview.mjs ./scripts/prepare-jairo-business-sftp-capability-preview.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-publication-preview.mjs ./scripts/prepare-jairo-business-publication-preview.mjs
+COPY --from=builder /repo/app/web/scripts/jairo-business-master-package.mjs ./scripts/jairo-business-master-package.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-guarded-provisioning.mjs ./scripts/jairo-business-guarded-provisioning.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-provisioning-preview.mjs ./scripts/prepare-jairo-business-provisioning-preview.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-provisioning-recovery-diagnostic.mjs ./scripts/jairo-business-provisioning-recovery-diagnostic.mjs
