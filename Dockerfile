@@ -24,6 +24,7 @@ COPY plantillas-de-pagina/business/config.js ./runtime-assets/business-config.js
 WORKDIR /repo/app/web
 RUN npm run build
 RUN npx esbuild server/runtime/jairoBusinessInProcessProvisioner.ts --bundle --platform=node --format=esm --target=node20 --outfile=/repo/runtime-assets/jairo-business-in-process-provisioner.mjs
+RUN npx esbuild server/runtime/jairoBusinessPackageGenerator.ts --bundle --platform=node --format=esm --target=node20 --alias:server-only=./server/runtime/serverOnlyRuntimeShim.mjs --outfile=/repo/runtime-assets/jairo-business-package-generator.mjs
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -42,6 +43,7 @@ COPY --from=builder /repo/plantillas-de-pagina/producto ./plantillas-de-pagina/p
 COPY --from=builder /repo/runtime-assets/personal-brand-config.js ./runtime-assets/personal-brand-config.js
 COPY --from=builder /repo/runtime-assets/business-config.js ./runtime-assets/business-config.js
 COPY --from=builder /repo/runtime-assets/jairo-business-in-process-provisioner.mjs ./runtime-assets/jairo-business-in-process-provisioner.mjs
+COPY --from=builder /repo/runtime-assets/jairo-business-package-generator.mjs ./runtime-assets/jairo-business-package-generator.mjs
 COPY --from=builder /repo/app/web/scripts/claudia-source-identity-dry-run.mjs ./scripts/claudia-source-identity-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-source-identity-dry-run.mjs ./scripts/jairo-source-identity-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-source-identity-guarded-apply.mjs ./scripts/jairo-source-identity-guarded-apply.mjs
@@ -51,6 +53,7 @@ COPY --from=builder /repo/app/web/scripts/jairo-business-publishing-preflight.mj
 COPY --from=builder /repo/app/web/scripts/guarded-ecosystem-publication.mjs ./scripts/guarded-ecosystem-publication.mjs
 COPY --from=builder /repo/app/web/scripts/sftp-directory-rename-capability-probe.mjs ./scripts/sftp-directory-rename-capability-probe.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-sftp-capability-preview.mjs ./scripts/prepare-jairo-business-sftp-capability-preview.mjs
+COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-publication-preview.mjs ./scripts/prepare-jairo-business-publication-preview.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-guarded-provisioning.mjs ./scripts/jairo-business-guarded-provisioning.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-provisioning-preview.mjs ./scripts/prepare-jairo-business-provisioning-preview.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-provisioning-recovery-diagnostic.mjs ./scripts/jairo-business-provisioning-recovery-diagnostic.mjs
