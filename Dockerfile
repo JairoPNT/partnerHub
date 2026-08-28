@@ -57,6 +57,7 @@ COPY --from=builder /repo/app/web/scripts/sftp-directory-rename-capability-probe
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-sftp-capability-preview.mjs ./scripts/prepare-jairo-business-sftp-capability-preview.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-publication-preview.mjs ./scripts/prepare-jairo-business-publication-preview.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-master-package.mjs ./scripts/jairo-business-master-package.mjs
+COPY --from=builder /repo/app/web/scripts/jairo-business-sftp-capability-renewal.mjs ./scripts/jairo-business-sftp-capability-renewal.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-guarded-provisioning.mjs ./scripts/jairo-business-guarded-provisioning.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-provisioning-preview.mjs ./scripts/prepare-jairo-business-provisioning-preview.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-provisioning-recovery-diagnostic.mjs ./scripts/jairo-business-provisioning-recovery-diagnostic.mjs
