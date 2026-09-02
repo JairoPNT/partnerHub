@@ -4,7 +4,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Ticket
 
-`PH-039 - Deploy recovery integration (ready for PR)`
+`CDX-20260902-005 - Automatic guarded publication worker (ready for PR)`
 
 ## Status Summary
 
@@ -39,6 +39,8 @@ PH-004A Commercial Pricing Update: Approved official commercial rates for MVP la
 PH-004B Product Ecosystem Beta Sales Campaign: CEO direction saved in `brain/business/PH-004B_PRODUCT_ECOSYSTEM_BETA_SALES_CAMPAIGN.md`. Current sales hook focuses only on Ecosistema de Producto at $247.000 COP implementation, first month of administration included during implementation, $59.900 COP/month required after the first implementation month, special meeting-day benefit of 2 waived monthly management months worth $119.800 COP, beta entry price maintained during MVP validation without a public fixed deadline, live demos at jairopinto.pro, yennygarcia.pro, claudiacalero.pro and blancastella.pro, direct transfer/Nequi/Nu/Bancolombia/Wompi payment options, and referral rule of 1 waived month per 2 activated referrals capped at 12 months.
 
 PH-020 Publicacion verificada was implemented in backend MVP on 2026-07-30. Publishing now performs SFTP upload followed by public-domain verification against the saved product page source. Manual verification is available at `POST /api/internal/product-pages/verify`. Verification results are stored under `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`, and `GET /api/internal/product-pages` returns `lastVerification`.
+
+On 2026-09-02 CDX-20260902-005 completed the backend worker that consumes durable publication jobs and automatically regenerates the exact client package from its ecosystem master, creates a fresh SFTP rename capability, performs recoverable atomic publication, verifies public HTTPS assets and records immutable per-plan journals. The job identity now includes the canonical master package hash, so a master update creates a new replication job while duplicate requests for the same version remain idempotent. The branch is tested and awaiting PR/merge; no customer was enqueued or published by the implementation work.
 
 On 2026-08-01 Codex audited and stabilized the 2026-07-31 Antigravity change set. Verification was restored to read-only behavior, public onboarding photo uploads now validate the onboarding token before uploading to R2, proxy host handling was hardened to prefer `Host`, and PH-025 font preset contracts were unified across UI, onboarding schema, lead sync, and generation. Handoff: `brain/session-handoffs/2026-08-01_ANTIGRAVITY_AUDIT_STABILIZATION.md`.
 
@@ -84,6 +86,4 @@ On 2026-08-01 Codex audited and stabilized the 2026-07-31 Antigravity change set
 
 ## Next Step
 
-PH-039 is the active production-recovery ticket. PRs #87-#90 were merged while required PH-036/PH-038 backend files remained untracked in the shared workspace, leaving `origin/main` with unresolved imports and a missing Domains API. New feature work and deployment are paused until the already tested backend files are integrated through a clean recovery PR. No infrastructure mutation is authorized during PH-039.
-
-The broader queue is documented in `brain/PH-036_INCREMENTAL_MULTI_ECOSYSTEM_OPERATIONS_PLAN.md`. Subdomain automation (`PH-036`) and logo media handling (`PH-037`) are independent streams and must not be combined into a mega-task.
+Open and review the CDX-20260902-005 PR. Because EasyPanel autodeploys `main`, merge requires the CEO's explicit release authorization. After deployment, the next separate ticket must connect successful activation/source-change events to authenticated job enqueueing and define a reviewed backfill preview for already active customers; no backfill or production publication is authorized by CDX-20260902-005.
