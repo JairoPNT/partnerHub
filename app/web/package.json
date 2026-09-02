@@ -28,6 +28,7 @@
     "test:wompi-status": "node --experimental-strip-types --test server/services/wompiIntentStatusCore.test.ts",
     "test:business-vsl-poster": "node --experimental-strip-types --test server/services/businessVslPoster.test.ts",
     "test:business-vsl-correlation": "node --experimental-strip-types --test server/services/businessProductHeroCorrelation.test.ts server/services/businessVslPoster.test.ts",
+    "test:business-whatsapp-cta": "node --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test server/services/businessWhatsappCta.test.ts server/services/productPageGenerationBusinessCta.test.ts",
     "test:partner-entitlement": "node --experimental-strip-types --test server/services/partnerEcosystemEntitlementCore.test.ts",
     "test:partner-hostnames": "node --experimental-strip-types --test server/services/partnerHostnameContract.test.ts server/services/partnerEcosystemEntitlementCore.test.ts server/services/subdomainProvisioningService.test.ts server/services/publicationTargetResolver.test.ts server/services/domainInventoryBuilder.test.ts",
     "test:claudia-source-identity-dry-run": "node --test scripts/claudia-source-identity-dry-run.test.mjs",
