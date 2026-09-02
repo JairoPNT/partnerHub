@@ -40,7 +40,9 @@ PH-004B Product Ecosystem Beta Sales Campaign: CEO direction saved in `brain/bus
 
 PH-020 Publicacion verificada was implemented in backend MVP on 2026-07-30. Publishing now performs SFTP upload followed by public-domain verification against the saved product page source. Manual verification is available at `POST /api/internal/product-pages/verify`. Verification results are stored under `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`, and `GET /api/internal/product-pages` returns `lastVerification`.
 
-On 2026-09-02 CDX-20260902-005 completed the backend worker that consumes durable publication jobs and automatically regenerates the exact client package from its ecosystem master, creates a fresh SFTP rename capability, performs recoverable atomic publication, verifies public HTTPS assets and records immutable per-plan journals. The job identity now includes the canonical master package hash, so a master update creates a new replication job while duplicate requests for the same version remain idempotent. The branch is tested and awaiting PR/merge; no customer was enqueued or published by the implementation work.
+On 2026-09-02 CDX-20260902-005 was merged as PR #188 and deployed through EasyPanel. The backend worker consumes durable publication jobs, regenerates the exact client package from its ecosystem master, creates a fresh SFTP rename capability, performs recoverable atomic publication, verifies public HTTPS assets and records immutable per-plan journals.
+
+CDX-20260902-006 is implemented and verified locally on branch `codex/CDX-20260902-006-publication-event-enqueue`. It connects future approved activation and explicit source-change events to the durable queue while revalidating ACTIVE + PAID/CONVERTED state, current entitlement, tenant ownership, exact site scope and READY provisioning state. It never scans or enqueues existing customers. PR/merge/deploy are pending explicit release authorization.
 
 On 2026-08-01 Codex audited and stabilized the 2026-07-31 Antigravity change set. Verification was restored to read-only behavior, public onboarding photo uploads now validate the onboarding token before uploading to R2, proxy host handling was hardened to prefer `Host`, and PH-025 font preset contracts were unified across UI, onboarding schema, lead sync, and generation. Handoff: `brain/session-handoffs/2026-08-01_ANTIGRAVITY_AUDIT_STABILIZATION.md`.
 
@@ -86,4 +88,4 @@ On 2026-08-01 Codex audited and stabilized the 2026-07-31 Antigravity change set
 
 ## Next Step
 
-Open and review the CDX-20260902-005 PR. Because EasyPanel autodeploys `main`, merge requires the CEO's explicit release authorization. After deployment, the next separate ticket must connect successful activation/source-change events to authenticated job enqueueing and define a reviewed backfill preview for already active customers; no backfill or production publication is authorized by CDX-20260902-005.
+Open and review CDX-20260902-006. Because EasyPanel autodeploys `main`, merge requires the CEO's explicit release authorization. After that release, create a separate read-only, hash-pinned backfill preview for already active customers; no production backfill or existing-customer enqueue is authorized yet.

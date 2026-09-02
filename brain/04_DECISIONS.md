@@ -183,3 +183,19 @@ Implication:
 - PRODUCT, BUSINESS and PERSONAL_BRAND use the same isolation contract;
 - already published targets can receive later versioned updates without overwriting prior audit journals;
 - activation hooks and existing-customer backfill are separate gated tickets and cannot silently publish customers merely because the worker is deployed.
+
+## Decision 17: Approved Events May Enqueue; Backfill Never Runs Implicitly
+
+Date: 2026-09-02
+
+Decision:
+
+After the primary business write commits, future activation and source-change events may enqueue a durable publication job only when the activation lead is ACTIVE and PAID or CONVERTED, the current entitlement includes the target ecosystem, tenant ownership matches and the PublishingTarget is READY. Event bridging is fail-safe and cannot roll back the commercial/source write or publish an older source after synchronization failure.
+
+Implication:
+
+- operators no longer call the publication-job endpoint for future eligible changes;
+- activation events can consider every entitled READY target owned by that lead, while source events are scoped to the exact changed site;
+- missing or invalid artifacts produce bounded non-secret outcome codes and no publication;
+- worker regeneration does not recursively create jobs;
+- existing customers require a separately reviewed backfill preview and explicit production authorization.
