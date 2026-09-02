@@ -4,7 +4,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Current Ticket
 
-`CDX-20260902-005 - Automatic guarded publication worker (ready for PR)`
+`CDX-20260902-007 - Existing-customer publication backfill preview (ready for PR)`
 
 ## Current State
 
@@ -28,7 +28,9 @@ PH-020 backend MVP was implemented on 2026-07-30. The internal product page publ
 
 CDX-20260902-005 was merged as PR #188 and deployed through EasyPanel. It replaces operator SFTP capability windows for queued jobs with an automatic server-side pipeline: exact source/target/master hashes, fresh scoped rename proof, atomic two-rename publication, HTTPS verification, versioned journal and crash recovery.
 
-CDX-20260902-006 is implemented and verified locally. Future ACTIVE + PAID/CONVERTED activation changes and explicit saved-source generations/updates can enqueue eligible tenant-owned READY targets without an operator calling the publication-job API. Failures return bounded safe metadata after the primary write, and a source-sync failure blocks publication of stale content. Existing customers were not scanned or enqueued.
+CDX-20260902-006 was merged as PR #189 and deployed. Future ACTIVE + PAID/CONVERTED activation changes and explicit saved-source generations/updates can enqueue eligible tenant-owned READY targets without an operator calling the publication-job API. Failures return bounded safe metadata after the primary write, and a source-sync failure blocks publication of stale content.
+
+CDX-20260902-007 is implemented and verified locally. Its authenticated GET preview reads existing valid PublishingTarget v2 records and classifies exact current publication intents as candidates, already current, already scheduled, retry required or blocked. Its deterministic `planHash` includes hashed approval state and exact source/target/master hashes. It performs no enqueue, retry, wake, filesystem write or provider operation.
 
 ## Path Integrity
 
@@ -64,4 +66,4 @@ CDX-20260902-006 is implemented and verified locally. Future ACTIVE + PAID/CONVE
 
 ## Next Step
 
-Open/review CDX-20260902-006 and request explicit CEO authorization before merge because EasyPanel autodeploy is enabled. Then prepare a separate non-mutating, hash-pinned backfill preview for existing active customers. Production backfill remains separately gated.
+Open/review CDX-20260902-007. After deployment, inspect the authenticated preview. A separate production executor must revalidate its exact `planHash` and requires explicit CEO authorization before enqueueing or retrying any existing-customer publication.

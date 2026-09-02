@@ -42,6 +42,17 @@ test("enqueue derives immutable identity and deduplicates the exact publication 
   assert.equal(JSON.stringify(fx.service.toSafeJob(first.job)).includes(first.job.requestedBySubjectHash), false);
 });
 
+test("previewIntent derives the enqueue identity without creating durable queue state", async () => {
+  const fx = await fixture();
+  const preview = await fx.service.previewIntent({ siteId: fx.siteId });
+  assert.equal(preview.intent.siteId, fx.siteId);
+  assert.match(preview.intentHash, /^[0-9a-f]{64}$/);
+  assert.deepEqual(await fx.service.list(), []);
+  const enqueued = await fx.service.enqueue({ siteId: fx.siteId }, "operator");
+  assert.equal(enqueued.job.id, preview.intentHash);
+  assert.deepEqual(enqueued.job.intent, preview.intent);
+});
+
 test("a canonical master package change creates a new publication intent", async () => {
   const fx = await fixture(); const first = await fx.service.enqueue({ siteId: fx.siteId }, "operator");
   await writeFile(resolve(fx.output, fx.masterSiteId, "index.html"), "master-v2");

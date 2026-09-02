@@ -285,11 +285,15 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     });
   }
 
-  async function enqueue(input: z.input<typeof publicationJobCreateInputSchema>, requestedBySubject: string) {
+  async function previewIntent(input: z.input<typeof publicationJobCreateInputSchema>) {
     const { siteId } = publicationJobCreateInputSchema.parse(input);
-    if (!requestedBySubject.trim()) throw new Error("PUBLICATION_JOB_REQUESTOR_MISSING");
     const intent = await resolveIntent(siteId);
-    const intentHash = sha256(JSON.stringify(intent));
+    return { intent, intentHash: sha256(JSON.stringify(intent)) };
+  }
+
+  async function enqueue(input: z.input<typeof publicationJobCreateInputSchema>, requestedBySubject: string) {
+    if (!requestedBySubject.trim()) throw new Error("PUBLICATION_JOB_REQUESTOR_MISSING");
+    const { intent, intentHash } = await previewIntent(input);
     const timestamp = now().toISOString();
     const job = publicationJobSchema.parse({
       schemaVersion: 1,
@@ -454,7 +458,7 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     });
   }
 
-  return { enqueue, get: readJob, list, claimNext, advance, complete, fail, retry, cancel, toSafeJob: safeJob };
+  return { previewIntent, enqueue, get: readJob, list, claimNext, advance, complete, fail, retry, cancel, toSafeJob: safeJob };
 }
 
 export const publicationJobService = createPublicationJobService();
