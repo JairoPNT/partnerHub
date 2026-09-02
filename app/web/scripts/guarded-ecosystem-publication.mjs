@@ -100,6 +100,7 @@ function validateManifest(manifest) {
   const expectedSiteId = entry.ecosystemType === "PERSONAL_BRAND" ? entry.ownerSiteId : `${entry.ownerSiteId}-${entry.ecosystemType === "PRODUCT" ? "product" : "business"}`;
   if (entry.siteId !== expectedSiteId) throw new Error("SITE_ID_OWNER_ECOSYSTEM_MISMATCH");
   for (const field of ["expectedSourceHash", "expectedTargetHash", "expectedPackageHash", "expectedCapabilityHash"]) if (!HASH.test(entry[field] ?? "")) throw new Error(`HASH_INVALID:${field}`);
+  if (entry.publicationJobId !== undefined && !HASH.test(entry.publicationJobId)) throw new Error("HASH_INVALID:publicationJobId");
   if (entry.expectedRemotePackageHash !== null && !HASH.test(entry.expectedRemotePackageHash ?? "")) throw new Error("HASH_INVALID:expectedRemotePackageHash");
   if (!Array.isArray(entry.protectedLocalArtifacts) || entry.protectedLocalArtifacts.some((item) => !SLUG.test(item?.siteId ?? "") || !HASH.test(item?.expectedHash ?? "")) ||
       new Set(entry.protectedLocalArtifacts.map((item) => item.siteId)).size !== entry.protectedLocalArtifacts.length ||
@@ -119,7 +120,7 @@ async function terminalJournal(journalPath, planHash, adapter, entry) {
     const remote = await adapter.inventory(journal.remoteRoot);
     if (!remote.exists || remote.hash !== entry.expectedPackageHash) reasons.push("PUBLISHED_PACKAGE_DRIFT");
   }
-  try { const target = JSON.parse(await readFile(journal.targetPath, "utf8")); if (target.publicationState !== "READY" || sha256(json(target)) !== journal.finalTargetHash) reasons.push("PUBLISHED_TARGET_STATE_DRIFT"); }
+  try { const targetFile = await required(journal.targetPath); const target = JSON.parse(targetFile.source); if (target.publicationState !== "READY" || targetFile.hash !== journal.finalTargetHash) reasons.push("PUBLISHED_TARGET_STATE_DRIFT"); }
   catch { reasons.push("PUBLISHED_TARGET_STATE_DRIFT"); }
   return { valid: reasons.length === 0, reasons, journal };
 }
@@ -138,7 +139,7 @@ export async function planGuardedPublication({ manifestPath, sourceDirectory, ou
   if (target?.version !== 2 || target?.ownerKey !== entry.ownerKey || target?.siteId !== entry.siteId || target?.ecosystemType !== entry.ecosystemType ||
       !Object.hasOwn(HOST_LABELS, target?.rootEcosystemType) || target?.baseDomain !== entry.baseDomain || target?.publicHost !== entry.publicHost) reasons.push("PUBLISHING_TARGET_IDENTITY_INVALID");
   if (target?.provisioningState !== "READY") reasons.push("PUBLISHING_TARGET_NOT_READY");
-  if (target?.publicationState === "READY") reasons.push("PUBLICATION_STATE_READY_WITHOUT_JOURNAL");
+  if (!["PENDING", "READY"].includes(target?.publicationState)) reasons.push("PUBLISHING_TARGET_PUBLICATION_STATE_INVALID");
   if (typeof target?.remoteRoot !== "string" || !target.remoteRoot.startsWith("/") || target.remoteRoot === "/") reasons.push("PUBLISHING_TARGET_REMOTE_ROOT_INVALID");
   if (capability?.status !== "VERIFIED") reasons.push("SFTP_DIRECTORY_SWAP_CAPABILITY_UNVERIFIED");
   const capabilityValidation = validateCapability(capability, connection, target?.remoteRoot, now.getTime()); reasons.push(...capabilityValidation.reasons);
@@ -150,12 +151,12 @@ export async function planGuardedPublication({ manifestPath, sourceDirectory, ou
     const path = inside(sourceDirectory, item.siteId + ".json"); const file = await required(path); protectedState.push({ path, expectedHash: item.expectedHash, actualHash: file.hash });
     if (file.hash !== item.expectedHash) reasons.push(`PROTECTED_ARTIFACT_DRIFT:${item.siteId}`);
   }
-  const material = { ownerKey: entry.ownerKey, ownerSiteId: entry.ownerSiteId, siteId: entry.siteId, ecosystemType: entry.ecosystemType, baseDomain: entry.baseDomain,
+  const material = { publicationJobId: entry.publicationJobId, ownerKey: entry.ownerKey, ownerSiteId: entry.ownerSiteId, siteId: entry.siteId, ecosystemType: entry.ecosystemType, baseDomain: entry.baseDomain,
     targetHash: entry.expectedTargetHash, sourceHash: entry.expectedSourceHash,
     packageHash: entry.expectedPackageHash, capabilityHash: entry.expectedCapabilityHash, expectedRemotePackageHash: entry.expectedRemotePackageHash,
     protectedLocalArtifacts: entry.protectedLocalArtifacts.map(({ siteId, expectedHash }) => ({ siteId, expectedHash })).sort((a, b) => a.siteId.localeCompare(b.siteId)),
     remoteRoot: target.remoteRoot ?? null, publicHost: entry.publicHost, capabilityBinding: capabilityValidation.binding };
-  const planHash = sha256(JSON.stringify(material)); const journalPath = resolve(journalDirectory, `${entry.siteId}.json`);
+  const planHash = sha256(JSON.stringify(material)); const journalPath = resolve(journalDirectory, entry.siteId, `${planHash}.json`);
   const terminal = await terminalJournal(journalPath, planHash, adapter, entry);
   if (terminal) return { requestId: "CDX-20260824-005", mode: "PREVIEW", outcome: terminal.valid ? "ALREADY_APPLIED" : "BLOCKED_APPLIED_STATE",
     changed: false, blocked: !terminal.valid, blockedReasons: terminal.reasons, planHash, material, journalPath };
@@ -181,7 +182,7 @@ export async function runGuardedPublication(options) {
   if (preview.outcome === "ALREADY_APPLIED") return { ...preview, mode: APPLY_MODE };
   if (preview.blocked) throw new Error(`APPLY_BLOCKED:${preview.blockedReasons.join(",")}`);
   if (!options.adapter) throw new Error("SFTP_ADAPTER_REQUIRED");
-  await mkdir(options.journalDirectory, { recursive: true });
+  await mkdir(dirname(preview.journalPath), { recursive: true });
   const { adapter } = options; const remoteRoot = preview.target.remoteRoot; const suffix = sha256(preview.entry.siteId).slice(0, 16);
   const claimPath = remoteSibling(remoteRoot, `partnerhub-claim-${suffix}`); const owner = await acquireClaim(adapter, claimPath);
   const stagePath = remoteSibling(remoteRoot, `partnerhub-stage-${owner.token}`); const backupPath = remoteSibling(remoteRoot, `partnerhub-backup-${owner.token}`);
@@ -213,17 +214,25 @@ export async function runGuardedPublication(options) {
     let currentTarget; try { currentTarget = JSON.parse(currentTargetFile.source); } catch { throw new Error("TARGET_DRIFT_BEFORE_PUBLICATION_COMMIT"); }
     if (currentTargetFile.hash !== preview.entry.expectedTargetHash || currentTarget?.version !== 2 || currentTarget?.ownerKey !== preview.entry.ownerKey ||
         currentTarget?.siteId !== preview.entry.siteId || currentTarget?.ecosystemType !== preview.entry.ecosystemType || currentTarget?.baseDomain !== preview.entry.baseDomain ||
-        currentTarget?.publicHost !== preview.entry.publicHost || currentTarget?.remoteRoot !== preview.target.remoteRoot || currentTarget?.provisioningState !== "READY" || currentTarget?.publicationState !== "PENDING") {
+        currentTarget?.publicHost !== preview.entry.publicHost || currentTarget?.remoteRoot !== preview.target.remoteRoot || currentTarget?.provisioningState !== "READY" ||
+        !["PENDING", "READY"].includes(currentTarget?.publicationState)) {
       throw new Error("TARGET_DRIFT_BEFORE_PUBLICATION_COMMIT");
     }
     for (const item of preview.protectedState) if ((await required(item.path)).hash !== item.expectedHash) throw new Error("PROTECTED_LOCAL_ARTIFACT_DRIFT_AT_COMMIT");
     await assertOwner(adapter, claimPath, owner);
-    const finalTarget = { ...currentTarget, publicationState: "READY", updatedAt: new Date().toISOString() };
-    await atomicReplace(preview.targetPath, json(finalTarget), `${owner.token}-target`); targetUpdated = true;
-    const finalTargetHash = sha256(json(finalTarget));
+    const finalTarget = currentTarget.publicationState === "READY"
+      ? currentTarget
+      : { ...currentTarget, publicationState: "READY", updatedAt: new Date().toISOString() };
+    if (currentTarget.publicationState !== "READY") {
+      await atomicReplace(preview.targetPath, json(finalTarget), `${owner.token}-target`);
+      targetUpdated = true;
+    }
+    const finalTargetHash = currentTarget.publicationState === "READY" ? currentTargetFile.hash : sha256(json(finalTarget));
     if (options.hooks?.afterTargetUpdate) await options.hooks.afterTargetUpdate({ claimPath, owner, remoteRoot, stagePath, backupPath });
     await assertOwner(adapter, claimPath, owner);
-    await atomicJournal(preview.journalPath, { mode: APPLY_MODE, changed: true, planHash: preview.planHash, packageHash: preview.entry.expectedPackageHash,
+    await atomicJournal(preview.journalPath, { mode: APPLY_MODE, changed: true, publicationJobId: preview.entry.publicationJobId,
+      planHash: preview.planHash, sourceHash: preview.entry.expectedSourceHash, initialTargetHash: preview.entry.expectedTargetHash,
+      packageHash: preview.entry.expectedPackageHash, capabilityHash: preview.entry.expectedCapabilityHash,
       remoteRoot, publicHost: preview.entry.publicHost, targetPath: preview.targetPath, finalTargetHash, appliedAt: new Date().toISOString(), verification }, owner.token); journalCommitted = true;
     if (options.hooks?.afterJournal) await options.hooks.afterJournal({ claimPath, owner, remoteRoot, stagePath, backupPath });
     await assertOwner(adapter, claimPath, owner); if (destinationBackedUp) await adapter.remove(backupPath, true);

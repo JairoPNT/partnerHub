@@ -13,9 +13,11 @@ const SCHEMA_VERSION = 1;
 const PROBE_VERSION = "partnerhub-sftp-sibling-rename-v1";
 const HASH = /^[0-9a-f]{64}$/;
 const UUID_V4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const OWNER_UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const HOSTNAME = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const FINGERPRINT = /^SHA256:[A-Za-z0-9+/]{43}=$/;
-const EXPECTED = Object.freeze({ ownerKey: "f403f29e-95c8-4825-9320-967376443020", siteId: "jairo-pinto-business", ecosystemType: "BUSINESS",
-  baseDomain: "jairopinto.pro", publicHost: "negocio.jairopinto.pro" });
+const HOST_LABELS = Object.freeze({ PRODUCT: "producto", BUSINESS: "negocio", PERSONAL_BRAND: "brand" });
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 
@@ -37,9 +39,20 @@ function safeProbePath(path, parent, remoteRoot, token) {
   if (normalized === root || normalized.startsWith(`${root}/`) || root.startsWith(`${normalized}/`)) return false;
   return true;
 }
+function ownerSiteId(siteId, ecosystemType) {
+  if (ecosystemType === "PERSONAL_BRAND") return siteId;
+  const suffix = ecosystemType === "PRODUCT" ? "-product" : "-business";
+  return siteId.endsWith(suffix) ? siteId.slice(0, -suffix.length) : null;
+}
 function validateManifest(manifest) {
   if (manifest?.confirmation !== MANIFEST_CONFIRMATION || !Array.isArray(manifest.allowlist) || manifest.allowlist.length !== 1) throw new Error("MANIFEST_EXACTLY_ONE_REQUIRED");
-  const entry = manifest.allowlist[0]; for (const [key, value] of Object.entries(EXPECTED)) if (entry?.[key] !== value) throw new Error(`ALLOWLIST_MISMATCH:${key}`);
+  const entry = manifest.allowlist[0];
+  if (!OWNER_UUID.test(entry?.ownerKey ?? "")) throw new Error("OWNER_KEY_INVALID");
+  if (!SLUG.test(entry?.siteId ?? "")) throw new Error("SITE_ID_INVALID");
+  if (!Object.hasOwn(HOST_LABELS, entry?.ecosystemType)) throw new Error("ECOSYSTEM_TYPE_INVALID");
+  if (!HOSTNAME.test(entry?.baseDomain ?? "") || entry.baseDomain !== entry.baseDomain.toLowerCase()) throw new Error("BASE_DOMAIN_INVALID");
+  if (!HOSTNAME.test(entry?.publicHost ?? "") || entry.publicHost !== `${HOST_LABELS[entry.ecosystemType]}.${entry.baseDomain}`) throw new Error("PUBLIC_HOST_INVALID");
+  if (!ownerSiteId(entry.siteId, entry.ecosystemType)) throw new Error("SITE_ID_OWNER_ECOSYSTEM_MISMATCH");
   if (!HASH.test(entry.expectedTargetHash ?? "") || !UUID_V4.test(entry.probeToken ?? "") || !HASH.test(entry.canaryHex ?? "")) throw new Error("MANIFEST_PIN_INVALID");
   if (!Number.isInteger(entry.ttlSeconds) || entry.ttlSeconds < 60 || entry.ttlSeconds > 3600) throw new Error("CAPABILITY_TTL_INVALID");
   return entry;
@@ -51,7 +64,8 @@ export async function planSftpCapabilityProbe({ manifestPath, sourceDirectory, e
   const target = JSON.parse(targetBytes); const reasons = []; const connection = binding(environment, reasons);
   if (targetHash !== entry.expectedTargetHash) reasons.push("TARGET_HASH_DRIFT");
   if (target?.version !== 2 || target?.ownerKey !== entry.ownerKey || target?.siteId !== entry.siteId || target?.ecosystemType !== entry.ecosystemType ||
-      target?.baseDomain !== entry.baseDomain || target?.publicHost !== entry.publicHost || target?.provisioningState !== "READY") reasons.push("TARGET_IDENTITY_OR_STATE_INVALID");
+      !Object.hasOwn(HOST_LABELS, target?.rootEcosystemType) || target?.baseDomain !== entry.baseDomain || target?.publicHost !== entry.publicHost ||
+      target?.provisioningState !== "READY" || !["PENDING", "READY"].includes(target?.publicationState)) reasons.push("TARGET_IDENTITY_OR_STATE_INVALID");
   let remoteRoot; let parentDirectory;
   try { remoteRoot = normalizeRemote(target?.remoteRoot); parentDirectory = normalizeRemote(posix.dirname(remoteRoot)); } catch { reasons.push("TARGET_REMOTE_ROOT_INVALID"); }
   if (entry.remoteRoot !== remoteRoot || entry.parentDirectory !== parentDirectory) reasons.push("TARGET_SCOPE_DRIFT");

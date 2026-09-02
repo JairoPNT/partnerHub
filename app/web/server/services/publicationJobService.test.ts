@@ -10,8 +10,8 @@ const HASH = "a".repeat(64);
 
 async function fixture(ecosystemType: "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND" = "BUSINESS") {
   const root = await mkdtemp(resolve(tmpdir(), "publication-jobs-"));
-  const sources = resolve(root, "sources"); const targets = resolve(sources, ".publishing-targets"); const jobs = resolve(root, "jobs");
-  await mkdir(targets, { recursive: true });
+  const sources = resolve(root, "sources"); const targets = resolve(sources, ".publishing-targets"); const jobs = resolve(root, "jobs"); const output = resolve(root, "output");
+  await mkdir(targets, { recursive: true }); await mkdir(output);
   const ownerSiteId = "client-one";
   const siteId = ecosystemType === "PERSONAL_BRAND" ? ownerSiteId : `${ownerSiteId}-${ecosystemType === "PRODUCT" ? "product" : "business"}`;
   const label = { PRODUCT: "producto", BUSINESS: "negocio", PERSONAL_BRAND: "brand" }[ecosystemType];
@@ -21,9 +21,11 @@ async function fixture(ecosystemType: "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND" 
     baseDomain: "clientone.pro", publicHost, remoteRoot: `/home/client/public_html/${label}`, provisioningState: "READY", publicationState: "PENDING" };
   await writeFile(resolve(sources, `${siteId}.json`), `${JSON.stringify(source, null, 2)}\n`);
   await writeFile(resolve(targets, `${siteId}.json`), `${JSON.stringify(target, null, 2)}\n`);
+  const masterSiteId = { PRODUCT: "ganomaster", BUSINESS: "ganomaster-business", PERSONAL_BRAND: "ganomaster-personal-brand" }[ecosystemType];
+  await mkdir(resolve(output, masterSiteId)); await writeFile(resolve(output, masterSiteId, "index.html"), `master-${ecosystemType}`);
   let clock = new Date("2026-09-02T20:00:00.000Z"); let sequence = 0;
-  const service = createPublicationJobService({ sourceDirectory: sources, jobDirectory: jobs, now: () => new Date(clock), token: () => `token-${++sequence}` });
-  return { root, sources, targets, jobs, ownerSiteId, siteId, publicHost, source, target, service, setClock: (value: string) => { clock = new Date(value); } };
+  const service = createPublicationJobService({ sourceDirectory: sources, outputDirectory: output, jobDirectory: jobs, now: () => new Date(clock), token: () => `token-${++sequence}` });
+  return { root, sources, targets, jobs, output, masterSiteId, ownerSiteId, siteId, publicHost, source, target, service, setClock: (value: string) => { clock = new Date(value); } };
 }
 
 test("enqueue derives immutable identity and deduplicates the exact publication intent", async () => {
@@ -33,10 +35,19 @@ test("enqueue derives immutable identity and deduplicates the exact publication 
   assert.equal(first.created, true); assert.equal(second.created, false); assert.equal(second.job.id, first.job.id);
   assert.equal(first.job.intent.siteId, fx.siteId); assert.equal(first.job.intent.ownerSiteId, fx.ownerSiteId);
   assert.equal(first.job.intent.publicHost, fx.publicHost); assert.equal(first.job.status, "QUEUED");
+  assert.match(first.job.intent.masterPackageHash, /^[0-9a-f]{64}$/);
   const persisted = await readFile(resolve(fx.jobs, `${first.job.id}.json`), "utf8");
   assert.equal(persisted.includes("cloudflare-subject-one"), false); assert.equal(persisted.includes("different-subject"), false);
   assert.equal(JSON.stringify(fx.service.toSafeJob(first.job)).includes(first.job.intent.ownerKey), false);
   assert.equal(JSON.stringify(fx.service.toSafeJob(first.job)).includes(first.job.requestedBySubjectHash), false);
+});
+
+test("a canonical master package change creates a new publication intent", async () => {
+  const fx = await fixture(); const first = await fx.service.enqueue({ siteId: fx.siteId }, "operator");
+  await writeFile(resolve(fx.output, fx.masterSiteId, "index.html"), "master-v2");
+  const second = await fx.service.enqueue({ siteId: fx.siteId }, "operator");
+  assert.equal(second.created, true); assert.notEqual(second.job.id, first.job.id);
+  assert.notEqual(second.job.intent.masterPackageHash, first.job.intent.masterPackageHash);
 });
 
 test("PRODUCT, BUSINESS and PERSONAL_BRAND canonical targets can be enqueued", async () => {

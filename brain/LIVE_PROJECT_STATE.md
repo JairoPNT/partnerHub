@@ -4,7 +4,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Current Ticket
 
-`PH-039 - Deploy recovery integration (ready for PR)`
+`CDX-20260902-005 - Automatic guarded publication worker (ready for PR)`
 
 ## Current State
 
@@ -25,6 +25,8 @@ Claude reviewed PH-003D as `APPROVED WITH WARNINGS`.
 PH-003D closure has incorporated W-A, W-B, and W-C documentally and is ready for CTO quick check.
 
 PH-020 backend MVP was implemented on 2026-07-30. The internal product page publisher now runs public verification after SFTP upload. A manual verification endpoint exists at `POST /api/internal/product-pages/verify`. Verification stores the latest result in `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`, updates linked activation leads to `VERIFIED` or `VERIFY_FAILED`, and exposes `lastVerification` from `GET /api/internal/product-pages`.
+
+CDX-20260902-005 is implemented and verified on branch `codex/CDX-20260902-005-publication-job-worker`. It replaces operator SFTP capability windows for queued jobs with an automatic server-side pipeline: exact source/target/master hashes, fresh scoped rename proof, atomic two-rename publication, HTTPS verification, versioned journal and crash recovery. It supports PRODUCT, BUSINESS and PERSONAL_BRAND and does not persist raw SFTP credentials or worker lease tokens. No production job or backfill was executed.
 
 ## Path Integrity
 
@@ -60,6 +62,4 @@ PH-020 backend MVP was implemented on 2026-07-30. The internal product page publ
 
 ## Next Step
 
-PH-039 is active. `origin/main` contains publication/verification imports and the merged Domains UI without their untracked PH-036/PH-038 backend implementations. Deployment and new feature work are paused while Codex prepares a narrowly scoped recovery branch, clean build evidence, and PR to `main`.
-
-Antigravity work for provisioning and logo upload must begin later from new, specific AGR requests after the corresponding backend APIs are stable. Existing completed AGR requests must not be reopened.
+Open/review CDX-20260902-005 and request explicit CEO authorization before merge because EasyPanel autodeploy is enabled. The following ticket should enqueue jobs from approved activation/source events and prepare a non-mutating backfill plan for existing active customers. Production backfill remains separately gated.

@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { posix, resolve } from "node:path";
 import test from "node:test";
@@ -235,7 +235,7 @@ test("concurrent target drift at commit is not overwritten and restores the prio
   await assert.rejects(apply(fx, { hooks: { beforePublicationCommit: async () => { await writeFile(targetPath, foreignTarget); } } }), /TARGET_DRIFT_BEFORE_PUBLICATION_COMMIT/);
   assert.equal(await readFile(targetPath, "utf8"), foreignTarget);
   assert.equal((await fx.remote.inventory("/hosting/negocio")).hash, fx.entry.expectedRemotePackageHash);
-  await assert.rejects(readFile(resolve(fx.journals, "jairo-pinto-business.json")), /ENOENT/);
+  assert.deepEqual(await readdir(resolve(fx.journals, "jairo-pinto-business")), []);
 });
 
 test("ownership loss after mutation never deletes or restores foreign artifacts", async () => {
@@ -255,18 +255,20 @@ test("post-journal cleanup failure never rolls back and rerun remains ALREADY_AP
 });
 
 test("journal and final remote package drift block idempotent reruns", async () => {
-  const fx = await fixture(); await apply(fx); const journalPath = resolve(fx.journals, "jairo-pinto-business.json");
+  const fx = await fixture(); const applied = await apply(fx); const journalPath = applied.preview.journalPath;
   const journal = JSON.parse(await readFile(journalPath, "utf8")); journal.planHash = "0".repeat(64); await writeFile(journalPath, stringify(journal));
   let preview = await planGuardedPublication(options(fx)); assert.equal(preview.outcome, "BLOCKED_APPLIED_STATE"); assert.ok(preview.blockedReasons.includes("PUBLICATION_JOURNAL_DRIFT"));
   const other = await fixture(); await apply(other); other.remote.files.set("/hosting/negocio/app.js", Buffer.from("drift"));
   preview = await planGuardedPublication(options(other)); assert.equal(preview.outcome, "BLOCKED_APPLIED_STATE"); assert.ok(preview.blockedReasons.includes("PUBLISHED_PACKAGE_DRIFT"));
 });
 
-test("provisioning READY never substitutes publication READY without a journal", async () => {
+test("an already READY target can receive a later version with its own immutable plan journal", async () => {
   const fx = await fixture(); const path = resolve(fx.sources, ".publishing-targets", "jairo-pinto-business.json"); const target = JSON.parse(await readFile(path, "utf8"));
   target.publicationState = "READY"; const source = stringify(target); await writeFile(path, source); fx.entry.expectedTargetHash = sha(source);
   await writeFile(fx.manifestPath, stringify({ confirmation: "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION", allowlist: [fx.entry] }));
-  const preview = await planGuardedPublication(options(fx)); assert.ok(preview.blockedReasons.includes("PUBLICATION_STATE_READY_WITHOUT_JOURNAL"));
+  const preview = await planGuardedPublication(options(fx)); assert.equal(preview.blocked, false);
+  const result = await runGuardedPublication(options(fx, { mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash }));
+  assert.equal(result.outcome, "APPLIED"); assert.match(result.journalPath, new RegExp(`${preview.planHash}\\.json$`));
 });
 
 test("Business validation blocks purchaseUrl and divergent WhatsApp CTAs", async () => {
