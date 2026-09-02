@@ -1,6 +1,6 @@
 import { Buffer } from "node:buffer";
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import { access, mkdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { access, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, resolve, sep } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -10,9 +10,8 @@ import { planSftpCapabilityProbe } from "./sftp-directory-rename-capability-prob
 export const APPLY_MODE = "APPLY_GUARDED_EXPIRED_SFTP_CAPABILITY_ARCHIVE";
 export const APPLY_CONFIRMATION = "ARCHIVE_EXPIRED_JAIRO_BUSINESS_SFTP_CAPABILITY";
 
-const REQUEST_ID = "CDX-20260827-003";
+const REQUEST_ID = "CDX-20260902-002";
 const INPUT_ID = "CDX-20260827-001";
-const EXPECTED_CAPABILITY_HASH = "f669889d249a791fdec820ff794eaff38040784093e85800df2ed0e41b2a3bb6";
 const HASH = /^[0-9a-f]{64}$/;
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
@@ -31,8 +30,6 @@ function resolvePaths(options = {}) {
   const inputDirectory = inside(inputParent, INPUT_ID);
   const archiveRoot = inside(inputParent, ".capability-archives");
   const requestArchiveRoot = inside(archiveRoot, REQUEST_ID);
-  const expectedCapabilityHash = options.expectedCapabilityHash ?? EXPECTED_CAPABILITY_HASH;
-  const archiveDirectory = inside(requestArchiveRoot, expectedCapabilityHash);
   return {
     inputParent,
     sourceDirectory,
@@ -41,11 +38,17 @@ function resolvePaths(options = {}) {
     capabilityPath: inside(inputDirectory, "sftp-capability.json"),
     archiveRoot,
     requestArchiveRoot,
-    archiveDirectory,
-    archivedCapabilityPath: inside(archiveDirectory, "sftp-capability.json"),
-    journalPath: inside(archiveDirectory, "archive.json"),
-    claimDirectory: inside(inputParent, `.capability-renewal-claim-${REQUEST_ID}`),
-    expectedCapabilityHash
+    claimDirectory: inside(inputParent, `.capability-renewal-claim-${REQUEST_ID}`)
+  };
+}
+
+function archivePaths(paths, capabilityHash) {
+  if (!HASH.test(capabilityHash ?? "")) throw new Error("SFTP_CAPABILITY_ARCHIVE_HASH_INVALID");
+  const directory = inside(paths.requestArchiveRoot, capabilityHash);
+  return {
+    directory,
+    capabilityPath: inside(directory, "sftp-capability.json"),
+    journalPath: inside(directory, "archive.json")
   };
 }
 
@@ -80,14 +83,14 @@ function validateCapability(capability, probe, now, reasons) {
   };
 }
 
-async function readArchiveJournal(paths, reasons) {
-  if (!(await exists(paths.journalPath))) {
+async function readArchiveJournal(archive, capabilityHash, reasons) {
+  if (!(await exists(archive.journalPath))) {
     reasons.push("SFTP_CAPABILITY_ARCHIVE_JOURNAL_MISSING");
     return null;
   }
   try {
-    const journal = JSON.parse(await readFile(paths.journalPath, "utf8"));
-    if (journal?.requestId !== REQUEST_ID || journal?.capabilityHash !== paths.expectedCapabilityHash || journal?.sourceInputId !== INPUT_ID) {
+    const journal = JSON.parse(await readFile(archive.journalPath, "utf8"));
+    if (journal?.requestId !== REQUEST_ID || journal?.capabilityHash !== capabilityHash || journal?.sourceInputId !== INPUT_ID) {
       reasons.push("SFTP_CAPABILITY_ARCHIVE_JOURNAL_DRIFT");
     }
     return journal;
@@ -95,6 +98,34 @@ async function readArchiveJournal(paths, reasons) {
     reasons.push("SFTP_CAPABILITY_ARCHIVE_JOURNAL_INVALID");
     return null;
   }
+}
+
+async function readArchivedByPlanHash(paths, expectedPlanHash) {
+  if (!HASH.test(expectedPlanHash ?? "") || !(await exists(paths.requestArchiveRoot))) return null;
+  const matches = [];
+  for (const entry of await readdir(paths.requestArchiveRoot, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !HASH.test(entry.name)) continue;
+    const archive = archivePaths(paths, entry.name);
+    try {
+      const journal = JSON.parse(await readFile(archive.journalPath, "utf8"));
+      if (journal?.planHash !== expectedPlanHash) continue;
+      const capabilityFile = await file(archive.capabilityPath);
+      if (
+        journal?.requestId !== REQUEST_ID ||
+        journal?.sourceInputId !== INPUT_ID ||
+        journal?.capabilityHash !== entry.name ||
+        capabilityFile.hash !== entry.name ||
+        !journal?.planMaterial ||
+        sha256(JSON.stringify(journal.planMaterial)) !== expectedPlanHash ||
+        journal.planMaterial.expectedCapabilityHash !== entry.name
+      ) throw new Error("SFTP_CAPABILITY_ARCHIVE_JOURNAL_DRIFT");
+      matches.push({ archive, journal, capabilityFile });
+    } catch (error) {
+      throw new Error(`SFTP_CAPABILITY_ARCHIVE_IDEMPOTENCY_INVALID:${error.message}`);
+    }
+  }
+  if (matches.length > 1) throw new Error("SFTP_CAPABILITY_ARCHIVE_PLAN_COLLISION");
+  return matches[0] ?? null;
 }
 
 export async function planExpiredSftpCapabilityRenewal(options = {}) {
@@ -113,26 +144,41 @@ export async function planExpiredSftpCapabilityRenewal(options = {}) {
   }
 
   const activePresent = await exists(paths.capabilityPath);
-  const archivePresent = await exists(paths.archiveDirectory);
   if (!options.ignoreClaim && await exists(paths.claimDirectory)) reasons.push("SFTP_CAPABILITY_RENEWAL_CLAIM_PRESENT");
-  if (activePresent && archivePresent) reasons.push("SFTP_CAPABILITY_ACTIVE_AND_ARCHIVE_COLLISION");
-  if (!activePresent && !archivePresent) reasons.push("SFTP_CAPABILITY_EVIDENCE_MISSING");
-
   let capabilityFile = null;
   let capability = null;
+  let capabilityHash = "ABSENT";
+  let archive = null;
+  let archivePresent = false;
+  let archivedCapabilityHash = "ABSENT";
+  let archiveJournal = null;
   let timing = { verifiedAt: "INVALID", expiresAt: "INVALID", ttlSeconds: null };
-  const evidencePath = activePresent ? paths.capabilityPath : paths.archivedCapabilityPath;
-  if (activePresent || archivePresent) {
+  if (activePresent) {
     try {
-      capabilityFile = await file(evidencePath);
-      if (capabilityFile.hash !== paths.expectedCapabilityHash) reasons.push("SFTP_CAPABILITY_HASH_DRIFT");
+      capabilityFile = await file(paths.capabilityPath);
+      capabilityHash = capabilityFile.hash;
+      if (options.expectedCapabilityHash && capabilityHash !== options.expectedCapabilityHash) reasons.push("SFTP_CAPABILITY_HASH_DRIFT");
+      archive = archivePaths(paths, capabilityHash);
+      archivePresent = await exists(archive.directory);
+      if (archivePresent) {
+        reasons.push("SFTP_CAPABILITY_ACTIVE_AND_ARCHIVE_COLLISION");
+        try {
+          const archived = await file(archive.capabilityPath);
+          archivedCapabilityHash = archived.hash;
+          if (archived.hash !== capabilityHash) reasons.push("SFTP_CAPABILITY_ARCHIVE_HASH_DRIFT");
+        } catch {
+          reasons.push("SFTP_CAPABILITY_ARCHIVE_EVIDENCE_INVALID");
+        }
+        archiveJournal = await readArchiveJournal(archive, capabilityHash, reasons);
+      }
       capability = JSON.parse(capabilityFile.bytes);
       if (probe) timing = validateCapability(capability, probe, options.now ?? new Date(), reasons);
     } catch {
       reasons.push("SFTP_CAPABILITY_EVIDENCE_INVALID_JSON_OR_FILE");
     }
+  } else {
+    reasons.push("SFTP_CAPABILITY_EVIDENCE_MISSING");
   }
-  const archiveJournal = archivePresent ? await readArchiveJournal(paths, reasons) : null;
 
   const manifestHash = await file(paths.manifestPath).then((value) => value.hash, () => "MISSING");
   const material = {
@@ -141,15 +187,14 @@ export async function planExpiredSftpCapabilityRenewal(options = {}) {
     sourceInputId: INPUT_ID,
     manifestHash,
     probePlanHash: probe?.planHash ?? "INVALID",
-    expectedCapabilityHash: paths.expectedCapabilityHash,
-    activeCapabilityHash: activePresent ? capabilityFile?.hash ?? "INVALID" : "ABSENT",
-    archiveCapabilityHash: archivePresent ? capabilityFile?.hash ?? "INVALID" : "ABSENT",
+    expectedCapabilityHash: capabilityHash,
+    activeCapabilityHash: activePresent ? capabilityHash : "ABSENT",
+    archiveCapabilityHash: archivedCapabilityHash,
     verifiedAt: timing.verifiedAt,
     expiresAt: timing.expiresAt,
     ttlSeconds: timing.ttlSeconds,
-    archiveDirectory: paths.archiveDirectory
+    archiveDirectory: archive?.directory ?? paths.requestArchiveRoot
   };
-  const alreadyArchived = !activePresent && archivePresent && reasons.length === 0;
   return {
     requestId: REQUEST_ID,
     mode: "PREVIEW",
@@ -158,11 +203,11 @@ export async function planExpiredSftpCapabilityRenewal(options = {}) {
     blockedReasons: [...new Set(reasons)],
     planHash: sha256(JSON.stringify(material)),
     planMaterial: material,
-    disposition: alreadyArchived ? "ALREADY_ARCHIVED" : "ARCHIVE_EXPIRED_CAPABILITY",
+    disposition: "ARCHIVE_EXPIRED_CAPABILITY",
     evidence: {
       activePresent,
       archivePresent,
-      capabilityHash: capabilityFile?.hash ?? "ABSENT",
+      capabilityHash,
       expired: !reasons.includes("SFTP_CAPABILITY_NOT_EXPIRED"),
       archivedPlanHash: archiveJournal?.planHash ?? null
     },
@@ -189,43 +234,70 @@ export async function applyExpiredSftpCapabilityRenewal(options = {}) {
   if (!HASH.test(options.expectedPlanHash ?? "")) throw new Error("SFTP_CAPABILITY_RENEWAL_PLAN_HASH_REQUIRED");
 
   const paths = resolvePaths(options);
-  const preview = await planExpiredSftpCapabilityRenewal(options);
-  if (preview.disposition === "ALREADY_ARCHIVED" && preview.evidence.archivedPlanHash === options.expectedPlanHash) {
-    return { ...preview, mode: APPLY_MODE, planHash: options.expectedPlanHash, outcome: "ALREADY_ARCHIVED", changed: false };
+  if (!(await exists(paths.capabilityPath))) {
+    const archived = await readArchivedByPlanHash(paths, options.expectedPlanHash);
+    if (archived) {
+      return {
+        requestId: REQUEST_ID,
+        mode: APPLY_MODE,
+        changed: false,
+        blocked: false,
+        blockedReasons: [],
+        planHash: options.expectedPlanHash,
+        planMaterial: archived.journal.planMaterial,
+        disposition: "ALREADY_ARCHIVED",
+        outcome: "ALREADY_ARCHIVED",
+        evidence: {
+          activePresent: false,
+          archivePresent: true,
+          capabilityHash: archived.capabilityFile.hash,
+          expired: true,
+          archivedPlanHash: archived.journal.planHash
+        },
+        safety: { providerCallsMade: false, sftpAdapterCreated: false, remoteWritesMade: false, publishingTargetMutable: false }
+      };
+    }
   }
+  const preview = await planExpiredSftpCapabilityRenewal(options);
   if (preview.planHash !== options.expectedPlanHash) throw new Error("SFTP_CAPABILITY_RENEWAL_PLAN_HASH_MISMATCH");
   if (preview.blocked) throw new Error(`SFTP_CAPABILITY_RENEWAL_BLOCKED:${preview.blockedReasons.join(",")}`);
 
+  const archive = archivePaths(paths, preview.planMaterial.expectedCapabilityHash);
   const owner = { requestId: REQUEST_ID, token: randomUUID(), acquiredAt: new Date().toISOString(), planHash: preview.planHash };
   await mkdir(dirname(paths.claimDirectory), { recursive: true, mode: 0o700 });
   await mkdir(paths.claimDirectory, { mode: 0o700 });
   await writeFile(resolve(paths.claimDirectory, "owner.json"), json(owner), { flag: "wx", mode: 0o600 });
-  const stagingDirectory = inside(paths.requestArchiveRoot, `.${paths.expectedCapabilityHash}.${owner.token}.staging`);
+  const stagingDirectory = inside(paths.requestArchiveRoot, `.${preview.planMaterial.expectedCapabilityHash}.${owner.token}.staging`);
   let movedToStaging = false;
   let committed = false;
   try {
-    const recheck = await planExpiredSftpCapabilityRenewal({ ...options, ignoreClaim: true });
+    const recheck = await planExpiredSftpCapabilityRenewal({
+      ...options,
+      ignoreClaim: true,
+      expectedCapabilityHash: preview.planMaterial.expectedCapabilityHash
+    });
     if (recheck.planHash !== preview.planHash || recheck.blocked) throw new Error("SFTP_CAPABILITY_RENEWAL_PREFLIGHT_DRIFT");
     await assertOwner(paths.claimDirectory, owner);
     await mkdir(paths.requestArchiveRoot, { recursive: true, mode: 0o700 });
-    if (await exists(stagingDirectory) || await exists(paths.archiveDirectory)) throw new Error("SFTP_CAPABILITY_ARCHIVE_COLLISION");
+    if (await exists(stagingDirectory) || await exists(archive.directory)) throw new Error("SFTP_CAPABILITY_ARCHIVE_COLLISION");
     await mkdir(stagingDirectory, { mode: 0o700 });
     await assertOwner(paths.claimDirectory, owner);
     await rename(paths.capabilityPath, resolve(stagingDirectory, "sftp-capability.json"));
     movedToStaging = true;
     const archived = await file(resolve(stagingDirectory, "sftp-capability.json"));
-    if (archived.hash !== paths.expectedCapabilityHash) throw new Error("SFTP_CAPABILITY_ARCHIVE_HASH_DRIFT");
+    if (archived.hash !== preview.planMaterial.expectedCapabilityHash) throw new Error("SFTP_CAPABILITY_ARCHIVE_HASH_DRIFT");
     const journal = {
       requestId: REQUEST_ID,
       sourceInputId: INPUT_ID,
       outcome: "ARCHIVED_FOR_RENEWAL",
       planHash: preview.planHash,
       capabilityHash: archived.hash,
+      planMaterial: preview.planMaterial,
       archivedAt: new Date().toISOString()
     };
     await writeFile(resolve(stagingDirectory, "archive.json"), json(journal), { flag: "wx", mode: 0o600 });
     await assertOwner(paths.claimDirectory, owner);
-    await rename(stagingDirectory, paths.archiveDirectory);
+    await rename(stagingDirectory, archive.directory);
     committed = true;
     await removeOwnedClaim(paths.claimDirectory, owner);
     const nextProbePreview = await planSftpCapabilityProbe({
@@ -238,7 +310,7 @@ export async function applyExpiredSftpCapabilityRenewal(options = {}) {
       mode: APPLY_MODE,
       outcome: "ARCHIVED_FOR_RENEWAL",
       changed: true,
-      archive: { capabilityHash: archived.hash, directory: paths.archiveDirectory, journalPath: paths.journalPath },
+      archive: { capabilityHash: archived.hash, directory: archive.directory, journalPath: archive.journalPath },
       nextProbePreview: {
         mode: nextProbePreview.mode,
         changed: nextProbePreview.changed,
