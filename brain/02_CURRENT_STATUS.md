@@ -4,7 +4,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Ticket
 
-`CDX-20260902-005 - Automatic guarded publication worker (ready for PR)`
+`CDX-20260902-007 - Existing-customer publication backfill preview (ready for PR)`
 
 ## Status Summary
 
@@ -42,7 +42,9 @@ PH-020 Publicacion verificada was implemented in backend MVP on 2026-07-30. Publ
 
 On 2026-09-02 CDX-20260902-005 was merged as PR #188 and deployed through EasyPanel. The backend worker consumes durable publication jobs, regenerates the exact client package from its ecosystem master, creates a fresh SFTP rename capability, performs recoverable atomic publication, verifies public HTTPS assets and records immutable per-plan journals.
 
-CDX-20260902-006 is implemented and verified locally on branch `codex/CDX-20260902-006-publication-event-enqueue`. It connects future approved activation and explicit source-change events to the durable queue while revalidating ACTIVE + PAID/CONVERTED state, current entitlement, tenant ownership, exact site scope and READY provisioning state. It never scans or enqueues existing customers. PR/merge/deploy are pending explicit release authorization.
+On 2026-09-02 CDX-20260902-006 was merged as PR #189 and deployed through EasyPanel. Future approved activation and explicit source-change events now enqueue durable publication jobs after revalidating ACTIVE + PAID/CONVERTED state, entitlement, tenant ownership, exact site scope and READY provisioning state.
+
+CDX-20260902-007 is implemented and verified locally on branch `codex/CDX-20260902-007-publication-backfill-preview`. It adds an authenticated, deterministic and strictly read-only inventory of existing targets. The inventory separates new candidates, exact intents already current, queued/running intents, retry-required intents and bounded blocked reasons, and binds exact approval/source/target/master hashes to one `planHash`. It creates no jobs, directories, leases or worker wakes and makes no provider call. PR/merge/deploy are pending.
 
 On 2026-08-01 Codex audited and stabilized the 2026-07-31 Antigravity change set. Verification was restored to read-only behavior, public onboarding photo uploads now validate the onboarding token before uploading to R2, proxy host handling was hardened to prefer `Host`, and PH-025 font preset contracts were unified across UI, onboarding schema, lead sync, and generation. Handoff: `brain/session-handoffs/2026-08-01_ANTIGRAVITY_AUDIT_STABILIZATION.md`.
 
@@ -88,4 +90,4 @@ On 2026-08-01 Codex audited and stabilized the 2026-07-31 Antigravity change set
 
 ## Next Step
 
-Open and review CDX-20260902-006. Because EasyPanel autodeploys `main`, merge requires the CEO's explicit release authorization. After that release, create a separate read-only, hash-pinned backfill preview for already active customers; no production backfill or existing-customer enqueue is authorized yet.
+Open and review CDX-20260902-007. Once deployed, request the authenticated read-only preview and review its counts, bounded blockers and exact `planHash`. Any enqueue/retry of existing customers belongs to a separate executor ticket and requires explicit CEO authorization for the reviewed plan hash.
