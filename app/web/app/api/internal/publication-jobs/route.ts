@@ -9,6 +9,7 @@ import {
   publicationJobCreateInputSchema,
   publicationJobService
 } from "@/server/services/publicationJobService";
+import { wakePublicationJobWorker } from "@/server/services/publicationJobWorkerService";
 
 export const runtime = "nodejs";
 
@@ -45,6 +46,7 @@ export async function POST(request: Request) {
     const operator = await authenticateCloudflareAccessRequest(request);
     const input = publicationJobCreateInputSchema.parse(await request.json());
     const result = await publicationJobService.enqueue(input, operator.subject);
+    void wakePublicationJobWorker();
     return NextResponse.json({ job: publicationJobService.toSafeJob(result.job), idempotent: !result.created }, { status: result.created ? 201 : 200 });
   } catch (error) {
     if (error instanceof CloudflareAccessAuthError) return NextResponse.json({ error: error.code }, { status: 401 });

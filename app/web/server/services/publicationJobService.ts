@@ -2,11 +2,12 @@ import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
 import { access, link, mkdir, open, readFile, readdir, rename, rm } from "node:fs/promises";
-import { dirname, resolve, sep } from "node:path";
+import { dirname, relative, resolve, sep } from "node:path";
 
 import { z } from "zod";
 
 import { getPartnerPublicHost } from "@/server/services/partnerHostnameContract";
+import { MASTER_SITE_IDS } from "@/server/services/ecosystemTemplateResolver";
 
 const HASH = /^[0-9a-f]{64}$/;
 const SAFE_ERROR_CODE = /^[A-Z0-9_:-]{1,160}$/;
@@ -51,7 +52,8 @@ const intentSchema = z.object({
   baseDomain: z.string().min(1),
   publicHost: z.string().min(1),
   sourceHash: z.string().regex(HASH),
-  targetHash: z.string().regex(HASH)
+  targetHash: z.string().regex(HASH),
+  masterPackageHash: z.string().regex(HASH)
 });
 
 const evidenceSchema = z.object({
@@ -105,6 +107,7 @@ export type PublicationJobEvidence = z.infer<typeof evidenceSchema>;
 
 type ServiceOptions = {
   sourceDirectory?: string;
+  outputDirectory?: string;
   jobDirectory?: string;
   now?: () => Date;
   token?: () => string;
@@ -149,6 +152,7 @@ function safeJob(job: PublicationJob) {
 
 export function createPublicationJobService(options: ServiceOptions = {}) {
   const sourceDirectory = resolve(options.sourceDirectory ?? process.env.PRODUCT_PAGE_SOURCE_DIR ?? "/data/generated-sites/.sources");
+  const outputDirectory = resolve(options.outputDirectory ?? process.env.PRODUCT_PAGE_OUTPUT_DIR ?? "/data/generated-sites");
   const jobDirectory = resolve(options.jobDirectory ?? process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR ?? "/data/generated-sites/.publication-jobs");
   const claimsDirectory = inside(jobDirectory, ".claims");
   const locksDirectory = inside(jobDirectory, ".locks");
@@ -228,6 +232,22 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     }
   }
 
+  async function packageHash(directory: string) {
+    const files: Array<{ path: string; hash: string }> = [];
+    async function visit(current: string) {
+      for (const entry of await readdir(current, { withFileTypes: true })) {
+        const path = resolve(current, entry.name);
+        if (entry.isDirectory()) await visit(path);
+        else if (entry.isFile()) files.push({ path: relative(directory, path).split(sep).join("/"), hash: sha256(await readFile(path)) });
+      }
+    }
+    try { await visit(directory); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") throw new Error("PUBLICATION_JOB_MASTER_PACKAGE_MISSING"); throw error; }
+    if (!files.length) throw new Error("PUBLICATION_JOB_MASTER_PACKAGE_MISSING");
+    files.sort((left, right) => left.path.localeCompare(right.path));
+    return sha256(JSON.stringify(files));
+  }
+
   async function resolveIntent(siteId: string) {
     const safeSiteId = siteIdSchema.parse(siteId);
     const sourcePath = inside(sourceDirectory, `${safeSiteId}.json`);
@@ -260,7 +280,8 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
       baseDomain: target.baseDomain,
       publicHost: target.publicHost,
       sourceHash: sha256(sourceBytes),
-      targetHash: sha256(targetBytes)
+      targetHash: sha256(targetBytes),
+      masterPackageHash: await packageHash(inside(outputDirectory, MASTER_SITE_IDS[target.ecosystemType]))
     });
   }
 

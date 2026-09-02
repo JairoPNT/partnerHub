@@ -24,12 +24,15 @@ class MemorySftp {
     for (const name of [...this.files.keys()]) if (name === root || name.startsWith(`${root}/`)) this.files.delete(name); for (const name of [...this.directories]) if (name === root || name.startsWith(`${root}/`)) this.directories.delete(name); }
 }
 
-async function fixture() {
+async function fixture(ecosystemType = "BUSINESS") {
   const root = await mkdtemp(resolve(tmpdir(), "sftp-capability-probe-")); const sources = resolve(root, "sources"); const inputs = resolve(root, "inputs"); const output = resolve(root, "output");
   await mkdir(resolve(sources, ".publishing-targets"), { recursive: true }); await mkdir(inputs); await mkdir(output);
-  const target = { version: 2, ownerKey: "f403f29e-95c8-4825-9320-967376443020", siteId: "jairo-pinto-business", ecosystemType: "BUSINESS",
-    rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", publicHost: "negocio.jairopinto.pro", remoteRoot: "/hosting/negocio", provisioningState: "READY", publicationState: "PENDING" };
-  const targetText = stringify(target); await writeFile(resolve(sources, ".publishing-targets", "jairo-pinto-business.json"), targetText);
+  const suffix = { PRODUCT: "-product", BUSINESS: "-business", PERSONAL_BRAND: "" }[ecosystemType];
+  const label = { PRODUCT: "producto", BUSINESS: "negocio", PERSONAL_BRAND: "brand" }[ecosystemType];
+  const siteId = `ana-segura${suffix}`; const publicHost = `${label}.anasegura.pro`; const remoteRoot = `/hosting/${label}`;
+  const target = { version: 2, ownerKey: "f403f29e-95c8-4825-9320-967376443020", siteId, ecosystemType,
+    rootEcosystemType: "PERSONAL_BRAND", baseDomain: "anasegura.pro", publicHost, remoteRoot, provisioningState: "READY", publicationState: "PENDING" };
+  const targetText = stringify(target); await writeFile(resolve(sources, ".publishing-targets", `${siteId}.json`), targetText);
   const probeToken = "123e4567-e89b-42d3-a456-426614174000"; const paths = { claim: `/hosting/.partnerhub-capability-claim-${probeToken}`,
     stage: `/hosting/.partnerhub-capability-stage-${probeToken}`, destination: `/hosting/.partnerhub-capability-destination-${probeToken}`, backup: `/hosting/.partnerhub-capability-backup-${probeToken}` };
   const entry = { ownerKey: target.ownerKey, siteId: target.siteId, ecosystemType: target.ecosystemType, baseDomain: target.baseDomain, publicHost: target.publicHost,
@@ -43,7 +46,21 @@ const options = (fx, extra = {}) => ({ manifestPath: fx.manifestPath, sourceDire
   now: new Date("2026-08-24T22:00:00.000Z"), adapter: fx.adapter, ...extra });
 async function probe(fx, extra = {}) { const preview = await planSftpCapabilityProbe(options(fx)); return runSftpCapabilityProbe(options(fx, { mode: PROBE_MODE,
   confirmation: PROBE_CONFIRMATION, expectedPlanHash: preview.planHash, ...extra })); }
-const targetSnapshot = async (adapter) => JSON.stringify(await adapter.inventory("/hosting/negocio"));
+const targetSnapshot = async (adapter, remoteRoot = "/hosting/negocio") => JSON.stringify(await adapter.inventory(remoteRoot));
+
+test("accepts canonical PRODUCT, BUSINESS and PERSONAL_BRAND targets without a customer allowlist", async () => {
+  for (const ecosystemType of ["PRODUCT", "BUSINESS", "PERSONAL_BRAND"]) {
+    const fx = await fixture(ecosystemType); const preview = await planSftpCapabilityProbe(options(fx));
+    assert.equal(preview.blocked, false); assert.equal(preview.entry.siteId, fx.target.siteId); assert.equal(preview.planMaterial.remoteRoot, fx.target.remoteRoot);
+  }
+});
+
+test("rejects a cross-tenant or non-canonical hostname before connecting", async () => {
+  const fx = await fixture(); fx.entry.publicHost = "negocio.otrocliente.pro";
+  await writeFile(fx.manifestPath, stringify({ confirmation: "PREVIEW_SFTP_DIRECTORY_RENAME_CAPABILITY", allowlist: [fx.entry] }));
+  await assert.rejects(planSftpCapabilityProbe(options(fx)), /PUBLIC_HOST_INVALID/);
+  assert.equal(fx.adapter.calls.length, 0);
+});
 
 test("PREVIEW creates no adapter, connection or filesystem write", async () => {
   const fx = await fixture(); let factoryCalls = 0; const before = await readdir(fx.output);
