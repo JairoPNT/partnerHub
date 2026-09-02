@@ -33,6 +33,7 @@
     "test:partner-hostnames": "node --experimental-strip-types --test server/services/partnerHostnameContract.test.ts server/services/partnerEcosystemEntitlementCore.test.ts server/services/subdomainProvisioningService.test.ts server/services/publicationTargetResolver.test.ts server/services/domainInventoryBuilder.test.ts",
     "test:publication-jobs": "node --conditions=react-server --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test server/services/publicationJobService.test.ts",
     "test:publication-job-worker": "node --conditions=react-server --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test server/services/publicationJobWorkerService.test.ts",
+    "test:publication-events": "node --conditions=react-server --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test server/services/publicationEventEnqueueService.test.ts",
     "test:claudia-source-identity-dry-run": "node --test scripts/claudia-source-identity-dry-run.test.mjs",
     "test:jairo-source-identity-dry-run": "node --test scripts/jairo-source-identity-dry-run.test.mjs",
     "test:jairo-source-identity-guarded-apply": "node --test scripts/jairo-source-identity-guarded-apply.test.mjs",
