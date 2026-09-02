@@ -30,39 +30,46 @@ class MemoryRemote {
     for (const name of [...this.directories]) if (name === root || name.startsWith(`${root}/`)) this.directories.delete(name); }
 }
 
-async function fixture({ existingRemote = false } = {}) {
+async function fixture({ existingRemote = false, ecosystemType = "BUSINESS" } = {}) {
   const root = await mkdtemp(resolve(tmpdir(), "guarded-publication-")); const sources = resolve(root, "sources"); const output = resolve(root, "output");
-  const inputs = resolve(root, "inputs"); const journals = resolve(root, "journals"); const packageDirectory = resolve(output, "jairo-pinto-business");
+  const ownerSiteId = "jairo-pinto"; const siteId = ecosystemType === "PERSONAL_BRAND" ? ownerSiteId : `${ownerSiteId}-${ecosystemType === "PRODUCT" ? "product" : "business"}`;
+  const hostLabel = { PRODUCT: "producto", BUSINESS: "negocio", PERSONAL_BRAND: "brand" }[ecosystemType]; const publicHost = `${hostLabel}.jairopinto.pro`; const remoteRoot = `/hosting/${hostLabel}`;
+  const inputs = resolve(root, "inputs"); const journals = resolve(root, "journals"); const packageDirectory = resolve(output, siteId);
   await Promise.all([mkdir(resolve(sources, ".publishing-targets"), { recursive: true }), mkdir(packageDirectory, { recursive: true }), mkdir(inputs), mkdir(journals)]);
-  const source = { ecosystemType: "BUSINESS", site: { id: "jairo-pinto-business", domain: "negocio.jairopinto.pro" },
+  const source = { ecosystemType, site: { id: siteId, domain: publicHost },
     distributor: { whatsappNumber: "573188430283", defaultMessage: "Hola Jairo" },
     vsl: { embedUrl: "https://media.example/business.mp4", thumbnailUrl: "https://cdn.example/product-hero.webp" } };
-  const config = { ecosystemType: "BUSINESS", site: { id: "jairo-pinto-business", domain: "negocio.jairopinto.pro" }, distributor: {},
-    vsl: { embedUrl: source.vsl.embedUrl, thumbnailUrl: source.vsl.thumbnailUrl }, cta: { primaryUrl: "https://wa.me/573188430283?text=Hola%20Jairo", secondaryUrl: "https://wa.me/573188430283?text=Hola%20Jairo", directRegisterUrl: "" } };
-  const localFiles = new Map([["index.html", "business"], ["app.js", "app"], ["styles.css", "css"], ["config.js", `const CONFIG = ${JSON.stringify(config)};\n`], ["favicon.svg", "svg"]]);
+  const config = { ecosystemType, site: { id: siteId, domain: publicHost }, distributor: {},
+    ...(ecosystemType === "BUSINESS" ? { vsl: { embedUrl: source.vsl.embedUrl, thumbnailUrl: source.vsl.thumbnailUrl },
+      cta: { primaryUrl: "https://wa.me/573188430283?text=Hola%20Jairo", secondaryUrl: "https://wa.me/573188430283?text=Hola%20Jairo", directRegisterUrl: "" } } : {}) };
+  const localFiles = new Map([["index.html", ecosystemType], ["app.js", "app"], ["styles.css", "css"], ["config.js", `const CONFIG = ${JSON.stringify(config)};\n`], ["favicon.svg", "svg"]]);
   for (const [name, value] of localFiles) await writeFile(resolve(packageDirectory, name), value);
-  const sourceText = stringify(source); await writeFile(resolve(sources, "jairo-pinto-business.json"), sourceText);
-  const brand = stringify({ ecosystemType: "PERSONAL_BRAND", site: { id: "jairo-pinto" } }); const product = stringify({ ecosystemType: "PRODUCT", site: { id: "jairo-pinto-product" } });
-  await writeFile(resolve(sources, "jairo-pinto.json"), brand); await writeFile(resolve(sources, "jairo-pinto-product.json"), product);
-  const target = { version: 2, ownerKey: "f403f29e-95c8-4825-9320-967376443020", siteId: "jairo-pinto-business", ecosystemType: "BUSINESS",
-    rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", publicHost: "negocio.jairopinto.pro", remoteRoot: "/hosting/negocio",
+  const sourceText = stringify(source); await writeFile(resolve(sources, `${siteId}.json`), sourceText);
+  const siblingSources = new Map([
+    ["jairo-pinto", stringify({ ecosystemType: "PERSONAL_BRAND", site: { id: "jairo-pinto" } })],
+    ["jairo-pinto-product", stringify({ ecosystemType: "PRODUCT", site: { id: "jairo-pinto-product" } })],
+    ["jairo-pinto-business", stringify({ ecosystemType: "BUSINESS", site: { id: "jairo-pinto-business" } })]
+  ]); siblingSources.delete(siteId);
+  for (const [siblingSiteId, value] of siblingSources) await writeFile(resolve(sources, `${siblingSiteId}.json`), value);
+  const target = { version: 2, ownerKey: "f403f29e-95c8-4825-9320-967376443020", siteId, ecosystemType,
+    rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", publicHost, remoteRoot,
     provisioningState: "READY", publicationState: "PENDING" };
-  const targetText = stringify(target); await writeFile(resolve(sources, ".publishing-targets", "jairo-pinto-business.json"), targetText);
+  const targetText = stringify(target); await writeFile(resolve(sources, ".publishing-targets", `${siteId}.json`), targetText);
   const environment = { HOSTINGER_SFTP_HOST: "sftp.example.test", HOSTINGER_SFTP_PORT: "22", HOSTINGER_SFTP_USERNAME: "u123456789",
     HOSTINGER_SFTP_PASSWORD: "not-used-by-tests", HOSTINGER_SFTP_HOST_KEY_SHA256: `SHA256:${"A".repeat(43)}=` };
   const capabilityValue = { schemaVersion: 1, probeVersion: "partnerhub-sftp-sibling-rename-v1", status: "VERIFIED",
     connection: { host: environment.HOSTINGER_SFTP_HOST, port: 22, hostKeyFingerprintSha256: environment.HOSTINGER_SFTP_HOST_KEY_SHA256, usernameHash: sha(environment.HOSTINGER_SFTP_USERNAME) },
-    scope: { parentDirectory: "/hosting", remoteRoot: "/hosting/negocio" }, evidence: { stagePath: "/hosting/.capability-stage", destinationPath: "/hosting/.capability-destination",
+    scope: { parentDirectory: "/hosting", remoteRoot }, evidence: { stagePath: "/hosting/.capability-stage", destinationPath: "/hosting/.capability-destination",
       backupPath: "/hosting/.capability-backup", sameFilesystemDirectoryRename: true, backupRestoreReadback: true }, verifiedAt: "2026-08-24T20:00:00.000Z", ttlSeconds: 3600 };
   const capability = stringify(capabilityValue);
   await writeFile(resolve(inputs, "sftp-capability.json"), capability);
   const oldRemote = new Map(existingRemote ? [["old.txt", "old package"]] : []); const expectedRemotePackageHash = existingRemote ? packageHash(oldRemote) : null;
-  const entry = { ownerKey: target.ownerKey, ownerSiteId: "jairo-pinto", siteId: target.siteId, ecosystemType: "BUSINESS", baseDomain: target.baseDomain, publicHost: target.publicHost,
+  const entry = { ownerKey: target.ownerKey, ownerSiteId, siteId: target.siteId, ecosystemType, baseDomain: target.baseDomain, publicHost: target.publicHost,
     expectedSourceHash: sha(sourceText), expectedTargetHash: sha(targetText), expectedPackageHash: packageHash(localFiles), expectedCapabilityHash: sha(capability), expectedRemotePackageHash,
-    protectedLocalArtifacts: [{ siteId: "jairo-pinto", expectedHash: sha(brand) }, { siteId: "jairo-pinto-product", expectedHash: sha(product) }] };
+    protectedLocalArtifacts: [...siblingSources].map(([siblingSiteId, value]) => ({ siteId: siblingSiteId, expectedHash: sha(value) })) };
   const manifestPath = resolve(inputs, "manifest.json"); await writeFile(manifestPath, stringify({ confirmation: "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION", allowlist: [entry] }));
-  const initial = Object.fromEntries([...oldRemote].map(([name, value]) => [`/hosting/negocio/${name}`, value])); const remote = new MemoryRemote(initial); if (existingRemote) remote.directories.add("/hosting/negocio");
-  return { root, sources, output, inputs, journals, manifestPath, remote, entry, localFiles, brand, product, environment, capabilityValue };
+  const initial = Object.fromEntries([...oldRemote].map(([name, value]) => [`${remoteRoot}/${name}`, value])); const remote = new MemoryRemote(initial); if (existingRemote) remote.directories.add(remoteRoot);
+  return { root, sources, output, inputs, journals, manifestPath, remote, entry, localFiles, environment, capabilityValue, siteId, publicHost, remoteRoot };
 }
 
 const options = (fx, extra = {}) => ({ manifestPath: fx.manifestPath, sourceDirectory: fx.sources, outputDirectory: fx.output, journalDirectory: fx.journals,
@@ -74,6 +81,63 @@ test("PREVIEW is unchanged, generic in contract, isolated to the first allowlist
   const fx = await fixture(); const preview = await planGuardedPublication(options(fx));
   assert.equal(preview.changed, false); assert.equal(preview.blocked, false); assert.equal(preview.guarantees.usesLegacyGlobalRemoteRoot, false);
   assert.equal(preview.guarantees.destinationSource, "PUBLISHING_TARGET_V2_REMOTE_ROOT_ONLY"); assert.deepEqual(preview.isolation.protectedSiteIds.sort(), ["jairo-pinto", "jairo-pinto-product"]);
+});
+
+test("PRODUCT and PERSONAL_BRAND packages pass the same guarded publication contract", async () => {
+  for (const ecosystemType of ["PRODUCT", "PERSONAL_BRAND"]) {
+    const fx = await fixture({ ecosystemType }); const preview = await planGuardedPublication(options(fx));
+    assert.equal(preview.blocked, false); assert.equal(preview.material.ecosystemType, ecosystemType);
+    assert.equal(preview.material.siteId, fx.siteId); assert.equal(preview.material.publicHost, fx.publicHost);
+    assert.equal(preview.material.remoteRoot, fx.remoteRoot);
+    const result = await runGuardedPublication(options(fx, { mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash }));
+    assert.equal(result.outcome, "APPLIED"); assert.equal((await fx.remote.inventory(fx.remoteRoot)).hash, fx.entry.expectedPackageHash);
+    assert.equal(JSON.parse(await readFile(resolve(fx.sources, ".publishing-targets", `${fx.siteId}.json`), "utf8")).publicationState, "READY");
+  }
+});
+
+test("planHash binds owner, domain and every protected local artifact hash", async () => {
+  const fx = await fixture(); const first = await planGuardedPublication(options(fx));
+  fx.entry.protectedLocalArtifacts[0].expectedHash = "0".repeat(64);
+  await writeFile(fx.manifestPath, stringify({ confirmation: "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION", allowlist: [fx.entry] }));
+  const second = await planGuardedPublication(options(fx)); assert.notEqual(second.planHash, first.planHash);
+  assert.ok(second.blockedReasons.some((reason) => reason.startsWith("PROTECTED_ARTIFACT_DRIFT:")));
+});
+
+test("PREVIEW output never exposes SFTP credentials", async () => {
+  const fx = await fixture(); const preview = await planGuardedPublication(options(fx)); const serialized = JSON.stringify(preview);
+  assert.equal(serialized.includes(fx.environment.HOSTINGER_SFTP_PASSWORD), false);
+  assert.equal(serialized.includes(fx.environment.HOSTINGER_SFTP_USERNAME), false);
+  assert.equal(serialized.includes(fx.environment.HOSTINGER_SFTP_HOST_KEY_SHA256), true);
+});
+
+test("manifest identity must use canonical owner siteId and ecosystem hostname", async () => {
+  const mutations = [
+    (entry) => { entry.ownerKey = "not-a-uuid"; },
+    (entry) => { entry.siteId = "../foreign"; },
+    (entry) => { entry.publicHost = "negocio.foreign.pro"; },
+    (entry) => { entry.ownerSiteId = "other-owner"; },
+    (entry) => { entry.protectedLocalArtifacts.push({ ...entry.protectedLocalArtifacts[0] }); }
+  ];
+  for (const mutate of mutations) {
+    const fx = await fixture(); mutate(fx.entry);
+    await writeFile(fx.manifestPath, stringify({ confirmation: "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION", allowlist: [fx.entry] }));
+    await assert.rejects(planGuardedPublication(options(fx)), /OWNER_KEY_INVALID|SITE_ID_INVALID|PUBLIC_HOST_INVALID|SITE_ID_OWNER_ECOSYSTEM_MISMATCH|PROTECTED_ARTIFACTS_INVALID/);
+  }
+});
+
+test("source and generated package cannot substitute another ecosystem identity even with updated hashes", async () => {
+  const packageFixture = await fixture(); const packagePath = resolve(packageFixture.output, packageFixture.siteId, "config.js");
+  const foreignConfig = `const CONFIG={ecosystemType:"PRODUCT",site:{id:"jairo-pinto-product",domain:"producto.jairopinto.pro"}};\n`;
+  await writeFile(packagePath, foreignConfig); packageFixture.localFiles.set("config.js", foreignConfig);
+  packageFixture.entry.expectedPackageHash = packageHash(packageFixture.localFiles);
+  await writeFile(packageFixture.manifestPath, stringify({ confirmation: "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION", allowlist: [packageFixture.entry] }));
+  let preview = await planGuardedPublication(options(packageFixture)); assert.ok(preview.blockedReasons.includes("PACKAGE_CONFIG_IDENTITY_INVALID"));
+
+  const sourceFixture = await fixture(); const sourcePath = resolve(sourceFixture.sources, `${sourceFixture.siteId}.json`);
+  const foreignSource = stringify({ ecosystemType: "PRODUCT", site: { id: "jairo-pinto-product", domain: "producto.jairopinto.pro" } });
+  await writeFile(sourcePath, foreignSource); sourceFixture.entry.expectedSourceHash = sha(foreignSource);
+  await writeFile(sourceFixture.manifestPath, stringify({ confirmation: "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION", allowlist: [sourceFixture.entry] }));
+  preview = await planGuardedPublication(options(sourceFixture)); assert.ok(preview.blockedReasons.includes("PACKAGE_SOURCE_IDENTITY_INVALID"));
 });
 
 test("blocks unverified rename capability, target drift and non-READY target", async () => {

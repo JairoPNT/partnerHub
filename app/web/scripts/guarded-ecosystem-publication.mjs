@@ -11,10 +11,12 @@ export const APPLY_CONFIRMATION = "PUBLISH_ALLOWLISTED_ECOSYSTEM_PACKAGE";
 const MANIFEST_CONFIRMATION = "PREVIEW_GUARDED_ECOSYSTEM_PUBLICATION";
 const HASH = /^[0-9a-f]{64}$/;
 const HOST_KEY_FINGERPRINT = /^SHA256:[A-Za-z0-9+/]{43}=$/;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+const SLUG = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
+const HOSTNAME = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const CAPABILITY_SCHEMA_VERSION = 1;
 const CAPABILITY_PROBE_VERSION = "partnerhub-sftp-sibling-rename-v1";
-const JAIRO_BUSINESS = Object.freeze({ ownerKey: "f403f29e-95c8-4825-9320-967376443020", ownerSiteId: "jairo-pinto",
-  siteId: "jairo-pinto-business", ecosystemType: "BUSINESS", baseDomain: "jairopinto.pro", publicHost: "negocio.jairopinto.pro" });
+const HOST_LABELS = Object.freeze({ PRODUCT: "producto", BUSINESS: "negocio", PERSONAL_BRAND: "brand" });
 const REQUIRED_ASSETS = ["index.html", "app.js", "styles.css", "config.js", "favicon.svg"];
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
@@ -71,10 +73,11 @@ function parseConfig(source, filename = "config.js") {
   return JSON.parse(JSON.stringify(script.runInNewContext(Object.create(null), { timeout: 1000 })));
 }
 
-function validateBusinessPackage(config, source, entry) {
+function validatePackage(config, source, entry) {
   const reasons = [];
-  if (config?.ecosystemType !== "BUSINESS" || config?.site?.id !== entry.siteId || config?.site?.domain !== entry.publicHost) reasons.push("BUSINESS_CONFIG_IDENTITY_INVALID");
-  if (source?.ecosystemType !== "BUSINESS" || source?.site?.id !== entry.siteId || source?.site?.domain !== entry.publicHost) reasons.push("BUSINESS_SOURCE_IDENTITY_INVALID");
+  if (config?.ecosystemType !== entry.ecosystemType || config?.site?.id !== entry.siteId || config?.site?.domain !== entry.publicHost) reasons.push("PACKAGE_CONFIG_IDENTITY_INVALID");
+  if (source?.ecosystemType !== entry.ecosystemType || source?.site?.id !== entry.siteId || source?.site?.domain !== entry.publicHost) reasons.push("PACKAGE_SOURCE_IDENTITY_INVALID");
+  if (entry.ecosystemType !== "BUSINESS") return reasons;
   if (typeof config?.vsl?.embedUrl !== "string" || !config.vsl.embedUrl.startsWith("https://") || !/\.mp4(?:\?|$)/i.test(config.vsl.embedUrl) || config.vsl.embedUrl !== source?.vsl?.embedUrl) reasons.push("BUSINESS_VSL_MP4_INVALID");
   if (!config?.vsl?.thumbnailUrl || config.vsl.thumbnailUrl !== source?.vsl?.thumbnailUrl) reasons.push("BUSINESS_POSTER_DERIVATION_INVALID");
   const primary = config?.cta?.primaryUrl; const secondary = config?.cta?.secondaryUrl;
@@ -88,10 +91,19 @@ function validateBusinessPackage(config, source, entry) {
 function validateManifest(manifest) {
   if (manifest?.confirmation !== MANIFEST_CONFIRMATION || !Array.isArray(manifest.allowlist) || manifest.allowlist.length !== 1) throw new Error("MANIFEST_EXACTLY_ONE_REQUIRED");
   const entry = manifest.allowlist[0];
-  for (const [key, value] of Object.entries(JAIRO_BUSINESS)) if (entry?.[key] !== value) throw new Error(`ALLOWLIST_MISMATCH:${key}`);
+  if (!UUID.test(entry?.ownerKey ?? "")) throw new Error("OWNER_KEY_INVALID");
+  if (!SLUG.test(entry?.ownerSiteId ?? "")) throw new Error("OWNER_SITE_ID_INVALID");
+  if (!SLUG.test(entry?.siteId ?? "")) throw new Error("SITE_ID_INVALID");
+  if (!Object.hasOwn(HOST_LABELS, entry?.ecosystemType)) throw new Error("ECOSYSTEM_TYPE_INVALID");
+  if (!HOSTNAME.test(entry?.baseDomain ?? "") || entry.baseDomain !== entry.baseDomain.toLowerCase()) throw new Error("BASE_DOMAIN_INVALID");
+  if (!HOSTNAME.test(entry?.publicHost ?? "") || entry.publicHost !== `${HOST_LABELS[entry.ecosystemType]}.${entry.baseDomain}`) throw new Error("PUBLIC_HOST_INVALID");
+  const expectedSiteId = entry.ecosystemType === "PERSONAL_BRAND" ? entry.ownerSiteId : `${entry.ownerSiteId}-${entry.ecosystemType === "PRODUCT" ? "product" : "business"}`;
+  if (entry.siteId !== expectedSiteId) throw new Error("SITE_ID_OWNER_ECOSYSTEM_MISMATCH");
   for (const field of ["expectedSourceHash", "expectedTargetHash", "expectedPackageHash", "expectedCapabilityHash"]) if (!HASH.test(entry[field] ?? "")) throw new Error(`HASH_INVALID:${field}`);
   if (entry.expectedRemotePackageHash !== null && !HASH.test(entry.expectedRemotePackageHash ?? "")) throw new Error("HASH_INVALID:expectedRemotePackageHash");
-  if (!Array.isArray(entry.protectedLocalArtifacts) || entry.protectedLocalArtifacts.length !== 2 || entry.protectedLocalArtifacts.some((item) => !HASH.test(item.expectedHash ?? ""))) throw new Error("PROTECTED_ARTIFACTS_INVALID");
+  if (!Array.isArray(entry.protectedLocalArtifacts) || entry.protectedLocalArtifacts.some((item) => !SLUG.test(item?.siteId ?? "") || !HASH.test(item?.expectedHash ?? "")) ||
+      new Set(entry.protectedLocalArtifacts.map((item) => item.siteId)).size !== entry.protectedLocalArtifacts.length ||
+      entry.protectedLocalArtifacts.some((item) => item.siteId === entry.siteId)) throw new Error("PROTECTED_ARTIFACTS_INVALID");
   return entry;
 }
 
@@ -124,7 +136,7 @@ export async function planGuardedPublication({ manifestPath, sourceDirectory, ou
   if (inventory.hash !== entry.expectedPackageHash) reasons.push("PACKAGE_HASH_DRIFT");
   if (capabilityFile.hash !== entry.expectedCapabilityHash) reasons.push("SFTP_CAPABILITY_HASH_DRIFT");
   if (target?.version !== 2 || target?.ownerKey !== entry.ownerKey || target?.siteId !== entry.siteId || target?.ecosystemType !== entry.ecosystemType ||
-      target?.baseDomain !== entry.baseDomain || target?.publicHost !== entry.publicHost) reasons.push("PUBLISHING_TARGET_IDENTITY_INVALID");
+      !Object.hasOwn(HOST_LABELS, target?.rootEcosystemType) || target?.baseDomain !== entry.baseDomain || target?.publicHost !== entry.publicHost) reasons.push("PUBLISHING_TARGET_IDENTITY_INVALID");
   if (target?.provisioningState !== "READY") reasons.push("PUBLISHING_TARGET_NOT_READY");
   if (target?.publicationState === "READY") reasons.push("PUBLICATION_STATE_READY_WITHOUT_JOURNAL");
   if (typeof target?.remoteRoot !== "string" || !target.remoteRoot.startsWith("/") || target.remoteRoot === "/") reasons.push("PUBLISHING_TARGET_REMOTE_ROOT_INVALID");
@@ -132,14 +144,16 @@ export async function planGuardedPublication({ manifestPath, sourceDirectory, ou
   const capabilityValidation = validateCapability(capability, connection, target?.remoteRoot, now.getTime()); reasons.push(...capabilityValidation.reasons);
   for (const name of REQUIRED_ASSETS) if (!inventory.files.some((file) => file.path === name)) reasons.push(`PACKAGE_ASSET_MISSING:${name}`);
   let config; try { config = parseConfig((await readFile(resolve(packageDirectory, "config.js"), "utf8"))); } catch { reasons.push("PACKAGE_CONFIG_INVALID"); }
-  if (config) reasons.push(...validateBusinessPackage(config, source, entry));
+  if (config) reasons.push(...validatePackage(config, source, entry));
   const protectedState = [];
   for (const item of entry.protectedLocalArtifacts) {
     const path = inside(sourceDirectory, item.siteId + ".json"); const file = await required(path); protectedState.push({ path, expectedHash: item.expectedHash, actualHash: file.hash });
     if (file.hash !== item.expectedHash) reasons.push(`PROTECTED_ARTIFACT_DRIFT:${item.siteId}`);
   }
-  const material = { siteId: entry.siteId, ecosystemType: entry.ecosystemType, targetHash: entry.expectedTargetHash, sourceHash: entry.expectedSourceHash,
+  const material = { ownerKey: entry.ownerKey, ownerSiteId: entry.ownerSiteId, siteId: entry.siteId, ecosystemType: entry.ecosystemType, baseDomain: entry.baseDomain,
+    targetHash: entry.expectedTargetHash, sourceHash: entry.expectedSourceHash,
     packageHash: entry.expectedPackageHash, capabilityHash: entry.expectedCapabilityHash, expectedRemotePackageHash: entry.expectedRemotePackageHash,
+    protectedLocalArtifacts: entry.protectedLocalArtifacts.map(({ siteId, expectedHash }) => ({ siteId, expectedHash })).sort((a, b) => a.siteId.localeCompare(b.siteId)),
     remoteRoot: target.remoteRoot ?? null, publicHost: entry.publicHost, capabilityBinding: capabilityValidation.binding };
   const planHash = sha256(JSON.stringify(material)); const journalPath = resolve(journalDirectory, `${entry.siteId}.json`);
   const terminal = await terminalJournal(journalPath, planHash, adapter, entry);
@@ -252,7 +266,7 @@ export async function verifyPublicPackage(entry, source, fetcher = globalThis.fe
   for (const asset of REQUIRED_ASSETS) { try { const response = await fetcher(`${base}/${asset}`, { redirect: "manual" }); responses[asset] = response;
     if (!response.ok) reasons.push(`PUBLIC_ASSET_UNAVAILABLE:${asset}`); } catch { reasons.push(`PUBLIC_ASSET_UNAVAILABLE:${asset}`); } }
   let config; try { config = parseConfig(await responses["config.js"].text(), `${base}/config.js`); } catch { reasons.push("PUBLIC_CONFIG_INVALID"); }
-  if (config) reasons.push(...validateBusinessPackage(config, source, entry));
+  if (config) reasons.push(...validatePackage(config, source, entry));
   return { passed: reasons.length === 0, reasons: [...new Set(reasons)], httpsVerified: reasons.every((item) => !item.startsWith("PUBLIC_ASSET_UNAVAILABLE")) };
 }
 
