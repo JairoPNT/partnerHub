@@ -53,6 +53,26 @@ test("previewIntent derives the enqueue identity without creating durable queue 
   assert.deepEqual(enqueued.job.intent, preview.intent);
 });
 
+test("enqueueReviewed writes only the exact reviewed immutable intent", async () => {
+  const fx = await fixture();
+  const preview = await fx.service.previewIntent({ siteId: fx.siteId });
+  await assert.rejects(
+    fx.service.enqueueReviewed({ siteId: fx.siteId }, "operator", "not-a-hash"),
+    /PUBLICATION_JOB_EXPECTED_INTENT_HASH_INVALID/
+  );
+  await assert.rejects(
+    fx.service.enqueueReviewed({ siteId: fx.siteId }, "operator", "0".repeat(64)),
+    /PUBLICATION_JOB_REVIEWED_INTENT_DRIFT/
+  );
+  assert.deepEqual(await fx.service.list(), []);
+
+  const first = await fx.service.enqueueReviewed({ siteId: fx.siteId }, "operator", preview.intentHash);
+  const replay = await fx.service.enqueueReviewed({ siteId: fx.siteId }, "another-operator", preview.intentHash);
+  assert.equal(first.created, true);
+  assert.equal(replay.created, false);
+  assert.equal(replay.job.id, preview.intentHash);
+});
+
 test("a canonical master package change creates a new publication intent", async () => {
   const fx = await fixture(); const first = await fx.service.enqueue({ siteId: fx.siteId }, "operator");
   await writeFile(resolve(fx.output, fx.masterSiteId, "index.html"), "master-v2");

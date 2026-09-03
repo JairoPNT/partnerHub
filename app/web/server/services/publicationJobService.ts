@@ -291,9 +291,12 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     return { intent, intentHash: sha256(JSON.stringify(intent)) };
   }
 
-  async function enqueue(input: z.input<typeof publicationJobCreateInputSchema>, requestedBySubject: string) {
+  async function persistQueuedJob(
+    intent: z.infer<typeof intentSchema>,
+    intentHash: string,
+    requestedBySubject: string
+  ) {
     if (!requestedBySubject.trim()) throw new Error("PUBLICATION_JOB_REQUESTOR_MISSING");
-    const { intent, intentHash } = await previewIntent(input);
     const timestamp = now().toISOString();
     const job = publicationJobSchema.parse({
       schemaVersion: 1,
@@ -318,6 +321,22 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
       if (!existing || existing.intentHash !== intentHash || JSON.stringify(existing.intent) !== JSON.stringify(intent)) throw new Error("PUBLICATION_JOB_IDEMPOTENCY_CONFLICT");
       return { job: existing, created: false };
     }
+  }
+
+  async function enqueue(input: z.input<typeof publicationJobCreateInputSchema>, requestedBySubject: string) {
+    const { intent, intentHash } = await previewIntent(input);
+    return persistQueuedJob(intent, intentHash, requestedBySubject);
+  }
+
+  async function enqueueReviewed(
+    input: z.input<typeof publicationJobCreateInputSchema>,
+    requestedBySubject: string,
+    expectedIntentHash: string
+  ) {
+    if (!HASH.test(expectedIntentHash)) throw new Error("PUBLICATION_JOB_EXPECTED_INTENT_HASH_INVALID");
+    const { intent, intentHash } = await previewIntent(input);
+    if (intentHash !== expectedIntentHash) throw new Error("PUBLICATION_JOB_REVIEWED_INTENT_DRIFT");
+    return persistQueuedJob(intent, intentHash, requestedBySubject);
   }
 
   async function list(filters: { siteId?: string; status?: z.infer<typeof statusSchema> } = {}) {
@@ -458,7 +477,7 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     });
   }
 
-  return { previewIntent, enqueue, get: readJob, list, claimNext, advance, complete, fail, retry, cancel, toSafeJob: safeJob };
+  return { previewIntent, enqueue, enqueueReviewed, get: readJob, list, claimNext, advance, complete, fail, retry, cancel, toSafeJob: safeJob };
 }
 
 export const publicationJobService = createPublicationJobService();
