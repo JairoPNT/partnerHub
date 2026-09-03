@@ -118,11 +118,30 @@ test("reviewed intent drift returns a safe blocked result without leaking the ra
   });
   const result = await service.apply(authorized(), "operator");
   assert.equal(result.blocked, true);
-  assert.deepEqual(result.blockedReasons, ["PUBLICATION_BACKFILL_PARTIAL_ENQUEUE"]);
+  assert.deepEqual(result.blockedReasons, ["PUBLICATION_BACKFILL_ENQUEUE_FAILED"]);
   assert.equal(result.summary.createdJobs, 0);
   assert.equal(result.summary.remainingCandidates, 1);
-  assert.equal(result.nextAction, "RUN_NEW_PREVIEW_AND_REQUIRE_NEW_AUTHORIZATION");
+  assert.equal(result.failedCandidate.siteId, "alpha-business");
+  assert.equal(result.failedCandidate.intentHash, preview().planMaterial.candidates[0].intentHash);
+  assert.equal(result.nextAction, "AUDIT_ENQUEUE_FAILURE_AND_RUN_NEW_PREVIEW");
   assert.equal(JSON.stringify(result).includes("secret provider detail"), false);
+  assert.equal(wakes, 0);
+});
+
+test("first enqueue conflict exposes only the safe job code and does not wake the worker", async () => {
+  let wakes = 0;
+  const service = createPublicationBackfillExecutorService({
+    preview: async () => preview(),
+    enqueueReviewed: async () => { throw new Error("PUBLICATION_JOB_IDEMPOTENCY_CONFLICT"); },
+    wake: () => { wakes += 1; }
+  });
+  const result = await service.apply(authorized(), "operator");
+  assert.equal(result.blocked, true);
+  assert.deepEqual(result.blockedReasons, ["PUBLICATION_JOB_IDEMPOTENCY_CONFLICT"]);
+  assert.equal(result.summary.processedCandidates, 0);
+  assert.equal(result.summary.createdJobs, 0);
+  assert.equal(result.jobs.length, 0);
+  assert.equal(result.nextAction, "AUDIT_ENQUEUE_FAILURE_AND_RUN_NEW_PREVIEW");
   assert.equal(wakes, 0);
 });
 
@@ -141,9 +160,11 @@ test("partial multi-candidate enqueue preserves completed jobs and requires a ne
   });
   const result = await service.apply(authorized(), "operator");
   assert.equal(result.blocked, true);
+  assert.deepEqual(result.blockedReasons, ["PUBLICATION_BACKFILL_PARTIAL_ENQUEUE", "PUBLICATION_BACKFILL_ENQUEUE_FAILED"]);
   assert.equal(result.changed, true);
   assert.equal(result.summary.processedCandidates, 1);
   assert.equal(result.summary.remainingCandidates, 1);
+  assert.equal(result.failedCandidate.siteId, "bravo-business");
   assert.equal(result.jobs[0].siteId, "alpha-business");
   assert.equal(wakes, 1);
 });
