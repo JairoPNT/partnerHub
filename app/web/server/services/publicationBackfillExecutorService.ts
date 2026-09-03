@@ -57,6 +57,20 @@ type Dependencies = {
   ) => Promise<{ created: boolean; job: Job }>;
   wake: () => void;
 };
+type SafeBackfillEnqueueFailureCode =
+  | "PUBLICATION_BACKFILL_ENQUEUE_FAILED"
+  | "PUBLICATION_BACKFILL_JOB_IDENTITY_MISMATCH"
+  | "PUBLICATION_BACKFILL_RETRY_NOT_AUTHORIZED"
+  | "PUBLICATION_JOB_BUSY"
+  | "PUBLICATION_JOB_CORRUPT"
+  | "PUBLICATION_JOB_EXPECTED_INTENT_HASH_INVALID"
+  | "PUBLICATION_JOB_IDEMPOTENCY_CONFLICT"
+  | "PUBLICATION_JOB_REQUESTOR_MISSING"
+  | "PUBLICATION_JOB_REVIEWED_INTENT_DRIFT"
+  | "PUBLICATION_JOB_SOURCE_OR_TARGET_INVALID"
+  | "PUBLICATION_JOB_SOURCE_OR_TARGET_MISSING"
+  | "PUBLICATION_JOB_MASTER_PACKAGE_MISSING"
+  | "PUBLICATION_JOB_SOURCE_TARGET_IDENTITY_MISMATCH";
 
 const defaultDependencies: Dependencies = {
   preview: publicationBackfillPreviewService.preview,
@@ -79,6 +93,27 @@ function matchesCandidate(job: Job, candidate: Candidate) {
     job.intent.siteId === candidate.siteId &&
     job.intent.ecosystemType === candidate.ecosystemType &&
     job.intent.publicHost === candidate.publicHost;
+}
+
+function safeEnqueueFailureCode(error: unknown): SafeBackfillEnqueueFailureCode {
+  if (!(error instanceof Error)) return "PUBLICATION_BACKFILL_ENQUEUE_FAILED";
+  switch (error.message) {
+    case "PUBLICATION_BACKFILL_JOB_IDENTITY_MISMATCH":
+    case "PUBLICATION_BACKFILL_RETRY_NOT_AUTHORIZED":
+    case "PUBLICATION_JOB_BUSY":
+    case "PUBLICATION_JOB_CORRUPT":
+    case "PUBLICATION_JOB_EXPECTED_INTENT_HASH_INVALID":
+    case "PUBLICATION_JOB_IDEMPOTENCY_CONFLICT":
+    case "PUBLICATION_JOB_REQUESTOR_MISSING":
+    case "PUBLICATION_JOB_REVIEWED_INTENT_DRIFT":
+    case "PUBLICATION_JOB_SOURCE_OR_TARGET_INVALID":
+    case "PUBLICATION_JOB_SOURCE_OR_TARGET_MISSING":
+    case "PUBLICATION_JOB_MASTER_PACKAGE_MISSING":
+    case "PUBLICATION_JOB_SOURCE_TARGET_IDENTITY_MISMATCH":
+      return error.message;
+    default:
+      return "PUBLICATION_BACKFILL_ENQUEUE_FAILED";
+  }
 }
 
 export function createPublicationBackfillExecutorService(dependencies: Dependencies = defaultDependencies) {
@@ -112,14 +147,18 @@ export function createPublicationBackfillExecutorService(dependencies: Dependenc
         jobs.push(safeJob(result.job));
         if (result.created) createdJobs += 1;
         else existingJobs += 1;
-      } catch {
+      } catch (error) {
+        const failureCode = safeEnqueueFailureCode(error);
+        const partial = jobs.length > 0;
         if (jobs.some((job) => job.status === "QUEUED" || job.status === "RUNNING")) dependencies.wake();
         return {
           requestId: "CDX-20260902-008" as const,
           mode: PUBLICATION_BACKFILL_APPLY_MODE,
           changed: createdJobs > 0,
           blocked: true as const,
-          blockedReasons: ["PUBLICATION_BACKFILL_PARTIAL_ENQUEUE"] as const,
+          blockedReasons: partial
+            ? ["PUBLICATION_BACKFILL_PARTIAL_ENQUEUE", failureCode] as const
+            : [failureCode] as const,
           planHash: preview.planHash,
           summary: {
             authorizedCandidates: candidates.length,
@@ -128,9 +167,17 @@ export function createPublicationBackfillExecutorService(dependencies: Dependenc
             existingJobs,
             remainingCandidates: candidates.length - jobs.length
           },
+          failedCandidate: {
+            siteId: candidate.siteId,
+            ecosystemType: candidate.ecosystemType,
+            publicHost: candidate.publicHost,
+            intentHash: candidate.intentHash
+          },
           jobs,
           workerWakeRequested: jobs.some((job) => job.status === "QUEUED" || job.status === "RUNNING"),
-          nextAction: "RUN_NEW_PREVIEW_AND_REQUIRE_NEW_AUTHORIZATION" as const
+          nextAction: partial
+            ? "RUN_NEW_PREVIEW_AND_REQUIRE_NEW_AUTHORIZATION" as const
+            : "AUDIT_ENQUEUE_FAILURE_AND_RUN_NEW_PREVIEW" as const
         };
       }
     }
