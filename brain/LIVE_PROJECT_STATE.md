@@ -32,6 +32,10 @@ CDX-20260902-006 was merged as PR #189 and deployed. Future ACTIVE + PAID/CONVER
 
 CDX-20260902-007 is implemented and verified locally. Its authenticated GET preview reads existing valid PublishingTarget v2 records and classifies exact current publication intents as candidates, already current, already scheduled, retry required or blocked. Its deterministic `planHash` includes hashed approval state and exact source/target/master hashes. It performs no enqueue, retry, wake, filesystem write or provider operation.
 
+CDX-20260902-007 was subsequently merged and deployed as PR #190. The authenticated production preview found exactly one candidate, `jairo-pinto-business`, no blocked/retry-required entries and plan hash `73c2db7372c040a960ba902a4f9ef7791a1f813861d14158645e327060e5debf`.
+
+CDX-20260902-008 is implemented and verified locally. It adds a separate authenticated POST executor that recomputes the complete preview, requires its exact reviewed plan hash and confirmation phrase, and binds every enqueue to the candidate's immutable publication intent hash. The executor has not been invoked in production.
+
 ## Path Integrity
 
 - Official project root: `D:\Proyectos multi agentes\PartnerHub`.
@@ -66,4 +70,4 @@ CDX-20260902-007 is implemented and verified locally. Its authenticated GET prev
 
 ## Next Step
 
-Open/review CDX-20260902-007. After deployment, inspect the authenticated preview. A separate production executor must revalidate its exact `planHash` and requires explicit CEO authorization before enqueueing or retrying any existing-customer publication.
+Open/review, merge and deploy CDX-20260902-008. Then obtain a fresh authenticated preview. Production APPLY remains blocked until Jairo explicitly authorizes the exact current `planHash`; the executor never retries FAILED/CANCELLED jobs.

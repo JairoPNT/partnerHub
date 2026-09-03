@@ -90,4 +90,8 @@ On 2026-08-01 Codex audited and stabilized the 2026-07-31 Antigravity change set
 
 ## Next Step
 
-Open and review CDX-20260902-007. Once deployed, request the authenticated read-only preview and review its counts, bounded blockers and exact `planHash`. Any enqueue/retry of existing customers belongs to a separate executor ticket and requires explicit CEO authorization for the reviewed plan hash.
+CDX-20260902-007 was merged, deployed and reviewed in production. Its authenticated preview found one candidate, `jairo-pinto-business`, with no blocked or retry-required entries and plan hash `73c2db7372c040a960ba902a4f9ef7791a1f813861d14158645e327060e5debf`.
+
+CDX-20260902-008 implements the separate authenticated, hash-pinned executor and is ready for PR. Deployment is inert: no existing customer is enqueued until Jairo explicitly authorizes a fresh post-deploy preview hash. The executor does not retry FAILED/CANCELLED jobs and requires a new preview after any partial batch.
+
+Open, review, merge and deploy CDX-20260902-008. Then obtain a fresh authenticated backfill preview. Do not call production APPLY until Jairo explicitly authorizes its exact current `planHash`.
