@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z, ZodError } from "zod";
 
 import {
-  authenticateCloudflareAccessRequest,
+  authenticateCloudflareAccessPublicationRequest,
   CloudflareAccessAuthError
 } from "@/server/auth/cloudflareAccessAuth";
 import {
@@ -29,7 +29,7 @@ function serviceError(error: unknown) {
 
 export async function GET(request: Request) {
   try {
-    await authenticateCloudflareAccessRequest(request);
+    await authenticateCloudflareAccessPublicationRequest(request);
     const url = new URL(request.url);
     const filters = querySchema.parse({ siteId: url.searchParams.get("siteId") ?? undefined, status: url.searchParams.get("status") ?? undefined });
     const jobs = await publicationJobService.list(filters);
@@ -43,7 +43,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const operator = await authenticateCloudflareAccessRequest(request);
+    const operator = await authenticateCloudflareAccessPublicationRequest(request);
     const input = publicationJobCreateInputSchema.parse(await request.json());
     const result = await publicationJobService.enqueue(input, operator.subject);
     void wakePublicationJobWorker();

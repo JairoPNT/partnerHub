@@ -84,3 +84,19 @@ export async function authenticateCloudflareAccessRequest(
   if (!token) throw new CloudflareAccessAuthError("ACCESS_TOKEN_MISSING");
   return verifyCloudflareAccessToken(token, configuration, keyResolver);
 }
+
+export function getCloudflareAccessPublicationConfig(source: NodeJS.ProcessEnv = process.env) {
+  return getCloudflareAccessConfig(source, "CLOUDFLARE_ACCESS_PUBLICATION_AUD");
+}
+
+export function authenticateCloudflareAccessPublicationRequest(
+  request: Request,
+  source: NodeJS.ProcessEnv = process.env,
+  keyResolver?: JWTVerifyGetKey
+) {
+  return authenticateCloudflareAccessRequest(
+    request,
+    getCloudflareAccessPublicationConfig(source),
+    keyResolver
+  );
+}

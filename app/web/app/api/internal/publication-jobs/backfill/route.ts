@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 
 import {
-  authenticateCloudflareAccessRequest,
+  authenticateCloudflareAccessPublicationRequest,
   CloudflareAccessAuthError
 } from "@/server/auth/cloudflareAccessAuth";
 import {
@@ -24,7 +24,7 @@ function operationError(error: unknown) {
 
 export async function POST(request: Request) {
   try {
-    const operator = await authenticateCloudflareAccessRequest(request);
+    const operator = await authenticateCloudflareAccessPublicationRequest(request);
     const input = publicationBackfillApplyInputSchema.parse(await request.json());
     const result = await publicationBackfillExecutorService.apply(input, operator.subject);
     return NextResponse.json(result, { status: result.blocked ? 409 : result.changed ? 201 : 200 });
