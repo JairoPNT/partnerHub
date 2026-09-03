@@ -35,6 +35,7 @@
     "test:publication-job-worker": "node --conditions=react-server --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test server/services/publicationJobWorkerService.test.ts",
     "test:publication-events": "node --conditions=react-server --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test server/services/publicationEventEnqueueService.test.ts",
     "test:publication-backfill-preview": "node --conditions=react-server --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test server/services/publicationBackfillPreviewService.test.ts",
+    "test:publication-backfill-executor": "node --conditions=react-server --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test server/services/publicationBackfillExecutorService.test.ts",
     "test:claudia-source-identity-dry-run": "node --test scripts/claudia-source-identity-dry-run.test.mjs",
     "test:jairo-source-identity-dry-run": "node --test scripts/jairo-source-identity-dry-run.test.mjs",
     "test:jairo-source-identity-guarded-apply": "node --test scripts/jairo-source-identity-guarded-apply.test.mjs",
