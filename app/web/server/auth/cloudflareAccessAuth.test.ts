@@ -4,9 +4,11 @@ import test from "node:test";
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from "jose";
 
 import {
+  authenticateCloudflareAccessPublicationRequest,
   authenticateCloudflareAccessRequest,
   CloudflareAccessAuthError,
-  getCloudflareAccessConfig
+  getCloudflareAccessConfig,
+  getCloudflareAccessPublicationConfig
 } from "./cloudflareAccessAuth.ts";
 
 const configuration = {
@@ -81,4 +83,46 @@ test("selects a route-specific audience instead of silently accepting the defaul
     audience: "entitlement-path-audience"
   });
   assert.equal(getCloudflareAccessConfig(source).audience, "default-app-audience");
+});
+
+test("selects the dedicated publication audience", () => {
+  const source = {
+    CLOUDFLARE_ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com",
+    CLOUDFLARE_ACCESS_AUD: "default-app-audience",
+    CLOUDFLARE_ACCESS_PUBLICATION_AUD: "publication-path-audience"
+  };
+  assert.deepEqual(getCloudflareAccessPublicationConfig(source), {
+    teamDomain: "https://team.cloudflareaccess.com",
+    audience: "publication-path-audience"
+  });
+});
+
+test("publication authentication rejects the broad administration audience", async () => {
+  const { keyResolver, token } = await fixture();
+  const source = {
+    CLOUDFLARE_ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com",
+    CLOUDFLARE_ACCESS_AUD: configuration.audience,
+    CLOUDFLARE_ACCESS_PUBLICATION_AUD: "publication-path-audience"
+  };
+  const request = new Request("https://app.partnerhub.club/api/internal/publication-jobs", {
+    headers: { "cf-access-jwt-assertion": await token() }
+  });
+  await assert.rejects(
+    authenticateCloudflareAccessPublicationRequest(request, source, keyResolver),
+    (error) => error instanceof CloudflareAccessAuthError && error.code === "ACCESS_TOKEN_INVALID"
+  );
+});
+
+test("publication authentication accepts the dedicated publication audience", async () => {
+  const { keyResolver, token } = await fixture();
+  const source = {
+    CLOUDFLARE_ACCESS_TEAM_DOMAIN: "team.cloudflareaccess.com",
+    CLOUDFLARE_ACCESS_AUD: "default-app-audience",
+    CLOUDFLARE_ACCESS_PUBLICATION_AUD: configuration.audience
+  };
+  const request = new Request("https://app.partnerhub.club/api/internal/publication-jobs", {
+    headers: { "cf-access-jwt-assertion": await token() }
+  });
+  const identity = await authenticateCloudflareAccessPublicationRequest(request, source, keyResolver);
+  assert.equal(identity.subject, "access-user-id");
 });

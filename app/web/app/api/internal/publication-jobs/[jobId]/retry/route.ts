@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 
 import {
-  authenticateCloudflareAccessRequest,
+  authenticateCloudflareAccessPublicationRequest,
   CloudflareAccessAuthError
 } from "@/server/auth/cloudflareAccessAuth";
 import { publicationJobService } from "@/server/services/publicationJobService";
@@ -14,7 +14,7 @@ const jobIdSchema = z.string().regex(/^[0-9a-f]{64}$/);
 
 export async function POST(request: Request, context: RouteContext) {
   try {
-    await authenticateCloudflareAccessRequest(request);
+    await authenticateCloudflareAccessPublicationRequest(request);
     const { jobId } = await context.params;
     const job = await publicationJobService.retry(jobIdSchema.parse(jobId));
     return NextResponse.json({ job: publicationJobService.toSafeJob(job) });

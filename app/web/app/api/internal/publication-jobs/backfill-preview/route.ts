@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 
 import {
-  authenticateCloudflareAccessRequest,
+  authenticateCloudflareAccessPublicationRequest,
   CloudflareAccessAuthError
 } from "@/server/auth/cloudflareAccessAuth";
 import { publicationBackfillPreviewService } from "@/server/services/publicationBackfillPreviewService";
@@ -10,7 +10,7 @@ export const runtime = "nodejs";
 
 export async function GET(request: Request) {
   try {
-    await authenticateCloudflareAccessRequest(request);
+    await authenticateCloudflareAccessPublicationRequest(request);
     const preview = await publicationBackfillPreviewService.preview();
     return NextResponse.json(preview, { headers: { "Cache-Control": "no-store, max-age=0" } });
   } catch (error) {
