@@ -20,12 +20,12 @@ async function fixture() {
   const { privateKey, publicKey } = await generateKeyPair("RS256");
   const jwk = await exportJWK(publicKey);
   const keyResolver = createLocalJWKSet({ keys: [{ ...jwk, kid: "test-key", alg: "RS256" }] });
-  async function token(overrides: { audience?: string; expiresIn?: string | number } = {}) {
-    return new SignJWT({ email: "admin@example.com" })
+  async function token(overrides: { audience?: string; expiresIn?: string | number; serviceToken?: boolean } = {}) {
+    return new SignJWT(overrides.serviceToken ? { type: "app", common_name: "service-client.access" } : { email: "admin@example.com" })
       .setProtectedHeader({ alg: "RS256", kid: "test-key" })
       .setIssuer(configuration.teamDomain)
       .setAudience(overrides.audience ?? configuration.audience)
-      .setSubject("access-user-id")
+      .setSubject(overrides.serviceToken ? "" : "access-user-id")
       .setIssuedAt()
       .setExpirationTime(overrides.expiresIn ?? "5m")
       .sign(privateKey);
@@ -40,7 +40,42 @@ test("accepts a valid Cloudflare Access JWT and returns identity", async () => {
   });
   const identity = await authenticateCloudflareAccessRequest(request, configuration, keyResolver);
   assert.equal(identity.subject, "access-user-id");
+  assert.equal(identity.identityType, "HUMAN");
   assert.equal(identity.email, "admin@example.com");
+});
+
+test("accepts a signed Access service-token assertion with empty sub and hashes common_name", async () => {
+  const { keyResolver, token } = await fixture();
+  const request = new Request("https://app.partnerhub.club/api/internal/publication-jobs/backfill", {
+    headers: { "cf-access-jwt-assertion": await token({ serviceToken: true }) }
+  });
+  const identity = await authenticateCloudflareAccessRequest(request, configuration, keyResolver);
+  assert.equal(identity.identityType, "SERVICE_TOKEN");
+  assert.match(identity.subject, /^service-token:[0-9a-f]{64}$/);
+  assert.equal(identity.subject.includes("service-client"), false);
+  assert.equal(identity.email, undefined);
+});
+
+test("rejects an empty subject without the signed service-token identity claims", async () => {
+  const { privateKey, publicKey } = await generateKeyPair("RS256");
+  const jwk = await exportJWK(publicKey);
+  const resolver = createLocalJWKSet({ keys: [{ ...jwk, kid: "empty", alg: "RS256" }] });
+  const empty = await new SignJWT({ type: "app" })
+    .setProtectedHeader({ alg: "RS256", kid: "empty" })
+    .setIssuer(configuration.teamDomain)
+    .setAudience(configuration.audience)
+    .setSubject("")
+    .setIssuedAt()
+    .setExpirationTime("5m")
+    .sign(privateKey);
+  await assert.rejects(
+    authenticateCloudflareAccessRequest(
+      new Request("https://app.partnerhub.club", { headers: { "cf-access-jwt-assertion": empty } }),
+      configuration,
+      resolver
+    ),
+    (error) => error instanceof CloudflareAccessAuthError && error.code === "ACCESS_TOKEN_INVALID"
+  );
 });
 
 test("rejects a request without the Access assertion", async () => {
@@ -125,4 +160,5 @@ test("publication authentication accepts the dedicated publication audience", as
   });
   const identity = await authenticateCloudflareAccessPublicationRequest(request, source, keyResolver);
   assert.equal(identity.subject, "access-user-id");
+  assert.equal(identity.identityType, "HUMAN");
 });
