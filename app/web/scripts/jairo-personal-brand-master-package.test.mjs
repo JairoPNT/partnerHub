@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, mkdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -49,9 +49,49 @@ test("plans a deterministic, read-only missing Personal Brand master package", a
     assert.match(preview.planHash, /^[a-f0-9]{64}$/);
     assert.equal(preview.destination.present, false);
     assert.equal(preview.destination.typographyDirectoryPresent, false);
+    await assert.rejects(() => lstat(resolve(item.outputRoot, "ganomaster-personal-brand")), { code: "ENOENT" });
     assert.equal(repeated.planMaterial.canonicalTemplateHash, preview.planMaterial.canonicalTemplateHash);
     assert.equal(repeated.planMaterial.expectedPackageHash, preview.planMaterial.expectedPackageHash);
     assert.equal(repeated.planHash, preview.planHash);
+  } finally {
+    await item.cleanup();
+  }
+});
+
+test("rejects symbolic-link template and destination roots before reading their contents", async () => {
+  const item = await fixture();
+  try {
+    const templateLink = resolve(item.root, "template-link");
+    const outputLink = resolve(item.root, "output-link");
+    await symlink(item.templateDirectory, templateLink, "junction");
+    await symlink(item.outputRoot, outputLink, "junction");
+
+    let preview = await planPersonalBrandMasterPackage({ ...item, templateDirectory: templateLink });
+    assert.ok(preview.blockedReasons.includes("PERSONAL_BRAND_CANONICAL_TEMPLATE_SYMLINK_FORBIDDEN"));
+
+    preview = await planPersonalBrandMasterPackage({ ...item, outputRoot: outputLink });
+    assert.ok(preview.blockedReasons.includes("PERSONAL_BRAND_MASTER_PACKAGE_DESTINATION_SYMLINK_FORBIDDEN"));
+
+    const destinationTarget = resolve(item.root, "destination-target");
+    await mkdir(destinationTarget);
+    await symlink(destinationTarget, resolve(item.outputRoot, "ganomaster-personal-brand"), "junction");
+    preview = await planPersonalBrandMasterPackage(item);
+    assert.ok(preview.blockedReasons.includes("PERSONAL_BRAND_MASTER_PACKAGE_DESTINATION_SYMLINK_FORBIDDEN"));
+  } finally {
+    await item.cleanup();
+  }
+});
+
+test("rejects unexpected special template entries without reading them", async () => {
+  const item = await fixture();
+  try {
+    const unexpectedLink = resolve(item.templateDirectory, "escaped-template-entry");
+    await symlink(item.outputRoot, unexpectedLink, "junction");
+
+    const preview = await planPersonalBrandMasterPackage(item);
+
+    assert.equal(preview.blocked, true);
+    assert.ok(preview.blockedReasons.includes("PERSONAL_BRAND_CANONICAL_TEMPLATE_SPECIAL_FILE_FORBIDDEN"));
   } finally {
     await item.cleanup();
   }

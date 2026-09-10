@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { access, lstat, readdir, readFile, stat } from "node:fs/promises";
+import { lstat, readdir, readFile, stat } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
@@ -22,7 +22,6 @@ const NO_CACHE_HTACCESS = `DirectoryIndex index.html
 </IfModule>
 `;
 
-const exists = async (path) => access(path).then(() => true, () => false);
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 
@@ -37,8 +36,22 @@ function inventoryHash(entries) {
   return sha256(JSON.stringify(entries.map(({ path, hash }) => ({ path, hash }))));
 }
 
+async function inspectDirectoryRoot(path, symlinkError) {
+  try {
+    const metadata = await lstat(path);
+    if (metadata.isSymbolicLink()) throw new Error(symlinkError);
+    if (!metadata.isDirectory()) throw new Error("PERSONAL_BRAND_MASTER_PACKAGE_SPECIAL_FILE_FORBIDDEN");
+    return true;
+  } catch (error) {
+    if (error && typeof error === "object" && error.code === "ENOENT") return false;
+    throw error;
+  }
+}
+
 async function inventory(directory) {
-  if (!(await exists(directory))) return { exists: false, files: [], hash: "ABSENT" };
+  if (!(await inspectDirectoryRoot(directory, "PERSONAL_BRAND_MASTER_PACKAGE_DESTINATION_SYMLINK_FORBIDDEN"))) {
+    return { exists: false, files: [], hash: "ABSENT" };
+  }
   const files = [];
 
   async function visit(current) {
@@ -70,6 +83,15 @@ function validateCanonicalConfig(bytes) {
 }
 
 async function loadCanonicalTemplate(templateDirectory) {
+  if (!(await inspectDirectoryRoot(templateDirectory, "PERSONAL_BRAND_CANONICAL_TEMPLATE_SYMLINK_FORBIDDEN"))) {
+    throw new Error("PERSONAL_BRAND_CANONICAL_TEMPLATE_MISSING_OR_UNREADABLE");
+  }
+  for (const entry of await readdir(templateDirectory, { withFileTypes: true })) {
+    inside(templateDirectory, entry.name);
+    if (!REQUIRED_TEMPLATE_FILES.includes(entry.name) && !entry.isFile() && !entry.isDirectory()) {
+      throw new Error("PERSONAL_BRAND_CANONICAL_TEMPLATE_SPECIAL_FILE_FORBIDDEN");
+    }
+  }
   const entries = [];
   const bytesByName = new Map();
   for (const name of REQUIRED_TEMPLATE_FILES) {
@@ -108,6 +130,7 @@ function resolvePaths(options = {}) {
   const outputRoot = resolve(options.outputRoot ?? "/data/generated-sites");
   const templateDirectory = resolve(options.templateDirectory ?? "/app/plantillas-de-pagina/personal-brand");
   return {
+    outputRoot,
     destinationDirectory: inside(outputRoot, SITE_ID),
     templateDirectory
   };
@@ -132,12 +155,18 @@ export async function planPersonalBrandMasterPackage(options = {}) {
   }
 
   let destination = { exists: false, files: [], hash: "ABSENT" };
+  let destinationSafe = true;
   try {
+    await inspectDirectoryRoot(paths.outputRoot, "PERSONAL_BRAND_MASTER_PACKAGE_DESTINATION_SYMLINK_FORBIDDEN");
     destination = await inventory(paths.destinationDirectory);
-  } catch {
-    reasons.push("PERSONAL_BRAND_MASTER_PACKAGE_DRIFT");
+  } catch (error) {
+    destinationSafe = false;
+    reasons.push(error instanceof Error && error.message === "PERSONAL_BRAND_MASTER_PACKAGE_DESTINATION_SYMLINK_FORBIDDEN"
+      ? error.message
+      : "PERSONAL_BRAND_MASTER_PACKAGE_DRIFT");
   }
-  const typographyDirectoryPresent = await isDirectory(inside(paths.destinationDirectory, "tipografia"));
+  const typographyDirectoryPresent = destinationSafe
+    && await isDirectory(inside(paths.destinationDirectory, "tipografia"));
   if (destination.exists && (destination.hash !== expectedPackage.hash || !typographyDirectoryPresent)) {
     reasons.push("PERSONAL_BRAND_MASTER_PACKAGE_DRIFT");
   }
