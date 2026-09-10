@@ -76,18 +76,21 @@ partner apex for Personal Brand.
 ## Latest backend contract checkpoint
 
 `CDX-20260909-003` completed the backend-only Personal Brand root-domain route
-contract in Tasks 1 and 2. The pure policy assigns the apex to active Personal
-Brand, otherwise redirects apex traffic to Business and then Product; Product
-and Business retain `producto.<baseDomain>` and `negocio.<baseDomain>`. The
-subdomain provisioner rejects Personal Brand apex provisioning before target
-persistence or provider access. No provider, DNS, SFTP, Cloudflare, EasyPanel,
-publication, or production action was performed.
+contract and final review. The pure policy gives priority to Personal Brand,
+then Business, then Product only for apex requests and inactive known-subdomain
+fallback. An active requested Product or Business subdomain instead serves its
+own ecosystem. Product and Business retain `producto.<baseDomain>` and
+`negocio.<baseDomain>`. The subdomain provisioner rejects Personal Brand apex
+provisioning before target persistence or provider access. No provider, DNS,
+SFTP, Cloudflare, EasyPanel, publication, or production action was performed.
 
-Task 3 closeout verification was partially blocked by the isolated worktree's
-incomplete `node_modules` tree: the hostname suite loaded 14 tests and failed
-only while importing `zod`, while the publication-target suite passed 6/6;
-`git diff --check` passed. ESLint could not start because the local dependency
-install remained incomplete. See the ticket report for exact evidence.
+The incomplete local dependency state recorded in
+`d21e92a5997428c02e95b98762060f9af3f49d83` (`docs: record dependency
+verification remediation`) and corrected in
+`d390572ed4ad5221cb0a0048e8b55ad708d8b0f4` (`docs: correct personal brand
+routing verification`) is historical. Final CDX-003 verification now records
+all required focused suites, the exact Task 3 ESLint command, and
+`git diff --check` as passing; see the ticket report for evidence.
 
 ## Next step
 

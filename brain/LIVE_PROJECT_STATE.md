@@ -5,7 +5,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 ## Current ticket
 
 `CDX-20260909-003 - Personal Brand root-domain target contract` (completed;
-closeout verification recorded in the ticket report)
+final-review verification recorded in the ticket report)
 
 ## Current state
 
@@ -58,8 +58,11 @@ approved three-ecosystem rule that assigns the partner apex to Personal Brand.
 
 `CDX-20260909-003` now owns the deterministic partner route policy and the
 pre-provider Personal Brand apex gate. Personal Brand serves the partner apex
-when active; Business and Product keep their fixed subdomains. Existing target
-identities and legacy migration behavior remain unchanged. No provider, DNS,
+when active; Business and Product keep their fixed subdomains and each serves
+an active requested subdomain even if another active ecosystem has higher apex
+priority. Existing target identities and legacy migration behavior remain
+unchanged. The earlier incomplete local dependency record is historical; the
+final ticket report records all required checks passing. No provider, DNS,
 SFTP, Cloudflare, EasyPanel, deployment, publication, or production mutation
 was performed.
 

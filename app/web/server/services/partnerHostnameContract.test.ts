@@ -37,7 +37,7 @@ test("defines canonical master hosts and preserves current production aliases fo
   assert.deepEqual(getCompatibleMasterHosts("PERSONAL_BRAND"), ["brand.ganomaster.pro"]);
 });
 
-test("resolves partner routes according to active ecosystem priority", () => {
+test("resolves apex priority and serves active requested Product or Business subdomains", () => {
   const cases = [
     {
       activeEcosystems: ["PRODUCT"],
@@ -84,9 +84,9 @@ test("resolves partner routes according to active ecosystem priority", () => {
       requestedHost: "producto.partner.pro",
       expected: {
         requestedHost: "producto.partner.pro",
-        canonicalHost: "negocio.partner.pro",
-        action: "REDIRECT",
-        ecosystemType: "BUSINESS"
+        canonicalHost: "producto.partner.pro",
+        action: "SERVE",
+        ecosystemType: "PRODUCT"
       }
     },
     {
@@ -104,9 +104,9 @@ test("resolves partner routes according to active ecosystem priority", () => {
       requestedHost: "producto.partner.pro",
       expected: {
         requestedHost: "producto.partner.pro",
-        canonicalHost: "partner.pro",
-        action: "REDIRECT",
-        ecosystemType: "PERSONAL_BRAND"
+        canonicalHost: "producto.partner.pro",
+        action: "SERVE",
+        ecosystemType: "PRODUCT"
       }
     },
     {
@@ -114,9 +114,9 @@ test("resolves partner routes according to active ecosystem priority", () => {
       requestedHost: "negocio.partner.pro",
       expected: {
         requestedHost: "negocio.partner.pro",
-        canonicalHost: "partner.pro",
-        action: "REDIRECT",
-        ecosystemType: "PERSONAL_BRAND"
+        canonicalHost: "negocio.partner.pro",
+        action: "SERVE",
+        ecosystemType: "BUSINESS"
       }
     },
     {
@@ -137,6 +137,26 @@ test("resolves partner routes according to active ecosystem priority", () => {
         canonicalHost: "partner.pro",
         action: "REDIRECT",
         ecosystemType: "PERSONAL_BRAND"
+      }
+    },
+    {
+      activeEcosystems: ["PERSONAL_BRAND", "PRODUCT", "BUSINESS"],
+      requestedHost: "producto.partner.pro",
+      expected: {
+        requestedHost: "producto.partner.pro",
+        canonicalHost: "producto.partner.pro",
+        action: "SERVE",
+        ecosystemType: "PRODUCT"
+      }
+    },
+    {
+      activeEcosystems: ["PERSONAL_BRAND", "PRODUCT", "BUSINESS"],
+      requestedHost: "negocio.partner.pro",
+      expected: {
+        requestedHost: "negocio.partner.pro",
+        canonicalHost: "negocio.partner.pro",
+        action: "SERVE",
+        ecosystemType: "BUSINESS"
       }
     }
   ] as const;

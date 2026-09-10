@@ -85,6 +85,15 @@ export function resolvePartnerRoute({
     throw new Error("requestedHost must be the apex or an allowlisted partner subdomain");
   }
 
+  if (requestedEcosystemType !== "PERSONAL_BRAND" && activeEcosystemSet.has(requestedEcosystemType)) {
+    return {
+      requestedHost,
+      canonicalHost: getPartnerCanonicalPublicHost(baseDomain, requestedEcosystemType, requestedEcosystemType),
+      action: "SERVE",
+      ecosystemType: requestedEcosystemType
+    };
+  }
+
   const resolvedEcosystemType = (["PERSONAL_BRAND", "BUSINESS", "PRODUCT"] as const)
     .find((ecosystemType) => activeEcosystemSet.has(ecosystemType));
 

@@ -30,12 +30,15 @@ Outcome: align `brain/` with the real production checkpoint so agents do not con
 
 Owner: Codex
 
-Status: completed as `CDX-20260909-003` (route contract and pre-provider apex
-gate). Focused closeout evidence is recorded in the ticket report; the
-isolated worktree dependency tree prevented a fully green aggregate suite.
+Status: completed as `CDX-20260909-003` (route contract, pre-provider apex
+gate, and final-review verification). The final ticket report records all
+required focused suites, the exact Task 3 ESLint command, and `git diff --check`
+as passing. The earlier dependency-state record is historical only.
 
-Outcome: the pipeline is partly reusable, and the apex route/provisioning gate
-is now explicit. No package, DNS, SFTP, or publication work was performed.
+Outcome: the pipeline is partly reusable, the apex route/provisioning gate is
+explicit, and active requested Product or Business subdomains serve their own
+ecosystem even when a higher-priority ecosystem is active. No package, DNS,
+SFTP, or publication work was performed.
 
 Expected scope:
 

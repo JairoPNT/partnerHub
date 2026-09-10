@@ -3,25 +3,28 @@
 ## Outcome
 
 Tasks 1 and 2 completed the backend route contract and pre-provider Personal
-Brand apex gate. Task 3 performed the mandated focused verification and updated
-operational memory. No frontend, provider, DNS, SFTP, Cloudflare, EasyPanel,
-deployment, publication, PR, push, or merge action was performed.
+Brand apex gate. Final review corrected the route policy so an active requested
+Product or Business subdomain serves its own ecosystem even when a
+higher-priority ecosystem is active. Apex requests and inactive known
+subdomains retain Personal Brand, Business, then Product fallback priority.
+Task 3 operational memory now records the final passing verification state. No
+frontend, provider, DNS, SFTP, Cloudflare, EasyPanel, deployment, publication,
+PR, push, or merge action was performed.
 
 ## Verification evidence
 
-- `npm run test:partner-hostnames` — **PASS**, 39 tests passed, 0 failed, after
-  restoring the incomplete generated dependency tree through a temporary local
-  junction to the complete official-checkout tree.
-- `npm run test:publication-target` — **PASS**, 6 tests passed, 0 failed.
-- `npx eslint server/services/partnerHostnameContract.ts server/services/partnerHostnameContract.test.ts server/services/subdomainProvisioningService.ts server/services/subdomainProvisioningService.test.ts --no-ignore --max-warnings=0` — **PASS** with process-local npm offline mode; no findings.
+- `node --experimental-strip-types --test server/services/partnerHostnameContract.test.ts` — **PASS**.
+- `npm run test:partner-hostnames` — **PASS**.
+- `npm run test:publication-target` — **PASS**.
+- `npx eslint server/services/partnerHostnameContract.ts server/services/partnerHostnameContract.test.ts server/services/subdomainProvisioningService.ts server/services/subdomainProvisioningService.test.ts --no-ignore --max-warnings=0` — **PASS** with no findings.
 - `git diff --check` — **PASS**.
 
-Root cause: the worktree's generated `node_modules` restore was interrupted;
-`zod` lacked its package entrypoint and plain `npx` attempted network package
-resolution. Minimal remediation: a temporary local junction to the complete
-dependency tree already present in the official checkout, with npm offline
-mode for the ESLint invocation. No network, credentials, provider, or
-production access was used.
+The worktree's incomplete generated dependency state previously recorded in
+`d21e92a5997428c02e95b98762060f9af3f49d83` (`docs: record dependency
+verification remediation`) and then addressed by
+`d390572ed4ad5221cb0a0048e8b55ad708d8b0f4` (`docs: correct personal brand
+routing verification`) is historical. It is not a current CDX-003 verification
+limitation. No network, credentials, provider, or production access was used.
 
 ## Changed files
 
@@ -41,16 +44,21 @@ authorization.
 
 ## Commit
 
-Prior documentation commit: `e9ba98180d29cc93b2ac5ab03f49a8cb42853a4b` —
+Initial Task 3 documentation commit:
+`e9ba98180d29cc93b2ac5ab03f49a8cb42853a4b` —
 `docs: close personal brand root routing contract`.
 
-Authoritative verification correction: `d21e92a5997428c02e95b98762060f9af3f49d83` —
-`docs: correct personal brand routing verification`. This correction changes
-only the tracked closeout report; the SDD evidence remains an ignored artifact.
+Historical dependency-remediation record:
+`d21e92a5997428c02e95b98762060f9af3f49d83` —
+`docs: record dependency verification remediation`.
+
+Historical verification-correction record:
+`d390572ed4ad5221cb0a0048e8b55ad708d8b0f4` —
+`docs: correct personal brand routing verification`.
 
 ## Self-review
 
-- Documentation changes stay within the four Task 3 files.
-- Verification results are reported exactly, including the dependency blocker;
-  no green aggregate-suite claim is made.
+- Documentation changes stay within CDX-003 operational-memory records.
+- Verification results are reported exactly: all required checks pass, and the
+  prior dependency blocker is identified as historical rather than current.
 - No frontend or infrastructure files were changed.
