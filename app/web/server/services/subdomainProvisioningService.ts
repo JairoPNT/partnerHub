@@ -7,7 +7,7 @@ import { z } from "zod";
 
 import type { HostingerDnsRoutingMode, HostingerEnsureDnsResult } from "../integrations/hostingerDnsClient.ts";
 import type { HostingerEnsureSubdomainResult, HostingerWebsite } from "../integrations/hostingerSubdomainClient.ts";
-import { getPartnerPublicHost, PARTNER_HOST_LABELS } from "#partner-hostname-contract";
+import { getPartnerCanonicalPublicHost, getPartnerPublicHost, PARTNER_HOST_LABELS } from "#partner-hostname-contract";
 
 const siteIdSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const ownerKeySchema = z.string().uuid();
@@ -81,10 +81,10 @@ type ReadinessProbe = {
 type Dependencies = { hostingerClient: HostingerClient; dnsClient: DnsClient; readinessProbe?: ReadinessProbe; storageDirectory?: string; now?: () => Date };
 
 export class ProvisioningError extends Error {
-  public readonly code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED";
+  public readonly code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED" | "PROVISIONING_ROOT_TARGET_REQUIRES_SEPARATE_GATE";
   public readonly providerCode?: string;
   public readonly providerStatus?: number | null;
-  constructor(code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED", message: string, provider: { code?: string; status?: number | null } = {}) {
+  constructor(code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED" | "PROVISIONING_ROOT_TARGET_REQUIRES_SEPARATE_GATE", message: string, provider: { code?: string; status?: number | null } = {}) {
     super(message); this.name = "ProvisioningError"; this.code = code; this.providerCode = provider.code; this.providerStatus = provider.status;
   }
 }
@@ -141,7 +141,7 @@ export async function listPublishingTargets(root = defaultStorageDirectory()) {
     return values.filter((value): value is PublishingTarget => Boolean(value));
   } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return []; throw error; }
 }
-function publicHost(input: ProvisionSubdomainInput) { return getPartnerPublicHost(input.baseDomain, input.ecosystemType); }
+function publicHost(input: ProvisionSubdomainInput) { return getPartnerCanonicalPublicHost(input.baseDomain, input.ecosystemType, input.rootEcosystemType); }
 function providerCode(error: unknown) { return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : "PROVISIONING_PROVIDER_FAILED"; }
 function providerStatus(error: unknown) { return error && typeof error === "object" && "status" in error && typeof error.status === "number" && error.status >= 100 && error.status <= 599 ? error.status : null; }
 
@@ -188,7 +188,12 @@ export function createSubdomainProvisioningService(deps: Dependencies) {
     return save({ version: 2, ownerKey: input.ownerKey, siteId: input.siteId, ecosystemType: input.ecosystemType, rootEcosystemType: input.rootEcosystemType, baseDomain: input.baseDomain, publicHost: host, remoteRoot: null, provisioningState: "PENDING", hostingerState: "PENDING", dnsState: "PENDING", sslState: "PENDING", publicationState: "PENDING", createdAt: timestamp, updatedAt: timestamp });
   }
   async function provision(raw: ProvisionSubdomainInput) {
-    const input = provisionSubdomainInputSchema.parse(raw); let target = await createOrLoad(input);
+    const input = provisionSubdomainInputSchema.parse(raw);
+    const host = publicHost(input);
+    if (input.ecosystemType === "PERSONAL_BRAND" && host === input.baseDomain) {
+      throw new ProvisioningError("PROVISIONING_ROOT_TARGET_REQUIRES_SEPARATE_GATE", "Personal Brand apex provisioning requires a separate root-target gate.");
+    }
+    let target = await createOrLoad(input);
     try {
       const hosting = (await deps.hostingerClient.ensure(input.baseDomain, PARTNER_HOST_LABELS[input.ecosystemType])).subdomain;
       if (target.remoteRoot && target.remoteRoot !== hosting.root_directory) {

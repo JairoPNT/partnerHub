@@ -26,12 +26,12 @@ function service(directory: string, options: { dnsReady?: boolean; sslReady?: bo
   }) };
 }
 
-test("persists PERSONAL_BRAND on its canonical brand subdomain", async () => isolated(async (directory) => {
+test("blocks PERSONAL_BRAND apex provisioning before persistence or provider calls", async () => isolated(async (directory) => {
   const { instance, calls } = service(directory);
-  const target = await instance.provision({ ownerKey, siteId: "jairo-brand", ecosystemType: "PERSONAL_BRAND", rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" });
-  assert.equal(target.publicHost, "brand.jairopinto.pro"); assert.equal(target.remoteRoot, "/hostinger/brand-from-api"); assert.equal(target.provisioningState, "READY");
-  assert.equal(target.publicationState, "PENDING");
-  assert.deepEqual(calls, ["brand", "dns:brand.jairopinto.pro"]);
+  const input = { ownerKey, siteId: "jairo-brand", ecosystemType: "PERSONAL_BRAND" as const, rootEcosystemType: "PERSONAL_BRAND" as const, baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" as const };
+  await assert.rejects(() => instance.provision(input), (error: unknown) => error instanceof ProvisioningError && error.code === "PROVISIONING_ROOT_TARGET_REQUIRES_SEPARATE_GATE");
+  assert.deepEqual(calls, []);
+  assert.equal(await instance.get("jairo-brand"), null);
 }));
 
 test("maps Plan 360 product and business to isolated Hostinger roots", async () => isolated(async (directory) => {
@@ -111,7 +111,7 @@ test("exposes only safe provider code and HTTP status for audited recovery", asy
 }));
 
 test("retries SSL_PENDING safely without changing the persisted identity or root", async () => isolated(async (directory) => {
-  const input = { ownerKey, siteId: "jairo-brand", ecosystemType: "PERSONAL_BRAND" as const, rootEcosystemType: "PERSONAL_BRAND" as const, baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" as const };
+  const input = { ownerKey, siteId: "jairo-business", ecosystemType: "BUSINESS" as const, rootEcosystemType: "PERSONAL_BRAND" as const, baseDomain: "jairopinto.pro", ipv4: "82.29.157.103", confirmation: "PROVISION_SUBDOMAIN" as const };
   const pending = service(directory, { sslReady: false });
   const first = await pending.instance.provision(input);
   assert.equal(first.provisioningState, "SSL_PENDING");
