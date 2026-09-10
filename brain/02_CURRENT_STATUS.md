@@ -73,11 +73,32 @@ one blocking backend mismatch: new targets are currently forced to
 `brand.<partner-domain>`, while the approved three-ecosystem route reserves the
 partner apex for Personal Brand.
 
+## Latest backend contract checkpoint
+
+`CDX-20260909-003` completed the backend-only Personal Brand root-domain route
+contract and final review. The pure policy gives priority to Personal Brand,
+then Business, then Product only for apex requests and inactive known-subdomain
+fallback. An active requested Product or Business subdomain instead serves its
+own ecosystem. Product and Business retain `producto.<baseDomain>` and
+`negocio.<baseDomain>`. The subdomain provisioner rejects Personal Brand apex
+provisioning before target persistence or provider access. No provider, DNS,
+SFTP, Cloudflare, EasyPanel, publication, or production action was performed.
+
+The incomplete local dependency state recorded in
+`d21e92a5997428c02e95b98762060f9af3f49d83` (`docs: record dependency
+verification remediation`) and corrected in
+`d390572ed4ad5221cb0a0048e8b55ad708d8b0f4` (`docs: correct personal brand
+routing verification`) is historical. Final CDX-003 verification now records
+all required focused suites, the exact Task 3 ESLint command, and
+`git diff --check` as passing; see the ticket report for evidence.
+
 ## Next step
 
-Open `CDX-20260909-003` to align the Personal Brand root-domain target contract
-without publishing anything. Keep UI/visual identity work separated through an
-Antigravity request.
+Open a separate guarded ticket for Personal Brand master-package preparation
+and preview. It must define the apex target's remote root explicitly and stop
+before DNS, SFTP, provider, or publication mutation pending fresh review and
+authorization. Keep UI/visual identity work separated through an Antigravity
+request.
 
 Do not combine these streams in one PR:
 
