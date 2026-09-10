@@ -9,18 +9,19 @@ deployment, publication, PR, push, or merge action was performed.
 
 ## Verification evidence
 
-- `npm run test:partner-hostnames` — **BLOCKED by isolated dependency state**:
-  14 tests passed; 2 test files failed at module loading because
-  `node_modules/zod` was incomplete/missing its package entrypoint. No assertion
-  failure was reported.
+- `npm run test:partner-hostnames` — **PASS**, 39 tests passed, 0 failed, after
+  restoring the incomplete generated dependency tree through a temporary local
+  junction to the complete official-checkout tree.
 - `npm run test:publication-target` — **PASS**, 6 tests passed, 0 failed.
-- `npx eslint server/services/partnerHostnameContract.ts server/services/partnerHostnameContract.test.ts server/services/subdomainProvisioningService.ts server/services/subdomainProvisioningService.test.ts --no-ignore --max-warnings=0` — **BLOCKED**; the isolated dependency install did not complete and `npx` could not start ESLint.
+- `npx eslint server/services/partnerHostnameContract.ts server/services/partnerHostnameContract.test.ts server/services/subdomainProvisioningService.ts server/services/subdomainProvisioningService.test.ts --no-ignore --max-warnings=0` — **PASS** with process-local npm offline mode; no findings.
 - `git diff --check` — **PASS**.
 
-The worktree had no complete `node_modules` tree. A locked local dependency
-restore was attempted without provider or production access, but it did not
-complete in the available verification window. This is an environment
-prerequisite, not a product-test failure.
+Root cause: the worktree's generated `node_modules` restore was interrupted;
+`zod` lacked its package entrypoint and plain `npx` attempted network package
+resolution. Minimal remediation: a temporary local junction to the complete
+dependency tree already present in the official checkout, with npm offline
+mode for the ESLint invocation. No network, credentials, provider, or
+production access was used.
 
 ## Changed files
 
@@ -40,7 +41,9 @@ authorization.
 
 ## Commit
 
-`6d859d74bb3290dc6156c8fcaf6488cf9e6b2153` — `docs: close personal brand root routing contract` (the final pre-report-metadata commit; the amended closeout retains this exact scoped diff).
+Base documentation commit: `e9ba98180d29cc93b2ac5ab03f49a8cb42853a4b` —
+`docs: close personal brand root routing contract`. This verification correction
+is committed separately and changes only this report plus the SDD evidence file.
 
 ## Self-review
 
