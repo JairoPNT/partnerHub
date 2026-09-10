@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { lstat, readFile } from "node:fs/promises";
-import { posix, resolve, sep } from "node:path";
+import { dirname, posix, resolve, sep } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
 
@@ -16,6 +16,7 @@ const MASTER_SITE_ID = "ganomaster-personal-brand";
 
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
+const enumOrNull = (value, allowed) => typeof value === "string" && allowed.includes(value) ? value : null;
 
 function inside(root, child) {
   const base = resolve(root);
@@ -26,6 +27,15 @@ function inside(root, child) {
 
 async function readOptional(path) {
   try {
+    const parents = [];
+    for (let parent = dirname(path); ; parent = dirname(parent)) {
+      parents.push(parent);
+      if (dirname(parent) === parent) break;
+    }
+    for (const parent of parents.reverse()) {
+      const metadata = await lstat(parent);
+      if (metadata.isSymbolicLink() || !metadata.isDirectory()) throw new Error("PERSONAL_BRAND_ARTIFACT_PARENT_NOT_REGULAR");
+    }
     const metadata = await lstat(path);
     if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error("PERSONAL_BRAND_ARTIFACT_NOT_REGULAR");
     return await readFile(path);
@@ -38,7 +48,14 @@ async function readJson(path, missingReason, invalidReason, reasons) {
   try { bytes = await readOptional(path); }
   catch { reasons.push(invalidReason); return { bytes: null, value: null, hash: "UNREADABLE" }; }
   if (!bytes) { reasons.push(missingReason); return { bytes: null, value: null, hash: "ABSENT" }; }
-  try { return { bytes, value: JSON.parse(bytes), hash: sha256(bytes) }; }
+  try {
+    const value = JSON.parse(bytes);
+    if (value === null || typeof value !== "object" || Array.isArray(value)) {
+      reasons.push(invalidReason);
+      return { bytes, value: null, hash: sha256(bytes) };
+    }
+    return { bytes, value, hash: sha256(bytes) };
+  }
   catch { reasons.push(invalidReason); return { bytes, value: null, hash: sha256(bytes) }; }
 }
 
@@ -47,7 +64,8 @@ function validSource(source) {
 }
 
 function validEntitlement(entitlement) {
-  const expectedTarget = entitlement?.expectedTargets?.find((entry) => entry?.ecosystemType === ECOSYSTEM_TYPE);
+  if (!Array.isArray(entitlement?.expectedTargets)) return false;
+  const expectedTarget = entitlement.expectedTargets.find((entry) => entry?.ecosystemType === ECOSYSTEM_TYPE);
   return entitlement?.activationLeadId === OWNER_KEY
     && entitlement?.commercialState === "KNOWN"
     && Array.isArray(entitlement?.includedEcosystems)
@@ -107,6 +125,12 @@ export async function preparePersonalBrandPublicationPreview(options = {}) {
   else if (masterPackage.blocked || masterPackage.disposition !== "ALREADY_CURRENT") reasons.push("PERSONAL_BRAND_PACKAGE_DRIFT");
 
   const identity = { ownerKey: OWNER_KEY, siteId: SITE_ID, ecosystemType: ECOSYSTEM_TYPE, baseDomain: BASE_DOMAIN, publicHost: PUBLIC_HOST, masterSiteId: MASTER_SITE_ID };
+  const targetStates = {
+    provisioningState: enumOrNull(target.value?.provisioningState, ["PENDING", "HOSTING_CREATED", "DNS_PENDING", "SSL_PENDING", "READY", "FAILED"]),
+    dnsState: enumOrNull(target.value?.dnsState, ["PENDING", "CREATED", "RESOLVED"]),
+    sslState: enumOrNull(target.value?.sslState, ["PENDING", "READY"]),
+    publicationState: enumOrNull(target.value?.publicationState, ["PENDING", "READY"])
+  };
   const material = {
     operation: "PREVIEW_PERSONAL_BRAND_APEX_PUBLICATION",
     identity,
@@ -114,11 +138,16 @@ export async function preparePersonalBrandPublicationPreview(options = {}) {
     entitlementHash: entitlement.hash,
     targetHash: target.hash,
     masterPackageHash: masterPackage.destination.hash,
+    masterPackageValidation: {
+      planHash: masterPackage.planHash ?? null,
+      canonicalTemplateHash: masterPackage.planMaterial?.canonicalTemplateHash ?? null,
+      expectedPackageHash: masterPackage.planMaterial?.expectedPackageHash ?? null,
+      typographyDirectoryPresent: masterPackage.destination.typographyDirectoryPresent,
+      blocked: masterPackage.blocked,
+      disposition: masterPackage.disposition
+    },
     targetReadiness: {
-      provisioningState: target.value?.provisioningState ?? null,
-      dnsState: target.value?.dnsState ?? null,
-      sslState: target.value?.sslState ?? null,
-      publicationState: target.value?.publicationState ?? null,
+      ...targetStates,
       remoteRoot: readiness.remoteRootPresent ? readiness.normalizedRemoteRoot : null,
       remoteRootPresent: readiness.remoteRootPresent
     }
@@ -134,10 +163,7 @@ export async function preparePersonalBrandPublicationPreview(options = {}) {
     target: {
       present: target.bytes !== null,
       hash: target.hash,
-      provisioningState: target.value?.provisioningState ?? null,
-      dnsState: target.value?.dnsState ?? null,
-      sslState: target.value?.sslState ?? null,
-      publicationState: target.value?.publicationState ?? null,
+      ...targetStates,
       remoteRootPresent: readiness.remoteRootPresent
     },
     safety: { providerCallsMade: false, sftpAdapterCreated: false, localWritesMade: false, remoteWritesMade: false, publishingTargetMutable: false }

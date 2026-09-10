@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import { createHash } from "node:crypto";
-import { lstat, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, mkdir, readFile, rename, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
 
 import { preparePersonalBrandPublicationPreview } from "./prepare-jairo-personal-brand-publication-preview.mjs";
+import { planPersonalBrandMasterPackage } from "./jairo-personal-brand-master-package.mjs";
 
 const OWNER_KEY = "f403f29e-95c8-4825-9320-967376443020";
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
@@ -230,3 +231,110 @@ test("blocks symlink source, entitlement, and target artifacts", async () => {
     }
   } finally { await item.cleanup(); }
 });
+
+for (const artifact of ["source", "entitlement", "target"]) {
+  for (const value of [null, false, 0, "", true, "invalid", []]) {
+    test(`blocks non-object ${artifact} JSON ${JSON.stringify(value)}`, async () => {
+      const item = await fixture();
+      try {
+        const paths = { source: resolve(item.sourceDirectory, "jairo-pinto.json"), entitlement: item.entitlementPath, target: item.targetPath };
+        const reasons = { source: "PERSONAL_BRAND_SOURCE_MISSING_OR_UNREADABLE", entitlement: "PERSONAL_BRAND_ENTITLEMENT_INVALID", target: "PERSONAL_BRAND_APEX_TARGET_INVALID" };
+        await writeFile(paths[artifact], json(value));
+        const preview = await preparePersonalBrandPublicationPreview(item);
+        assert.equal(preview.blocked, true);
+        assert.ok(preview.blockedReasons.includes(reasons[artifact]));
+      } finally { await item.cleanup(); }
+    });
+  }
+}
+
+for (const expectedTargets of [null, false, 0, "invalid", {}]) {
+  test(`blocks non-array expectedTargets ${JSON.stringify(expectedTargets)} without throwing`, async () => {
+    const item = await fixture();
+    try {
+      await writeFile(item.entitlementPath, json({ ...entitlement, expectedTargets }));
+      const preview = await preparePersonalBrandPublicationPreview(item);
+      assert.equal(preview.blocked, true);
+      assert.ok(preview.blockedReasons.includes("PERSONAL_BRAND_ENTITLEMENT_INVALID"));
+    } finally { await item.cleanup(); }
+  });
+}
+
+for (const directory of ["source root", "publishing-targets", "entitlement parent", "source ancestor", "entitlement ancestor"]) {
+  test(`blocks linked ${directory} before reading artifact bytes`, async () => {
+    const item = await fixture();
+    try {
+      let hashKey;
+      let reason;
+      if (directory === "publishing-targets") {
+        const original = resolve(item.sourceDirectory, ".publishing-targets");
+        const relocated = resolve(item.root, "real-targets");
+        await rename(original, relocated);
+        await symlink(relocated, original, "junction");
+        hashKey = "targetHash";
+        reason = "PERSONAL_BRAND_APEX_TARGET_INVALID";
+      } else {
+        const link = resolve(item.root, "linked-parent");
+        const isSource = directory.startsWith("source");
+        const direct = directory === "source root";
+        await symlink(direct ? item.sourceDirectory : item.root, link, "junction");
+        if (isSource) item.sourceDirectory = direct ? link : resolve(link, "sources");
+        else {
+          if (directory === "entitlement ancestor") {
+            await mkdir(resolve(item.root, "nested"));
+            await writeFile(resolve(item.root, "nested", "entitlement.json"), json(entitlement));
+            item.entitlementPath = resolve(link, "nested", "entitlement.json");
+          } else item.entitlementPath = resolve(link, "entitlement.json");
+        }
+        hashKey = isSource ? "sourceHash" : "entitlementHash";
+        reason = isSource ? "PERSONAL_BRAND_SOURCE_MISSING_OR_UNREADABLE" : "PERSONAL_BRAND_ENTITLEMENT_INVALID";
+      }
+      const preview = await preparePersonalBrandPublicationPreview(item);
+      assert.equal(preview.blocked, true);
+      assert.ok(preview.blockedReasons.includes(reason));
+      assert.equal(preview.planMaterial[hashKey], "UNREADABLE");
+    } finally { await item.cleanup(); }
+  });
+}
+
+for (const field of ["provisioningState", "dnsState", "sslState", "publicationState"]) {
+  for (const invalidValue of [{ syntheticCredential: "DO_NOT_DISCLOSE_TEST_SECRET" }, "DO_NOT_DISCLOSE_TEST_SECRET", ["READY"], 7]) {
+    test(`redacts invalid ${field} ${JSON.stringify(invalidValue)}`, async () => {
+      const item = await fixture();
+      try {
+        await writeFile(item.targetPath, json({ ...target, [field]: invalidValue }));
+        const preview = await preparePersonalBrandPublicationPreview(item);
+        assert.equal(preview.blocked, true);
+        assert.equal(preview.planMaterial.targetReadiness[field], null);
+        assert.equal(preview.target[field], null);
+        assert.equal(JSON.stringify(preview).includes("syntheticCredential"), false);
+        assert.equal(JSON.stringify(preview).includes("DO_NOT_DISCLOSE_TEST_SECRET"), false);
+      } finally { await item.cleanup(); }
+    });
+  }
+}
+
+for (const change of ["required typography removal", "canonical template byte drift"]) {
+  test(`invalidates reviewed master and publication plan hashes on ${change}`, async () => {
+    const item = await fixture();
+    try {
+      const masterOptions = { outputRoot: item.outputDirectory, templateDirectory: item.templateDirectory };
+      const beforeMaster = await planPersonalBrandMasterPackage(masterOptions);
+      const before = await preparePersonalBrandPublicationPreview(item);
+      assert.equal(beforeMaster.blocked, false);
+      assert.equal(before.blocked, false);
+      assert.equal((await preparePersonalBrandPublicationPreview(item)).planHash, before.planHash);
+      if (change === "required typography removal") await rm(resolve(item.packageDirectory, "tipografia"), { recursive: true });
+      else await writeFile(resolve(item.templateDirectory, "app.js"), "changed canonical bytes");
+      const afterMaster = await planPersonalBrandMasterPackage(masterOptions);
+      const after = await preparePersonalBrandPublicationPreview(item);
+      assert.equal(afterMaster.destination.hash, beforeMaster.destination.hash);
+      assert.equal(after.planMaterial.masterPackageHash, before.planMaterial.masterPackageHash);
+      assert.equal(afterMaster.blocked, true);
+      assert.equal(after.blocked, true);
+      assert.ok(after.blockedReasons.includes("PERSONAL_BRAND_PACKAGE_DRIFT"));
+      assert.notEqual(afterMaster.planHash, beforeMaster.planHash);
+      assert.notEqual(after.planHash, before.planHash);
+    } finally { await item.cleanup(); }
+  });
+}

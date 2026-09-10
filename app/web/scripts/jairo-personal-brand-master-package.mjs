@@ -179,7 +179,13 @@ export async function planPersonalBrandMasterPackage(options = {}) {
     canonicalTemplateFiles: template.files,
     expectedPackageHash: expectedPackage.hash,
     expectedPackageFiles: expectedPackage.files,
-    destinationHash: destination.hash
+    destinationHash: destination.hash,
+    validation: {
+      destinationPresent: destination.exists,
+      destinationSafe,
+      typographyDirectoryPresent,
+      blockedReasons: [...new Set(reasons)].sort()
+    }
   };
   const alreadyCurrent = destination.exists
     && destination.hash === expectedPackage.hash

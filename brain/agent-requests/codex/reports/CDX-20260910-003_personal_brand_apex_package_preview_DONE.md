@@ -8,6 +8,20 @@ the current ticket branch after the independently approved lint correction.
 
 ## Verification evidence
 
+### Final-review remediation checkpoint — 2026-09-10
+
+The final-review fix wave closed malformed root JSON/expectedTargets handling,
+artifact parent-link traversal, invalid target-state disclosure, and stale
+plan hashes after canonical-template or typography-directory changes.
+Fresh focused verification: master package **7/7**, publication preview
+**65/65**, publication target **6/6**, partner hostnames **39/39**, exact
+four-file ESLint **PASS**, and `git diff --check` **PASS**. Both master and
+publication hashes now bind package-validation evidence; older hashes require
+a fresh review. Full application lint/build below belong to the earlier
+Task 3 checkpoint and were not rerun for this focused remediation.
+
+### Original Task 3 checkpoint
+
 - The isolated worktree initially lacked `app/web/node_modules`. For this
   verification only, a temporary directory junction at that path pointed to
   the pre-existing canonical root dependency tree. No install, download,
