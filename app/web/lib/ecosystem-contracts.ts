@@ -8,7 +8,7 @@
  * Cumple con PH-025 (Temas visuales) y PH-033 (Contrato Backend Multi-Ecosistema).
  */
 
-import { FontPreset, PalettePreset, FONT_PRESETS, PALETTE_PRESETS, getFontPresetMeta, getPalettePresetMeta } from "./theme-presets";
+import { FontPreset, PalettePreset, FONT_PRESETS, PALETTE_PRESETS } from "./theme-presets";
 
 export type EcosystemType = "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND";
 

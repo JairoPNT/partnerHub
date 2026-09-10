@@ -11,8 +11,6 @@ import {
   Smartphone,
   Monitor,
   CheckCircle2,
-  AlertCircle,
-  Clock,
   Plus,
   Trash2,
   Layers,
@@ -26,7 +24,6 @@ import {
   PersonalBrandTemplateConfig,
   DEFAULT_PERSONAL_BRAND_CONFIG,
   PERSONAL_BRAND_LIMITS,
-  validatePersonalBrandConfig,
   PersonalServiceItem,
   PersonalLinkItem,
   PersonalEventItem
@@ -34,8 +31,6 @@ import {
 import {
   FONT_PRESETS,
   PALETTE_PRESETS,
-  FontPreset,
-  PalettePreset,
   getFontPresetMeta,
   getPalettePresetMeta
 } from "@/lib/theme-presets";
