@@ -42,7 +42,10 @@ export function getPartnerCanonicalPublicHost(
   assertPartnerRouteEcosystem(ecosystemType);
   assertPartnerRouteEcosystem(rootEcosystemType);
 
-  if (ecosystemType === "PERSONAL_BRAND" && rootEcosystemType === "PERSONAL_BRAND") {
+  if (ecosystemType === "PERSONAL_BRAND") {
+    if (rootEcosystemType !== "PERSONAL_BRAND") {
+      throw new Error("PERSONAL_BRAND can only use the apex as the root ecosystem");
+    }
     return baseDomain;
   }
 
@@ -89,15 +92,13 @@ export function resolvePartnerRoute({
     throw new Error("activeEcosystems must contain a known ecosystem");
   }
 
-  const servesRequestedSubdomain = requestedHost !== baseDomain && activeEcosystemSet.has(requestedEcosystemType);
-  const ecosystemType = servesRequestedSubdomain ? requestedEcosystemType : resolvedEcosystemType;
-  const canonicalHost = getPartnerCanonicalPublicHost(baseDomain, ecosystemType, ecosystemType);
+  const canonicalHost = getPartnerCanonicalPublicHost(baseDomain, resolvedEcosystemType, resolvedEcosystemType);
 
   return {
     requestedHost,
     canonicalHost,
     action: requestedHost === canonicalHost ? "SERVE" : "REDIRECT",
-    ecosystemType
+    ecosystemType: resolvedEcosystemType
   };
 }
 

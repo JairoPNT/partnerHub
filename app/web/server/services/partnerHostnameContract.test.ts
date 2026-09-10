@@ -84,9 +84,9 @@ test("resolves partner routes according to active ecosystem priority", () => {
       requestedHost: "producto.partner.pro",
       expected: {
         requestedHost: "producto.partner.pro",
-        canonicalHost: "producto.partner.pro",
-        action: "SERVE",
-        ecosystemType: "PRODUCT"
+        canonicalHost: "negocio.partner.pro",
+        action: "REDIRECT",
+        ecosystemType: "BUSINESS"
       }
     },
     {
@@ -97,6 +97,26 @@ test("resolves partner routes according to active ecosystem priority", () => {
         canonicalHost: "negocio.partner.pro",
         action: "SERVE",
         ecosystemType: "BUSINESS"
+      }
+    },
+    {
+      activeEcosystems: ["PERSONAL_BRAND", "PRODUCT"],
+      requestedHost: "producto.partner.pro",
+      expected: {
+        requestedHost: "producto.partner.pro",
+        canonicalHost: "partner.pro",
+        action: "REDIRECT",
+        ecosystemType: "PERSONAL_BRAND"
+      }
+    },
+    {
+      activeEcosystems: ["PERSONAL_BRAND", "BUSINESS"],
+      requestedHost: "negocio.partner.pro",
+      expected: {
+        requestedHost: "negocio.partner.pro",
+        canonicalHost: "partner.pro",
+        action: "REDIRECT",
+        ecosystemType: "PERSONAL_BRAND"
       }
     },
     {
@@ -130,7 +150,7 @@ test("derives canonical partner public hosts without letting Product or Business
   assert.equal(getPartnerCanonicalPublicHost("partner.pro", "PRODUCT", "PERSONAL_BRAND"), "producto.partner.pro");
   assert.equal(getPartnerCanonicalPublicHost("partner.pro", "BUSINESS", "PERSONAL_BRAND"), "negocio.partner.pro");
   assert.equal(getPartnerCanonicalPublicHost("partner.pro", "PERSONAL_BRAND", "PERSONAL_BRAND"), "partner.pro");
-  assert.equal(getPartnerCanonicalPublicHost("partner.pro", "PERSONAL_BRAND", "PRODUCT"), "brand.partner.pro");
+  assert.throws(() => getPartnerCanonicalPublicHost("partner.pro", "PERSONAL_BRAND", "PRODUCT"));
 });
 
 test("rejects malformed partner route inputs", () => {
