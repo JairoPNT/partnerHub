@@ -88,7 +88,7 @@ async function loadCanonicalTemplate(templateDirectory) {
   }
   for (const entry of await readdir(templateDirectory, { withFileTypes: true })) {
     inside(templateDirectory, entry.name);
-    if (!REQUIRED_TEMPLATE_FILES.includes(entry.name) && !entry.isFile() && !entry.isDirectory()) {
+    if (!REQUIRED_TEMPLATE_FILES.includes(entry.name)) {
       throw new Error("PERSONAL_BRAND_CANONICAL_TEMPLATE_SPECIAL_FILE_FORBIDDEN");
     }
   }

@@ -97,6 +97,34 @@ test("rejects unexpected special template entries without reading them", async (
   }
 });
 
+test("rejects an extra regular template file", async () => {
+  const item = await fixture();
+  try {
+    await writeFile(resolve(item.templateDirectory, "extra.js"), "unexpected");
+
+    const preview = await planPersonalBrandMasterPackage(item);
+
+    assert.equal(preview.blocked, true);
+    assert.ok(preview.blockedReasons.includes("PERSONAL_BRAND_CANONICAL_TEMPLATE_SPECIAL_FILE_FORBIDDEN"));
+  } finally {
+    await item.cleanup();
+  }
+});
+
+test("rejects an extra template directory", async () => {
+  const item = await fixture();
+  try {
+    await mkdir(resolve(item.templateDirectory, "extra-dir"));
+
+    const preview = await planPersonalBrandMasterPackage(item);
+
+    assert.equal(preview.blocked, true);
+    assert.ok(preview.blockedReasons.includes("PERSONAL_BRAND_CANONICAL_TEMPLATE_SPECIAL_FILE_FORBIDDEN"));
+  } finally {
+    await item.cleanup();
+  }
+});
+
 test("rejects a non-Personal Brand canonical template identity", async () => {
   const item = await fixture();
   try {
