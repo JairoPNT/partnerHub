@@ -72,6 +72,10 @@ was performed.
 publication previews. The Personal Brand apex is not public and no
 infrastructure mutation occurred. The previews do not create a target, use
 SFTP, call a provider, publish, deploy, or mutate production.
+Final scoped review approved `397c129`: 72 focused Personal Brand tests,
+target/hostname suites, exact ESLint, and diff check passed. The prior passing
+application build remains historical evidence because the post-fix scope is
+standalone `.mjs` scripts/tests excluded from TypeScript/global lint.
 
 ## Next step
 

@@ -17,7 +17,9 @@ The Business ecosystem pilot for Jairo is complete:
 
 - `CDX-20260910-003` completed the read-only Personal Brand master-package
   and apex publication previews. The apex is not public and no infrastructure
-  mutation occurred.
+  mutation occurred. Final scoped review approved `397c129`; 72 focused
+  Personal Brand tests, target/hostname suites, exact ESLint, and diff check
+  passed. The earlier application build remains historical evidence only.
 
 ## Next work
 

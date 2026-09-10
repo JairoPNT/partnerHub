@@ -10,15 +10,18 @@ the current ticket branch after the independently approved lint correction.
 
 ### Final-review remediation checkpoint — 2026-09-10
 
-The final-review fix wave closed malformed root JSON/expectedTargets handling,
+Commit `397c12959311237673f69640f514aa063fea03f7` closed malformed root JSON/expectedTargets handling,
 artifact parent-link traversal, invalid target-state disclosure, and stale
 plan hashes after canonical-template or typography-directory changes.
-Fresh focused verification: master package **7/7**, publication preview
-**65/65**, publication target **6/6**, partner hostnames **39/39**, exact
+Final scoped review approved the fix wave. Post-fix verification: **72 focused
+Personal Brand tests** (master package **7/7** and publication preview
+**65/65**), publication target **6/6**, partner hostnames **39/39**, exact
 four-file ESLint **PASS**, and `git diff --check` **PASS**. Both master and
 publication hashes now bind package-validation evidence; older hashes require
-a fresh review. Full application lint/build below belong to the earlier
-Task 3 checkpoint and were not rerun for this focused remediation.
+a fresh review. The earlier passing application lint/build is historical Task
+3 evidence only: the post-fix changes are standalone `.mjs` scripts/tests
+excluded from TypeScript/global lint, and the final scoped reviewer concluded
+a fresh application build was not required.
 
 ### Original Task 3 checkpoint
 
@@ -88,6 +91,8 @@ The following remain separate authorization gates:
 - Latest implementation commit: `50d6b28de6b418ce425342c37b53a0720d60f209`
   (`fix(publication): harden personal brand apex preview`)
 - Lint-correction commit supplied for final verification: `6be06ec`.
+- Final scoped-review fix wave: `397c12959311237673f69640f514aa063fea03f7`
+  (`fix(publication): close personal brand preview review findings`).
 - Task 3 final documentation commit: recorded with this completed report.
 
 ## Self-review

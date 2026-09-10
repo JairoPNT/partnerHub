@@ -54,8 +54,11 @@ Owner: Codex
 
 `CDX-20260910-003` added and verified read-only Personal Brand master-package
 and apex publication previews. The apex remains not public and no
-infrastructure mutation occurred. Future local apply, apex provisioning,
-SFTP proof, and guarded publication remain separate authorization gates.
+infrastructure mutation occurred. Final scoped review approved `397c129`
+after 72 focused Personal Brand tests, target/hostname suites, exact ESLint,
+and diff check passed; the prior application build is historical evidence.
+Future local apply, apex provisioning, SFTP proof, and guarded publication
+remain separate authorization gates.
 
 ### 3. AGR - PartnerHub visual identity request
 
