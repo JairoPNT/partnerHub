@@ -5,9 +5,9 @@ import { resolve, sep } from "node:path";
 
 import { z } from "zod";
 
-import type { HostingerEnsureDnsResult } from "../integrations/hostingerDnsClient.ts";
+import type { HostingerDnsRoutingMode, HostingerEnsureDnsResult } from "../integrations/hostingerDnsClient.ts";
 import type { HostingerEnsureSubdomainResult, HostingerWebsite } from "../integrations/hostingerSubdomainClient.ts";
-import { getPartnerPublicHost, PARTNER_HOST_LABELS } from "#partner-hostname-contract";
+import { getPartnerCanonicalPublicHost, getPartnerPublicHost, PARTNER_HOST_LABELS } from "#partner-hostname-contract";
 
 const siteIdSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const ownerKeySchema = z.string().uuid();
@@ -74,14 +74,17 @@ type HostingerClient = {
   getWebsite?(parentDomain: string): Promise<HostingerWebsite>;
 };
 type DnsClient = { ensureARecord(zone: string, hostname: string, ipv4: string): Promise<HostingerEnsureDnsResult> };
-type ReadinessProbe = { dnsResolves(hostname: string, ipv4: string): Promise<boolean>; httpsReady(hostname: string): Promise<boolean> };
+type ReadinessProbe = {
+  dnsResolves(hostname: string, ipv4: string, routingMode: HostingerDnsRoutingMode): Promise<boolean>;
+  httpsReady(hostname: string, routingMode: HostingerDnsRoutingMode): Promise<boolean>;
+};
 type Dependencies = { hostingerClient: HostingerClient; dnsClient: DnsClient; readinessProbe?: ReadinessProbe; storageDirectory?: string; now?: () => Date };
 
 export class ProvisioningError extends Error {
-  public readonly code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED";
+  public readonly code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED" | "PROVISIONING_ROOT_TARGET_REQUIRES_SEPARATE_GATE";
   public readonly providerCode?: string;
   public readonly providerStatus?: number | null;
-  constructor(code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED", message: string, provider: { code?: string; status?: number | null } = {}) {
+  constructor(code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED" | "PROVISIONING_ROOT_TARGET_REQUIRES_SEPARATE_GATE", message: string, provider: { code?: string; status?: number | null } = {}) {
     super(message); this.name = "ProvisioningError"; this.code = code; this.providerCode = provider.code; this.providerStatus = provider.status;
   }
 }
@@ -138,16 +141,38 @@ export async function listPublishingTargets(root = defaultStorageDirectory()) {
     return values.filter((value): value is PublishingTarget => Boolean(value));
   } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return []; throw error; }
 }
-function publicHost(input: ProvisionSubdomainInput) { return getPartnerPublicHost(input.baseDomain, input.ecosystemType); }
+function publicHost(input: ProvisionSubdomainInput) { return getPartnerCanonicalPublicHost(input.baseDomain, input.ecosystemType, input.rootEcosystemType); }
 function providerCode(error: unknown) { return error && typeof error === "object" && "code" in error && typeof error.code === "string" ? error.code : "PROVISIONING_PROVIDER_FAILED"; }
 function providerStatus(error: unknown) { return error && typeof error === "object" && "status" in error && typeof error.status === "number" && error.status >= 100 && error.status <= 599 ? error.status : null; }
 
+export function createHostingerReadinessProbe(overrides: {
+  resolve4?: (hostname: string) => Promise<string[]>;
+  fetch?: (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
+} = {}): ReadinessProbe {
+  const resolve4 = overrides.resolve4 ?? ((hostname: string) => dns.resolve4(hostname));
+  const fetchImplementation = overrides.fetch ?? fetch;
+  return {
+    dnsResolves: async (host, ip, routingMode) => {
+      try {
+        const addresses = await resolve4(host);
+        return routingMode === "HOSTINGER_ALIAS" ? addresses.length > 0 : addresses.includes(ip);
+      } catch { return false; }
+    },
+    httpsReady: async (host, routingMode) => {
+      try {
+        const response = await fetchImplementation(`https://${host}/`, { redirect: "manual" });
+        if (routingMode === "HOSTINGER_ALIAS") {
+          return response.status >= 200 && response.status < 400 && response.headers.get("server")?.toLowerCase().includes("hcdn") === true;
+        }
+        return true;
+      } catch { return false; }
+    }
+  };
+}
+
 export function createSubdomainProvisioningService(deps: Dependencies) {
   const root = resolve(deps.storageDirectory ?? defaultStorageDirectory()); const now = deps.now ?? (() => new Date());
-  const probe = deps.readinessProbe ?? {
-    dnsResolves: async (host, ip) => { try { return (await dns.resolve4(host)).includes(ip); } catch { return false; } },
-    httpsReady: async (host) => { try { await fetch(`https://${host}/`, { redirect: "manual" }); return true; } catch { return false; } }
-  };
+  const probe = deps.readinessProbe ?? createHostingerReadinessProbe();
   async function save(target: PublishingTarget) { return persistTarget(root, publishingTargetSchema.parse(target)); }
   const get = (siteId: string) => getPublishingTarget(siteId, root); const list = () => listPublishingTargets(root);
   async function update(target: PublishingTarget, changes: Partial<PublishingTarget>) { return save({ ...target, ...changes, updatedAt: now().toISOString() }); }
@@ -163,7 +188,12 @@ export function createSubdomainProvisioningService(deps: Dependencies) {
     return save({ version: 2, ownerKey: input.ownerKey, siteId: input.siteId, ecosystemType: input.ecosystemType, rootEcosystemType: input.rootEcosystemType, baseDomain: input.baseDomain, publicHost: host, remoteRoot: null, provisioningState: "PENDING", hostingerState: "PENDING", dnsState: "PENDING", sslState: "PENDING", publicationState: "PENDING", createdAt: timestamp, updatedAt: timestamp });
   }
   async function provision(raw: ProvisionSubdomainInput) {
-    const input = provisionSubdomainInputSchema.parse(raw); let target = await createOrLoad(input);
+    const input = provisionSubdomainInputSchema.parse(raw);
+    const host = publicHost(input);
+    if (input.ecosystemType === "PERSONAL_BRAND" && host === input.baseDomain) {
+      throw new ProvisioningError("PROVISIONING_ROOT_TARGET_REQUIRES_SEPARATE_GATE", "Personal Brand apex provisioning requires a separate root-target gate.");
+    }
+    let target = await createOrLoad(input);
     try {
       const hosting = (await deps.hostingerClient.ensure(input.baseDomain, PARTNER_HOST_LABELS[input.ecosystemType])).subdomain;
       if (target.remoteRoot && target.remoteRoot !== hosting.root_directory) {
@@ -173,9 +203,9 @@ export function createSubdomainProvisioningService(deps: Dependencies) {
       const record = await deps.dnsClient.ensureARecord(input.baseDomain, target.publicHost, input.ipv4);
       target = await update(target, { dnsRecordId: record.record.id, dnsState: "CREATED", provisioningState: "DNS_PENDING" });
       const checked = now().toISOString();
-      if (!(await probe.dnsResolves(target.publicHost, input.ipv4))) return update(target, { provisioningState: "DNS_PENDING", lastCheckedAt: checked });
+      if (!(await probe.dnsResolves(target.publicHost, input.ipv4, record.routingMode))) return update(target, { provisioningState: "DNS_PENDING", lastCheckedAt: checked });
       target = await update(target, { dnsState: "RESOLVED", provisioningState: "SSL_PENDING", lastCheckedAt: checked });
-      if (!(await probe.httpsReady(target.publicHost))) return target;
+      if (!(await probe.httpsReady(target.publicHost, record.routingMode))) return target;
       return update(target, { sslState: "READY", provisioningState: "READY", publicationState: "PENDING", lastCheckedAt: now().toISOString(), lastErrorCode: undefined });
     } catch (error) {
       if (error instanceof ProvisioningError) throw error;

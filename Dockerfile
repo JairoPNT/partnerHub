@@ -7,16 +7,25 @@ WORKDIR /repo/app/web
 COPY app/web/package.json app/web/package-lock.json ./
 RUN npm ci
 
+FROM base AS sftp-runtime-deps
+WORKDIR /repo/sftp-runtime
+COPY app/web/runtime-deps/sftp/package.json app/web/runtime-deps/sftp/package-lock.json ./
+COPY app/web/runtime-deps/sftp/smoke.mjs ./smoke.mjs
+RUN npm ci --omit=dev --omit=optional --ignore-scripts
+RUN node smoke.mjs
+
 FROM base AS builder
 WORKDIR /repo
 COPY --from=deps /repo/app/web/node_modules ./app/web/node_modules
 COPY app/web ./app/web
 COPY plantillas-de-pagina/producto ./plantillas-de-pagina/producto
+COPY plantillas-de-pagina/business ./plantillas-de-pagina/business
 COPY plantillas-de-pagina/personal-brand/config.js ./runtime-assets/personal-brand-config.js
 COPY plantillas-de-pagina/business/config.js ./runtime-assets/business-config.js
 WORKDIR /repo/app/web
 RUN npm run build
 RUN npx esbuild server/runtime/jairoBusinessInProcessProvisioner.ts --bundle --platform=node --format=esm --target=node20 --outfile=/repo/runtime-assets/jairo-business-in-process-provisioner.mjs
+RUN npx esbuild server/runtime/jairoBusinessPackageGenerator.ts --bundle --platform=node --format=esm --target=node20 --alias:server-only=./server/runtime/serverOnlyRuntimeShim.mjs --outfile=/repo/runtime-assets/jairo-business-package-generator.mjs
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -30,10 +39,13 @@ COPY --from=builder /repo/app/web/package-lock.json ./package-lock.json
 COPY --from=builder /repo/app/web/public ./public
 COPY --from=builder /repo/app/web/.next/standalone ./
 COPY --from=builder /repo/app/web/.next/static ./.next/static
+COPY --from=sftp-runtime-deps /repo/sftp-runtime/node_modules ./scripts/node_modules
 COPY --from=builder /repo/plantillas-de-pagina/producto ./plantillas-de-pagina/producto
+COPY --from=builder /repo/plantillas-de-pagina/business ./plantillas-de-pagina/business
 COPY --from=builder /repo/runtime-assets/personal-brand-config.js ./runtime-assets/personal-brand-config.js
 COPY --from=builder /repo/runtime-assets/business-config.js ./runtime-assets/business-config.js
 COPY --from=builder /repo/runtime-assets/jairo-business-in-process-provisioner.mjs ./runtime-assets/jairo-business-in-process-provisioner.mjs
+COPY --from=builder /repo/runtime-assets/jairo-business-package-generator.mjs ./runtime-assets/jairo-business-package-generator.mjs
 COPY --from=builder /repo/app/web/scripts/claudia-source-identity-dry-run.mjs ./scripts/claudia-source-identity-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-source-identity-dry-run.mjs ./scripts/jairo-source-identity-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-source-identity-guarded-apply.mjs ./scripts/jairo-source-identity-guarded-apply.mjs
@@ -42,6 +54,10 @@ COPY --from=builder /repo/app/web/scripts/jairo-business-source-guarded-apply.mj
 COPY --from=builder /repo/app/web/scripts/jairo-business-publishing-preflight.mjs ./scripts/jairo-business-publishing-preflight.mjs
 COPY --from=builder /repo/app/web/scripts/guarded-ecosystem-publication.mjs ./scripts/guarded-ecosystem-publication.mjs
 COPY --from=builder /repo/app/web/scripts/sftp-directory-rename-capability-probe.mjs ./scripts/sftp-directory-rename-capability-probe.mjs
+COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-sftp-capability-preview.mjs ./scripts/prepare-jairo-business-sftp-capability-preview.mjs
+COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-publication-preview.mjs ./scripts/prepare-jairo-business-publication-preview.mjs
+COPY --from=builder /repo/app/web/scripts/jairo-business-master-package.mjs ./scripts/jairo-business-master-package.mjs
+COPY --from=builder /repo/app/web/scripts/jairo-business-sftp-capability-renewal.mjs ./scripts/jairo-business-sftp-capability-renewal.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-guarded-provisioning.mjs ./scripts/jairo-business-guarded-provisioning.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-provisioning-preview.mjs ./scripts/prepare-jairo-business-provisioning-preview.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-provisioning-recovery-diagnostic.mjs ./scripts/jairo-business-provisioning-recovery-diagnostic.mjs
@@ -49,6 +65,7 @@ COPY --from=builder /repo/app/web/scripts/jairo-business-provisioning-guarded-re
 COPY --from=builder /repo/app/web/scripts/jairo-business-provisioning-dynamic-recovery.mjs ./scripts/jairo-business-provisioning-dynamic-recovery.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-hostinger-dns-readonly-diagnostic.mjs ./scripts/jairo-hostinger-dns-readonly-diagnostic.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-hostinger-dns-payload-validation.mjs ./scripts/jairo-hostinger-dns-payload-validation.mjs
+COPY --from=builder /repo/app/web/scripts/jairo-hostinger-dns-hostname-collision-diagnostic.mjs ./scripts/jairo-hostinger-dns-hostname-collision-diagnostic.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-entitlement-snapshot.mjs ./scripts/prepare-jairo-business-entitlement-snapshot.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-whatsapp-guarded-correction.mjs ./scripts/jairo-whatsapp-guarded-correction.mjs
 COPY --from=builder /repo/app/web/shared/business-vsl-poster-contract.mjs ./shared/business-vsl-poster-contract.mjs

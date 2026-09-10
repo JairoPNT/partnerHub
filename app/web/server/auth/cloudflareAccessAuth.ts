@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey, type JWTPayload } from "jose";
 import { z } from "zod";
 
@@ -8,6 +9,7 @@ const configurationSchema = z.object({
 
 export type CloudflareAccessIdentity = {
   subject: string;
+  identityType: "HUMAN" | "SERVICE_TOKEN";
   email?: string;
   payload: JWTPayload;
 };
@@ -64,9 +66,13 @@ export async function verifyCloudflareAccessToken(
       audience: configuration.audience,
       algorithms: ["RS256"]
     });
-    if (!payload.sub) throw new Error("Cloudflare Access JWT has no subject.");
+    const humanSubject = typeof payload.sub === "string" && payload.sub.length > 0 ? payload.sub : null;
+    const commonName = typeof payload.common_name === "string" && payload.common_name.length > 0 ? payload.common_name : null;
+    const isServiceToken = payload.sub === "" && payload.type === "app" && commonName !== null;
+    if (!humanSubject && !isServiceToken) throw new Error("Cloudflare Access JWT has no supported identity.");
     return {
-      subject: payload.sub,
+      subject: humanSubject ?? `service-token:${createHash("sha256").update(commonName!).digest("hex")}`,
+      identityType: isServiceToken ? "SERVICE_TOKEN" : "HUMAN",
       ...(typeof payload.email === "string" ? { email: payload.email } : {}),
       payload
     };
@@ -83,4 +89,20 @@ export async function authenticateCloudflareAccessRequest(
   const token = request.headers.get("cf-access-jwt-assertion");
   if (!token) throw new CloudflareAccessAuthError("ACCESS_TOKEN_MISSING");
   return verifyCloudflareAccessToken(token, configuration, keyResolver);
+}
+
+export function getCloudflareAccessPublicationConfig(source: NodeJS.ProcessEnv = process.env) {
+  return getCloudflareAccessConfig(source, "CLOUDFLARE_ACCESS_PUBLICATION_AUD");
+}
+
+export function authenticateCloudflareAccessPublicationRequest(
+  request: Request,
+  source: NodeJS.ProcessEnv = process.env,
+  keyResolver?: JWTVerifyGetKey
+) {
+  return authenticateCloudflareAccessRequest(
+    request,
+    getCloudflareAccessPublicationConfig(source),
+    keyResolver
+  );
 }

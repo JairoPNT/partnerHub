@@ -20,7 +20,15 @@ const zoneEntrySchema = z.object({
 const zoneSchema = z.array(zoneEntrySchema);
 
 export type HostingerDnsRecord = z.infer<typeof dnsRecordSchema>;
-export type HostingerEnsureDnsResult = { state: "EXISTING" | "CREATED"; record: HostingerDnsRecord };
+export type HostingerDnsRoutingMode = "DIRECT_A" | "HOSTINGER_ALIAS";
+export type HostingerDnsRouteRecord =
+  | HostingerDnsRecord
+  | { id: string; type: "ALIAS"; name: string; ttl?: number };
+export type HostingerEnsureDnsResult = {
+  state: "EXISTING" | "CREATED" | "EXISTING_ALIAS";
+  routingMode: HostingerDnsRoutingMode;
+  record: HostingerDnsRouteRecord;
+};
 type FetchLike = (input: string | URL | Request, init?: RequestInit) => Promise<Response>;
 
 export class HostingerDnsError extends Error {
@@ -48,6 +56,29 @@ async function json(response: Response) {
   try { return await response.json(); } catch { return null; }
 }
 
+function entryHostname(domain: string, rawName: string) {
+  const name = rawName.trim().toLowerCase().replace(/\.$/, "");
+  const fqdn = name === "@" ? domain : name === domain || name.endsWith(`.${domain}`) ? name : `${name}.${domain}`;
+  const parsed = hostnameSchema.safeParse(fqdn);
+  if (!parsed.success) throw new HostingerDnsError("HOSTINGER_DNS_INVALID_RESPONSE", "Hostinger returned an invalid DNS hostname.");
+  return parsed.data;
+}
+
+function aRecords(entries: z.infer<typeof zoneSchema>, domain: string) {
+  const records: HostingerDnsRecord[] = [];
+  for (const entry of entries) {
+    if (entry.type.toUpperCase() !== "A") continue;
+    const fqdn = entryHostname(domain, entry.name);
+    for (const record of entry.records) {
+      if (record.is_disabled) continue;
+      const candidate = dnsRecordSchema.safeParse({ id: `hostinger-zone:${domain}:${fqdn}:A`, type: "A", name: fqdn, content: record.content, ttl: entry.ttl });
+      if (!candidate.success) throw new HostingerDnsError("HOSTINGER_DNS_INVALID_RESPONSE", "Hostinger returned an invalid A record.");
+      records.push(candidate.data);
+    }
+  }
+  return records;
+}
+
 export function createHostingerDnsClient(
   config: { apiToken: string; baseUrl?: string },
   fetchImplementation: FetchLike = fetch
@@ -73,23 +104,16 @@ export function createHostingerDnsClient(
     return response;
   }
 
-  async function list(zone: string) {
+  async function readZone(zone: string) {
     const response = await request(zone);
-    const domain = hostnameSchema.parse(zone);
     const parsed = zoneSchema.safeParse(await json(response));
     if (!parsed.success) throw new HostingerDnsError("HOSTINGER_DNS_INVALID_RESPONSE", "Hostinger returned invalid DNS records.", response.status);
-    const records: HostingerDnsRecord[] = [];
-    for (const entry of parsed.data) {
-      if (entry.type !== "A") continue;
-      const fqdn = entry.name === "@" ? domain : entry.name.endsWith(`.${domain}`) ? entry.name : `${entry.name}.${domain}`;
-      for (const record of entry.records) {
-        if (record.is_disabled) continue;
-        const candidate = dnsRecordSchema.safeParse({ id: `hostinger-zone:${domain}:${fqdn}:A`, type: "A", name: fqdn, content: record.content, ttl: entry.ttl });
-        if (!candidate.success) throw new HostingerDnsError("HOSTINGER_DNS_INVALID_RESPONSE", "Hostinger returned an invalid A record.", response.status);
-        records.push(candidate.data);
-      }
-    }
-    return records;
+    return parsed.data;
+  }
+
+  async function list(zone: string) {
+    const domain = hostnameSchema.parse(zone);
+    return aRecords(await readZone(domain), domain);
   }
 
   async function ensureARecord(zone: string, hostname: string, ipv4: string): Promise<HostingerEnsureDnsResult> {
@@ -97,16 +121,35 @@ export function createHostingerDnsClient(
     const name = hostnameSchema.parse(hostname);
     const content = ipv4Schema.parse(ipv4);
     if (name !== domain && !name.endsWith(`.${domain}`)) throw new HostingerDnsError("HOSTINGER_DNS_CONFLICT", "DNS hostname is outside the requested zone.");
-    const matches = (await list(domain)).filter((record) => record.type === "A" && record.name === name);
+    const entries = await readZone(domain);
+    const matchingEntries = entries.filter((entry) => entryHostname(domain, entry.name) === name);
+    if (matchingEntries.length === 1 && matchingEntries[0].type.toUpperCase() === "ALIAS") {
+      const alias = matchingEntries[0];
+      const enabled = alias.records.filter((record) => record.is_disabled !== true);
+      const disabled = alias.records.filter((record) => record.is_disabled === true);
+      if (enabled.length !== 1 || disabled.length !== 0) {
+        throw new HostingerDnsError("HOSTINGER_DNS_CONFLICT", `Hostinger DNS has an ambiguous ALIAS record for ${name}.`);
+      }
+      return {
+        state: "EXISTING_ALIAS",
+        routingMode: "HOSTINGER_ALIAS",
+        record: { id: `hostinger-zone:${domain}:${name}:ALIAS`, type: "ALIAS", name, ttl: alias.ttl }
+      };
+    }
+    if (matchingEntries.some((entry) => entry.type.toUpperCase() !== "A") || matchingEntries.some((entry) => entry.records.some((record) => record.is_disabled === true))) {
+      throw new HostingerDnsError("HOSTINGER_DNS_CONFLICT", `Hostinger DNS has a conflicting record for ${name}.`);
+    }
+    const matches = aRecords(matchingEntries, domain).filter((record) => record.name === name);
     if (matches.length > 1 || (matches[0] && matches[0].content !== content)) {
       throw new HostingerDnsError("HOSTINGER_DNS_CONFLICT", `Hostinger DNS has a conflicting A record for ${name}.`);
     }
-    if (matches[0]) return { state: "EXISTING", record: matches[0] };
+    if (matches[0]) return { state: "EXISTING", routingMode: "DIRECT_A", record: matches[0] };
+    if (matchingEntries.length > 0) throw new HostingerDnsError("HOSTINGER_DNS_CONFLICT", `Hostinger DNS has an unusable A record for ${name}.`);
     const relativeName = name === domain ? "@" : name.slice(0, -(domain.length + 1));
     await request(domain, { method: "PUT", body: JSON.stringify({ overwrite: false, zone: [{ type: "A", name: relativeName, records: [{ content }], ttl: 300 }] }) });
     const created = (await list(domain)).filter((record) => record.type === "A" && record.name === name && record.content === content);
     if (created.length !== 1) throw new HostingerDnsError("HOSTINGER_DNS_INVALID_RESPONSE", "Hostinger DNS write was not confirmed by readback.");
-    return { state: "CREATED", record: created[0] };
+    return { state: "CREATED", routingMode: "DIRECT_A", record: created[0] };
   }
 
   return { ensureARecord, list };

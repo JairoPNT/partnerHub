@@ -2,62 +2,81 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
-## Current Gate
+## Current gate
 
-PH-003D CTO quick check after Claude review.
+Business publication is no longer the blocking gate.
 
-PH-003C supersedes the CRM-like parts of the earlier model. PartnerHub is not a CRM.
+`jairo-pinto-business` has been provisioned, published, verified, and reconciled through the existing-customer backfill path. The latest backfill preview shows no remaining candidates and one already-current target.
 
-PartnerHub attracts, educates, and routes interested people toward external channels controlled by the entrepreneur.
+## Mission objective
 
-PH-003B still contributes the MVP go-to-market addendum: manual / voz a voz / initial promoter team, not public marketplace, mass self-service checkout, or public affiliate system.
+Move from the validated Business pilot to the next commercial enablement block:
 
-PH-003B still contributes the domain/subdomain addendum: `nombre.pro` root domain reserved for future owner profile site, MVP operational landings preferably on subdominios such as `vsl.nombre.pro`, `shop.nombre.pro`, or `[producto].nombre.pro`.
+1. Prepare the Personal Brand ecosystem generation/publication path.
+2. Keep the PartnerHub visual identity work in an Antigravity-owned request.
+3. Preserve the durable, guarded publication pattern proven by the Business pilot.
 
-PH-003D documents the target schema direction for tenant isolation, commercial packages, billing, payment records, webhook records, publishing targets, domain records, master asset versioning, personalized channels, lead destinations, traffic campaigns, claims/compliance, and BusinessEvent auditability.
+## Recommended ticket order
 
-Claude reviewed PH-003D as `APPROVED WITH WARNINGS`.
+### 1. CDX - Project memory reconciliation
 
-PH-003D closure incorporated W-A, W-B, and W-C documentally:
+Owner: Codex
 
-- W-A: redirect event naming is `visitor.redirected_to_external_destination`.
-- W-B: `OrganizationMembership` and `UserRole` are in MVP planning.
-- W-C: `BillingMode` is documented for `TrafficCampaign`, default recommended as `MANUAL`.
+Status: active as `CDX-20260909-001`
 
-PH-003D also documents PaymentWebhookEvent minimum fields, raw payload storage before processing, webhook idempotency, `BillingStatement` for MVP, `ProductCatalog` / `Product` / `Kit` / `KitItem` for MVP, `MasterAsset` GLOBAL or ORGANIZATION scope, and manual upgrade price policy.
+Outcome: align `brain/` with the real production checkpoint so agents do not continue from stale PH-003/PH-039 instructions.
 
-## Current Queue
+### 2. CDX - Personal Brand backend/publication readiness
 
-1. PH-003D CTO quick check.
-2. PH-003E - Controlled Prisma Schema Implementation, only if CTO authorizes it.
-3. Migration ticket only after schema implementation is approved.
-4. PH-004 Authentication Strategy after schema direction is accepted.
+Owner: Codex
 
-## Hold
+Status: completed as `CDX-20260909-003` (route contract, pre-provider apex
+gate, and final-review verification). The final ticket report records all
+required focused suites, the exact Task 3 ESLint command, and `git diff --check`
+as passing. The earlier dependency-state record is historical only.
 
-Do not create migrations, endpoints, UI, or production workflows until PH-003E or another explicit ticket authorizes implementation.
+Outcome: the pipeline is partly reusable, the apex route/provisioning gate is
+explicit, and active requested Product or Business subdomains serve their own
+ecosystem even when a higher-priority ecosystem is active. No package, DNS,
+SFTP, or publication work was performed.
 
-## Path Integrity
+Expected scope:
 
-- Official project root: `D:\Proyectos multi agentes\PartnerHub`.
-- Obsolete / unauthorized path: `C:\Users\jairo\Documents\PartnerHub`.
+- resolve the apex-domain rule for a three-ecosystem partner without using a
+  Hostinger subdomain for Personal Brand;
+- preserve existing Business/Product subdomain behavior and legacy targets;
+- avoid frontend implementation;
+- avoid production publication until a fresh preview is reviewed and explicitly authorized.
 
-## Do Not Do Yet
+### 2a. Completed — Personal Brand master package / preview
 
-- Do not implement features.
-- Do not modify UI.
-- Do not apply database migrations.
-- Do not modify Docker.
-- Do not add endpoints.
-- Do not change auth.
-- Do not add dependencies.
-- Do not add CRM, inbox, pipeline, prospect, opportunity, deal, follow-up, CRM activity, or lead management features.
-- Do not run `prisma generate`.
-- Do not run `prisma migrate`.
-- Do not run `prisma db push`.
+Owner: Codex
 
-## Next Step
+`CDX-20260910-003` added and verified read-only Personal Brand master-package
+and apex publication previews. The apex remains not public and no
+infrastructure mutation occurred. Final scoped review approved `397c129`
+after 72 focused Personal Brand tests, target/hostname suites, exact ESLint,
+and diff check passed; the prior application build is historical evidence.
+Future local apply, apex provisioning, SFTP proof, and guarded publication
+remain separate authorization gates.
 
-Run CTO quick check on PH-003D closure.
+### 3. AGR - PartnerHub visual identity request
 
-Do not open PH-003E yet without CTO authorization.
+Owner: Antigravity
+
+Outcome: create the frontend/visual-design request for PartnerHub identity, design language, and UI expression.
+
+Codex may create the request file, but Antigravity owns implementation.
+
+## Do not do next
+
+- Do not touch UI, React, Tailwind, navigation, or visual implementation from Codex.
+- Do not batch Business, Product, Personal Brand, and identity work in one mega-task.
+- Do not run provider, DNS, SFTP, publication, or Cloudflare write operations without a reviewed plan hash and explicit authorization.
+- Do not assume `.project-status/status.json` alone is enough; durable project memory must be reflected in `brain/`.
+- Do not use the stale PH-003D/PH-039 gates as current blockers.
+
+## Product decisions still open
+
+- Exactly two purchased ecosystems: root-domain owner rule remains open unless a newer approved decision supersedes PH-041.
+- PartnerHub visual identity direction: needs a dedicated Antigravity request and design decision path.

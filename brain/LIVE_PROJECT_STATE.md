@@ -2,64 +2,101 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
-## Current Ticket
+## Latest completed ticket
 
-`PH-039 - Deploy recovery integration (ready for PR)`
+`CDX-20260910-003 - Personal Brand apex package preview` (completed;
+read-only verification recorded in the ticket report)
 
-## Current State
+## Current state
 
-PH-003A is closed / approved with warnings.
+PartnerHub is past the first validated Business ecosystem publication pilot.
 
-PH-003B has been executed in `/brain`; PH-003B-ADDENDUM documented MVP go-to-market clarification; PH-003B-ADDENDUM-2 documented domain/subdomain publishing strategy.
+The current production checkpoint is:
 
-PH-003C was executed as an architecture correction mission from the active CTO instruction.
+- `jairo-pinto-business`
+- `BUSINESS`
+- `negocio.jairopinto.pro`
+- provisioning `READY`
+- DNS `RESOLVED`
+- SSL `READY`
+- publication current
+- durable backfill closed with `alreadyCurrent=1` and `candidates=0`
 
-PH-003C redefines PartnerHub as a platform for web assets, validated messages, personalized channels, external lead destinations, traffic generation, and traceability.
+The latest checked GitHub state on 2026-09-09:
 
-PartnerHub is not a CRM and does not manage leads after routing.
+- `origin/main`: `c5dd8efbc88d97e5251fcee2151ad5ab70a1c6e9`
+- latest merged PR: #194
+- open PRs: none observed
 
-PH-003D has created schema planning documentation and has not modified `schema.prisma`.
+## Recently completed chain
 
-Claude reviewed PH-003D as `APPROVED WITH WARNINGS`.
+- Business target provisioning was recovered safely after Hostinger DNS conflict diagnostics.
+- A Hostinger-managed ALIAS route was recognized as the valid DNS shape.
+- SFTP capability proof was hardened, renewed, verified, and cleaned up using owned temporary paths.
+- Business master package generation was added and applied locally.
+- Guarded Business publication reached `negocio.jairopinto.pro`.
+- Publication jobs were made durable.
+- Future eligible activation/source events can enqueue publication automatically.
+- Existing-customer backfill preview and executor were added behind authenticated, hash-pinned gates.
+- Publication-job Cloudflare Access audience and machine identity handling were isolated.
+- Backfill for `jairo-pinto-business` was executed and completed successfully.
+- A final read-only preview confirmed no remaining backfill work for current targets.
 
-PH-003D closure has incorporated W-A, W-B, and W-C documentally and is ready for CTO quick check.
+## Active correction
 
-PH-020 backend MVP was implemented on 2026-07-30. The internal product page publisher now runs public verification after SFTP upload. A manual verification endpoint exists at `POST /api/internal/product-pages/verify`. Verification stores the latest result in `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`, updates linked activation leads to `VERIFIED` or `VERIFY_FAILED`, and exposes `lastVerification` from `GET /api/internal/product-pages`.
+This file, `brain/01_CURRENT_SPRINT.md`, `brain/02_CURRENT_STATUS.md`, and `brain/03_NEXT_MISSION.md` were stale compared with `.project-status/status.json`. CDX-20260909-001 updates the durable repo memory so future agents do not restart from obsolete PH-003/PH-039 instructions.
 
-## Path Integrity
+## Personal Brand diagnostic
 
-- Official project root: `D:\Proyectos multi agentes\PartnerHub`.
-- Obsolete / unauthorized path: `C:\Users\jairo\Documents\PartnerHub`.
-- Work for PH-003D was performed only under the official root.
+`CDX-20260909-002` is complete. The canonical Personal Brand template,
+generation resolver and generic durable publisher already support
+`PERSONAL_BRAND`. The blocker is not publication machinery: the current target
+contract forces Personal Brand to `brand.<domain>`, which conflicts with the
+approved three-ecosystem rule that assigns the partner apex to Personal Brand.
 
-## Current Scope
+## Completed backend contract
 
-- PH-003C created non-CRM domain, state-machine, business-rule, and flow documentation under `/brain`.
-- PH-003C updated Prisma planning entities to Entrepreneur, WebAssetPackage, MasterAsset, PersonalizedChannel, LeadDestination, ValidatedMessage, TrafficCampaign, and BusinessEvent.
-- PH-003C added backend service base files for domain transitions and minimum business events.
-- PH-003D created database planning docs under `brain/database/`.
-- PH-003D created a session handoff under `brain/session-handoffs/`.
-- PH-003D identified required schema additions for Organization/Tenant, billing, payments, webhooks, publishing, domains, master asset versions, product catalog, compliance, and hardened BusinessEvent audit logs.
-- PH-003D closure ratified Organization as the tenant boundary name.
-- PH-003D closure added OrganizationMembership and UserRole to MVP planning without implementing auth or permissions.
-- PH-003D closure renamed terminal external routing traceability to `visitor.redirected_to_external_destination`.
-- PH-003D closure added BillingMode to TrafficCampaign planning, with MVP default recommended as MANUAL.
-- PH-003D closure documented PaymentWebhookEvent minimum fields, rawPayload-before-processing, and idempotencyKey duplicate protection.
-- PH-003D closure ratified BillingStatement for MVP, ProductCatalog/Product/Kit/KitItem for MVP, MasterAsset GLOBAL or ORGANIZATION scope, and manual upgrade price policy.
-- PH-003B-ADDENDUM clarified that MVP PartnerHub sales are manual / voz a voz / initial promoter team, with no public marketplace, no mass self-service checkout, and no public affiliate system.
-- PH-003B-ADDENDUM-2 clarified that `nombre.pro` root domain is reserved for a future owner profile site and MVP operational landings should preferably publish on subdominios such as `vsl.nombre.pro`, `shop.nombre.pro`, or `[producto].nombre.pro`.
-- Application backend planning code was touched for PH-003C service bases and Prisma schema planning.
-- No UI was touched.
-- Prisma schema was not modified during PH-003D closure; no migration was created or applied.
-- No database migration was run.
-- No Docker was touched.
-- No endpoints were created or changed.
-- No auth was changed.
-- No dependencies were added.
-- No Prisma generate, migrate, or db push was run.
+`CDX-20260909-003` now owns the deterministic partner route policy and the
+pre-provider Personal Brand apex gate. Personal Brand serves the partner apex
+when active; Business and Product keep their fixed subdomains and each serves
+an active requested subdomain even if another active ecosystem has higher apex
+priority. Existing target identities and legacy migration behavior remain
+unchanged. The earlier incomplete local dependency record is historical; the
+final ticket report records all required checks passing. No provider, DNS,
+SFTP, Cloudflare, EasyPanel, deployment, publication, or production mutation
+was performed.
 
-## Next Step
+## Personal Brand preview checkpoint
 
-PH-039 is active. `origin/main` contains publication/verification imports and the merged Domains UI without their untracked PH-036/PH-038 backend implementations. Deployment and new feature work are paused while Codex prepares a narrowly scoped recovery branch, clean build evidence, and PR to `main`.
+`CDX-20260910-003` completed deterministic local master-package and apex
+publication previews. The Personal Brand apex is not public and no
+infrastructure mutation occurred. The previews do not create a target, use
+SFTP, call a provider, publish, deploy, or mutate production.
+Final scoped review approved `397c129`: 72 focused Personal Brand tests,
+target/hostname suites, exact ESLint, and diff check passed. The prior passing
+application build remains historical evidence because the post-fix scope is
+standalone `.mjs` scripts/tests excluded from TypeScript/global lint.
 
-Antigravity work for provisioning and logo upload must begin later from new, specific AGR requests after the corresponding backend APIs are stable. Existing completed AGR requests must not be reopened.
+## Next step
+
+Open separate guarded authorization tickets for: local Personal Brand
+master-package apply; apex target/DNS/SSL provisioning; SFTP capability proof;
+and publication enqueue/apply. Each requires fresh review and authorization.
+
+Expected Personal Brand outcome:
+
+- determine whether current Personal Brand templates and package generation are complete enough for publication;
+- implement only missing backend/package/publication gates;
+- preserve the Business-proven preview/apply authorization pattern;
+- leave production publication blocked until Jairo approves a fresh exact plan hash.
+
+## Parallel visual identity stream
+
+PartnerHub visual identity remains pending and should be opened as an Antigravity request. Codex may write the request, but Antigravity owns implementation.
+
+## Current holds
+
+- No active production apply/publish operation.
+- No open PRs observed at this checkpoint.
+- No unresolved current backfill candidate.
+- No secrets, passwords, tokens, AUD values, or raw provider responses should be stored in repo memory.

@@ -2,88 +2,121 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
-## Ticket
+## Current operating state
 
-`PH-039 - Deploy recovery integration (ready for PR)`
+PartnerHub is in the multi-ecosystem publication phase.
 
-## Status Summary
+The latest verified production line is the Business ecosystem for Jairo:
 
-PH-003A is closed / approved with warnings.
+- Site ID: `jairo-pinto-business`
+- Ecosystem: `BUSINESS`
+- Public host: `negocio.jairopinto.pro`
+- Provisioning: `READY`
+- DNS: `RESOLVED`
+- SSL: `READY`
+- Publication: current / already published
 
-PH-003B domain documentation has been created.
+The durable publication backfill for existing customers is closed for the only current target. A fresh post-publication preview confirmed:
 
-PH-003B-ADDENDUM documented MVP go-to-market clarification: manual / voz a voz / initial promoter team, no public marketplace, no mass self-service checkout, and no public affiliate system.
+- `targets=1`
+- `candidates=0`
+- `alreadyCurrent=1`
+- `alreadyScheduled=0`
+- `retryRequired=0`
+- `blocked=0`
 
-PH-003B-ADDENDUM-2 documented domain/subdomain publishing strategy: root domain `nombre.pro` reserved for future owner profile site, MVP operational landings preferably on `vsl.nombre.pro`, `shop.nombre.pro`, or `[producto].nombre.pro`.
+## Latest GitHub state checked by Codex
 
-PH-003C was executed from the active CTO instruction as an architecture correction.
+Checked on 2026-09-09.
 
-PartnerHub is now documented and modeled as not being a CRM.
+- `origin/main`: `c5dd8efbc88d97e5251fcee2151ad5ab70a1c6e9`
+- Latest merged PR: #194, `CDX-20260903-001 - Publication backfill conflict diagnostic`
+- Open PRs: none observed during this checkpoint
 
-The PH-003C core is web assets, validated messages, personalized channels, external lead destinations, traffic generation, and traceability.
+## Completed production capabilities
 
-PH-003D has created database planning documentation for schema review before migration.
+- Business PublishingTarget v2 can be provisioned safely on Hostinger-managed DNS.
+- The Business target for Jairo was recovered to `READY` with DNS and SSL ready.
+- SFTP capability proof supports temporary guarded rename checks and cleanup of owned probe paths.
+- Business master package generation exists and was used to produce the canonical local package.
+- Guarded publication can publish the Business ecosystem to the provisioned remote root.
+- Durable publication jobs exist for future events.
+- Publication jobs can be enqueued automatically from eligible activation/source events.
+- Existing valid targets can be backfilled through an authenticated, hash-pinned preview/apply flow.
+- Machine access for publication-jobs is isolated behind a dedicated Cloudflare Access audience.
+- The backfill executor reports safe bounded conflict diagnostics without exposing secrets.
+- EasyPanel auto deploy is enabled for `main`.
 
-Claude Code reviewed PH-003D as `APPROVED WITH WARNINGS`.
+## Current deliverables
 
-The PH-003D closure pass incorporated W-A, W-B, and W-C documentally:
+- `negocio.jairopinto.pro` is the validated Business publication pilot.
+- The latest backfill job for `jairo-pinto-business` completed `SUCCEEDED` / `COMPLETE`.
+- No current customer publication candidate remains pending in the backfill inventory.
+- Project-local dashboard state is tracked in `.project-status/status.json`; this file is local operational evidence and must not contain secrets.
 
-- W-A: terminal redirect event is `visitor.redirected_to_external_destination`.
-- W-B: `OrganizationMembership` and `UserRole` are included in MVP planning.
-- W-C: `BillingMode` is documented for `TrafficCampaign`, with MVP default recommended as `MANUAL`.
+## Known memory issue corrected by CDX-20260909-001
 
-PH-003D does not authorize migrations, Prisma generate, Prisma migrate, Prisma db push, endpoint work, auth work, UI work, webhook implementation, Wompi integration, or billing automation.
+Before CDX-20260909-001, these files still described old PH-003/PH-039 work:
 
-PH-004A Commercial Pricing Update: Approved official commercial rates for MVP launch saved in `brain/business/OFERTA_COMERCIAL_OFICIAL_MVP.md` ($247k Producto, $347k Negocio, $475.2k Plan 360, $59.9k/mo 1 servicio, $89.900/mo 2 servicios, Meta Ads $197k setup + $89.9k/mo).
+- `brain/01_CURRENT_SPRINT.md`
+- `brain/02_CURRENT_STATUS.md`
+- `brain/03_NEXT_MISSION.md`
+- `brain/LIVE_PROJECT_STATE.md`
 
-PH-004B Product Ecosystem Beta Sales Campaign: CEO direction saved in `brain/business/PH-004B_PRODUCT_ECOSYSTEM_BETA_SALES_CAMPAIGN.md`. Current sales hook focuses only on Ecosistema de Producto at $247.000 COP implementation, first month of administration included during implementation, $59.900 COP/month required after the first implementation month, special meeting-day benefit of 2 waived monthly management months worth $119.800 COP, beta entry price maintained during MVP validation without a public fixed deadline, live demos at jairopinto.pro, yennygarcia.pro, claudiacalero.pro and blancastella.pro, direct transfer/Nequi/Nu/Bancolombia/Wompi payment options, and referral rule of 1 waived month per 2 activated referrals capped at 12 months.
+That stale memory could cause future agents to restart from obsolete architecture gates. CDX-20260909-001 updates them to the current Business publication/backfill checkpoint and the next Personal Brand / identity visual direction.
 
-PH-020 Publicacion verificada was implemented in backend MVP on 2026-07-30. Publishing now performs SFTP upload followed by public-domain verification against the saved product page source. Manual verification is available at `POST /api/internal/product-pages/verify`. Verification results are stored under `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`, and `GET /api/internal/product-pages` returns `lastVerification`.
+## Personal Brand readiness diagnostic
 
-On 2026-08-01 Codex audited and stabilized the 2026-07-31 Antigravity change set. Verification was restored to read-only behavior, public onboarding photo uploads now validate the onboarding token before uploading to R2, proxy host handling was hardened to prefer `Host`, and PH-025 font preset contracts were unified across UI, onboarding schema, lead sync, and generation. Handoff: `brain/session-handoffs/2026-08-01_ANTIGRAVITY_AUDIT_STABILIZATION.md`.
+`CDX-20260909-002` confirmed that the template, generation resolver and
+durable publication worker already understand `PERSONAL_BRAND`. It also found
+one blocking backend mismatch: new targets are currently forced to
+`brand.<partner-domain>`, while the approved three-ecosystem route reserves the
+partner apex for Personal Brand.
 
-## Path Integrity
+## Latest backend contract checkpoint
 
-- Official project root: `D:\Proyectos multi agentes\PartnerHub`.
-- Obsolete / unauthorized path: `C:\Users\jairo\Documents\PartnerHub`.
+`CDX-20260909-003` completed the backend-only Personal Brand root-domain route
+contract and final review. The pure policy gives priority to Personal Brand,
+then Business, then Product only for apex requests and inactive known-subdomain
+fallback. An active requested Product or Business subdomain instead serves its
+own ecosystem. Product and Business retain `producto.<baseDomain>` and
+`negocio.<baseDomain>`. The subdomain provisioner rejects Personal Brand apex
+provisioning before target persistence or provider access. No provider, DNS,
+SFTP, Cloudflare, EasyPanel, publication, or production action was performed.
 
-## Constraints Honored
+The incomplete local dependency state recorded in
+`d21e92a5997428c02e95b98762060f9af3f49d83` (`docs: record dependency
+verification remediation`) and corrected in
+`d390572ed4ad5221cb0a0048e8b55ad708d8b0f4` (`docs: correct personal brand
+routing verification`) is historical. Final CDX-003 verification now records
+all required focused suites, the exact Task 3 ESLint command, and
+`git diff --check` as passing; see the ticket report for evidence.
 
-- Work changed `/brain` database planning documentation only after PH-003C commit closure.
-- No UI changed.
-- Prisma schema was not changed during PH-003D.
-- No database migration was created or applied.
-- No Docker changed.
-- No endpoints changed.
-- No auth changed.
-- No dependencies added.
-- Schema planning was documented in `brain/database/`.
-- No migrations created.
+## Next step
 
-## Current Deliverables
+`CDX-20260910-003` completed the read-only Personal Brand master-package and
+apex publication previews. It verifies deterministic local preview evidence
+only; the Personal Brand apex is not public and no infrastructure mutation
+occurred. Final scoped review approved `397c129` with 72 focused Personal
+Brand tests plus the target/hostname suites, exact ESLint, and diff check
+passing. Its standalone `.mjs` scripts/tests do not require a fresh
+application build; the recorded passing build remains historical evidence.
+Keep UI/visual identity work separated through an Antigravity request.
 
-- PH-003C non-CRM domain clarification exists under `brain/domain-model/`.
-- PH-003C state machines exist under `brain/state-machines/`.
-- PH-003C attract/educate/route flow exists under `brain/business-flows/`.
-- PH-003C non-CRM business rules exist under `brain/business-rules/`.
-- Prisma schema uses Entrepreneur, WebAssetPackage, MasterAsset, PersonalizedChannel, LeadDestination, ValidatedMessage, TrafficCampaign, and BusinessEvent.
-- Backend service base files exist under `app/web/server/services/`.
-- PH-003D schema review exists under `brain/database/`.
-- PH-003D migration plan exists under `brain/database/`.
-- PH-003D Prisma model decisions exist under `brain/database/`.
-- PH-003D MVP vs future schema boundary exists under `brain/database/`.
-- PH-003D session handoff exists under `brain/session-handoffs/`.
-- PH-003D closure documents PaymentWebhookEvent minimum fields and idempotency/raw payload handling.
-- PH-003D closure ratifies Organization as tenant boundary, BillingStatement for MVP, ProductCatalog/Product/Kit/KitItem for MVP, MasterAsset GLOBAL/ORGANIZATION scope, and manual upgrade price policy.
-- PH-003B domain clarification files remain under `brain/domain-model/`.
-- PH-003B open questions exist under `brain/open-questions/`.
-- PH-003B dependencies for PH-003C exist under `brain/dependencies/`.
-- PH-003B session handoff exists under `brain/session-handoffs/`.
-- PH-003B addendum is reflected in domain model, roles, entities, plan/service model, open questions, dependencies, and session handoff.
-- PH-003B-ADDENDUM-2 is reflected in domain model, landing fields, dashboard scope, open questions, dependencies, and session handoff.
+The next work must remain separate guarded authorization gates: local
+master-package apply; apex target/DNS/SSL provisioning; SFTP capability proof;
+and publication enqueue/apply.
 
-## Next Step
+Do not combine these streams in one PR:
 
-PH-039 is the active production-recovery ticket. PRs #87-#90 were merged while required PH-036/PH-038 backend files remained untracked in the shared workspace, leaving `origin/main` with unresolved imports and a missing Domains API. New feature work and deployment are paused until the already tested backend files are integrated through a clean recovery PR. No infrastructure mutation is authorized during PH-039.
+1. Codex backend/publication work for Personal Brand.
+2. Antigravity visual identity / frontend request for PartnerHub brand language.
+3. Any production apply/publish operation.
 
-The broader queue is documented in `brain/PH-036_INCREMENTAL_MULTI_ECOSYSTEM_OPERATIONS_PLAN.md`. Subdomain automation (`PH-036`) and logo media handling (`PH-037`) are independent streams and must not be combined into a mega-task.
+## Current constraints
+
+- No production mutation is authorized by this status file.
+- No SFTP, DNS, provider, Cloudflare write, or publication action should run without a fresh preview and explicit authorization from Jairo.
+- Codex must not implement frontend/UI/design changes directly.
+- Antigravity requests are required for React, Tailwind, UX, visual identity, and interaction work.
+- Exactly-two-ecosystem root-domain routing remains a product decision unless superseded by a newer approved architecture note.

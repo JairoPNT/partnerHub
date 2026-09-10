@@ -8,6 +8,7 @@ import {
   updateActivationLeadSchema
 } from "@/server/services/activationLeadService";
 import { productPageLeadSyncService } from "@/server/services/productPageLeadSyncService";
+import { publicationEventEnqueueService } from "@/server/services/publicationEventEnqueueService";
 
 export const runtime = "nodejs";
 
@@ -22,26 +23,44 @@ async function trySyncLeadToProductPageSource(lead: Parameters<typeof productPag
   }
 }
 
+function sourceSyncFailedAutomation() {
+  return {
+    event: "ACTIVATION_CHANGED" as const,
+    outcome: "SKIPPED" as const,
+    eligibleCount: 0,
+    createdCount: 0,
+    idempotentCount: 0,
+    skippedCount: 0,
+    reason: "SOURCE_SYNC_FAILED" as const
+  };
+}
+
 export async function PATCH(request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const body = await request.json();
 
     if ("recordState" in body) {
-      return NextResponse.json(
-        await activationLeadService.updateRecordState(id, activationLeadRecordStateSchema.parse(body.recordState))
-      );
+      const lead = await activationLeadService.updateRecordState(id, activationLeadRecordStateSchema.parse(body.recordState));
+      const publicationAutomation = await publicationEventEnqueueService.afterActivationChange(lead);
+      return NextResponse.json({ ...lead, publicationAutomation });
     }
 
     if ("siteId" in body) {
       const result = await activationLeadService.linkSite(id, linkActivationLeadSchema.parse(body));
       const syncWarning = await trySyncLeadToProductPageSource(result.lead);
-      return NextResponse.json(syncWarning ? { ...result, syncWarning } : result);
+      const publicationAutomation = syncWarning
+        ? sourceSyncFailedAutomation()
+        : await publicationEventEnqueueService.afterActivationChange(result.lead);
+      return NextResponse.json(syncWarning ? { ...result, syncWarning, publicationAutomation } : { ...result, publicationAutomation });
     }
 
     const lead = await activationLeadService.updateStatus(id, updateActivationLeadSchema.parse(body));
     const syncWarning = await trySyncLeadToProductPageSource(lead);
-    return NextResponse.json(syncWarning ? { ...lead, syncWarning } : lead);
+    const publicationAutomation = syncWarning
+      ? sourceSyncFailedAutomation()
+      : await publicationEventEnqueueService.afterActivationChange(lead);
+    return NextResponse.json(syncWarning ? { ...lead, syncWarning, publicationAutomation } : { ...lead, publicationAutomation });
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(
