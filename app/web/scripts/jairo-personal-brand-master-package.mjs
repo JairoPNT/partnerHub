@@ -1,3 +1,4 @@
+import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
 import { lstat, readdir, readFile, stat } from "node:fs/promises";
 import { relative, resolve, sep } from "node:path";
@@ -10,7 +11,6 @@ const SITE_ID = "ganomaster-personal-brand";
 const ECOSYSTEM_TYPE = "PERSONAL_BRAND";
 const PUBLIC_HOST = "brand.ganomaster.pro";
 const REQUIRED_TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "styles.css"];
-const PACKAGE_FILES = [".htaccess", ...REQUIRED_TEMPLATE_FILES, "manifest.json"];
 const NO_CACHE_HTACCESS = `DirectoryIndex index.html
 
 <IfModule mod_headers.c>
