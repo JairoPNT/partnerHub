@@ -8,14 +8,11 @@ import {
   Gift,
   CheckCircle2,
   AlertCircle,
-  XCircle,
-  RefreshCw,
   PlusCircle,
   UserPlus,
   Tag,
   ShieldAlert,
   ArrowRight,
-  HelpCircle,
   Check,
   X,
   AlertTriangle,
@@ -83,7 +80,7 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
     summary: []
   });
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [_isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -123,8 +120,8 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
       }
 
       setData(json);
-    } catch (err: any) {
-      setErrorMessage(err.message || "Error de conexión al cargar los referidos.");
+    } catch (err: unknown) {
+      setErrorMessage((err as Error).message || "Error de conexión al cargar los referidos.");
     } finally {
       setIsLoading(false);
     }
@@ -167,8 +164,8 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
       setSuccessMessage(`Código ${json.code} asignado correctamente a ${json.displayName}.`);
       setAssignForm({ siteId: "", code: "", displayName: "" });
       fetchReferralData();
-    } catch (err: any) {
-      setErrorMessage(err.message || "Error al registrar el código.");
+    } catch (err: unknown) {
+      setErrorMessage((err as Error).message || "Error al registrar el código.");
     } finally {
       setIsAssigning(false);
     }
@@ -214,8 +211,8 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
 
       setReferralForm({ referredSiteId: "", referrerCode: "" });
       fetchReferralData();
-    } catch (err: any) {
-      setErrorMessage(err.message || "Error al registrar el referido.");
+    } catch (err: unknown) {
+      setErrorMessage((err as Error).message || "Error al registrar el referido.");
     } finally {
       setIsRegistering(false);
     }
@@ -253,8 +250,8 @@ export function PartnersReferralsView({ record }: PartnersReferralsViewProps) {
       setSuccessMessage(`Estado del referido ${json.referredSiteId} actualizado a ${json.status}.`);
       setConfirmation(null);
       fetchReferralData();
-    } catch (err: any) {
-      setErrorMessage(err.message || "Error al cambiar estado.");
+    } catch (err: unknown) {
+      setErrorMessage((err as Error).message || "Error al cambiar estado.");
     } finally {
       setIsUpdatingStatus(false);
     }
