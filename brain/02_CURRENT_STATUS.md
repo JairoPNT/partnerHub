@@ -73,11 +73,29 @@ one blocking backend mismatch: new targets are currently forced to
 `brand.<partner-domain>`, while the approved three-ecosystem route reserves the
 partner apex for Personal Brand.
 
+## Latest backend contract checkpoint
+
+`CDX-20260909-003` completed the backend-only Personal Brand root-domain route
+contract in Tasks 1 and 2. The pure policy assigns the apex to active Personal
+Brand, otherwise redirects apex traffic to Business and then Product; Product
+and Business retain `producto.<baseDomain>` and `negocio.<baseDomain>`. The
+subdomain provisioner rejects Personal Brand apex provisioning before target
+persistence or provider access. No provider, DNS, SFTP, Cloudflare, EasyPanel,
+publication, or production action was performed.
+
+Task 3 closeout verification was partially blocked by the isolated worktree's
+incomplete `node_modules` tree: the hostname suite loaded 14 tests and failed
+only while importing `zod`, while the publication-target suite passed 6/6;
+`git diff --check` passed. ESLint could not start because the local dependency
+install remained incomplete. See the ticket report for exact evidence.
+
 ## Next step
 
-Open `CDX-20260909-003` to align the Personal Brand root-domain target contract
-without publishing anything. Keep UI/visual identity work separated through an
-Antigravity request.
+Open a separate guarded ticket for Personal Brand master-package preparation
+and preview. It must define the apex target's remote root explicitly and stop
+before DNS, SFTP, provider, or publication mutation pending fresh review and
+authorization. Keep UI/visual identity work separated through an Antigravity
+request.
 
 Do not combine these streams in one PR:
 

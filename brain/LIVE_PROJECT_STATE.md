@@ -4,7 +4,8 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Current ticket
 
-`CDX-20260909-001 - Project memory reconciliation after Business publication/backfill`
+`CDX-20260909-003 - Personal Brand root-domain target contract` (completed;
+closeout verification recorded in the ticket report)
 
 ## Current state
 
@@ -53,11 +54,21 @@ generation resolver and generic durable publisher already support
 contract forces Personal Brand to `brand.<domain>`, which conflicts with the
 approved three-ecosystem rule that assigns the partner apex to Personal Brand.
 
+## Completed backend contract
+
+`CDX-20260909-003` now owns the deterministic partner route policy and the
+pre-provider Personal Brand apex gate. Personal Brand serves the partner apex
+when active; Business and Product keep their fixed subdomains. Existing target
+identities and legacy migration behavior remain unchanged. No provider, DNS,
+SFTP, Cloudflare, EasyPanel, deployment, publication, or production mutation
+was performed.
+
 ## Next step
 
-Open `CDX-20260909-003` for the backend-only Personal Brand root-domain target
-contract. It must complete before a separate Personal Brand master-package and
-publication-preview ticket.
+Create a separate guarded Personal Brand master-package and publication-preview
+ticket. It must define the apex target's remote root explicitly and remain
+preview-only until a fresh exact plan is reviewed and Jairo authorizes any
+later provider or publication operation.
 
 Expected Personal Brand outcome:
 

@@ -30,11 +30,12 @@ Outcome: align `brain/` with the real production checkpoint so agents do not con
 
 Owner: Codex
 
-Status: diagnostic completed as `CDX-20260909-002`.
+Status: completed as `CDX-20260909-003` (route contract and pre-provider apex
+gate). Focused closeout evidence is recorded in the ticket report; the
+isolated worktree dependency tree prevented a fully green aggregate suite.
 
-Outcome: the pipeline is partly reusable, but the next implementation must be
-`CDX-20260909-003 — Personal Brand root-domain target contract` before any
-package or publication work.
+Outcome: the pipeline is partly reusable, and the apex route/provisioning gate
+is now explicit. No package, DNS, SFTP, or publication work was performed.
 
 Expected scope:
 
@@ -43,6 +44,15 @@ Expected scope:
 - preserve existing Business/Product subdomain behavior and legacy targets;
 - avoid frontend implementation;
 - avoid production publication until a fresh preview is reviewed and explicitly authorized.
+
+### 2a. Separate next ticket — Personal Brand master package / preview
+
+Owner: Codex
+
+Boundary: prepare and verify the Personal Brand master package and an explicit
+preview contract for an apex target. Do not provision, create DNS, obtain SFTP,
+publish, deploy, or mutate production. The preview must name the remote root
+and preserve the route contract from `CDX-20260909-003`.
 
 ### 3. AGR - PartnerHub visual identity request
 
