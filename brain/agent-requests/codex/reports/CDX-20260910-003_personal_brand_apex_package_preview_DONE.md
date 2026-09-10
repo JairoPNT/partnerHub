@@ -1,0 +1,90 @@
+# CDX-20260910-003 — Personal Brand apex package preview
+
+## Verification status: BLOCKED
+
+Task 1 and Task 2 implementation commits are present through
+`50d6b28de6b418ce425342c37b53a0720d60f209`. This Task 3 closure does not mark
+the ticket complete because the exact focused ESLint verification does not
+pass.
+
+## Verification evidence
+
+- The isolated worktree initially lacked `app/web/node_modules`. For this
+  verification only, a temporary directory junction at that path pointed to
+  the pre-existing canonical root dependency tree. No install, download,
+  lockfile change, or root modification occurred; the junction was removed
+  immediately after verification and is not committed.
+- `npm run test:jairo-personal-brand-master-package` — **PASS** (7 tests).
+- `npm run test:jairo-personal-brand-publication-preview` — **PASS** (16
+  tests).
+- `npm run test:publication-target` — **PASS** (6 tests). Node emitted the
+  non-fatal `MODULE_TYPELESS_PACKAGE_JSON` warning.
+- `npm run test:partner-hostnames` — **PASS** (39 tests). Node emitted the
+  non-fatal `MODULE_TYPELESS_PACKAGE_JSON` warning.
+- `npx eslint --no-ignore scripts/jairo-personal-brand-master-package.mjs
+  scripts/jairo-personal-brand-master-package.test.mjs
+  scripts/prepare-jairo-personal-brand-publication-preview.mjs
+  scripts/prepare-jairo-personal-brand-publication-preview.test.mjs` —
+  **FAIL**: 3 errors in `jairo-personal-brand-master-package.mjs`:
+  `PACKAGE_FILES` is unused (line 13), and `Buffer` is undefined (lines 112
+  and 122).
+- `npm run lint` — **PASS**.
+- `npm run build` — **PASS**. Next.js emitted the non-fatal multiple-lockfile
+  workspace-root warning.
+- `git diff --check origin/main...HEAD` was run before the authorized
+  design-spec whitespace correction was committed and reported its former EOF
+  blank line. The working-tree correction is pending a documentation commit;
+  a final range check remains required after that commit.
+
+No dependency installation, source correction, provider operation, DNS query,
+SFTP operation, or deployment was attempted while collecting this evidence.
+
+## Changed ticket paths
+
+Implementation already present before Task 3:
+
+- `app/web/package.json`
+- `app/web/scripts/jairo-personal-brand-master-package.mjs`
+- `app/web/scripts/jairo-personal-brand-master-package.test.mjs`
+- `app/web/scripts/prepare-jairo-personal-brand-publication-preview.mjs`
+- `app/web/scripts/prepare-jairo-personal-brand-publication-preview.test.mjs`
+- `brain/agent-requests/codex/requests/CDX-20260910-003_personal_brand_apex_package_preview.md`
+
+Task 3 adds this audit report and removes the ticket-owned trailing blank line
+from `docs/superpowers/specs/2026-09-10-personal-brand-apex-package-preview-design.md`.
+Operational-memory status files were not updated because the ticket must be
+marked complete only after all required verification passes.
+
+## Safety and handoff boundary
+
+Both maintenance commands are preview-only and their focused tests passed.
+This ticket did not create a Personal Brand publishing target, call
+DNS/Hostinger/Cloudflare, create or renew SFTP capability, use credentials,
+write a master package, enqueue a publication job, upload remote files,
+deploy, or mutate production.
+
+The Personal Brand apex is not public. No infrastructure mutation occurred.
+
+The following remain separate authorization gates after the local dependency
+state and whitespace check are remediated and the full verification sequence is
+rerun successfully:
+
+1. Guarded local Personal Brand master-package apply.
+2. Independently designed Personal Brand apex target/DNS/SSL provisioning.
+3. Scoped SFTP capability proof.
+4. Guarded publication enqueue/apply.
+
+## Branch and commits
+
+- Branch: `codex/CDX-20260910-003-personal-brand-preview`
+- Latest implementation commit: `50d6b28de6b418ce425342c37b53a0720d60f209`
+  (`fix(publication): harden personal brand apex preview`)
+- Task 3 documentation commit: recorded after this report is committed.
+
+## Self-review
+
+- Report states actual command outcomes without treating missing dependencies
+  or the focused ESLint failure as passing.
+- No operational completion status was invented or updated.
+- No identity data beyond the approved ticket identifier and existing public
+  context, no credentials, and no remote content are recorded.

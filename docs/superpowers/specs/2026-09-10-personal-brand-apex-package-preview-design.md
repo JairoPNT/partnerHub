@@ -116,4 +116,3 @@ request/report/operational memory.
 Excluded: React/templates visual changes, DNS records, Hostinger, Cloudflare,
 SFTP, EasyPanel, secrets, remote files, publication, deploys, and production
 mutations.
-
