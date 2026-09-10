@@ -2,72 +2,67 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
-## Current Ticket
+## Current ticket
 
-`CDX-20260902-007 - Existing-customer publication backfill preview (ready for PR)`
+`CDX-20260909-001 - Project memory reconciliation after Business publication/backfill`
 
-## Current State
+## Current state
 
-PH-003A is closed / approved with warnings.
+PartnerHub is past the first validated Business ecosystem publication pilot.
 
-PH-003B has been executed in `/brain`; PH-003B-ADDENDUM documented MVP go-to-market clarification; PH-003B-ADDENDUM-2 documented domain/subdomain publishing strategy.
+The current production checkpoint is:
 
-PH-003C was executed as an architecture correction mission from the active CTO instruction.
+- `jairo-pinto-business`
+- `BUSINESS`
+- `negocio.jairopinto.pro`
+- provisioning `READY`
+- DNS `RESOLVED`
+- SSL `READY`
+- publication current
+- durable backfill closed with `alreadyCurrent=1` and `candidates=0`
 
-PH-003C redefines PartnerHub as a platform for web assets, validated messages, personalized channels, external lead destinations, traffic generation, and traceability.
+The latest checked GitHub state on 2026-09-09:
 
-PartnerHub is not a CRM and does not manage leads after routing.
+- `origin/main`: `c5dd8efbc88d97e5251fcee2151ad5ab70a1c6e9`
+- latest merged PR: #194
+- open PRs: none observed
 
-PH-003D has created schema planning documentation and has not modified `schema.prisma`.
+## Recently completed chain
 
-Claude reviewed PH-003D as `APPROVED WITH WARNINGS`.
+- Business target provisioning was recovered safely after Hostinger DNS conflict diagnostics.
+- A Hostinger-managed ALIAS route was recognized as the valid DNS shape.
+- SFTP capability proof was hardened, renewed, verified, and cleaned up using owned temporary paths.
+- Business master package generation was added and applied locally.
+- Guarded Business publication reached `negocio.jairopinto.pro`.
+- Publication jobs were made durable.
+- Future eligible activation/source events can enqueue publication automatically.
+- Existing-customer backfill preview and executor were added behind authenticated, hash-pinned gates.
+- Publication-job Cloudflare Access audience and machine identity handling were isolated.
+- Backfill for `jairo-pinto-business` was executed and completed successfully.
+- A final read-only preview confirmed no remaining backfill work for current targets.
 
-PH-003D closure has incorporated W-A, W-B, and W-C documentally and is ready for CTO quick check.
+## Active correction
 
-PH-020 backend MVP was implemented on 2026-07-30. The internal product page publisher now runs public verification after SFTP upload. A manual verification endpoint exists at `POST /api/internal/product-pages/verify`. Verification stores the latest result in `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`, updates linked activation leads to `VERIFIED` or `VERIFY_FAILED`, and exposes `lastVerification` from `GET /api/internal/product-pages`.
+This file, `brain/01_CURRENT_SPRINT.md`, `brain/02_CURRENT_STATUS.md`, and `brain/03_NEXT_MISSION.md` were stale compared with `.project-status/status.json`. CDX-20260909-001 updates the durable repo memory so future agents do not restart from obsolete PH-003/PH-039 instructions.
 
-CDX-20260902-005 was merged as PR #188 and deployed through EasyPanel. It replaces operator SFTP capability windows for queued jobs with an automatic server-side pipeline: exact source/target/master hashes, fresh scoped rename proof, atomic two-rename publication, HTTPS verification, versioned journal and crash recovery.
+## Next step
 
-CDX-20260902-006 was merged as PR #189 and deployed. Future ACTIVE + PAID/CONVERTED activation changes and explicit saved-source generations/updates can enqueue eligible tenant-owned READY targets without an operator calling the publication-job API. Failures return bounded safe metadata after the primary write, and a source-sync failure blocks publication of stale content.
+After CDX-20260909-001 is merged, start a separate Personal Brand backend/publication readiness ticket.
 
-CDX-20260902-007 is implemented and verified locally. Its authenticated GET preview reads existing valid PublishingTarget v2 records and classifies exact current publication intents as candidates, already current, already scheduled, retry required or blocked. Its deterministic `planHash` includes hashed approval state and exact source/target/master hashes. It performs no enqueue, retry, wake, filesystem write or provider operation.
+Expected Personal Brand outcome:
 
-CDX-20260902-007 was subsequently merged and deployed as PR #190. The authenticated production preview found exactly one candidate, `jairo-pinto-business`, no blocked/retry-required entries and plan hash `73c2db7372c040a960ba902a4f9ef7791a1f813861d14158645e327060e5debf`.
+- determine whether current Personal Brand templates and package generation are complete enough for publication;
+- implement only missing backend/package/publication gates;
+- preserve the Business-proven preview/apply authorization pattern;
+- leave production publication blocked until Jairo approves a fresh exact plan hash.
 
-CDX-20260902-008 is implemented and verified locally. It adds a separate authenticated POST executor that recomputes the complete preview, requires its exact reviewed plan hash and confirmation phrase, and binds every enqueue to the candidate's immutable publication intent hash. The executor has not been invoked in production.
+## Parallel visual identity stream
 
-## Path Integrity
+PartnerHub visual identity remains pending and should be opened as an Antigravity request. Codex may write the request, but Antigravity owns implementation.
 
-- Official project root: `D:\Proyectos multi agentes\PartnerHub`.
-- Obsolete / unauthorized path: `C:\Users\jairo\Documents\PartnerHub`.
-- Work for PH-003D was performed only under the official root.
+## Current holds
 
-## Current Scope
-
-- PH-003C created non-CRM domain, state-machine, business-rule, and flow documentation under `/brain`.
-- PH-003C updated Prisma planning entities to Entrepreneur, WebAssetPackage, MasterAsset, PersonalizedChannel, LeadDestination, ValidatedMessage, TrafficCampaign, and BusinessEvent.
-- PH-003C added backend service base files for domain transitions and minimum business events.
-- PH-003D created database planning docs under `brain/database/`.
-- PH-003D created a session handoff under `brain/session-handoffs/`.
-- PH-003D identified required schema additions for Organization/Tenant, billing, payments, webhooks, publishing, domains, master asset versions, product catalog, compliance, and hardened BusinessEvent audit logs.
-- PH-003D closure ratified Organization as the tenant boundary name.
-- PH-003D closure added OrganizationMembership and UserRole to MVP planning without implementing auth or permissions.
-- PH-003D closure renamed terminal external routing traceability to `visitor.redirected_to_external_destination`.
-- PH-003D closure added BillingMode to TrafficCampaign planning, with MVP default recommended as MANUAL.
-- PH-003D closure documented PaymentWebhookEvent minimum fields, rawPayload-before-processing, and idempotencyKey duplicate protection.
-- PH-003D closure ratified BillingStatement for MVP, ProductCatalog/Product/Kit/KitItem for MVP, MasterAsset GLOBAL or ORGANIZATION scope, and manual upgrade price policy.
-- PH-003B-ADDENDUM clarified that MVP PartnerHub sales are manual / voz a voz / initial promoter team, with no public marketplace, no mass self-service checkout, and no public affiliate system.
-- PH-003B-ADDENDUM-2 clarified that `nombre.pro` root domain is reserved for a future owner profile site and MVP operational landings should preferably publish on subdominios such as `vsl.nombre.pro`, `shop.nombre.pro`, or `[producto].nombre.pro`.
-- Application backend planning code was touched for PH-003C service bases and Prisma schema planning.
-- No UI was touched.
-- Prisma schema was not modified during PH-003D closure; no migration was created or applied.
-- No database migration was run.
-- No Docker was touched.
-- No endpoints were created or changed.
-- No auth was changed.
-- No dependencies were added.
-- No Prisma generate, migrate, or db push was run.
-
-## Next Step
-
-Open/review, merge and deploy CDX-20260902-008. Then obtain a fresh authenticated preview. Production APPLY remains blocked until Jairo explicitly authorizes the exact current `planHash`; the executor never retries FAILED/CANCELLED jobs.
+- No active production apply/publish operation.
+- No open PRs observed at this checkpoint.
+- No unresolved current backfill candidate.
+- No secrets, passwords, tokens, AUD values, or raw provider responses should be stored in repo memory.
