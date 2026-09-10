@@ -1,29 +1,37 @@
-﻿# Current Sprint
+# Current Sprint
 
-## Sprint 0 - Foundation
+## Sprint: Multi-ecosystem publication and commercial enablement
 
-Sprint 0 exists to establish the project memory, decision system, and architectural guardrails before implementation expands. It is now practically complete.
+The foundation sprint is closed for practical execution. PartnerHub is now focused on turning the validated publication pipeline into sellable, repeatable ecosystem delivery.
 
-## Objectives
+## Current position
 
-- Finish the local brain.
-- Record the current architecture inventory.
-- Validate architecture only after the inventory is complete.
-- Keep the product generic across partner-driven businesses.
-- Capture the business flows foundation before database planning.
+The Business ecosystem pilot for Jairo is complete:
 
-## Active Work
+- `jairo-pinto-business` is provisioned.
+- DNS and SSL are ready.
+- The Business page is published at `negocio.jairopinto.pro`.
+- Durable publication backfill reports the target as already current.
 
-- PH-003C - Non-CRM Web Assets, Validated Messages, and Routing Model
+## Active work
 
-## Pending Work
+- `CDX-20260909-001` - project memory reconciliation after Business publication/backfill completion.
 
-- PHOS Sync Engine queue design
-- PH-003D - Schema review and migration plan
-- PH-004 - Authentication Strategy
-- PH-005 - Entrepreneur asset/channel operations
+## Next work
 
-## Sprint Rule
+1. Personal Brand backend/publication readiness.
+2. Antigravity request for PartnerHub visual identity.
+3. One small integration checkpoint after both streams have produced reviewed outputs.
 
-No new product features should be built until Architecture Validation is complete.
-Architecture validation has been approved with mandatory adjustments. PH-003C now blocks CRM-like product drift and sets the next technical step as schema review before migrations.
+## Sprint rule
+
+Do not restart obsolete PH-003/PH-039 gates as if they were active.
+
+Every next change must be ticketed, small, independently verifiable, and owned by the correct agent:
+
+- Codex: backend, publication, auth, infrastructure, safety gates.
+- Antigravity: frontend, UX, visual identity, React/Tailwind implementation.
+- ChatGPT/CEO: product direction and cross-cutting architecture decisions.
+- Claude: review and quality gates when requested.
+
+No production publish/apply is authorized by this sprint note.

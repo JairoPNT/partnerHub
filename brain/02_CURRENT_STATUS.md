@@ -2,96 +2,83 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
-## Ticket
+## Current operating state
 
-`CDX-20260902-007 - Existing-customer publication backfill preview (ready for PR)`
+PartnerHub is in the multi-ecosystem publication phase.
 
-## Status Summary
+The latest verified production line is the Business ecosystem for Jairo:
 
-PH-003A is closed / approved with warnings.
+- Site ID: `jairo-pinto-business`
+- Ecosystem: `BUSINESS`
+- Public host: `negocio.jairopinto.pro`
+- Provisioning: `READY`
+- DNS: `RESOLVED`
+- SSL: `READY`
+- Publication: current / already published
 
-PH-003B domain documentation has been created.
+The durable publication backfill for existing customers is closed for the only current target. A fresh post-publication preview confirmed:
 
-PH-003B-ADDENDUM documented MVP go-to-market clarification: manual / voz a voz / initial promoter team, no public marketplace, no mass self-service checkout, and no public affiliate system.
+- `targets=1`
+- `candidates=0`
+- `alreadyCurrent=1`
+- `alreadyScheduled=0`
+- `retryRequired=0`
+- `blocked=0`
 
-PH-003B-ADDENDUM-2 documented domain/subdomain publishing strategy: root domain `nombre.pro` reserved for future owner profile site, MVP operational landings preferably on `vsl.nombre.pro`, `shop.nombre.pro`, or `[producto].nombre.pro`.
+## Latest GitHub state checked by Codex
 
-PH-003C was executed from the active CTO instruction as an architecture correction.
+Checked on 2026-09-09.
 
-PartnerHub is now documented and modeled as not being a CRM.
+- `origin/main`: `c5dd8efbc88d97e5251fcee2151ad5ab70a1c6e9`
+- Latest merged PR: #194, `CDX-20260903-001 - Publication backfill conflict diagnostic`
+- Open PRs: none observed during this checkpoint
 
-The PH-003C core is web assets, validated messages, personalized channels, external lead destinations, traffic generation, and traceability.
+## Completed production capabilities
 
-PH-003D has created database planning documentation for schema review before migration.
+- Business PublishingTarget v2 can be provisioned safely on Hostinger-managed DNS.
+- The Business target for Jairo was recovered to `READY` with DNS and SSL ready.
+- SFTP capability proof supports temporary guarded rename checks and cleanup of owned probe paths.
+- Business master package generation exists and was used to produce the canonical local package.
+- Guarded publication can publish the Business ecosystem to the provisioned remote root.
+- Durable publication jobs exist for future events.
+- Publication jobs can be enqueued automatically from eligible activation/source events.
+- Existing valid targets can be backfilled through an authenticated, hash-pinned preview/apply flow.
+- Machine access for publication-jobs is isolated behind a dedicated Cloudflare Access audience.
+- The backfill executor reports safe bounded conflict diagnostics without exposing secrets.
+- EasyPanel auto deploy is enabled for `main`.
 
-Claude Code reviewed PH-003D as `APPROVED WITH WARNINGS`.
+## Current deliverables
 
-The PH-003D closure pass incorporated W-A, W-B, and W-C documentally:
+- `negocio.jairopinto.pro` is the validated Business publication pilot.
+- The latest backfill job for `jairo-pinto-business` completed `SUCCEEDED` / `COMPLETE`.
+- No current customer publication candidate remains pending in the backfill inventory.
+- Project-local dashboard state is tracked in `.project-status/status.json`; this file is local operational evidence and must not contain secrets.
 
-- W-A: terminal redirect event is `visitor.redirected_to_external_destination`.
-- W-B: `OrganizationMembership` and `UserRole` are included in MVP planning.
-- W-C: `BillingMode` is documented for `TrafficCampaign`, with MVP default recommended as `MANUAL`.
+## Known memory issue corrected by CDX-20260909-001
 
-PH-003D does not authorize migrations, Prisma generate, Prisma migrate, Prisma db push, endpoint work, auth work, UI work, webhook implementation, Wompi integration, or billing automation.
+Before CDX-20260909-001, these files still described old PH-003/PH-039 work:
 
-PH-004A Commercial Pricing Update: Approved official commercial rates for MVP launch saved in `brain/business/OFERTA_COMERCIAL_OFICIAL_MVP.md` ($247k Producto, $347k Negocio, $475.2k Plan 360, $59.9k/mo 1 servicio, $89.900/mo 2 servicios, Meta Ads $197k setup + $89.9k/mo).
+- `brain/01_CURRENT_SPRINT.md`
+- `brain/02_CURRENT_STATUS.md`
+- `brain/03_NEXT_MISSION.md`
+- `brain/LIVE_PROJECT_STATE.md`
 
-PH-004B Product Ecosystem Beta Sales Campaign: CEO direction saved in `brain/business/PH-004B_PRODUCT_ECOSYSTEM_BETA_SALES_CAMPAIGN.md`. Current sales hook focuses only on Ecosistema de Producto at $247.000 COP implementation, first month of administration included during implementation, $59.900 COP/month required after the first implementation month, special meeting-day benefit of 2 waived monthly management months worth $119.800 COP, beta entry price maintained during MVP validation without a public fixed deadline, live demos at jairopinto.pro, yennygarcia.pro, claudiacalero.pro and blancastella.pro, direct transfer/Nequi/Nu/Bancolombia/Wompi payment options, and referral rule of 1 waived month per 2 activated referrals capped at 12 months.
+That stale memory could cause future agents to restart from obsolete architecture gates. CDX-20260909-001 updates them to the current Business publication/backfill checkpoint and the next Personal Brand / identity visual direction.
 
-PH-020 Publicacion verificada was implemented in backend MVP on 2026-07-30. Publishing now performs SFTP upload followed by public-domain verification against the saved product page source. Manual verification is available at `POST /api/internal/product-pages/verify`. Verification results are stored under `PRODUCT_PAGE_SOURCE_DIR/.verifications/<siteId>.json`, and `GET /api/internal/product-pages` returns `lastVerification`.
+## Next step
 
-On 2026-09-02 CDX-20260902-005 was merged as PR #188 and deployed through EasyPanel. The backend worker consumes durable publication jobs, regenerates the exact client package from its ecosystem master, creates a fresh SFTP rename capability, performs recoverable atomic publication, verifies public HTTPS assets and records immutable per-plan journals.
+Open the next small ticket for Personal Brand generation/publication using the Business path as the proven pattern, while keeping UI/visual identity work separated through an Antigravity request.
 
-On 2026-09-02 CDX-20260902-006 was merged as PR #189 and deployed through EasyPanel. Future approved activation and explicit source-change events now enqueue durable publication jobs after revalidating ACTIVE + PAID/CONVERTED state, entitlement, tenant ownership, exact site scope and READY provisioning state.
+Do not combine these streams in one PR:
 
-CDX-20260902-007 is implemented and verified locally on branch `codex/CDX-20260902-007-publication-backfill-preview`. It adds an authenticated, deterministic and strictly read-only inventory of existing targets. The inventory separates new candidates, exact intents already current, queued/running intents, retry-required intents and bounded blocked reasons, and binds exact approval/source/target/master hashes to one `planHash`. It creates no jobs, directories, leases or worker wakes and makes no provider call. PR/merge/deploy are pending.
+1. Codex backend/publication work for Personal Brand.
+2. Antigravity visual identity / frontend request for PartnerHub brand language.
+3. Any production apply/publish operation.
 
-On 2026-08-01 Codex audited and stabilized the 2026-07-31 Antigravity change set. Verification was restored to read-only behavior, public onboarding photo uploads now validate the onboarding token before uploading to R2, proxy host handling was hardened to prefer `Host`, and PH-025 font preset contracts were unified across UI, onboarding schema, lead sync, and generation. Handoff: `brain/session-handoffs/2026-08-01_ANTIGRAVITY_AUDIT_STABILIZATION.md`.
+## Current constraints
 
-## Path Integrity
-
-- Official project root: `D:\Proyectos multi agentes\PartnerHub`.
-- Obsolete / unauthorized path: `C:\Users\jairo\Documents\PartnerHub`.
-
-## Constraints Honored
-
-- Work changed `/brain` database planning documentation only after PH-003C commit closure.
-- No UI changed.
-- Prisma schema was not changed during PH-003D.
-- No database migration was created or applied.
-- No Docker changed.
-- No endpoints changed.
-- No auth changed.
-- No dependencies added.
-- Schema planning was documented in `brain/database/`.
-- No migrations created.
-
-## Current Deliverables
-
-- PH-003C non-CRM domain clarification exists under `brain/domain-model/`.
-- PH-003C state machines exist under `brain/state-machines/`.
-- PH-003C attract/educate/route flow exists under `brain/business-flows/`.
-- PH-003C non-CRM business rules exist under `brain/business-rules/`.
-- Prisma schema uses Entrepreneur, WebAssetPackage, MasterAsset, PersonalizedChannel, LeadDestination, ValidatedMessage, TrafficCampaign, and BusinessEvent.
-- Backend service base files exist under `app/web/server/services/`.
-- PH-003D schema review exists under `brain/database/`.
-- PH-003D migration plan exists under `brain/database/`.
-- PH-003D Prisma model decisions exist under `brain/database/`.
-- PH-003D MVP vs future schema boundary exists under `brain/database/`.
-- PH-003D session handoff exists under `brain/session-handoffs/`.
-- PH-003D closure documents PaymentWebhookEvent minimum fields and idempotency/raw payload handling.
-- PH-003D closure ratifies Organization as tenant boundary, BillingStatement for MVP, ProductCatalog/Product/Kit/KitItem for MVP, MasterAsset GLOBAL/ORGANIZATION scope, and manual upgrade price policy.
-- PH-003B domain clarification files remain under `brain/domain-model/`.
-- PH-003B open questions exist under `brain/open-questions/`.
-- PH-003B dependencies for PH-003C exist under `brain/dependencies/`.
-- PH-003B session handoff exists under `brain/session-handoffs/`.
-- PH-003B addendum is reflected in domain model, roles, entities, plan/service model, open questions, dependencies, and session handoff.
-- PH-003B-ADDENDUM-2 is reflected in domain model, landing fields, dashboard scope, open questions, dependencies, and session handoff.
-
-## Next Step
-
-CDX-20260902-007 was merged, deployed and reviewed in production. Its authenticated preview found one candidate, `jairo-pinto-business`, with no blocked or retry-required entries and plan hash `73c2db7372c040a960ba902a4f9ef7791a1f813861d14158645e327060e5debf`.
-
-CDX-20260902-008 implements the separate authenticated, hash-pinned executor and is ready for PR. Deployment is inert: no existing customer is enqueued until Jairo explicitly authorizes a fresh post-deploy preview hash. The executor does not retry FAILED/CANCELLED jobs and requires a new preview after any partial batch.
-
-Open, review, merge and deploy CDX-20260902-008. Then obtain a fresh authenticated backfill preview. Do not call production APPLY until Jairo explicitly authorizes its exact current `planHash`.
+- No production mutation is authorized by this status file.
+- No SFTP, DNS, provider, Cloudflare write, or publication action should run without a fresh preview and explicit authorization from Jairo.
+- Codex must not implement frontend/UI/design changes directly.
+- Antigravity requests are required for React, Tailwind, UX, visual identity, and interaction work.
+- Exactly-two-ecosystem root-domain routing remains a product decision unless superseded by a newer approved architecture note.
