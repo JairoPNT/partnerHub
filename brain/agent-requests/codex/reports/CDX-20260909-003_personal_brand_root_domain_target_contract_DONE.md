@@ -41,9 +41,12 @@ authorization.
 
 ## Commit
 
-Base documentation commit: `e9ba98180d29cc93b2ac5ab03f49a8cb42853a4b` —
-`docs: close personal brand root routing contract`. This verification correction
-is committed separately and changes only this report plus the SDD evidence file.
+Prior documentation commit: `e9ba98180d29cc93b2ac5ab03f49a8cb42853a4b` —
+`docs: close personal brand root routing contract`.
+
+Authoritative verification correction: `d21e92a5997428c02e95b98762060f9af3f49d83` —
+`docs: correct personal brand routing verification`. This correction changes
+only the tracked closeout report; the SDD evidence remains an ignored artifact.
 
 ## Self-review
 
