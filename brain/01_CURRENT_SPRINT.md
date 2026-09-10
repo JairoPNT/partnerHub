@@ -15,11 +15,14 @@ The Business ecosystem pilot for Jairo is complete:
 
 ## Active work
 
-- `CDX-20260909-001` - project memory reconciliation after Business publication/backfill completion.
+- `CDX-20260910-003` completed the read-only Personal Brand master-package
+  and apex publication previews. The apex is not public and no infrastructure
+  mutation occurred.
 
 ## Next work
 
-1. Personal Brand backend/publication readiness.
+1. Separate authorization gates for Personal Brand local package apply, apex
+   target/DNS/SSL provisioning, SFTP proof, and guarded publication apply.
 2. Antigravity request for PartnerHub visual identity.
 3. One small integration checkpoint after both streams have produced reviewed outputs.
 

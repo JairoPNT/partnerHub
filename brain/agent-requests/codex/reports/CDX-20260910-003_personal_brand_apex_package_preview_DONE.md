@@ -1,11 +1,10 @@
 # CDX-20260910-003 — Personal Brand apex package preview
 
-## Verification status: BLOCKED
+## Verification status: COMPLETE
 
 Task 1 and Task 2 implementation commits are present through
-`50d6b28de6b418ce425342c37b53a0720d60f209`. This Task 3 closure does not mark
-the ticket complete because a Next.js build lock prevented fresh build
-verification.
+`50d6b28de6b418ce425342c37b53a0720d60f209`. Task 3 verification completed on
+the current ticket branch after the independently approved lint correction.
 
 ## Verification evidence
 
@@ -27,14 +26,11 @@ verification.
   scripts/prepare-jairo-personal-brand-publication-preview.test.mjs` —
   **PASS** after the independently approved `6be06ec` lint correction.
 - `npm run lint` — **PASS**.
-- `npm run build` — **BLOCKED**: each of two fresh attempts emitted the
-  non-fatal multiple-lockfile workspace-root warning, then stopped because
-  Next.js reported that another build process is already running. The existing
-  `.next/lock` was not removed and no process was stopped.
-- `git diff --check origin/main...HEAD` was run before the authorized
-  design-spec whitespace correction was committed and reported its former EOF
-  blank line. The working-tree correction is pending a documentation commit;
-  a final range check remains required after that commit.
+- `npm run build` — **PASS** after the stale worktree-only build lock was no
+  longer present. Next.js emitted the non-fatal multiple-lockfile workspace
+  warning and a non-fatal NFT tracing warning, then compiled successfully,
+  ran TypeScript, and wrote `BUILD_ID`.
+- `git diff --check origin/main...HEAD` — **PASS** (silent).
 
 No dependency installation, source correction, provider operation, DNS query,
 SFTP operation, or deployment was attempted while collecting this evidence.
@@ -52,8 +48,8 @@ Implementation already present before Task 3:
 
 Task 3 adds this audit report and removes the ticket-owned trailing blank line
 from `docs/superpowers/specs/2026-09-10-personal-brand-apex-package-preview-design.md`.
-Operational-memory status files were not updated because the ticket must be
-marked complete only after all required verification passes.
+Relevant operational-memory status files were updated after all required
+verification passed.
 
 ## Safety and handoff boundary
 
@@ -65,9 +61,7 @@ deploy, or mutate production.
 
 The Personal Brand apex is not public. No infrastructure mutation occurred.
 
-The following remain separate authorization gates after the local dependency
-state and whitespace check are remediated and the full verification sequence is
-rerun successfully:
+The following remain separate authorization gates:
 
 1. Guarded local Personal Brand master-package apply.
 2. Independently designed Personal Brand apex target/DNS/SSL provisioning.
@@ -79,12 +73,14 @@ rerun successfully:
 - Branch: `codex/CDX-20260910-003-personal-brand-preview`
 - Latest implementation commit: `50d6b28de6b418ce425342c37b53a0720d60f209`
   (`fix(publication): harden personal brand apex preview`)
-- Task 3 documentation commit: recorded after this report is committed.
+- Lint-correction commit supplied for final verification: `6be06ec`.
+- Task 3 final documentation commit: recorded with this completed report.
 
 ## Self-review
 
-- Report states actual command outcomes without treating missing dependencies
-  or a stale build-lock failure as passing.
-- No operational completion status was invented or updated.
+- Report states actual command outcomes, including non-fatal Node, Next.js,
+  and Turbopack warnings.
+- Operational memory records completion without suggesting publication or
+  infrastructure readiness.
 - No identity data beyond the approved ticket identifier and existing public
   context, no credentials, and no remote content are recorded.

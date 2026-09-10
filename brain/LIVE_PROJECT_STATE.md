@@ -2,10 +2,10 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
-## Current ticket
+## Latest completed ticket
 
-`CDX-20260909-003 - Personal Brand root-domain target contract` (completed;
-final-review verification recorded in the ticket report)
+`CDX-20260910-003 - Personal Brand apex package preview` (completed;
+read-only verification recorded in the ticket report)
 
 ## Current state
 
@@ -66,12 +66,18 @@ final ticket report records all required checks passing. No provider, DNS,
 SFTP, Cloudflare, EasyPanel, deployment, publication, or production mutation
 was performed.
 
+## Personal Brand preview checkpoint
+
+`CDX-20260910-003` completed deterministic local master-package and apex
+publication previews. The Personal Brand apex is not public and no
+infrastructure mutation occurred. The previews do not create a target, use
+SFTP, call a provider, publish, deploy, or mutate production.
+
 ## Next step
 
-Create a separate guarded Personal Brand master-package and publication-preview
-ticket. It must define the apex target's remote root explicitly and remain
-preview-only until a fresh exact plan is reviewed and Jairo authorizes any
-later provider or publication operation.
+Open separate guarded authorization tickets for: local Personal Brand
+master-package apply; apex target/DNS/SSL provisioning; SFTP capability proof;
+and publication enqueue/apply. Each requires fresh review and authorization.
 
 Expected Personal Brand outcome:
 

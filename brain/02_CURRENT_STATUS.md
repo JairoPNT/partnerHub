@@ -94,11 +94,15 @@ all required focused suites, the exact Task 3 ESLint command, and
 
 ## Next step
 
-Open a separate guarded ticket for Personal Brand master-package preparation
-and preview. It must define the apex target's remote root explicitly and stop
-before DNS, SFTP, provider, or publication mutation pending fresh review and
-authorization. Keep UI/visual identity work separated through an Antigravity
+`CDX-20260910-003` completed the read-only Personal Brand master-package and
+apex publication previews. It verifies deterministic local preview evidence
+only; the Personal Brand apex is not public and no infrastructure mutation
+occurred. Keep UI/visual identity work separated through an Antigravity
 request.
+
+The next work must remain separate guarded authorization gates: local
+master-package apply; apex target/DNS/SSL provisioning; SFTP capability proof;
+and publication enqueue/apply.
 
 Do not combine these streams in one PR:
 

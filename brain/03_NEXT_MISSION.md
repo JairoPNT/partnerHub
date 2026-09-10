@@ -48,14 +48,14 @@ Expected scope:
 - avoid frontend implementation;
 - avoid production publication until a fresh preview is reviewed and explicitly authorized.
 
-### 2a. Separate next ticket — Personal Brand master package / preview
+### 2a. Completed — Personal Brand master package / preview
 
 Owner: Codex
 
-Boundary: prepare and verify the Personal Brand master package and an explicit
-preview contract for an apex target. Do not provision, create DNS, obtain SFTP,
-publish, deploy, or mutate production. The preview must name the remote root
-and preserve the route contract from `CDX-20260909-003`.
+`CDX-20260910-003` added and verified read-only Personal Brand master-package
+and apex publication previews. The apex remains not public and no
+infrastructure mutation occurred. Future local apply, apex provisioning,
+SFTP proof, and guarded publication remain separate authorization gates.
 
 ### 3. AGR - PartnerHub visual identity request
 
