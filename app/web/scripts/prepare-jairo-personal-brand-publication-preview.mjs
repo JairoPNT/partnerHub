@@ -1,8 +1,10 @@
 import { createHash } from "node:crypto";
-import { lstat, readFile, readdir } from "node:fs/promises";
-import { relative, resolve, sep } from "node:path";
+import { lstat, readFile } from "node:fs/promises";
+import { posix, resolve, sep } from "node:path";
 import process from "node:process";
 import { pathToFileURL } from "node:url";
+
+import { planPersonalBrandMasterPackage } from "./jairo-personal-brand-master-package.mjs";
 
 const REQUEST_ID = "CDX-20260910-003";
 const OWNER_KEY = "f403f29e-95c8-4825-9320-967376443020";
@@ -11,7 +13,6 @@ const ECOSYSTEM_TYPE = "PERSONAL_BRAND";
 const BASE_DOMAIN = "jairopinto.pro";
 const PUBLIC_HOST = "jairopinto.pro";
 const MASTER_SITE_ID = "ganomaster-personal-brand";
-const REQUIRED_PACKAGE_FILES = [".htaccess", "app.js", "config.js", "favicon.svg", "index.html", "manifest.json", "styles.css"];
 
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
@@ -24,7 +25,11 @@ function inside(root, child) {
 }
 
 async function readOptional(path) {
-  try { return await readFile(path); }
+  try {
+    const metadata = await lstat(path);
+    if (!metadata.isFile() || metadata.isSymbolicLink()) throw new Error("PERSONAL_BRAND_ARTIFACT_NOT_REGULAR");
+    return await readFile(path);
+  }
   catch (error) { if (error && typeof error === "object" && error.code === "ENOENT") return null; throw error; }
 }
 
@@ -37,39 +42,18 @@ async function readJson(path, missingReason, invalidReason, reasons) {
   catch { reasons.push(invalidReason); return { bytes, value: null, hash: sha256(bytes) }; }
 }
 
-async function inventory(directory) {
-  let root;
-  try { root = await lstat(directory); }
-  catch (error) { if (error && typeof error === "object" && error.code === "ENOENT") return { present: false, files: [], hash: "ABSENT", valid: false }; throw error; }
-  if (!root.isDirectory() || root.isSymbolicLink()) return { present: true, files: [], directories: [], hash: "INVALID", valid: false };
-  const files = [];
-  const directories = [];
-  async function visit(current) {
-    for (const entry of await readdir(current, { withFileTypes: true })) {
-      const path = inside(directory, relative(directory, resolve(current, entry.name)));
-      if (entry.isDirectory()) {
-        directories.push(relative(directory, path).split(sep).join("/"));
-        await visit(path);
-      }
-      else if (entry.isFile()) files.push({ path: relative(directory, path).split(sep).join("/"), hash: sha256(await readFile(path)) });
-      else throw new Error("PERSONAL_BRAND_PACKAGE_SPECIAL_FILE_FORBIDDEN");
-    }
-  }
-  await visit(directory);
-  files.sort((left, right) => left.path.localeCompare(right.path));
-  directories.sort((left, right) => left.localeCompare(right));
-  return { present: true, files, directories, hash: sha256(JSON.stringify(files)), valid: true };
-}
-
 function validSource(source) {
   return source?.site?.id === SITE_ID && source?.ecosystemType === ECOSYSTEM_TYPE;
 }
 
 function validEntitlement(entitlement) {
+  const expectedTarget = entitlement?.expectedTargets?.find((entry) => entry?.ecosystemType === ECOSYSTEM_TYPE);
   return entitlement?.activationLeadId === OWNER_KEY
     && entitlement?.commercialState === "KNOWN"
     && Array.isArray(entitlement?.includedEcosystems)
-    && entitlement.includedEcosystems.includes(ECOSYSTEM_TYPE);
+    && entitlement.includedEcosystems.includes(ECOSYSTEM_TYPE)
+    && expectedTarget?.role === "ROOT"
+    && expectedTarget?.publicHost === PUBLIC_HOST;
 }
 
 function targetReadiness(target) {
@@ -80,20 +64,14 @@ function targetReadiness(target) {
     && target.ecosystemType === ECOSYSTEM_TYPE
     && target.baseDomain === BASE_DOMAIN
     && target.publicHost === PUBLIC_HOST;
-  const remoteRootPresent = typeof target.remoteRoot === "string" && target.remoteRoot.startsWith("/") && target.remoteRoot !== "/";
+  const normalizedRemoteRoot = typeof target.remoteRoot === "string" ? posix.normalize(target.remoteRoot).replace(/\/+$/, "") || "/" : null;
+  const remoteRootPresent = typeof normalizedRemoteRoot === "string" && normalizedRemoteRoot.startsWith("/") && normalizedRemoteRoot !== "/";
   const ready = remoteRootPresent
     && target.provisioningState === "READY"
     && target.dnsState === "RESOLVED"
     && target.sslState === "READY"
     && ["PENDING", "READY"].includes(target.publicationState);
-  return { validIdentity, ready, remoteRootPresent };
-}
-
-function packageMatchesContract(item) {
-  if (!item.present || !item.valid) return false;
-  const filePaths = item.files.map((entry) => entry.path);
-  if (filePaths.length !== REQUIRED_PACKAGE_FILES.length || !REQUIRED_PACKAGE_FILES.every((path) => filePaths.includes(path))) return false;
-  return item.directories.length === 1 && item.directories[0] === "tipografia";
+  return { validIdentity, ready, remoteRootPresent, normalizedRemoteRoot };
 }
 
 function resolvePaths(options = {}) {
@@ -103,7 +81,8 @@ function resolvePaths(options = {}) {
     sourcePath: inside(sourceDirectory, `${SITE_ID}.json`),
     targetPath: inside(inside(sourceDirectory, ".publishing-targets"), `${SITE_ID}.json`),
     entitlementPath: resolve(options.entitlementPath ?? "/data/generated-sites/.migration-inputs/CDX-20260910-003/entitlement.json"),
-    packageDirectory: inside(outputDirectory, MASTER_SITE_ID)
+    outputDirectory,
+    templateDirectory: resolve(options.templateDirectory ?? "/app/plantillas-de-pagina/personal-brand")
   };
 }
 
@@ -121,11 +100,11 @@ export async function preparePersonalBrandPublicationPreview(options = {}) {
   if (target.value && !readiness.validIdentity) reasons.push("PERSONAL_BRAND_APEX_TARGET_INVALID");
   if (target.value && readiness.validIdentity && !readiness.ready) reasons.push("PERSONAL_BRAND_TARGET_NOT_READY");
 
-  let masterPackage = { present: false, files: [], hash: "ABSENT", valid: false };
-  try { masterPackage = await inventory(paths.packageDirectory); }
+  let masterPackage = { destination: { present: false, hash: "ABSENT", typographyDirectoryPresent: false }, disposition: "MASTER_PACKAGE_MISSING", blocked: true };
+  try { masterPackage = await planPersonalBrandMasterPackage({ outputRoot: paths.outputDirectory, templateDirectory: paths.templateDirectory }); }
   catch { reasons.push("PERSONAL_BRAND_PACKAGE_DRIFT"); }
-  if (!masterPackage.present) reasons.push("PERSONAL_BRAND_MASTER_PACKAGE_MISSING");
-  else if (!packageMatchesContract(masterPackage)) reasons.push("PERSONAL_BRAND_PACKAGE_DRIFT");
+  if (!masterPackage.destination.present) reasons.push("PERSONAL_BRAND_MASTER_PACKAGE_MISSING");
+  else if (masterPackage.blocked || masterPackage.disposition !== "ALREADY_CURRENT") reasons.push("PERSONAL_BRAND_PACKAGE_DRIFT");
 
   const identity = { ownerKey: OWNER_KEY, siteId: SITE_ID, ecosystemType: ECOSYSTEM_TYPE, baseDomain: BASE_DOMAIN, publicHost: PUBLIC_HOST, masterSiteId: MASTER_SITE_ID };
   const material = {
@@ -134,13 +113,13 @@ export async function preparePersonalBrandPublicationPreview(options = {}) {
     sourceHash: source.hash,
     entitlementHash: entitlement.hash,
     targetHash: target.hash,
-    masterPackageHash: masterPackage.hash,
+    masterPackageHash: masterPackage.destination.hash,
     targetReadiness: {
       provisioningState: target.value?.provisioningState ?? null,
       dnsState: target.value?.dnsState ?? null,
       sslState: target.value?.sslState ?? null,
       publicationState: target.value?.publicationState ?? null,
-      remoteRoot: readiness.remoteRootPresent ? target.value.remoteRoot : null,
+      remoteRoot: readiness.remoteRootPresent ? readiness.normalizedRemoteRoot : null,
       remoteRootPresent: readiness.remoteRootPresent
     }
   };

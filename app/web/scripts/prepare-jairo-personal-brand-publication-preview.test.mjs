@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import { lstat, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { createHash } from "node:crypto";
+import { lstat, mkdtemp, mkdir, readFile, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { resolve } from "node:path";
 import test from "node:test";
@@ -16,7 +17,8 @@ const source = {
 const entitlement = {
   activationLeadId: OWNER_KEY,
   commercialState: "KNOWN",
-  includedEcosystems: ["PRODUCT", "BUSINESS", "PERSONAL_BRAND"]
+  includedEcosystems: ["PRODUCT", "BUSINESS", "PERSONAL_BRAND"],
+  expectedTargets: [{ ecosystemType: "PERSONAL_BRAND", role: "ROOT", publicHost: "jairopinto.pro" }]
 };
 const target = {
   version: 2,
@@ -32,16 +34,43 @@ const target = {
   publicationState: "PENDING"
 };
 
-async function writePackage(directory) {
+const templateFiles = {
+  "app.js": "app",
+  "config.js": `const CONFIG = { ecosystemType: "PERSONAL_BRAND", site: { id: "ganomaster-personal-brand", appName: "ganomaster-personal-brand" } };`,
+  "favicon.svg": "<svg/>",
+  "index.html": "<html/>",
+  "styles.css": "body{}"
+};
+const sha256 = (value) => createHash("sha256").update(value).digest("hex");
+const inventoryHash = (files) => sha256(JSON.stringify(files.map(({ path, hash }) => ({ path, hash }))));
+const htaccess = `DirectoryIndex index.html
+
+<IfModule mod_headers.c>
+  <FilesMatch "^(index\\.html|config\\.js|app\\.js|styles\\.css|manifest\\.json)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
+`;
+
+async function writePackage(directory, templateDirectory) {
   await mkdir(resolve(directory, "tipografia"), { recursive: true });
+  const templateEntries = Object.entries(templateFiles).map(([path, contents]) => ({ path, hash: sha256(contents) })).sort((a, b) => a.path.localeCompare(b.path));
+  const manifest = {
+    schemaVersion: 1,
+    siteId: "ganomaster-personal-brand",
+    ecosystemType: "PERSONAL_BRAND",
+    publicHost: "brand.ganomaster.pro",
+    source: "CANONICAL_PERSONAL_BRAND_TEMPLATE",
+    canonicalTemplateHash: inventoryHash(templateEntries),
+    files: ["app.js", "config.js", "favicon.svg", "index.html", "styles.css", ".htaccess", "tipografia/"]
+  };
   await Promise.all([
-    writeFile(resolve(directory, ".htaccess"), "rules"),
-    writeFile(resolve(directory, "app.js"), "app"),
-    writeFile(resolve(directory, "config.js"), "config"),
-    writeFile(resolve(directory, "favicon.svg"), "<svg/>"),
-    writeFile(resolve(directory, "index.html"), "<html/>") ,
-    writeFile(resolve(directory, "styles.css"), "body{}"),
-    writeFile(resolve(directory, "manifest.json"), json({ schemaVersion: 1 }))
+    ...Object.entries(templateFiles).map(([path, contents]) => writeFile(resolve(directory, path), contents)),
+    ...Object.entries(templateFiles).map(([path, contents]) => writeFile(resolve(templateDirectory, path), contents)),
+    writeFile(resolve(directory, ".htaccess"), htaccess),
+    writeFile(resolve(directory, "manifest.json"), json(manifest))
   ]);
 }
 
@@ -49,8 +78,9 @@ async function fixture({ withTarget = true, withPackage = true } = {}) {
   const root = await mkdtemp(resolve(os.tmpdir(), "partnerhub-personal-brand-publication-"));
   const sourceDirectory = resolve(root, "sources");
   const outputDirectory = resolve(root, "output");
+  const templateDirectory = resolve(root, "template");
   const entitlementPath = resolve(root, "entitlement.json");
-  await Promise.all([mkdir(sourceDirectory), mkdir(outputDirectory)]);
+  await Promise.all([mkdir(sourceDirectory), mkdir(outputDirectory), mkdir(templateDirectory)]);
   await Promise.all([
     writeFile(resolve(sourceDirectory, "jairo-pinto.json"), json(source)),
     writeFile(entitlementPath, json(entitlement))
@@ -59,9 +89,9 @@ async function fixture({ withTarget = true, withPackage = true } = {}) {
     await mkdir(resolve(sourceDirectory, ".publishing-targets"));
     await writeFile(resolve(sourceDirectory, ".publishing-targets", "jairo-pinto.json"), json(target));
   }
-  if (withPackage) await writePackage(resolve(outputDirectory, "ganomaster-personal-brand"));
+  if (withPackage) await writePackage(resolve(outputDirectory, "ganomaster-personal-brand"), templateDirectory);
   return {
-    root, sourceDirectory, outputDirectory, entitlementPath,
+    root, sourceDirectory, outputDirectory, entitlementPath, templateDirectory,
     targetPath: resolve(sourceDirectory, ".publishing-targets", "jairo-pinto.json"),
     packageDirectory: resolve(outputDirectory, "ganomaster-personal-brand"),
     cleanup: () => rm(root, { recursive: true, force: true })
@@ -134,6 +164,14 @@ test("blocks an entitlement without Personal Brand", async () => {
   } finally { await item.cleanup(); }
 });
 
+test("blocks an entitlement whose Personal Brand target is not the approved apex", async () => {
+  const item = await fixture();
+  try {
+    await writeFile(item.entitlementPath, json({ ...entitlement, expectedTargets: [{ ecosystemType: "PERSONAL_BRAND", role: "SUBDOMAIN", publicHost: "brand.jairopinto.pro" }] }));
+    assert.ok((await preparePersonalBrandPublicationPreview(item)).blockedReasons.includes("PERSONAL_BRAND_ENTITLEMENT_INVALID"));
+  } finally { await item.cleanup(); }
+});
+
 test("blocks a missing master package", async () => {
   const item = await fixture({ withPackage: false });
   try {
@@ -149,10 +187,46 @@ test("blocks master-package inventory drift", async () => {
   } finally { await item.cleanup(); }
 });
 
+test("blocks a canonical master package whose app content drifts", async () => {
+  const item = await fixture();
+  try {
+    await writeFile(resolve(item.packageDirectory, "app.js"), "modified-app");
+    assert.ok((await preparePersonalBrandPublicationPreview(item)).blockedReasons.includes("PERSONAL_BRAND_PACKAGE_DRIFT"));
+  } finally { await item.cleanup(); }
+});
+
 test("blocks a master package missing its required typography directory", async () => {
   const item = await fixture();
   try {
     await rm(resolve(item.packageDirectory, "tipografia"), { recursive: true, force: true });
     assert.ok((await preparePersonalBrandPublicationPreview(item)).blockedReasons.includes("PERSONAL_BRAND_PACKAGE_DRIFT"));
+  } finally { await item.cleanup(); }
+});
+
+test("blocks a remote root that normalizes to the filesystem root", async () => {
+  const item = await fixture();
+  try {
+    await writeFile(item.targetPath, json({ ...target, remoteRoot: "/provider/.." }));
+    assert.ok((await preparePersonalBrandPublicationPreview(item)).blockedReasons.includes("PERSONAL_BRAND_TARGET_NOT_READY"));
+  } finally { await item.cleanup(); }
+});
+
+test("blocks symlink source, entitlement, and target artifacts", async () => {
+  const item = await fixture();
+  try {
+    const replacements = [
+      [resolve(item.sourceDirectory, "jairo-pinto.json"), resolve(item.root, "source-real.json"), "PERSONAL_BRAND_SOURCE_MISSING_OR_UNREADABLE"],
+      [item.entitlementPath, resolve(item.root, "entitlement-real.json"), "PERSONAL_BRAND_ENTITLEMENT_INVALID"],
+      [item.targetPath, resolve(item.root, "target-real.json"), "PERSONAL_BRAND_APEX_TARGET_INVALID"]
+    ];
+    for (const [artifact, replacement, reason] of replacements) {
+      const bytes = await readFile(artifact);
+      await mkdir(replacement);
+      await rm(artifact);
+      await symlink(replacement, artifact, "junction");
+      assert.ok((await preparePersonalBrandPublicationPreview(item)).blockedReasons.includes(reason));
+      await rm(artifact);
+      await writeFile(artifact, bytes);
+    }
   } finally { await item.cleanup(); }
 });
