@@ -40,4 +40,5 @@ Se corrigieron todos los warnings y errores de ESLint a nivel global en el proye
 ## Rama, commit y PR
 
 - **Rama:** `antigravity/AGR-20260910-001-global-lint-fix`
-- **PR:** Creado vía GitHub CLI a la espera de auditoría (sin merge).
+- **PR:** #197 creado vía GitHub CLI a la espera de auditoría (sin merge).
+- **Seguimiento:** Ajustado `GuardedRunResult` en `publication-runtime-modules.d.ts` para hacer `packageHash`, `capabilityHash` y `journalHash` opcionales en el PR de seguimiento `AGR-20260910-002`.

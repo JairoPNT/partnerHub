@@ -32,9 +32,9 @@ declare module "*.mjs" {
     blocked: boolean;
     blockedReasons: string[];
     planHash: string;
-    capabilityHash: string;
-    packageHash: string;
-    journalHash: string;
+    capabilityHash?: string;
+    packageHash?: string;
+    journalHash?: string;
     journalPath?: string;
     outcome: "APPLIED" | "ALREADY_APPLIED";
     [key: string]: unknown;
