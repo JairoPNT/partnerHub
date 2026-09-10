@@ -65,9 +65,19 @@ Before CDX-20260909-001, these files still described old PH-003/PH-039 work:
 
 That stale memory could cause future agents to restart from obsolete architecture gates. CDX-20260909-001 updates them to the current Business publication/backfill checkpoint and the next Personal Brand / identity visual direction.
 
+## Personal Brand readiness diagnostic
+
+`CDX-20260909-002` confirmed that the template, generation resolver and
+durable publication worker already understand `PERSONAL_BRAND`. It also found
+one blocking backend mismatch: new targets are currently forced to
+`brand.<partner-domain>`, while the approved three-ecosystem route reserves the
+partner apex for Personal Brand.
+
 ## Next step
 
-Open the next small ticket for Personal Brand generation/publication using the Business path as the proven pattern, while keeping UI/visual identity work separated through an Antigravity request.
+Open `CDX-20260909-003` to align the Personal Brand root-domain target contract
+without publishing anything. Keep UI/visual identity work separated through an
+Antigravity request.
 
 Do not combine these streams in one PR:
 

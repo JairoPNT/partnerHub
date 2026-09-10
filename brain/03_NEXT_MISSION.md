@@ -30,12 +30,17 @@ Outcome: align `brain/` with the real production checkpoint so agents do not con
 
 Owner: Codex
 
-Outcome: define and implement the backend/package/publication preparation required for the Personal Brand ecosystem, using the Business path as the reference pattern.
+Status: diagnostic completed as `CDX-20260909-002`.
+
+Outcome: the pipeline is partly reusable, but the next implementation must be
+`CDX-20260909-003 — Personal Brand root-domain target contract` before any
+package or publication work.
 
 Expected scope:
 
-- inspect current Personal Brand template/package support;
-- define the missing source/package/publication gates;
+- resolve the apex-domain rule for a three-ecosystem partner without using a
+  Hostinger subdomain for Personal Brand;
+- preserve existing Business/Product subdomain behavior and legacy targets;
 - avoid frontend implementation;
 - avoid production publication until a fresh preview is reviewed and explicitly authorized.
 

@@ -45,9 +45,19 @@ The latest checked GitHub state on 2026-09-09:
 
 This file, `brain/01_CURRENT_SPRINT.md`, `brain/02_CURRENT_STATUS.md`, and `brain/03_NEXT_MISSION.md` were stale compared with `.project-status/status.json`. CDX-20260909-001 updates the durable repo memory so future agents do not restart from obsolete PH-003/PH-039 instructions.
 
+## Personal Brand diagnostic
+
+`CDX-20260909-002` is complete. The canonical Personal Brand template,
+generation resolver and generic durable publisher already support
+`PERSONAL_BRAND`. The blocker is not publication machinery: the current target
+contract forces Personal Brand to `brand.<domain>`, which conflicts with the
+approved three-ecosystem rule that assigns the partner apex to Personal Brand.
+
 ## Next step
 
-After CDX-20260909-001 is merged, start a separate Personal Brand backend/publication readiness ticket.
+Open `CDX-20260909-003` for the backend-only Personal Brand root-domain target
+contract. It must complete before a separate Personal Brand master-package and
+publication-preview ticket.
 
 Expected Personal Brand outcome:
 
