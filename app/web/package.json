@@ -47,6 +47,7 @@
     "test:guarded-ecosystem-publication": "node --test scripts/guarded-ecosystem-publication.test.mjs",
     "test:sftp-directory-rename-capability-probe": "node --test scripts/sftp-directory-rename-capability-probe.test.mjs",
     "test:sftp-runtime-packaging": "node --test scripts/sftp-runtime-packaging.test.mjs",
+    "test:personal-brand-runtime-packaging": "node --test scripts/personal-brand-runtime-packaging.test.mjs",
     "test:jairo-business-sftp-capability-preview": "node --test scripts/prepare-jairo-business-sftp-capability-preview.test.mjs",
     "test:jairo-business-publication-preview": "node --test scripts/prepare-jairo-business-publication-preview.test.mjs",
     "test:jairo-personal-brand-publication-preview": "node --test scripts/prepare-jairo-personal-brand-publication-preview.test.mjs",
