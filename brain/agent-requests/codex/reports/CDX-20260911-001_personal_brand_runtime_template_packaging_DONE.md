@@ -34,4 +34,6 @@ La imagen final ahora empaqueta la plantilla canónica completa de Personal Bran
 
 - Sin cambios de DNS, Cloudflare, Hostinger, SFTP, secretos, destinos de publicación ni archivos remotos.
 - No ejecuta publicación ni creación de paquete.
-- Rama, commit y despliegue: pendientes al redactar este reporte.
+- Rama: `codex/CDX-20260911-001-personal-brand-runtime-packaging`.
+- Commit de implementación: `f9efee51d831162aa9f0eda11d9a8f42da7c05a7`.
+- PR, merge y despliegue: pendientes de autorización.
