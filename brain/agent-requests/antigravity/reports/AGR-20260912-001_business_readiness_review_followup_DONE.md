@@ -51,5 +51,6 @@
 ## Rama, Commit y PR
 
 - **Rama:** `antigravity/AGR-20260911-001-business-commercial-readiness-view`
-- **Commit:** `30618214faeeae9b1ad8dcf20c9e658c14fcaea4`
+- **Commit de Implementación:** `3061821655c36552c933736b9d44376b89ee7138`
+- **Commit de Reporte:** `cd6f048d0df7383bb379207e780dc9a4fae3c3b0`
 - **PR:** [#201](https://github.com/JairoPNT/partnerHub/pull/201) (contra `main`, sin merge).

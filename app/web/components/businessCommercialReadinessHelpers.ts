@@ -25,6 +25,7 @@ export interface BusinessReadinessArtifacts {
 }
 
 export interface BusinessCommercialReadinessResponse {
+  activationLeadId?: string;
   status: BusinessReadinessStatus;
   blocked: boolean;
   blockedReasons: BusinessReadinessBlockedReason[];
@@ -137,7 +138,58 @@ export async function fetchBusinessCommercialReadiness({
     }
     throw new Error(formatReadinessErrorMessage(res.status, errJson.error));
   }
-  return (await res.json()) as BusinessCommercialReadinessResponse;
+  const json = (await res.json()) as BusinessCommercialReadinessResponse;
+  return {
+    ...json,
+    activationLeadId: leadId
+  };
+}
+
+export function isReadinessForLead(
+  response: BusinessCommercialReadinessResponse | null | undefined,
+  leadId: string | null | undefined
+): boolean {
+  if (!response || !leadId) return false;
+  return response.activationLeadId === leadId;
+}
+
+export function getActiveReadiness(
+  response: BusinessCommercialReadinessResponse | null | undefined,
+  leadId: string | null | undefined
+): BusinessCommercialReadinessResponse | null {
+  return isReadinessForLead(response, leadId) ? response! : null;
+}
+
+export interface ReadinessViewProps {
+  status: "LOADING" | "ERROR" | "DATA" | "EMPTY";
+  data: BusinessCommercialReadinessResponse | null;
+  error: string | null;
+}
+
+export function resolveReadinessViewProps(input: {
+  selectedLeadId: string | null | undefined;
+  storedReadiness: BusinessCommercialReadinessResponse | null | undefined;
+  storedError: { leadId: string; message: string } | null | undefined;
+  isNetworkLoading: boolean;
+}): ReadinessViewProps {
+  const { selectedLeadId, storedReadiness, storedError, isNetworkLoading } = input;
+  if (!selectedLeadId) {
+    return { status: "EMPTY", data: null, error: null };
+  }
+
+  const activeData = getActiveReadiness(storedReadiness, selectedLeadId);
+  const activeError = storedError && storedError.leadId === selectedLeadId ? storedError.message : null;
+
+  if (isNetworkLoading || (!activeData && !activeError)) {
+    return { status: "LOADING", data: null, error: null };
+  }
+  if (activeError) {
+    return { status: "ERROR", data: null, error: activeError };
+  }
+  if (activeData) {
+    return { status: "DATA", data: activeData, error: null };
+  }
+  return { status: "EMPTY", data: null, error: null };
 }
 
 export interface ReadinessSessionManager {

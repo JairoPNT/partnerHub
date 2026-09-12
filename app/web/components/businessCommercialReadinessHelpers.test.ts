@@ -9,8 +9,12 @@ import {
   formatReadinessErrorMessage,
   fetchBusinessCommercialReadiness,
   createReadinessSessionManager,
+  isReadinessForLead,
+  getActiveReadiness,
+  resolveReadinessViewProps,
   type BusinessReadinessStatus,
-  type BusinessReadinessBlockedReason
+  type BusinessReadinessBlockedReason,
+  type BusinessCommercialReadinessResponse
 } from "./businessCommercialReadinessHelpers.ts";
 
 test("BUSINESS_READINESS_STATUS_CONFIG defines all 5 standard readiness statuses", () => {
@@ -227,4 +231,187 @@ test("createReadinessSessionManager cancels in-flight request on unmount", async
 
   const result = await promise;
   assert.equal(result, null);
+});
+
+test("getActiveReadiness guarantees Jairo state never renders while Claudia is selected, even during brief transitions", () => {
+  const jairoState: BusinessCommercialReadinessResponse = {
+    activationLeadId: "lead-jairo",
+    status: "READY_FOR_PUBLICATION_PREVIEW",
+    blocked: false,
+    blockedReasons: [],
+    siteId: "jairo-pinto-business",
+    publicHost: "negocio.partner.pro",
+    artifacts: null
+  };
+
+  const claudiaState: BusinessCommercialReadinessResponse = {
+    activationLeadId: "lead-claudia",
+    status: "BLOCKED",
+    blocked: true,
+    blockedReasons: ["BUSINESS_NOT_ENTITLED"],
+    siteId: "claudia-business",
+    publicHost: "negocio.partner.pro",
+    artifacts: null
+  };
+
+  // 1. When Claudia is the selected lead, Jairo's state returns null synchronously
+  const resultForClaudia = getActiveReadiness(jairoState, "lead-claudia");
+  assert.equal(
+    resultForClaudia,
+    null,
+    "Jairo's state must NEVER be returned while Claudia is selected"
+  );
+  assert.equal(isReadinessForLead(jairoState, "lead-claudia"), false);
+
+  // 2. When Jairo is selected, Jairo's state returns valid
+  const resultForJairo = getActiveReadiness(jairoState, "lead-jairo");
+  assert.equal(resultForJairo?.siteId, "jairo-pinto-business");
+  assert.equal(isReadinessForLead(jairoState, "lead-jairo"), true);
+
+  // 3. When switching from Jairo to Claudia, before async fetch completes, Jairo's state is strictly hidden
+  let currentSelectedLead: string = "lead-jairo";
+  let activeData = getActiveReadiness(jairoState, currentSelectedLead);
+  assert.equal(activeData?.siteId, "jairo-pinto-business");
+
+  // Synchronous transition: user selects Claudia
+  currentSelectedLead = "lead-claudia";
+  // The UI re-evaluates activeReadiness in the exact same render pass
+  activeData = getActiveReadiness(jairoState, currentSelectedLead);
+  assert.equal(
+    activeData,
+    null,
+    "During the transition render frame, Jairo's data must immediately evaluate to null"
+  );
+
+  // 4. Once Claudia's data arrives, only Claudia's state is returned
+  activeData = getActiveReadiness(claudiaState, currentSelectedLead);
+  assert.equal(activeData?.siteId, "claudia-business");
+  assert.equal(activeData?.status, "BLOCKED");
+
+  // 5. If Claudia is closed/deselected (leadId is null or undefined), state is null
+  assert.equal(getActiveReadiness(claudiaState, null), null);
+  assert.equal(getActiveReadiness(claudiaState, undefined), null);
+  assert.equal(getActiveReadiness(null, "lead-claudia"), null);
+});
+
+test("fetchBusinessCommercialReadiness preserves and attaches activationLeadId to returned response", async () => {
+  const mockFetch: typeof fetch = async () =>
+    new Response(
+      JSON.stringify({
+        status: "PUBLICATION_CURRENT",
+        blocked: false,
+        blockedReasons: [],
+        siteId: "claudia-business",
+        publicHost: "negocio.partner.pro",
+        artifacts: null
+      }),
+      { status: 200, headers: { "Content-Type": "application/json" } }
+    );
+
+  const result = await fetchBusinessCommercialReadiness({
+    leadId: "lead-claudia",
+    fetchFn: mockFetch
+  });
+
+  assert.equal(result.activationLeadId, "lead-claudia");
+  assert.equal(isReadinessForLead(result, "lead-claudia"), true);
+  assert.equal(isReadinessForLead(result, "lead-jairo"), false);
+});
+
+test("resolveReadinessViewProps guarantees Jairo readiness is never rendered for Claudia during transitions or delays", () => {
+  const jairoState: BusinessCommercialReadinessResponse = {
+    activationLeadId: "lead-jairo",
+    status: "READY_FOR_PUBLICATION_PREVIEW",
+    blocked: false,
+    blockedReasons: [],
+    siteId: "jairo-pinto-business",
+    publicHost: "negocio.partner.pro",
+    artifacts: null
+  };
+
+  const claudiaState: BusinessCommercialReadinessResponse = {
+    activationLeadId: "lead-claudia",
+    status: "BLOCKED",
+    blocked: true,
+    blockedReasons: ["BUSINESS_NOT_ENTITLED"],
+    siteId: "claudia-business",
+    publicHost: "negocio.partner.pro",
+    artifacts: null
+  };
+
+  // Case 1: Jairo is currently selected, data matches -> DATA
+  const jairoView = resolveReadinessViewProps({
+    selectedLeadId: "lead-jairo",
+    storedReadiness: jairoState,
+    storedError: null,
+    isNetworkLoading: false
+  });
+  assert.equal(jairoView.status, "DATA");
+  assert.equal(jairoView.data?.siteId, "jairo-pinto-business");
+
+  // Case 2: Operator switches selection to Claudia, but storedReadiness still has Jairo's data
+  // Even if isNetworkLoading is false (before effect fires), status MUST BE "LOADING" and data MUST BE null
+  const claudiaTransitionView = resolveReadinessViewProps({
+    selectedLeadId: "lead-claudia",
+    storedReadiness: jairoState,
+    storedError: null,
+    isNetworkLoading: false
+  });
+  assert.equal(claudiaTransitionView.status, "LOADING");
+  assert.equal(claudiaTransitionView.data, null);
+  assert.equal(claudiaTransitionView.error, null);
+
+  // Case 3: Transition with network loading active
+  const claudiaLoadingView = resolveReadinessViewProps({
+    selectedLeadId: "lead-claudia",
+    storedReadiness: jairoState,
+    storedError: null,
+    isNetworkLoading: true
+  });
+  assert.equal(claudiaLoadingView.status, "LOADING");
+  assert.equal(claudiaLoadingView.data, null);
+
+  // Case 4: Stored error is for Jairo, Claudia is selected -> status LOADING, error null (no error leakage)
+  const claudiaWithErrorFromJairo = resolveReadinessViewProps({
+    selectedLeadId: "lead-claudia",
+    storedReadiness: null,
+    storedError: { leadId: "lead-jairo", message: "Error de Jairo" },
+    isNetworkLoading: false
+  });
+  assert.equal(claudiaWithErrorFromJairo.status, "LOADING");
+  assert.equal(claudiaWithErrorFromJairo.data, null);
+  assert.equal(claudiaWithErrorFromJairo.error, null);
+
+  // Case 5: Claudia's fetch resolves successfully -> status DATA with Claudia's data
+  const claudiaResolvedView = resolveReadinessViewProps({
+    selectedLeadId: "lead-claudia",
+    storedReadiness: claudiaState,
+    storedError: null,
+    isNetworkLoading: false
+  });
+  assert.equal(claudiaResolvedView.status, "DATA");
+  assert.equal(claudiaResolvedView.data?.siteId, "claudia-business");
+  assert.equal(claudiaResolvedView.data?.status, "BLOCKED");
+
+  // Case 6: Claudia's fetch returns an error -> status ERROR with Claudia's error
+  const claudiaErrorView = resolveReadinessViewProps({
+    selectedLeadId: "lead-claudia",
+    storedReadiness: null,
+    storedError: { leadId: "lead-claudia", message: "Error consultando a Claudia" },
+    isNetworkLoading: false
+  });
+  assert.equal(claudiaErrorView.status, "ERROR");
+  assert.equal(claudiaErrorView.error, "Error consultando a Claudia");
+  assert.equal(claudiaErrorView.data, null);
+
+  // Case 7: Drawer closed or unselected (no lead selected) -> status EMPTY
+  const emptyView = resolveReadinessViewProps({
+    selectedLeadId: null,
+    storedReadiness: claudiaState,
+    storedError: null,
+    isNetworkLoading: false
+  });
+  assert.equal(emptyView.status, "EMPTY");
+  assert.equal(emptyView.data, null);
+  assert.equal(emptyView.error, null);
 });

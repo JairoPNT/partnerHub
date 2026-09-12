@@ -58,6 +58,7 @@ import {
   getReadinessStatusInfo,
   getBlockedReasonDescription,
   fetchBusinessCommercialReadiness,
+  resolveReadinessViewProps,
   type BusinessCommercialReadinessResponse
 } from "@/components/businessCommercialReadinessHelpers";
 
@@ -243,7 +244,7 @@ export function EntrepreneurOperationsView() {
   // Business Commercial Readiness State (AGR-20260911-001)
   const [businessReadiness, setBusinessReadiness] = useState<BusinessCommercialReadinessResponse | null>(null);
   const [isReadinessLoading, setIsReadinessLoading] = useState(false);
-  const [readinessError, setReadinessError] = useState<string | null>(null);
+  const [readinessError, setReadinessError] = useState<{ leadId: string; message: string } | null>(null);
 
   const [createForm, setCreateForm] = useState({
     fullName: "",
@@ -796,7 +797,10 @@ export function EntrepreneurOperationsView() {
             return;
           }
           setBusinessReadiness(null);
-          setReadinessError(err instanceof Error ? err.message : "Error al consultar disponibilidad comercial de Negocio.");
+          setReadinessError({
+            leadId: currentLeadId,
+            message: err instanceof Error ? err.message : "Error al consultar disponibilidad comercial de Negocio."
+          });
         }
       })
       .finally(() => {
@@ -968,6 +972,23 @@ export function EntrepreneurOperationsView() {
       </span>
     );
   };
+
+  // Isolate readiness and readback state to selected partner to prevent any cross-partner leakage
+  const activeReadbackData = (readbackData && readbackData.activationLeadId === selectedLead?.id)
+    ? readbackData
+    : null;
+  const isReadbackLoadingEffective = Boolean(
+    selectedLead?.id &&
+    !activeReadbackData &&
+    !readbackError
+  ) || isReadbackLoading;
+
+  const readinessViewProps = resolveReadinessViewProps({
+    selectedLeadId: selectedLead?.id,
+    storedReadiness: businessReadiness,
+    storedError: readinessError,
+    isNetworkLoading: isReadinessLoading
+  });
 
   return (
     <div className="space-y-6">
@@ -1886,7 +1907,7 @@ export function EntrepreneurOperationsView() {
                   </div>
 
                   {/* Estado de Carga / Error */}
-                  {isReadbackLoading ? (
+                  {isReadbackLoadingEffective ? (
                     <div className="flex items-center gap-2 py-3 text-xs text-purple-700 font-medium">
                       <RefreshCw className="h-4 w-4 animate-spin text-purple-600" />
                       <span>Consultando cortesías persistidas del partner...</span>
@@ -1896,8 +1917,11 @@ export function EntrepreneurOperationsView() {
                       <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
                       <span>{readbackError}</span>
                     </div>
-                  ) : readbackData ? (
-                    <div className="space-y-4">
+                  ) : activeReadbackData ? (
+                    (() => {
+                      const readbackData = activeReadbackData;
+                      return (
+                        <div className="space-y-4">
                       {/* Entitlement Summary Card */}
                       <div className="rounded-xl border border-purple-200/80 bg-white p-3.5 space-y-2.5">
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2015,7 +2039,9 @@ export function EntrepreneurOperationsView() {
                         )}
                       </div>
                     </div>
-                  ) : null}
+                  );
+                })()
+              ) : null}
                 </div>
 
                 {/* 5. Disponibilidad Comercial de Negocio (Read-Only) */}
@@ -2036,18 +2062,21 @@ export function EntrepreneurOperationsView() {
                   </div>
 
                   {/* Estado de Carga / Error */}
-                  {isReadinessLoading ? (
+                  {readinessViewProps.status === "LOADING" ? (
                     <div className="flex items-center gap-2 py-3 text-xs text-blue-700 font-medium">
                       <RefreshCw className="h-4 w-4 animate-spin text-blue-600" />
                       <span>Consultando disponibilidad comercial de Negocio...</span>
                     </div>
-                  ) : readinessError ? (
+                  ) : readinessViewProps.status === "ERROR" && readinessViewProps.error ? (
                     <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center gap-2">
                       <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                      <span>{readinessError}</span>
+                      <span>{readinessViewProps.error}</span>
                     </div>
-                  ) : businessReadiness ? (
-                    <div className="space-y-4">
+                  ) : readinessViewProps.status === "DATA" && readinessViewProps.data ? (
+                    (() => {
+                      const businessReadiness = readinessViewProps.data;
+                      return (
+                        <div className="space-y-4">
                       {/* Tarjeta de Resumen de Estado */}
                       <div className="rounded-xl border border-blue-200/80 bg-white p-3.5 space-y-3 shadow-sm">
                         <div className="flex flex-wrap items-center justify-between gap-2">
@@ -2127,7 +2156,9 @@ export function EntrepreneurOperationsView() {
                         </span>
                       </div>
                     </div>
-                  ) : null}
+                  );
+                })()
+              ) : null}
                 </div>
               </div>
 
