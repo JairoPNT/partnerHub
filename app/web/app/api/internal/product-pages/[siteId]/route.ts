@@ -7,6 +7,7 @@ import {
 } from "@/server/services/productPageGenerationService";
 import { productPageSourceService } from "@/server/services/productPageSourceService";
 import { publicationEventEnqueueService } from "@/server/services/publicationEventEnqueueService";
+import { businessProductHeroPropagationService } from "@/server/services/businessProductHeroPropagationService";
 
 export const runtime = "nodejs";
 
@@ -30,8 +31,9 @@ export async function PATCH(request: Request, context: RouteContext) {
     const input = productPageGenerationInputSchema.parse({ ...body, site: { ...body.site, id: siteId } });
     const result = await productPageGenerationService.generate(input);
     const publicationAutomation = await publicationEventEnqueueService.afterSourceChange(result.siteId);
+    const businessPosterPropagation = await businessProductHeroPropagationService.afterProductSourceChange(result.siteId);
 
-    return NextResponse.json({ ...result, requiresPublication: publicationAutomation.outcome === "SKIPPED" || publicationAutomation.outcome === "FAILED_SAFE", publicationAutomation }, { status: 200 });
+    return NextResponse.json({ ...result, requiresPublication: publicationAutomation.outcome === "SKIPPED" || publicationAutomation.outcome === "FAILED_SAFE", publicationAutomation, businessPosterPropagation }, { status: 200 });
   } catch (error) {
     if (error instanceof ZodError) {
       return NextResponse.json(
