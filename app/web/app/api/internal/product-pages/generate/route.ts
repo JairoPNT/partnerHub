@@ -7,6 +7,7 @@ import {
 } from "@/server/services/productPageGenerationService";
 import { PartnerEcosystemGenerationError } from "@/server/services/partnerEcosystemGenerationGuard";
 import { publicationEventEnqueueService } from "@/server/services/publicationEventEnqueueService";
+import { businessProductHeroPropagationService } from "@/server/services/businessProductHeroPropagationService";
 
 export const runtime = "nodejs";
 
@@ -64,11 +65,12 @@ export async function POST(request: Request) {
     const input = productPageGenerationInputSchema.parse(body);
     const result = await productPageGenerationService.generate(input);
     const publicationAutomation = await publicationEventEnqueueService.afterSourceChange(result.siteId);
+    const businessPosterPropagation = await businessProductHeroPropagationService.afterProductSourceChange(result.siteId);
     const rawPreviewPath = result.previewUrl.startsWith("/") ? result.previewUrl : new URL(result.previewUrl).pathname;
     const previewPath = normalizePreviewPath(rawPreviewPath);
     const previewUrl = new URL(previewPath, getPublicOrigin(request)).toString();
 
-    return NextResponse.json({ ...result, previewPath, previewUrl, publicationAutomation }, { status: 201 });
+    return NextResponse.json({ ...result, previewPath, previewUrl, publicationAutomation, businessPosterPropagation }, { status: 201 });
   } catch (error) {
     if (error instanceof PartnerEcosystemGenerationError) {
       return NextResponse.json({ error: error.code, details: error.details }, { status: 409 });
