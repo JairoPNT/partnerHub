@@ -1,4 +1,4 @@
-﻿# Reporte de Tarea Completada
+# Reporte de Tarea Completada
 
 **Request ID:** AGR-20260912-002
 **Tarea:** Guard against cross-partner readiness render
@@ -60,6 +60,7 @@
 ## Rama, Commit y PR
 
 - **Rama:** `antigravity/AGR-20260911-001-business-commercial-readiness-view`
+- **Commit:** `72aebb3` (`72aebb3a647ff9ca730c49bb0f41b2aa26038f6d`)
 - **PR:** [#201](https://github.com/JairoPNT/partnerHub/pull/201) (amendado sobre la misma rama, sin mergear antes de la auditoría final).
 
 ## Riesgos Pendientes
