@@ -51,4 +51,5 @@
 ## Rama, Commit y PR
 
 - **Rama:** `antigravity/AGR-20260911-001-business-commercial-readiness-view`
-- **PR:** Creado contra `main` sin merge.
+- **Commit:** `30618214faeeae9b1ad8dcf20c9e658c14fcaea4`
+- **PR:** [#201](https://github.com/JairoPNT/partnerHub/pull/201) (contra `main`, sin merge).
