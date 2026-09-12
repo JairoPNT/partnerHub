@@ -26,6 +26,9 @@ import {
   Sparkles,
   Lock,
   Gift,
+  Briefcase,
+  ShieldAlert,
+  Info,
   Image as ImageIcon
 } from "lucide-react";
 import { FontSelector, PaletteSelector } from "@/components/ui/theme-selectors";
@@ -51,6 +54,12 @@ import {
   type ComplimentaryGrantResult,
   type ComplimentaryGrantReadback
 } from "@/components/complimentaryGrantHelpers";
+import {
+  getReadinessStatusInfo,
+  getBlockedReasonDescription,
+  fetchBusinessCommercialReadiness,
+  type BusinessCommercialReadinessResponse
+} from "@/components/businessCommercialReadinessHelpers";
 
 export type ActivationLeadStatus = "NEW" | "CONTACTED" | "PAID" | "CONVERTED" | "CANCELLED";
 export type EcosystemType = "PRODUCT" | "BUSINESS" | "PERSONAL_BRAND";
@@ -230,6 +239,11 @@ export function EntrepreneurOperationsView() {
   const [readbackData, setReadbackData] = useState<ComplimentaryGrantReadback | null>(null);
   const [isReadbackLoading, setIsReadbackLoading] = useState(false);
   const [readbackError, setReadbackError] = useState<string | null>(null);
+
+  // Business Commercial Readiness State (AGR-20260911-001)
+  const [businessReadiness, setBusinessReadiness] = useState<BusinessCommercialReadinessResponse | null>(null);
+  const [isReadinessLoading, setIsReadinessLoading] = useState(false);
+  const [readinessError, setReadinessError] = useState<string | null>(null);
 
   const [createForm, setCreateForm] = useState({
     fullName: "",
@@ -745,12 +759,56 @@ export function EntrepreneurOperationsView() {
   };
 
   useEffect(() => {
-    if (selectedLead?.id) {
-      fetchComplimentaryGrantReadback(selectedLead.id);
-    } else {
+    if (!selectedLead?.id) {
       setReadbackData(null);
       setReadbackError(null);
+      setBusinessReadiness(null);
+      setReadinessError(null);
+      setIsReadinessLoading(false);
+      return;
     }
+
+    const currentLeadId = selectedLead.id;
+
+    // Reset readiness state immediately upon partner change to avoid showing stale partner data
+    setBusinessReadiness(null);
+    setReadinessError(null);
+    setIsReadinessLoading(true);
+
+    fetchComplimentaryGrantReadback(currentLeadId);
+
+    const abortController = new AbortController();
+    let isCancelled = false;
+
+    fetchBusinessCommercialReadiness({
+      leadId: currentLeadId,
+      signal: abortController.signal
+    })
+      .then((data) => {
+        if (!isCancelled) {
+          setBusinessReadiness(data);
+          setReadinessError(null);
+        }
+      })
+      .catch((err: unknown) => {
+        if (!isCancelled) {
+          if (err instanceof Error && err.name === "AbortError") {
+            return;
+          }
+          setBusinessReadiness(null);
+          setReadinessError(err instanceof Error ? err.message : "Error al consultar disponibilidad comercial de Negocio.");
+        }
+      })
+      .finally(() => {
+        if (!isCancelled) {
+          setIsReadinessLoading(false);
+        }
+      });
+
+    return () => {
+      isCancelled = true;
+      abortController.abort();
+    };
   }, [selectedLead?.id]);
 
   const handleSubmitComplimentaryGrant = async (e: React.FormEvent) => {
@@ -1955,6 +2013,118 @@ export function EntrepreneurOperationsView() {
                             })}
                           </div>
                         )}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+
+                {/* 5. Disponibilidad Comercial de Negocio (Read-Only) */}
+                <div className="rounded-2xl border border-blue-200 bg-blue-50/40 p-5 space-y-4 md:col-span-2">
+                  <div className="flex flex-wrap items-center justify-between gap-3 border-b border-blue-100 pb-3">
+                    <div>
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-blue-900 flex items-center gap-1.5">
+                        <Briefcase className="h-4 w-4 text-blue-600" />
+                        Disponibilidad Comercial — Negocio VSL
+                      </h4>
+                      <p className="mt-0.5 text-xs text-slate-600">
+                        Precondiciones comerciales, técnicas y estado de publicación del ecosistema de Negocio.
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[10px] font-bold bg-white text-slate-600 border border-slate-200 shadow-sm shrink-0">
+                      Lectura Operativa
+                    </span>
+                  </div>
+
+                  {/* Estado de Carga / Error */}
+                  {isReadinessLoading ? (
+                    <div className="flex items-center gap-2 py-3 text-xs text-blue-700 font-medium">
+                      <RefreshCw className="h-4 w-4 animate-spin text-blue-600" />
+                      <span>Consultando disponibilidad comercial de Negocio...</span>
+                    </div>
+                  ) : readinessError ? (
+                    <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                      <span>{readinessError}</span>
+                    </div>
+                  ) : businessReadiness ? (
+                    <div className="space-y-4">
+                      {/* Tarjeta de Resumen de Estado */}
+                      <div className="rounded-xl border border-blue-200/80 bg-white p-3.5 space-y-3 shadow-sm">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                            Estado del Ecosistema
+                          </span>
+                          {(() => {
+                            const statusConfig = getReadinessStatusInfo(businessReadiness.status);
+                            return (
+                              <div className="flex flex-wrap items-center gap-1.5">
+                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${statusConfig.badgeClass}`}>
+                                  {statusConfig.label}
+                                </span>
+                                {businessReadiness.blocked && (
+                                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                                    <ShieldAlert className="h-3 w-3 text-rose-600" />
+                                    BLOQUEADO
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </div>
+
+                        {/* Descripción / Mensaje Informativo */}
+                        <div className="rounded-lg bg-slate-50 p-2.5 text-xs text-slate-700 leading-relaxed">
+                          {getReadinessStatusInfo(businessReadiness.status).description}
+                        </div>
+
+                        {/* Host Público y Site ID si están disponibles */}
+                        {(businessReadiness.siteId || businessReadiness.publicHost) && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-2 border-t border-slate-100 text-xs text-slate-600">
+                            {businessReadiness.siteId && (
+                              <p className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-500">Sitio:</span>
+                                <span className="font-mono text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">
+                                  {businessReadiness.siteId}
+                                </span>
+                              </p>
+                            )}
+                            {businessReadiness.publicHost && (
+                              <p className="flex items-center gap-1.5">
+                                <Globe className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                <span className="font-semibold text-slate-500">Host público:</span>
+                                <strong className="font-mono text-blue-900 truncate">
+                                  {businessReadiness.publicHost}
+                                </strong>
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Motivos de Bloqueo (si está bloqueado) */}
+                      {businessReadiness.blocked && businessReadiness.blockedReasons.length > 0 && (
+                        <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-3.5 space-y-2">
+                          <h5 className="text-[11px] font-bold uppercase tracking-wider text-rose-900 flex items-center gap-1.5">
+                            <ShieldAlert className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                            Motivos de Bloqueo Detectados ({businessReadiness.blockedReasons.length})
+                          </h5>
+                          <ul className="space-y-1.5 pl-1 text-xs text-rose-800">
+                            {businessReadiness.blockedReasons.map((reason) => (
+                              <li key={reason} className="flex items-start gap-2">
+                                <span className="text-rose-500 font-bold">•</span>
+                                <span>{getBlockedReasonDescription(reason)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      )}
+
+                      {/* Nota Informativa sobre Gobernanza de Publicación */}
+                      <div className="text-[11px] text-slate-500 bg-white/80 rounded-xl p-3 border border-blue-100 flex items-start gap-2">
+                        <Info className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
+                        <span>
+                          Panel de solo lectura: Esta vista no genera mutaciones, no ejecuta despliegues, ni altera registros DNS o SFTP. El control de publicación se gestiona a través de los tickets y flujos autorizados correspondientes.
+                        </span>
                       </div>
                     </div>
                   ) : null}
