@@ -22,9 +22,17 @@ Se detectó una brecha delimitada: al generar o editar una fuente de **Producto*
 - Las pruebas de correlación/póster ejecutables en el worktree aislado aprobaron: **9/9**.
 - La prueba de `publicationEventEnqueueService` no pudo iniciarse en este worktree porque no contiene dependencias instaladas (`zod` no está disponible); no se instaló nada ni se alteró el entorno. La cobertura existente fue revisada estáticamente: cubre PAID, no aprobado, aislamiento por owner, idempotencia, artefacto ausente y fallos seguros; falta un caso positivo explícito para `CONVERTED`.
 
-## Riesgos y follow-up requerido
+## Riesgo y follow-up identificado en la auditoría
 
-Crear un ticket backend separado para la propagación controlada **Producto hero → regeneración Business asociada → evento de fuente Business**, con pruebas de `CONVERTED`, de cortesía sin publicación y de aislamiento por `ownerKey`. Debe evitar republicación si el artefacto derivado no cambió y no debe tocar proveedores ni el frontend.
+Al momento de esta auditoría, el follow-up requerido era crear un ticket backend separado para la propagación controlada **Producto hero → regeneración Business asociada → evento de fuente Business**, con pruebas de `CONVERTED`, de cortesía sin publicación y de aislamiento por `ownerKey`. Debía evitar republicación si el artefacto derivado no cambiaba y no tocar proveedores ni el frontend.
+
+## Actualización de resolución (2026-09-21)
+
+El follow-up descrito por esta auditoría fue implementado posteriormente en PR #203, `feat: propagate Product hero to Business VSL poster`, fusionado en `main` mediante el commit `194f1ad5194b02be10e28b9a8954a676f3ce5116`.
+
+PR #203 agregó la propagación fail-closed Producto → Business, conserva el aislamiento por owner, evita encolar si el póster derivado no cambió y mantiene los gates comerciales y de target existentes. Esta auditoría conserva el hallazgo histórico; su follow-up ya no está pendiente.
+
+La revisión documental CDX-20260921-002 verificó esta resolución. No se modificaron proveedores, DNS, SFTP, publicación ni datos como parte de la adenda.
 
 ## Cambios
 
