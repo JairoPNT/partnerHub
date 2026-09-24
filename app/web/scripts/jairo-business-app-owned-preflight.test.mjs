@@ -127,3 +127,10 @@ test("CLI argument parser rejects forbidden, duplicate and unknown flags with sa
   assert.throws(() => parseArguments([`--site-id=${SITE_ID}`, "--unknown=secret/path"]), { code: "UNKNOWN_ARGUMENT" });
   assert.throws(() => parseArguments([]), { code: "SITE_ID_REQUIRED" });
 });
+
+test("entrypoint source forbids caller-controlled path parsing and provider/publication imports", async () => {
+  const source = await readFile(new URL("./jairo-business-app-owned-preflight.mjs", import.meta.url), "utf8");
+  assert.doesNotMatch(source, /argument\("(?:manifest|endpoint|output-dir|source-dir)"\)/);
+  assert.doesNotMatch(source, /ssh2|hostingerDns|cloudflareDns|guarded-ecosystem-publication|publicationJob/);
+  assert.match(source, /SITE_NOT_ALLOWLISTED/);
+});
