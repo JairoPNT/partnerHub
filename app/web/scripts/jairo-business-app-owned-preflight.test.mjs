@@ -84,6 +84,34 @@ test("native configuration blocker retains its safe code without exposing values
   assert.deepEqual(result.blockedReasons, ["CONFIGURATION_MISSING:HOSTINGER_API_TOKEN"]);
 });
 
+test("missing master filename maps to category without revealing filename", async (t) => {
+  const fx = await fixture(t);
+  const result = await runAppOwnedJairoBusinessPreflight({ siteId: SITE_ID, ...fx, reader: async () => readerResult(),
+    preflight: async () => ({ blocked: true, blockedReasons: ["BUSINESS_MASTER_PACKAGE_MISSING:index.html"] }) });
+  assert.deepEqual(result.blockedReasons, ["BUSINESS_MASTER_PACKAGE_MISSING"]);
+  assert.equal(JSON.stringify(result).includes("index.html"), false);
+});
+
+test("invalid target filename maps to category without revealing filename", async (t) => {
+  const fx = await fixture(t);
+  const result = await runAppOwnedJairoBusinessPreflight({ siteId: SITE_ID, ...fx, reader: async () => readerResult(),
+    preflight: async () => ({ blocked: true, blockedReasons: ["INVALID_PUBLISHING_TARGET:legacy.json"] }) });
+  assert.deepEqual(result.blockedReasons, ["INVALID_PUBLISHING_TARGET"]);
+  assert.equal(JSON.stringify(result).includes("legacy.json"), false);
+});
+
+test("filename blockers and hash drift preserve ordered deduplicated safe categories", async (t) => {
+  const fx = await fixture(t);
+  const result = await runAppOwnedJairoBusinessPreflight({ siteId: SITE_ID, ...fx, reader: async () => readerResult(),
+    preflight: async () => ({ blocked: true, blockedReasons: ["INVALID_PUBLISHING_TARGET:legacy.json",
+      "BUSINESS_MASTER_PACKAGE_MISSING:index.html", "SOURCE_HASH_DRIFT", "INVALID_PUBLISHING_TARGET:other.json",
+      "BUSINESS_MASTER_PACKAGE_MISSING:styles.css", "SOURCE_HASH_DRIFT"] }) });
+  assert.deepEqual(result.blockedReasons, ["INVALID_PUBLISHING_TARGET", "BUSINESS_MASTER_PACKAGE_MISSING", "SOURCE_HASH_DRIFT"]);
+  const serialized = JSON.stringify(result);
+  for (const filename of ["legacy.json", "index.html", "other.json", "styles.css"])
+    assert.equal(serialized.includes(filename), false);
+});
+
 test("fresh reader 401 returns refresh failure without files or fallback", async (t) => {
   const fx = await fixture(t);
   let preflightCalls = 0;

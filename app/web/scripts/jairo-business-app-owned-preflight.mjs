@@ -10,6 +10,7 @@ const SITE_ID = "jairo-pinto-business";
 const fixedScratchRoot = ".app-owned-jairo-business-preflight";
 const SAFE_CODE = /^[A-Z][A-Z0-9_]*$/;
 const SAFE_REASON = /^[A-Z][A-Z0-9_]*(?::[A-Z][A-Z0-9_]*)?$/;
+const FILENAME_REASON_PREFIXES = ["BUSINESS_MASTER_PACKAGE_MISSING", "INVALID_PUBLISHING_TARGET"];
 const SHA256 = /^[0-9a-f]{64}$/;
 const FORBIDDEN_FLAGS = new Set(["--apply", "--mode", "--manifest", "--endpoint", "--output-dir", "--source-dir"]);
 const json = (value) => `${JSON.stringify(value)}\n`;
@@ -41,7 +42,12 @@ export function parseArguments(argv) {
 
 function safeReasons(reasons) {
   if (!Array.isArray(reasons)) return ["PREFLIGHT_BLOCKED"];
-  const safe = reasons.filter((reason) => typeof reason === "string" && SAFE_REASON.test(reason));
+  const safe = reasons.flatMap((reason) => {
+    if (typeof reason !== "string") return [];
+    const filenameCategory = FILENAME_REASON_PREFIXES.find((prefix) => reason.startsWith(`${prefix}:`));
+    if (filenameCategory) return [filenameCategory];
+    return SAFE_REASON.test(reason) ? [reason] : [];
+  });
   return safe.length ? [...new Set(safe)] : ["PREFLIGHT_BLOCKED"];
 }
 
