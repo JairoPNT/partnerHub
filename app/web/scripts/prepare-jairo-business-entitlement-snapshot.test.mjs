@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
@@ -13,7 +14,10 @@ test("service token uses only supported headers and persists no secret or cookie
   const result = await prepareJairoBusinessEntitlementSnapshot({ mode: SERVICE_TOKEN_MODE, outputDirectory: resolve(directory, "stage"),
     environment: { CF_ACCESS_CLIENT_ID: "client-id", CF_ACCESS_CLIENT_SECRET: "client-secret" }, fetchImplementation: async (url, init) => { request = { url: String(url), init }; return response(JSON.stringify(entitlement())); } });
   assert.equal(request.init.redirect, "manual"); assert.equal(request.init.headers["CF-Access-Client-Id"], "client-id"); assert.equal(request.init.headers["CF-Access-Client-Secret"], "client-secret"); assert.equal("Cookie" in request.init.headers, false);
-  const persisted = await readFile(result.entitlementPath, "utf8"); assert.equal(persisted.includes("client-secret"), false); assert.equal(JSON.stringify(result).includes("client-secret"), false); assert.equal(result.security.cookiesUsed, false); });
+  const persisted = await readFile(result.entitlementPath, "utf8"); assert.equal(persisted.includes("client-secret"), false); assert.equal(JSON.stringify(result).includes("client-secret"), false); assert.equal(result.security.cookiesUsed, false);
+  assert.match(persisted, /^\{\n {2}"activationLeadId"/);
+  assert.equal(result.entitlementSha256, createHash("sha256").update(Buffer.from(persisted)).digest("hex"));
+  assert.deepEqual(result.identity, { activationLeadId: "f403f29e-95c8-4825-9320-967376443020", businessPublicHost: "negocio.jairopinto.pro", businessEntitled: true }); });
 test("service token redirect, non-json and missing credentials fail closed", async () => { const one = await root(); await assert.rejects(() => prepareJairoBusinessEntitlementSnapshot({ mode: SERVICE_TOKEN_MODE,
   outputDirectory: resolve(one, "stage"), environment: {}, fetchImplementation: async () => response("") }), /SERVICE_TOKEN_CONFIGURATION_MISSING/);
   const two = await root(); await assert.rejects(() => prepareJairoBusinessEntitlementSnapshot({ mode: SERVICE_TOKEN_MODE, outputDirectory: resolve(two, "stage"), endpoint: "https://app.partnerhub.club/x",
@@ -23,6 +27,10 @@ test("service token redirect, non-json and missing credentials fail closed", asy
 test("markdown-rendered and lookalike endpoints are rejected before fetch", async () => { const directory = await root(); let called = false;
   await assert.rejects(() => prepareJairoBusinessEntitlementSnapshot({ mode: SERVICE_TOKEN_MODE, outputDirectory: resolve(directory, "stage"),
     endpoint: `[${JAIRO_ENTITLEMENT_ENDPOINT}](${JAIRO_ENTITLEMENT_ENDPOINT})`, environment: { CF_ACCESS_CLIENT_ID: "id", CF_ACCESS_CLIENT_SECRET: "secret" }, fetchImplementation: async () => { called = true; return response("{}"); } }), /ENTITLEMENT_ENDPOINT_NOT_ALLOWLISTED/);
+  assert.equal(called, false); });
+test("missing credentials retain precedence over an endpoint override", async () => { const directory = await root(); let called = false;
+  await assert.rejects(() => prepareJairoBusinessEntitlementSnapshot({ mode: SERVICE_TOKEN_MODE, outputDirectory: resolve(directory, "stage"), endpoint: "https://app.partnerhub.club/x",
+    environment: {}, fetchImplementation: async () => { called = true; return response("{}"); } }), /SERVICE_TOKEN_CONFIGURATION_MISSING/);
   assert.equal(called, false); });
 test("operator export is canonicalized and validated without Access cookies", async () => { const directory = await root(); const input = resolve(directory, "browser-export.json"); await writeFile(input, JSON.stringify(entitlement()));
   const result = await prepareJairoBusinessEntitlementSnapshot({ mode: OPERATOR_EXPORT_MODE, outputDirectory: resolve(directory, "stage"), operatorExportPath: input });
