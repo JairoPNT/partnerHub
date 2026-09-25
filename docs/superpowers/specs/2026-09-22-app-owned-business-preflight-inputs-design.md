@@ -1,8 +1,8 @@
 # App-owned Business preflight inputs
 
-**Ticket:** CDX-20260922-002  
-**Owner:** Codex (Backend)  
-**Status:** Design approved by Jairo; implementation plan pending review  
+**Ticket:** CDX-20260922-002
+**Owner:** Codex (Backend)
+**Status:** Design approved by Jairo; implementation plan pending review
 **Depends on:** CDX-20260922-001 read-only Business preflight contract verification
 
 ## Intent and success criteria
