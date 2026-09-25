@@ -2,13 +2,14 @@ import { createHash, randomUUID } from "node:crypto";
 import { access, mkdir, readFile, readdir, rename, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import process from "node:process";
-import { pathToFileURL, URL } from "node:url";
+import { pathToFileURL } from "node:url";
+import { FreshEntitlementError, JAIRO_BUSINESS_ENTITLEMENT_ENDPOINT, readFreshJairoBusinessEntitlement } from "./lib/jairo-business-fresh-entitlement.mjs";
 
 export const SERVICE_TOKEN_MODE = "SERVICE_TOKEN";
 export const OPERATOR_EXPORT_MODE = "OPERATOR_EXPORT";
 const EXPECTED_ID = "f403f29e-95c8-4825-9320-967376443020";
 const EXPECTED_HOST = "negocio.jairopinto.pro";
-export const JAIRO_ENTITLEMENT_ENDPOINT = `https://app.partnerhub.club/api/internal/partner-ecosystem-entitlement?activationLeadId=${EXPECTED_ID}`;
+export const JAIRO_ENTITLEMENT_ENDPOINT = JAIRO_BUSINESS_ENTITLEMENT_ENDPOINT;
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 const sha = (value) => createHash("sha256").update(value).digest("hex");
 async function exists(path) { try { await access(path); return true; } catch (error) { if (error.code === "ENOENT") return false; throw error; } }
@@ -30,25 +31,26 @@ async function prepareDirectory(outputDirectory, resumeEmptyStaging) {
   } else { await mkdir(output, { recursive: false, mode: 0o700 }); }
   return { output, destination };
 }
-async function fetchWithServiceToken({ endpoint, environment, fetchImplementation }) {
-  const clientId = environment.CF_ACCESS_CLIENT_ID?.trim(); const clientSecret = environment.CF_ACCESS_CLIENT_SECRET?.trim();
-  if (!clientId || !clientSecret) throw new Error("SERVICE_TOKEN_CONFIGURATION_MISSING");
-  if (endpoint !== JAIRO_ENTITLEMENT_ENDPOINT) throw new Error("ENTITLEMENT_ENDPOINT_NOT_ALLOWLISTED");
-  const url = new URL(endpoint);
-  const response = await fetchImplementation(url, { method: "GET", redirect: "manual", headers: { Accept: "application/json", "CF-Access-Client-Id": clientId, "CF-Access-Client-Secret": clientSecret } });
-  if (response.status !== 200) throw new Error(`SERVICE_TOKEN_HTTP_${response.status}`);
-  if (!(response.headers.get("content-type") ?? "").toLowerCase().includes("application/json")) throw new Error("SERVICE_TOKEN_RESPONSE_NOT_JSON");
-  return response.text();
-}
 export async function prepareJairoBusinessEntitlementSnapshot(options) {
   if (![SERVICE_TOKEN_MODE, OPERATOR_EXPORT_MODE].includes(options.mode)) throw new Error("SNAPSHOT_MODE_INVALID");
-  const paths = await prepareDirectory(options.outputDirectory, options.resumeEmptyStaging === true); let raw;
-  if (options.mode === SERVICE_TOKEN_MODE) raw = await fetchWithServiceToken({ endpoint: options.endpoint ?? JAIRO_ENTITLEMENT_ENDPOINT, environment: options.environment ?? process.env, fetchImplementation: options.fetchImplementation ?? globalThis.fetch });
-  else { if (!options.operatorExportPath) throw new Error("OPERATOR_EXPORT_PATH_REQUIRED"); raw = await readFile(resolve(options.operatorExportPath), "utf8"); }
-  const parsed = validateEntitlement(JSON.parse(raw)); const canonicalBytes = json(canonical(parsed)); const temporary = resolve(paths.output, `.entitlement.${randomUUID()}.tmp`);
+  const paths = await prepareDirectory(options.outputDirectory, options.resumeEmptyStaging === true);
+  let canonicalBytes; let entitlementSha256; let identity;
+  if (options.mode === SERVICE_TOKEN_MODE) {
+    const environment = options.environment ?? process.env;
+    if (!environment.CF_ACCESS_CLIENT_ID?.trim() || !environment.CF_ACCESS_CLIENT_SECRET?.trim()) throw new FreshEntitlementError("SERVICE_TOKEN_CONFIGURATION_MISSING");
+    if (options.endpoint !== undefined && options.endpoint !== JAIRO_ENTITLEMENT_ENDPOINT) throw new Error("ENTITLEMENT_ENDPOINT_NOT_ALLOWLISTED");
+    ({ canonicalBytes, sha256: entitlementSha256, identity } = await readFreshJairoBusinessEntitlement({ environment, fetchImplementation: options.fetchImplementation ?? globalThis.fetch }));
+  } else {
+    if (!options.operatorExportPath) throw new Error("OPERATOR_EXPORT_PATH_REQUIRED");
+    const parsed = validateEntitlement(JSON.parse(await readFile(resolve(options.operatorExportPath), "utf8")));
+    canonicalBytes = Buffer.from(json(canonical(parsed)));
+    entitlementSha256 = sha(canonicalBytes);
+    identity = { activationLeadId: EXPECTED_ID, businessPublicHost: EXPECTED_HOST, businessEntitled: true };
+  }
+  const temporary = resolve(paths.output, `.entitlement.${randomUUID()}.tmp`);
   await writeFile(temporary, canonicalBytes, { flag: "wx", mode: 0o600 }); await rename(temporary, paths.destination);
-  return { requestId: "CDX-20260824-009", mode: options.mode, outcome: "SNAPSHOT_READY", changed: true, entitlementPath: paths.destination, entitlementSha256: sha(canonicalBytes),
-    identity: { activationLeadId: EXPECTED_ID, businessPublicHost: EXPECTED_HOST, businessEntitled: true }, authentication: options.mode === SERVICE_TOKEN_MODE ? "CLOUDFLARE_ACCESS_SERVICE_TOKEN" : "OPERATOR_AUTHENTICATED_BROWSER_EXPORT",
+  return { requestId: "CDX-20260824-009", mode: options.mode, outcome: "SNAPSHOT_READY", changed: true, entitlementPath: paths.destination, entitlementSha256,
+    identity, authentication: options.mode === SERVICE_TOKEN_MODE ? "CLOUDFLARE_ACCESS_SERVICE_TOKEN" : "OPERATOR_AUTHENTICATED_BROWSER_EXPORT",
     security: { cookiesUsed: false, bindingCookieCopied: false, serviceTokenPersisted: false, secretsPrinted: false, canonicalized: true } };
 }
 async function main() { const arg = (name) => process.argv.find((item) => item.startsWith(`--${name}=`))?.slice(name.length + 3); const mode = arg("mode"); const outputDirectory = arg("output-dir");
