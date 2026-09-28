@@ -17,6 +17,7 @@ const SITE_ID = "jairo-pinto-business";
 const OWNER_SITE_ID = "jairo-pinto";
 const PRODUCT_SITE_ID = "jairo-pinto-product";
 const MASTER_SITE_ID = "ganomaster-business";
+export const EXPECTED_SOURCE_HASH = "1cf347064989fefcebb0fbe61c1cf8444f3865f354ab16ff07cf667154c0355c";
 const EXPECTED = Object.freeze({
   ownerKey: OWNER_KEY,
   ownerSiteId: OWNER_SITE_ID,
@@ -25,7 +26,7 @@ const EXPECTED = Object.freeze({
   ecosystemType: "BUSINESS",
   baseDomain: "jairopinto.pro",
   publicHost: "negocio.jairopinto.pro",
-  sourceHash: "795ede8048a4d882960f08dc633de5ca0e58c810066c0e854e35fdf9531f8725",
+  sourceHash: EXPECTED_SOURCE_HASH,
   brandHash: "bafe5f704f8c515b9f6ea20c5379b5c9780c7dbe0da7c0e3734c746d4de1c71c",
   productHash: "9e69a03c9a794b96222cacf8d0bfb5327564f21f0d3bb4d8ab656180e92d7d3c"
 });
