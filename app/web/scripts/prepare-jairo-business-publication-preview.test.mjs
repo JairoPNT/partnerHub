@@ -16,6 +16,12 @@ import {
 const sha = (value) => createHash("sha256").update(value).digest("hex");
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
 const exists = (path) => access(path).then(() => true, () => false);
+const approvedPublishedSourceHash = "1cf347064989fefcebb0fbe61c1cf8444f3865f354ab16ff07cf667154c0355c";
+
+test("compiled package-preparation source pin is the approved published digest", async () => {
+  const { EXPECTED_SOURCE_HASH } = await import("./prepare-jairo-business-publication-preview.mjs");
+  assert.equal(EXPECTED_SOURCE_HASH, approvedPublishedSourceHash);
+});
 
 function packageConfig(source) {
   const digits = source.distributor.whatsappNumber.replace(/\D/g, "");
@@ -166,6 +172,15 @@ test("package preparation PREVIEW is read-only and binds every local/provider in
   assert.equal(result.safety.providerCallsMade, false);
   assert.equal(result.safety.localWritesMade, false);
   assert.match(result.planHash, /^[0-9a-f]{64}$/);
+});
+
+test("source comparison blocks unrelated bytes and accepts a matching injected fixture contract", async () => {
+  const fx = await fixture();
+  const defaultPreview = await planPackagePreparation({ ...fx, contract: undefined });
+  assert.ok(defaultPreview.blockedReasons.includes("SOURCE_HASH_DRIFT"));
+  const matchedPreview = await planPackagePreparation(fx);
+  assert.equal(matchedPreview.blockedReasons.includes("SOURCE_HASH_DRIFT"), false);
+  assert.equal(matchedPreview.blocked, false);
 });
 
 test("blocks expired capability and protected source drift", async () => {
