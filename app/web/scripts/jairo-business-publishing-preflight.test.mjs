@@ -76,6 +76,23 @@ test("blocks missing provider configuration and missing Business master package"
   assert.ok(result.blockedReasons.includes("BUSINESS_MASTER_PACKAGE_MISSING:index.html"));
 });
 
+test("does not require Cloudflare credentials but preserves Hostinger and IPv4 checks", async () => {
+  const fx = await fixture();
+  delete fx.environment.CLOUDFLARE_API_TOKEN;
+  delete fx.environment.CLOUDFLARE_ZONE_ID;
+  let result = await run(fx);
+  assert.deepEqual(result.configuration.missing, []);
+  assert.equal(result.blockedReasons.some((reason) => reason.includes("CLOUDFLARE")), false);
+
+  delete fx.environment.HOSTINGER_API_TOKEN;
+  fx.environment.PARTNERHUB_PROVISIONING_IPV4 = "not-an-ipv4-address";
+  result = await run(fx);
+  assert.deepEqual(result.configuration.missing, ["HOSTINGER_API_TOKEN"]);
+  assert.deepEqual(result.configuration.invalid, ["PARTNERHUB_PROVISIONING_IPV4"]);
+  assert.ok(result.blockedReasons.includes("CONFIGURATION_MISSING:HOSTINGER_API_TOKEN"));
+  assert.ok(result.blockedReasons.includes("CONFIGURATION_INVALID:PARTNERHUB_PROVISIONING_IPV4"));
+});
+
 test("does not require the legacy global remote root for an isolated v2 target", async () => {
   const fx = await fixture();
   assert.equal(fx.environment.HOSTINGER_SFTP_REMOTE_ROOT, undefined);

@@ -85,6 +85,10 @@ export async function runAppOwnedJairoBusinessPreflight({ siteId, reader = readF
     await writeFile(resolve(bundle, "entitlement.json"), fresh.canonicalBytes, { flag: "wx", mode: 0o600 });
     const native = await preflight({ sourceDirectory, outputDirectory, manifestPath, environment });
     outcome = native?.blocked === false ? result("READY") : result("BLOCKED", safeReasons(native?.blockedReasons));
+    if (outcome.status === "BLOCKED" && outcome.blockedReasons.includes("SOURCE_HASH_DRIFT") &&
+        typeof native?.source?.sha256 === "string" && SHA256.test(native.source.sha256)) {
+      outcome.sourceHash = native.source.sha256;
+    }
   } catch {
     outcome = result("BLOCKED", ["PREFLIGHT_FAILED"]);
   } finally {

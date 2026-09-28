@@ -77,6 +77,43 @@ test("native block keeps safe reason codes, redacts native detail and removes bu
   assert.deepEqual(await readdir(fx.scratchRoot), []);
 });
 
+test("source drift exposes only a valid native SHA-256 digest", async (t) => {
+  const fx = await fixture(t);
+  const sourceHash = "a".repeat(64);
+  const result = await runAppOwnedJairoBusinessPreflight({ siteId: SITE_ID, ...fx, reader: async () => readerResult(),
+    preflight: async () => ({ blocked: true, blockedReasons: ["SOURCE_HASH_DRIFT"],
+      source: { path: fx.environment.PRODUCT_PAGE_SOURCE_DIR, sha256: sourceHash, bytes: "private source" },
+      entitlement: { secret: "test-secret" }, manifest: { secret: "manifest-secret" }, error: "private error" }) });
+  assert.deepEqual(result.blockedReasons, ["SOURCE_HASH_DRIFT"]);
+  assert.equal(result.status, "BLOCKED");
+  assert.equal(result.sourceHash, sourceHash);
+  assert.deepEqual(Object.keys(result), [...expectedKeys, "sourceHash"]);
+  const serialized = JSON.stringify(result);
+  for (const forbidden of [fx.environment.PRODUCT_PAGE_SOURCE_DIR, "private source", "test-secret", "manifest-secret", "private error"])
+    assert.equal(serialized.includes(forbidden), false);
+});
+
+test("source drift omits absent or malformed native digests", async (t) => {
+  const fx = await fixture(t);
+  for (const sha256 of [undefined, "A".repeat(64), "a".repeat(63), "secret-looking-token", fx.environment.PRODUCT_PAGE_SOURCE_DIR]) {
+    const result = await runAppOwnedJairoBusinessPreflight({ siteId: SITE_ID, ...fx, reader: async () => readerResult(),
+      preflight: async () => ({ blocked: true, blockedReasons: ["SOURCE_HASH_DRIFT"], source: { sha256 } }) });
+    assert.equal(result.status, "BLOCKED");
+    assert.deepEqual(result.blockedReasons, ["SOURCE_HASH_DRIFT"]);
+    assert.deepEqual(Object.keys(result), expectedKeys);
+  }
+});
+
+test("native digest is omitted without source drift, including a READY result", async (t) => {
+  const fx = await fixture(t);
+  for (const blocked of [true, false]) {
+    const result = await runAppOwnedJairoBusinessPreflight({ siteId: SITE_ID, ...fx, reader: async () => readerResult(),
+      preflight: async () => ({ blocked, blockedReasons: blocked ? ["BUSINESS_NOT_ENTITLED"] : [],
+        source: { sha256: "a".repeat(64) } }) });
+    assert.deepEqual(Object.keys(result), expectedKeys);
+  }
+});
+
 test("native configuration blocker retains its safe code without exposing values", async (t) => {
   const fx = await fixture(t);
   const result = await runAppOwnedJairoBusinessPreflight({ siteId: SITE_ID, ...fx, reader: async () => readerResult(),
