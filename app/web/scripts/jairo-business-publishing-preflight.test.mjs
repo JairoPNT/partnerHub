@@ -8,7 +8,7 @@ import { runJairoBusinessPublishingPreflight } from "./jairo-business-publishing
 
 const stringify = (value) => `${JSON.stringify(value, null, 2)}\n`;
 const hash = (value) => createHash("sha256").update(value).digest("hex");
-const expectedSourceHash = "795ede8048a4d882960f08dc633de5ca0e58c810066c0e854e35fdf9531f8725";
+const expectedSourceHash = "1cf347064989fefcebb0fbe61c1cf8444f3865f354ab16ff07cf667154c0355c";
 
 async function fixture() {
   const root = await mkdtemp(resolve(tmpdir(), "business-publish-preview-"));
@@ -34,6 +34,20 @@ async function fixture() {
 
 async function run(fx) { return runJairoBusinessPublishingPreflight({ sourceDirectory: fx.sources, outputDirectory: fx.output,
   manifestPath: fx.manifestPath, environment: fx.environment }); }
+
+test("accepts only the approved published source hash in the manifest", async () => {
+  const fx = await fixture();
+  const accepted = await run(fx);
+  assert.equal(accepted.source.sha256, hash(fx.source));
+  assert.ok(accepted.blockedReasons.includes("SOURCE_HASH_DRIFT"));
+
+  const manifest = JSON.parse(await readFile(fx.manifestPath, "utf8"));
+  for (const otherHash of ["795ede8048a4d882960f08dc633de5ca0e58c810066c0e854e35fdf9531f8725", "a".repeat(64)]) {
+    manifest.allowlist[0].expectedSourceHash = otherHash;
+    await writeFile(fx.manifestPath, stringify(manifest));
+    await assert.rejects(run(fx), /Manifest source and entitlement hashes must be the approved complete SHA-256 values/);
+  }
+});
 
 test("is read-only, fail-closed, and plans only the Business target", async () => {
   const fx = await fixture();

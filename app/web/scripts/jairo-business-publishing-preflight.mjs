@@ -15,7 +15,7 @@ const EXPECTED = Object.freeze({
   baseDomain: "jairopinto.pro",
   publicHost: "negocio.jairopinto.pro"
 });
-const EXPECTED_SOURCE_HASH = "795ede8048a4d882960f08dc633de5ca0e58c810066c0e854e35fdf9531f8725";
+const EXPECTED_SOURCE_HASH = "1cf347064989fefcebb0fbe61c1cf8444f3865f354ab16ff07cf667154c0355c";
 const HASH = /^[0-9a-f]{64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 const REQUIRED_CONFIGURATION = [

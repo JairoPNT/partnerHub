@@ -7,7 +7,7 @@ import test from "node:test";
 import { parseArguments, runAppOwnedJairoBusinessPreflight } from "./jairo-business-app-owned-preflight.mjs";
 
 const SITE_ID = "jairo-pinto-business";
-const HASH = "795ede8048a4d882960f08dc633de5ca0e58c810066c0e854e35fdf9531f8725";
+const HASH = "1cf347064989fefcebb0fbe61c1cf8444f3865f354ab16ff07cf667154c0355c";
 const ENTITLEMENT = Buffer.from('{"activationLeadId":"f403f29e-95c8-4825-9320-967376443020","secret":"test-secret"}\n');
 const SHA = createHash("sha256").update(ENTITLEMENT).digest("hex");
 const expectedKeys = ["requestId", "mode", "changed", "status", "blockedReasons", "providerCallsMade", "secretsExposed"];

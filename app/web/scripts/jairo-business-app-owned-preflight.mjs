@@ -78,7 +78,7 @@ export async function runAppOwnedJairoBusinessPreflight({ siteId, reader = readF
     const manifest = { confirmation: "PREVIEW_JAIRO_BUSINESS_PUBLISHING", allowlist: [{
       activationLeadId: "f403f29e-95c8-4825-9320-967376443020", ownerSiteId: "jairo-pinto", siteId: SITE_ID,
       ecosystemType: "BUSINESS", rootEcosystemType: "PERSONAL_BRAND", baseDomain: "jairopinto.pro",
-      publicHost: "negocio.jairopinto.pro", expectedSourceHash: "795ede8048a4d882960f08dc633de5ca0e58c810066c0e854e35fdf9531f8725",
+      publicHost: "negocio.jairopinto.pro", expectedSourceHash: "1cf347064989fefcebb0fbe61c1cf8444f3865f354ab16ff07cf667154c0355c",
       expectedEntitlementHash: fresh.sha256,
     }] };
     await writeFile(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, { flag: "wx", mode: 0o600 });
