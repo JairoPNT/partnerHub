@@ -21,7 +21,7 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-
 const REQUIRED_CONFIGURATION = [
   "HOSTINGER_API_TOKEN", "HOSTINGER_SFTP_USERNAME", "HOSTINGER_SFTP_HOST",
   "HOSTINGER_SFTP_PORT", "HOSTINGER_SFTP_PASSWORD",
-  "CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ZONE_ID", "PARTNERHUB_PROVISIONING_IPV4"
+  "PARTNERHUB_PROVISIONING_IPV4"
 ];
 const REQUIRED_PACKAGE_FILES = ["index.html", "app.js", "styles.css", "config.js", "favicon.svg"];
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
