@@ -3,8 +3,8 @@
 - **Request ID:** CDX-20260928-002
 - **Owner:** Codex (Backend)
 - **Branch:** `codex/CDX-20260928-002-business-preflight-published-source-pin`
-- **Commit:** To be recorded with the ticket commit.
-- **PR:** To be recorded after creation.
+- **Commit:** `cb49975c7006607b7a6feb5905433eb610361d71` (implementation); report metadata follow-up pending.
+- **PR:** [#206](https://github.com/JairoPNT/partnerHub/pull/206), open, mergeable and CLEAN at initial verification; no checks configured.
 
 ## Changes and files
 
