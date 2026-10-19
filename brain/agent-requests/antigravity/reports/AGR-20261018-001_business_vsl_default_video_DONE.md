@@ -1,8 +1,8 @@
 # Reporte de Tarea Completada
 
-**Request ID:** AGR-20261018-001  
-**Tarea:** Video predeterminado de la plantilla Business  
-**Estado:** DONE (Implementación local lista; despliegue bloqueado por dependencia R2)
+**Request ID:** AGR-20261018-001
+**Tarea:** Video predeterminado de la plantilla Business
+**Estado:** Implementación revisada; activo R2 verificado el 2026-10-19; PR pendiente de apertura.
 
 ## Resumen de Cambios Realizados
 
@@ -29,22 +29,26 @@
    - `npm run test:business-vsl-poster` en `app/web` → 5/5 pruebas pasadas (0 fallos).
    - `npm run test:business-vsl-correlation` en `app/web` → 9/9 pruebas pasadas (0 fallos).
 3. **Build de Next.js**:
-   - `npm run build` en `app/web` → Exitoso (exit code 0, Turbopack optimizado, 39 páginas generadas).
-4. **Comprobación de Dependencia Externa R2 (CDX-20261017-003)**:
-   - Consulta `curl.exe -I https://media.partnerhub.club/comunes/business/v2/vsl/business-vsl-pilot-v2.mp4` devuelve `HTTP/1.1 404 Not Found`.
-   - Conforme a la regla de aceptación del ticket, **este cambio NO debe ser desplegado ni mergeado a producción** hasta que Codex complete CDX-20261017-003 y el endpoint responda `HTTP 200` con `Content-Type: video/mp4`.
+   - `npm run build` en `app/web`, reejecutado por Codex el 2026-10-19 → Exitoso (exit code 0, TypeScript correcto, 39/39 páginas generadas).
+   - Advertencias no bloqueantes observadas: Next.js encontró dos lockfiles y eligió el de la raíz del repo; Turbopack informó que el trazado NFT de `next.config.mjs` incluyó inesperadamente el proyecto completo en la ruta de importación del worker de publicaciones.
+4. **Pruebas focales reejecutadas por Codex el 2026-10-19**:
+   - `npm run test:business-vsl-poster` → 5/5 pasadas.
+   - `npm run test:business-vsl-correlation` → 9/9 pasadas.
+5. **Comprobación de Dependencia Externa R2 (CDX-20261017-003)**:
+   - Verificación HTTP HEAD realizada el 2026-10-19: `HTTP 200 OK`, `Content-Type: video/mp4`, `Content-Length: 7022103` y `Cache-Control: public, max-age=60, must-revalidate`.
+   - La dependencia de R2 está satisfecha; el objeto v2 está disponible y el cambio puede avanzar a revisión de PR. No se publicaron sitios de clientes ni se hicieron cambios DNS/SFTP como parte de esta verificación.
 
 ## Rama y Commit
 
 - **Rama:** `antigravity/AGR-20261018-001-business-vsl-default-video`
 - **Commit:** `ab0799d` (`ab0799df0288f36c5332fc3ce00c6d9bf0d1e57c`)
-- **PR:** Pendiente de apertura / merge condicionado a la resolución de CDX-20261017-003.
+- **PR:** Pendiente de apertura. El PR deberá incluir el cambio de plantilla y este reporte corregido.
 
 ## Estado de Dependencias y Riesgos
 
-- **Dependencia R2 (CDX-20261017-003):** Pendiente / Bloqueada por credenciales R2 locales de Jairo.
-- **Riesgo:** Si se despliega este archivo a producción antes de que el objeto R2 exista, el reproductor de video fallará al intentar cargar el archivo v2 (404). Por diseño, la plantilla retiene la compatibilidad con v1 para rollback.
+- **Dependencia R2 (CDX-20261017-003):** Satisfecha; el URL público v2 respondió 200 con tipo `video/mp4` el 2026-10-19.
+- **Riesgo residual:** El cambio aún no está fusionado/desplegado y no actualiza por sí mismo páginas ya publicadas. La URL v1 y el póster v1 se conservan para rollback visual/configurativo.
 
 ## Follow-up Requerido
 
-- Una vez que Codex cargue el asset en R2 y se confirme respuesta `HTTP 200`, proceder al merge y despliegue autorizado.
+- Abrir y revisar el PR. Tras el merge y el deploy de PartnerHub, ejecutar el flujo separado de generación/publicación para la página Business de Claudia y validar allí el video y sus CTA; ese paso no está incluido en este ticket.
