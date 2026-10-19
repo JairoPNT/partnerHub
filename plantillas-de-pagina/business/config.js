@@ -53,11 +53,11 @@ const CONFIG = {
   // Video Sales Letter (VSL)
   vsl: {
     provider: 'custom', // 'youtube' | 'vimeo' | 'wistia' | 'custom'
-    embedUrl: 'https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.mp4',
+    embedUrl: 'https://media.partnerhub.club/comunes/business/v2/vsl/business-vsl-pilot-v2.mp4',
     videoTitle: 'Presentación Oficial del Modelo de Negocio',
     aspectRatio: '16:9', // '16:9' | '4:3'
-    caption: 'Duración aproximada: 10 minutos · Activa el sonido para mejor experiencia',
-    durationText: 'Ver Presentación de Negocio (10 min)',
+    caption: 'Duración aproximada: 3 minutos · Activa el sonido para mejor experiencia',
+    durationText: 'Ver Presentación de Negocio (3 min)',
     thumbnailUrl: 'https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-pilot-v1.webp',
     autoPlay: true
   },
