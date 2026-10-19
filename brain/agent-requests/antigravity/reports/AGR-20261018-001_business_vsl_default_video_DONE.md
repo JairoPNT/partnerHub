@@ -2,7 +2,7 @@
 
 **Request ID:** AGR-20261018-001
 **Tarea:** Video predeterminado de la plantilla Business
-**Estado:** Implementación revisada; activo R2 verificado el 2026-10-19; PR pendiente de apertura.
+**Estado:** Implementación revisada; activo R2 verificado; PR #208 abierto para revisión.
 
 ## Resumen de Cambios Realizados
 
@@ -36,13 +36,13 @@
    - `npm run test:business-vsl-correlation` → 9/9 pasadas.
 5. **Comprobación de Dependencia Externa R2 (CDX-20261017-003)**:
    - Verificación HTTP HEAD realizada el 2026-10-19: `HTTP 200 OK`, `Content-Type: video/mp4`, `Content-Length: 7022103` y `Cache-Control: public, max-age=60, must-revalidate`.
-   - La dependencia de R2 está satisfecha; el objeto v2 está disponible y el cambio puede avanzar a revisión de PR. No se publicaron sitios de clientes ni se hicieron cambios DNS/SFTP como parte de esta verificación.
+   - La dependencia de R2 está satisfecha; el objeto v2 está disponible. No se publicaron sitios de clientes ni se hicieron cambios DNS/SFTP como parte de esta verificación.
 
 ## Rama y Commit
 
 - **Rama:** `antigravity/AGR-20261018-001-business-vsl-default-video`
-- **Commit:** `ab0799d` (`ab0799df0288f36c5332fc3ce00c6d9bf0d1e57c`)
-- **PR:** Pendiente de apertura. El PR deberá incluir el cambio de plantilla y este reporte corregido.
+- **Commits:** `ab0799d` (implementación), `ee9df80` (reporte inicial), `3bece55` (reporte corregido y verificado).
+- **PR:** [#208](https://github.com/JairoPNT/partnerHub/pull/208), abierto contra `main`, pendiente de revisión y merge.
 
 ## Estado de Dependencias y Riesgos
 
@@ -51,4 +51,4 @@
 
 ## Follow-up Requerido
 
-- Abrir y revisar el PR. Tras el merge y el deploy de PartnerHub, ejecutar el flujo separado de generación/publicación para la página Business de Claudia y validar allí el video y sus CTA; ese paso no está incluido en este ticket.
+- Tras la revisión y el merge del PR, desplegar PartnerHub y ejecutar el flujo separado de generación/publicación para la página Business de Claudia; verificar allí el video y sus CTA. Ese paso no está incluido en este ticket.
