@@ -204,7 +204,7 @@ function resolvePaths(options = {}) {
     archiveDirectory: inside(outputRoot, ".master-package-archives/CDX-20261019-003/ganomaster-business"),
     archiveReservationPath: inside(outputRoot, ".master-package-archives/CDX-20261019-003/ganomaster-business.reservation.json"),
     claimDirectory: inside(outputRoot, ".master-package-claims/ganomaster-business"),
-    businessJobsDirectory: resolve(options.businessJobsDirectory ?? process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR ?? inside(outputRoot, ".publication-jobs"))
+    businessJobsDirectory: resolve(options.businessJobsDirectory ?? process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR ?? "/data/generated-sites/.publication-jobs")
   };
 }
 
@@ -468,6 +468,7 @@ async function buildPreview(options = {}, { claimOwner = null } = {}) {
     } : null,
     archivePath: paths.archiveDirectory,
     archivePresent,
+    businessJobsDirectory: paths.businessJobsDirectory,
     refreshJournalPath: paths.refreshJournalPath,
     refreshJournalPresent,
     claimPresent: Boolean(claimPresent && !claimOwner),
@@ -681,9 +682,9 @@ export async function applyBusinessMasterPackageRefresh(options = {}) {
     archiveReserved = true;
     if ((await inventory(paths.archiveDirectory)).hash !== LEGACY_PACKAGE_HASH) throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_ARCHIVE_HASH_DRIFT");
     await assertArchiveReservation(paths, owner);
-    await testHook(options, "beforePreviousBackupRename")?.({ destinationDirectory: paths.destinationDirectory, previousBackupDirectory });
-    await assertClaimOwner(paths.claimDirectory, owner);
     if ((await pathKind(previousBackupDirectory)) !== "absent") throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_BACKUP_OCCUPIED");
+    await testHook(options, "afterPreviousBackupAbsentCheck")?.({ destinationDirectory: paths.destinationDirectory, previousBackupDirectory });
+    await assertClaimOwner(paths.claimDirectory, owner);
     await rename(paths.destinationDirectory, previousBackupDirectory);
     previousMovedToBackup = true;
     await testHook(options, "afterArchive")?.({ archiveDirectory: paths.archiveDirectory });

@@ -442,6 +442,41 @@ test("PREVIEW blocks a configured publication job directory outside its safe out
   }
 });
 
+test("PREVIEW and APPLY use the fixed runtime job-directory fallback when outputRoot is customized", async () => {
+  const item = await fixture();
+  const previousJobDirectory = process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR;
+  const previousOutputDirectory = process.env.PRODUCT_PAGE_OUTPUT_DIR;
+  const options = { ...item.options };
+  delete options.businessJobsDirectory;
+  try {
+    delete process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR;
+    process.env.PRODUCT_PAGE_OUTPUT_DIR = join(item.root, "different-product-output");
+    const before = await treeSnapshot(item.outputRoot);
+    const preview = await planBusinessMasterPackageRefresh(options);
+    assert.equal(preview.blocked, true);
+    assert.equal(preview.planMaterial.businessJobsDirectory, resolve("/data/generated-sites/.publication-jobs"));
+    assert.ok(preview.blockedReasons.includes("BUSINESS_MASTER_PACKAGE_REFRESH_JOB_DIRECTORY_OUTSIDE_OUTPUT_ROOT"));
+    assert.equal(preview.blockedReasons.includes("BUSINESS_MASTER_PACKAGE_PUBLICATION_RUNNING"), false);
+    assert.equal(preview.blockedReasons.includes("BUSINESS_MASTER_PACKAGE_PUBLICATION_JOB_UNCLASSIFIABLE"), false);
+    await assert.rejects(
+      () => applyBusinessMasterPackageRefresh({
+        ...options,
+        mode: APPLY_MODE,
+        confirmation: APPLY_CONFIRMATION,
+        expectedPlanHash: preview.planHash
+      }),
+      /BLOCKED:.*JOB_DIRECTORY_OUTSIDE_OUTPUT_ROOT/
+    );
+    assert.deepEqual(await treeSnapshot(item.outputRoot), before);
+  } finally {
+    if (previousJobDirectory === undefined) delete process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR;
+    else process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR = previousJobDirectory;
+    if (previousOutputDirectory === undefined) delete process.env.PRODUCT_PAGE_OUTPUT_DIR;
+    else process.env.PRODUCT_PAGE_OUTPUT_DIR = previousOutputDirectory;
+    await item.cleanup();
+  }
+});
+
 test("PREVIEW blocks corrupt and unclassifiable publication job files fail-closed", async (t) => {
   for (const content of ["{", JSON.stringify({ schemaVersion: 1, status: "RUNNING", intent: {} })]) {
     await t.test(content === "{" ? "invalid-json" : "unknown-ecosystem", async () => {
@@ -611,7 +646,10 @@ test("APPLY rechecks claim ownership immediately before renaming the previous pa
     await assert.rejects(
       () => authorizedApply(item, preview, {
         testHooks: {
-          beforePreviousBackupRename: async () => writeFile(join(claimDirectory, "owner.json"), `${JSON.stringify(foreignOwner)}\n`)
+          afterPreviousBackupAbsentCheck: async ({ previousBackupDirectory }) => {
+            assert.equal(await exists(previousBackupDirectory), false);
+            await writeFile(join(claimDirectory, "owner.json"), `${JSON.stringify(foreignOwner)}\n`);
+          }
         }
       }),
       /CLAIM|OWNERSHIP/
