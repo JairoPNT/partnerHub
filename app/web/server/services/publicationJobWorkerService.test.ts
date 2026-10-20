@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { Buffer } from "node:buffer";
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { posix, resolve } from "node:path";
 import test from "node:test";
@@ -310,4 +310,84 @@ test("the production execution generates, probes, atomically publishes and journ
   const recovered = await execution.execute({ ...executionJob, attemptCount: 2 }, async (phase) => { recoveredPhases.push(phase); return executionJob; });
   assert.equal(generationCount, 1); assert.deepEqual(recovered, evidence);
   assert.deepEqual(recoveredPhases, ["VALIDATING_CAPABILITY", "PLANNING_PUBLICATION", "PUBLISHING", "VERIFYING"]);
+});
+
+test("a deferred Business job can retry the rolled-back attempt after local staging without EEXIST", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "publication-worker-business-retry-race-"));
+  const sources = resolve(root, "sources"); const targets = resolve(sources, ".publishing-targets");
+  const output = resolve(root, "output"); const work = resolve(root, "work"); const journals = resolve(root, "journals");
+  await mkdir(targets, { recursive: true }); await mkdir(output); await mkdir(journals);
+  const siteId = "ana-segura-business";
+  const source = { ecosystemType: "BUSINESS", site: { id: siteId, domain: "negocio.anasegura.pro" },
+    distributor: { whatsappNumber: "573001234567", defaultMessage: "Hola, quiero conocer el servicio." },
+    vsl: { embedUrl: "https://media.example.test/business.mp4", thumbnailUrl: "https://media.example.test/business.jpg" } };
+  const target = { version: 2, ownerKey: job.intent.ownerKey, siteId, ecosystemType: "BUSINESS", rootEcosystemType: "PERSONAL_BRAND",
+    baseDomain: "anasegura.pro", publicHost: "negocio.anasegura.pro", remoteRoot: "/hosting/negocio", provisioningState: "READY", publicationState: "PENDING" };
+  const sourceText = stringify(source); const targetText = stringify(target);
+  await writeFile(resolve(sources, `${siteId}.json`), sourceText); await writeFile(resolve(targets, `${siteId}.json`), targetText);
+  const masterText = "business-master"; const master = resolve(output, "ganomaster-business");
+  await mkdir(master); await writeFile(resolve(master, "index.html"), masterText);
+  const executionJob: PublicationJob = { ...job, id: sha("business-retry-race-job"), intentHash: sha("business-retry-race-intent"),
+    intent: { ...job.intent, siteId, ecosystemType: "BUSINESS", publicHost: target.publicHost, sourceHash: sha(sourceText), targetHash: sha(targetText),
+      masterPackageHash: sha(JSON.stringify([{ path: "index.html", hash: sha(masterText) }])) } };
+  const adapter = new MemorySftp(); let refreshActive = false; let claimCount = 0;
+  let generationCalls = 0; let adapterFactoryCalls = 0; let verificationCalls = 0;
+  const environment = { HOSTINGER_SFTP_HOST: "sftp.example.test", HOSTINGER_SFTP_PORT: "65002", HOSTINGER_SFTP_USERNAME: "private-user",
+    HOSTINGER_SFTP_PASSWORD: "super-secret-password", HOSTINGER_SFTP_HOST_KEY_SHA256: `SHA256:${"A".repeat(43)}=` } as NodeJS.ProcessEnv;
+  const isRefreshActive = async () => refreshActive;
+  const execution = createPublicationExecution({ sourceDirectory: sources, outputDirectory: output, workDirectory: work, journalDirectory: journals,
+    environment, isBusinessMasterPackageRefreshActive: isRefreshActive,
+    generate: async (id) => {
+      generationCalls += 1;
+      const destination = resolve(output, id);
+      await rm(destination, { recursive: true, force: true });
+      await mkdir(destination);
+      const whatsappUrl = `https://wa.me/${source.distributor.whatsappNumber}?text=${encodeURIComponent(source.distributor.defaultMessage)}`;
+      const config = `const CONFIG = ${JSON.stringify({ ...source, cta: { primaryUrl: whatsappUrl, secondaryUrl: whatsappUrl } })};\n`;
+      for (const [name, value] of Object.entries({ "index.html": `business-${generationCalls}`, "app.js": "app", "styles.css": "css", "config.js": config, "favicon.svg": "svg" })) {
+        await writeFile(resolve(destination, name), value);
+      }
+      return { siteId: id, generatedAt: `2026-10-19T12:00:0${generationCalls}.000Z`, outputDirectory: destination, previewUrl: "", files: [] };
+    },
+    adapterFactory: async () => { adapterFactoryCalls += 1; return adapter as never; },
+    verifyPublic: async () => { verificationCalls += 1; return { passed: true, reasons: [] }; } });
+  const jobs = {
+    async claimNext() { claimCount += 1; return { job: { ...executionJob, attemptCount: 1 }, leaseToken: "RAW_LEASE_SECRET" }; },
+    isBusinessMasterPackageRefreshActive: isRefreshActive,
+    async deferClaimedBusinessJob() { return { ...executionJob, status: "QUEUED", phase: "QUEUED", attemptCount: 0, lease: undefined }; },
+    async advance(_id: string, _token: string, phase: string) {
+      if (claimCount === 1 && phase === "VALIDATING_CAPABILITY") refreshActive = true;
+      return executionJob;
+    },
+    async complete() { return { ...executionJob, status: "SUCCEEDED", phase: "COMPLETE" }; },
+    async fail(_id: string, _token: string, code: string) { return { ...executionJob, status: "FAILED", lastErrorCode: code }; },
+    toSafeJob(value: Record<string, unknown>) { return { status: value.status, lastErrorCode: value.lastErrorCode, attemptCount: value.attemptCount }; }
+  };
+  const worker = createPublicationJobWorker({ jobs: jobs as never, execution, workerId: "worker" });
+
+  const deferred = await worker.runNext();
+
+  assert.equal(deferred.outcome, "DEFERRED");
+  assert.equal(deferred.job.status, "QUEUED");
+  assert.equal(deferred.job.attemptCount, 0);
+  assert.equal(generationCalls, 1);
+  assert.equal(adapterFactoryCalls, 0);
+  assert.equal(verificationCalls, 0);
+  const stagedAttempts = await readdir(work);
+  assert.equal(stagedAttempts.length, 1);
+  assert.ok((await readdir(resolve(work, stagedAttempts[0]))).includes("sftp-probe-manifest.json"));
+
+  refreshActive = false;
+  const retried = await worker.runNext();
+
+  assert.equal(claimCount, 2);
+  assert.equal(retried.outcome, "SUCCEEDED", JSON.stringify(retried));
+  assert.equal(retried.job.status, "SUCCEEDED");
+  assert.equal(generationCalls, 2);
+  assert.equal(adapterFactoryCalls, 1);
+  assert.equal(verificationCalls, 1);
+  const attemptsAfterRetry = await readdir(work);
+  assert.equal(attemptsAfterRetry.length, 2);
+  assert.notEqual(attemptsAfterRetry[0], attemptsAfterRetry[1]);
+  assert.doesNotMatch(JSON.stringify(retried), /RAW_LEASE_SECRET/);
 });

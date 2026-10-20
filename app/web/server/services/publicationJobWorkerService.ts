@@ -255,7 +255,7 @@ export function createPublicationExecution(options: {
         if (await exists(path)) protectedLocalArtifacts.push({ siteId, expectedHash: (await required(path)).hash });
       }
 
-      const attemptDirectory = inside(workDirectory, `${job.id}-${job.attemptCount}`);
+      const attemptDirectory = inside(workDirectory, `${job.id}-${job.attemptCount}-${randomUUID()}`);
       await mkdir(workDirectory, { recursive: true, mode: 0o700 });
       await mkdir(attemptDirectory, { recursive: false, mode: 0o700 });
       const probeManifestPath = inside(attemptDirectory, "sftp-probe-manifest.json");
