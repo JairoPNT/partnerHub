@@ -78,4 +78,4 @@ Importador de código o ZIP, marketplace, variantes por cliente, editor visual n
 
 ## Gate de ejecución
 
-Jairo aprobó esta especificación y autorizó preparar el siguiente paso. Plan técnico: `docs/superpowers/plans/2026-10-20-business-master-sites-manual-delivery.md`, pendiente su revisión antes de implementar. Se conserva el método solicitado: subagentes por tarea y revisión entre entregas; UI propiedad de Antigravity. La configuración de autorización Super Admin debe verificarse antes de cualquier prueba productiva.
+Jairo aprobó esta especificación y el plan técnico `docs/superpowers/plans/2026-10-20-business-master-sites-manual-delivery.md` el 2026-10-20. PR #212 conserva esa aprobación y la ejecución está habilitada por tareas. Se conserva el método solicitado: subagentes por tarea y revisión entre entregas; UI propiedad de Antigravity. La configuración de autorización Super Admin debe verificarse antes de cualquier prueba productiva. La aprobación no convierte un módulo parcial en el flujo productivo completo ni autoriza republicaciones automáticas de clientes.
