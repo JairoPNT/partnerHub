@@ -27,6 +27,8 @@ WORKDIR /repo/app/web
 RUN npm run build
 RUN npx esbuild server/runtime/jairoBusinessInProcessProvisioner.ts --bundle --platform=node --format=esm --target=node20 --outfile=/repo/runtime-assets/jairo-business-in-process-provisioner.mjs
 RUN npx esbuild server/runtime/jairoBusinessPackageGenerator.ts --bundle --platform=node --format=esm --target=node20 --alias:server-only=./server/runtime/serverOnlyRuntimeShim.mjs --outfile=/repo/runtime-assets/jairo-business-package-generator.mjs
+RUN npx esbuild server/services/productMutationCoordinator.ts --bundle --platform=node --format=esm --target=node20 --alias:server-only=./server/runtime/serverOnlyRuntimeShim.mjs --outfile=/repo/runtime-assets/product-mutation-coordinator.mjs
+RUN node --input-type=module -e "import('/repo/runtime-assets/product-mutation-coordinator.mjs').then(m => { if (m.PRODUCT_MUTATION_COORDINATION_VERSION !== 'product-mutation-v1' || typeof m.createProductMutationCoordinator !== 'function') process.exit(1); })"
 
 FROM node:20-alpine AS runner
 WORKDIR /app
@@ -48,6 +50,8 @@ COPY --from=builder /repo/runtime-assets/personal-brand-config.js ./runtime-asse
 COPY --from=builder /repo/runtime-assets/business-config.js ./runtime-assets/business-config.js
 COPY --from=builder /repo/runtime-assets/jairo-business-in-process-provisioner.mjs ./runtime-assets/jairo-business-in-process-provisioner.mjs
 COPY --from=builder /repo/runtime-assets/jairo-business-package-generator.mjs ./runtime-assets/jairo-business-package-generator.mjs
+COPY --from=builder /repo/runtime-assets/product-mutation-coordinator.mjs ./runtime-assets/product-mutation-coordinator.mjs
+COPY --from=builder /repo/app/web/scripts/product-destination-reconcile.mjs ./scripts/product-destination-reconcile.mjs
 COPY --from=builder /repo/app/web/scripts/claudia-source-identity-dry-run.mjs ./scripts/claudia-source-identity-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-source-identity-dry-run.mjs ./scripts/jairo-source-identity-dry-run.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-source-identity-guarded-apply.mjs ./scripts/jairo-source-identity-guarded-apply.mjs
