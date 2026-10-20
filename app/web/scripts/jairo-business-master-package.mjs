@@ -1,5 +1,5 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
-import { access, mkdir, readFile, readdir, rename, rm, stat, writeFile } from "node:fs/promises";
+import { access, lstat, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import { dirname, relative, resolve, sep } from "node:path";
 import process from "node:process";
 import vm from "node:vm";
@@ -9,6 +9,8 @@ export const APPLY_MODE = "APPLY_GUARDED_BUSINESS_MASTER_PACKAGE";
 export const APPLY_CONFIRMATION = "CREATE_CANONICAL_GANOMASTER_BUSINESS_PACKAGE";
 
 const REQUEST_ID = "CDX-20260827-002";
+const REFRESH_REQUEST_ID = "CDX-20261019-003";
+const REFRESH_OPERATION = "REFRESH_CANONICAL_BUSINESS_MASTER_PACKAGE";
 const SITE_ID = "ganomaster-business";
 const ECOSYSTEM_TYPE = "BUSINESS";
 const PUBLIC_HOST = "business.ganomaster.pro";
@@ -28,6 +30,7 @@ const NO_CACHE_HTACCESS = `DirectoryIndex index.html
 const exists = async (path) => access(path).then(() => true, () => false);
 const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
+const isSha256 = (value) => typeof value === "string" && /^[0-9a-f]{64}$/.test(value);
 
 function inside(root, child) {
   const base = resolve(root);
@@ -40,8 +43,36 @@ function inventoryHash(entries) {
   return sha256(JSON.stringify(entries.map(({ path, hash }) => ({ path, hash }))));
 }
 
+async function hasNoSymlinkComponents(root, target) {
+  const base = resolve(root);
+  const path = resolve(target);
+  const pathFromBase = relative(base, path);
+  if (pathFromBase === ".." || pathFromBase.startsWith(`..${sep}`) || resolve(base, pathFromBase) !== path) return false;
+  let current = base;
+  try {
+    const rootInfo = await lstat(current);
+    if (rootInfo.isSymbolicLink()) return false;
+  } catch (error) {
+    if (error?.code === "ENOENT") return true;
+    return false;
+  }
+  for (const component of pathFromBase.split(sep).filter(Boolean)) {
+    current = resolve(current, component);
+    try {
+      const info = await lstat(current);
+      if (info.isSymbolicLink()) return false;
+    } catch (error) {
+      if (error?.code === "ENOENT") return true;
+      return false;
+    }
+  }
+  return true;
+}
+
 async function inventory(directory) {
   if (!(await exists(directory))) return { exists: false, files: [], hash: "ABSENT" };
+  const rootInfo = await lstat(directory);
+  if (!rootInfo.isDirectory() || rootInfo.isSymbolicLink()) throw new Error("BUSINESS_MASTER_PACKAGE_DIRECTORY_INVALID");
   const files = [];
   async function visit(current) {
     for (const entry of await readdir(current, { withFileTypes: true })) {
@@ -112,35 +143,124 @@ function buildExpectedPackage(template) {
 function resolvePaths(options = {}) {
   const outputRoot = resolve(options.outputRoot ?? process.env.PRODUCT_PAGE_OUTPUT_DIR ?? "/data/generated-sites");
   const templateDirectory = resolve(options.templateDirectory ?? "/app/plantillas-de-pagina/business");
-  const auditRoot = resolve(options.auditRoot ?? inside(outputRoot, ".master-package-audits"));
+  const auditRoot = inside(outputRoot, ".master-package-audits");
   const claimRoot = resolve(options.claimRoot ?? inside(outputRoot, ".master-package-claims"));
   const auditDirectory = inside(auditRoot, REQUEST_ID);
+  const refreshAuditDirectory = inside(auditRoot, REFRESH_REQUEST_ID);
+  const archiveDirectory = inside(inside(outputRoot, ".master-package-archives"), `${REFRESH_REQUEST_ID}/${SITE_ID}`);
   return {
     outputRoot,
     templateDirectory,
     destinationDirectory: inside(outputRoot, SITE_ID),
     claimDirectory: inside(claimRoot, SITE_ID),
     auditDirectory,
-    journalPath: inside(auditDirectory, "apply.json")
+    journalPath: inside(auditDirectory, "apply.json"),
+    refreshAuditDirectory,
+    refreshJournalPath: inside(refreshAuditDirectory, "refresh.json"),
+    archiveDirectory
   };
 }
 
-async function isDirectory(path) {
-  return stat(path).then((value) => value.isDirectory(), () => false);
+async function isDirectory(path, root) {
+  if (root && !(await hasNoSymlinkComponents(root, path))) return false;
+  return lstat(path).then((value) => value.isDirectory() && !value.isSymbolicLink(), () => false);
 }
 
-async function readJournal(path, reasons, expectedPackageHash) {
-  if (!(await exists(path))) return null;
+async function readFixedJson(path, reasons, { missingReason, invalidReason, root }) {
+  let bytes;
   try {
-    const journal = JSON.parse(await readFile(path, "utf8"));
-    if (journal?.requestId !== REQUEST_ID || journal?.siteId !== SITE_ID || journal?.expectedPackageHash !== expectedPackageHash) {
-      reasons.push("BUSINESS_MASTER_PACKAGE_JOURNAL_DRIFT");
+    if (root && !(await hasNoSymlinkComponents(root, path))) throw new Error("FIXED_PATH_SYMLINK");
+    const info = await lstat(path);
+    if (!info.isFile() || info.isSymbolicLink()) throw new Error("FIXED_FILE_NOT_REGULAR");
+    bytes = await readFile(path);
+  } catch (error) {
+    if (error?.code === "ENOENT") {
+      if (missingReason) reasons.push(missingReason);
+      return null;
     }
-    return journal;
-  } catch {
-    reasons.push("BUSINESS_MASTER_PACKAGE_JOURNAL_INVALID");
+    reasons.push(invalidReason);
     return null;
   }
+
+  try {
+    return { value: JSON.parse(bytes.toString("utf8")), bytes, hash: sha256(bytes) };
+  } catch {
+    reasons.push(invalidReason);
+    return { value: null, bytes, hash: sha256(bytes) };
+  }
+}
+
+function isIsoTimestamp(value) {
+  return typeof value === "string" && /^\d{4}-\d{2}-\d{2}T/.test(value) && Number.isFinite(Date.parse(value));
+}
+
+function validateHistoricalJournal(journal) {
+  return journal?.requestId === REQUEST_ID
+    && journal?.mode === APPLY_MODE
+    && journal?.outcome === "APPLIED"
+    && journal?.siteId === SITE_ID
+    && isSha256(journal?.planHash)
+    && isSha256(journal?.canonicalTemplateHash)
+    && isSha256(journal?.expectedPackageHash)
+    && isIsoTimestamp(journal?.appliedAt);
+}
+
+function validateManifestIdentity(manifest, { requireCurrentTemplateHash, currentTemplateHash } = {}) {
+  return manifest?.schemaVersion === 1
+    && manifest?.siteId === SITE_ID
+    && manifest?.ecosystemType === ECOSYSTEM_TYPE
+    && manifest?.publicHost === PUBLIC_HOST
+    && manifest?.source === "CANONICAL_BUSINESS_TEMPLATE"
+    && isSha256(manifest?.canonicalTemplateHash)
+    && (!requireCurrentTemplateHash || manifest.canonicalTemplateHash === currentTemplateHash)
+    && Array.isArray(manifest?.files);
+}
+
+async function readManifest(directory, reasons, reason, root) {
+  const manifestPath = inside(directory, "manifest.json");
+  try {
+    if (root && !(await hasNoSymlinkComponents(root, manifestPath))) throw new Error("MANIFEST_PATH_SYMLINK");
+    const info = await lstat(manifestPath);
+    if (!info.isFile() || info.isSymbolicLink()) throw new Error("MANIFEST_NOT_REGULAR");
+    const bytes = await readFile(manifestPath);
+    return { value: JSON.parse(bytes.toString("utf8")), hash: sha256(bytes) };
+  } catch {
+    reasons.push(reason);
+    return null;
+  }
+}
+
+async function safeInventory(directory, reasons, invalidReason, root) {
+  try {
+    if (root && !(await hasNoSymlinkComponents(root, directory))) throw new Error("FIXED_PATH_SYMLINK");
+    return await inventory(directory);
+  } catch {
+    reasons.push(invalidReason);
+    return { exists: true, files: [], hash: "INVALID" };
+  }
+}
+
+function refreshJournalIsConsistent(refresh, paths, legacy, legacyHash, archive, archiveManifest, templateHash, expectedPackageHash) {
+  return refresh?.schemaVersion === 1
+    && refresh?.operation === REFRESH_OPERATION
+    && refresh?.requestId === REFRESH_REQUEST_ID
+    && refresh?.siteId === SITE_ID
+    && refresh?.ecosystemType === ECOSYSTEM_TYPE
+    && refresh?.publicHost === PUBLIC_HOST
+    && isSha256(refresh?.planHash)
+    && isSha256(refresh?.previousPackageHash)
+    && refresh?.refreshedPackageHash === expectedPackageHash
+    && refresh?.canonicalTemplateHash === templateHash
+    && refresh?.previousJournalPath === paths.journalPath
+    && refresh?.previousJournalHash === legacyHash
+    && refresh?.archivePath === paths.archiveDirectory
+    && refresh?.archivedPackageHash === archive.hash
+    && refresh?.previousPackageHash === archive.hash
+    && legacy?.expectedPackageHash === refresh.previousPackageHash
+    && legacy?.canonicalTemplateHash === archiveManifest?.canonicalTemplateHash
+    && legacy?.requestId === REQUEST_ID
+    && validateHistoricalJournal(legacy)
+    && isIsoTimestamp(refresh?.appliedAt);
 }
 
 export async function planBusinessMasterPackage(options = {}) {
@@ -156,14 +276,97 @@ export async function planBusinessMasterPackage(options = {}) {
       ? error.message
       : "BUSINESS_CANONICAL_TEMPLATE_MISSING_OR_UNREADABLE");
   }
-  const destination = await inventory(paths.destinationDirectory);
-  const typographyPresent = await isDirectory(resolve(paths.destinationDirectory, "tipografia"));
+  const destination = await safeInventory(paths.destinationDirectory, reasons, "BUSINESS_MASTER_PACKAGE_DESTINATION_INVALID", paths.outputRoot);
+  const archive = await safeInventory(paths.archiveDirectory, reasons, "BUSINESS_MASTER_PACKAGE_ARCHIVE_INVALID", paths.outputRoot);
+  const typographyPresent = await isDirectory(resolve(paths.destinationDirectory, "tipografia"), paths.outputRoot);
+  let destinationManifest = null;
+  let destinationIdentityValid = false;
+  if (destination.exists && destination.hash !== "INVALID") {
+    const destinationManifestFile = await readManifest(paths.destinationDirectory, reasons, "BUSINESS_MASTER_PACKAGE_DESTINATION_IDENTITY_INVALID", paths.outputRoot);
+    destinationManifest = destinationManifestFile?.value ?? null;
+    const destinationManifestEntry = destination.files.find(({ path }) => path === "manifest.json");
+    destinationIdentityValid = destinationManifestEntry?.hash === destinationManifestFile?.hash
+      && validateManifestIdentity(destinationManifest, {
+      requireCurrentTemplateHash: true,
+      currentTemplateHash: template.hash
+    });
+    if (!destinationIdentityValid) reasons.push("BUSINESS_MASTER_PACKAGE_DESTINATION_IDENTITY_INVALID");
+  }
   if (destination.exists && (destination.hash !== expectedPackage.hash || !typographyPresent)) {
     reasons.push("BUSINESS_MASTER_PACKAGE_DRIFT");
   }
   if (!options.ignoreClaim && await exists(paths.claimDirectory)) reasons.push("BUSINESS_MASTER_PACKAGE_CLAIM_PRESENT");
-  const journal = await readJournal(paths.journalPath, reasons, expectedPackage.hash);
-  if (journal && !destination.exists) reasons.push("BUSINESS_MASTER_PACKAGE_JOURNAL_WITHOUT_PACKAGE");
+
+  const journalFile = await readFixedJson(paths.journalPath, reasons, {
+    invalidReason: "BUSINESS_MASTER_PACKAGE_JOURNAL_INVALID",
+    root: paths.outputRoot
+  });
+  const journal = journalFile?.value ?? null;
+  const journalPresent = journalFile !== null;
+  const journalBaseValid = validateHistoricalJournal(journal);
+  if (journalPresent && !journalBaseValid) reasons.push("BUSINESS_MASTER_PACKAGE_JOURNAL_DRIFT");
+  if (journalPresent && !destination.exists) reasons.push("BUSINESS_MASTER_PACKAGE_JOURNAL_WITHOUT_PACKAGE");
+
+  const refreshFile = await readFixedJson(paths.refreshJournalPath, reasons, {
+    invalidReason: "BUSINESS_MASTER_PACKAGE_REFRESH_JOURNAL_INVALID",
+    root: paths.outputRoot
+  });
+  const refreshJournal = refreshFile?.value ?? null;
+  const refreshJournalPresent = refreshFile !== null;
+  const hasLineageArtifacts = refreshJournalPresent || archive.exists;
+  const journalMatchesCurrentPackage = journalBaseValid
+    && journal.expectedPackageHash === expectedPackage.hash
+    && journal.canonicalTemplateHash === template.hash;
+  const legacyJournalPointsToPriorPackage = journalBaseValid
+    && (journal.expectedPackageHash !== expectedPackage.hash || journal.canonicalTemplateHash !== template.hash);
+  const lineageExpected = hasLineageArtifacts || legacyJournalPointsToPriorPackage;
+  let archiveManifest = null;
+  let archiveIdentityValid = false;
+  if (archive.exists && archive.hash !== "INVALID") {
+    const archiveManifestFile = await readManifest(paths.archiveDirectory, reasons, "BUSINESS_MASTER_PACKAGE_ARCHIVE_IDENTITY_INVALID", paths.outputRoot);
+    archiveManifest = archiveManifestFile?.value ?? null;
+    const archiveManifestEntry = archive.files.find(({ path }) => path === "manifest.json");
+    archiveIdentityValid = archiveManifestEntry?.hash === archiveManifestFile?.hash
+      && validateManifestIdentity(archiveManifest);
+    if (!archiveIdentityValid) reasons.push("BUSINESS_MASTER_PACKAGE_ARCHIVE_IDENTITY_INVALID");
+  }
+
+  let lineageValid = false;
+  if (lineageExpected) {
+    if (legacyJournalPointsToPriorPackage && !refreshJournalPresent) {
+      reasons.push("BUSINESS_MASTER_PACKAGE_JOURNAL_DRIFT");
+    }
+    if (!refreshJournalPresent) reasons.push("BUSINESS_MASTER_PACKAGE_REFRESH_JOURNAL_MISSING");
+    if (!archive.exists) reasons.push("BUSINESS_MASTER_PACKAGE_ARCHIVE_MISSING");
+    if (!journalPresent) reasons.push("BUSINESS_MASTER_PACKAGE_LEGACY_JOURNAL_MISSING");
+    if (archive.exists && archive.hash !== "INVALID" && archiveIdentityValid
+      && journalBaseValid && journalFile && refreshJournal) {
+      lineageValid = refreshJournalIsConsistent(
+        refreshJournal,
+        paths,
+        journal,
+        journalFile.hash,
+        archive,
+        archiveManifest,
+        template.hash,
+        expectedPackage.hash
+      );
+    }
+    if (refreshJournalPresent && !lineageValid) reasons.push("BUSINESS_MASTER_PACKAGE_LINEAGE_DRIFT");
+    if (archive.exists && archive.hash !== "INVALID" && journalBaseValid
+      && journal.expectedPackageHash !== archive.hash) reasons.push("BUSINESS_MASTER_PACKAGE_ARCHIVE_DRIFT");
+    if (archive.exists && archive.hash !== "INVALID" && refreshJournal
+      && (refreshJournal.archivedPackageHash !== archive.hash || refreshJournal.previousPackageHash !== archive.hash)) {
+      reasons.push("BUSINESS_MASTER_PACKAGE_ARCHIVE_DRIFT");
+    }
+    if (refreshJournal && journalFile && refreshJournal.previousJournalHash !== journalFile.hash) {
+      reasons.push("BUSINESS_MASTER_PACKAGE_LEGACY_JOURNAL_HASH_DRIFT");
+    }
+  } else if (destination.exists && !journalPresent) {
+    reasons.push("BUSINESS_MASTER_PACKAGE_JOURNAL_MISSING");
+  } else if (journalPresent && !journalMatchesCurrentPackage && destination.exists) {
+    reasons.push("BUSINESS_MASTER_PACKAGE_JOURNAL_DRIFT");
+  }
 
   const material = {
     requestId: REQUEST_ID,
@@ -173,9 +376,38 @@ export async function planBusinessMasterPackage(options = {}) {
     canonicalTemplateFiles: template.files,
     expectedPackageHash: expectedPackage.hash,
     expectedPackageFiles: expectedPackage.files,
-    destinationHash: destination.hash
+    destinationHash: destination.hash,
+    destinationFiles: destination.files,
+    destinationIdentity: destinationManifest ? {
+      siteId: destinationManifest.siteId,
+      ecosystemType: destinationManifest.ecosystemType,
+      publicHost: destinationManifest.publicHost,
+      canonicalTemplateHash: destinationManifest.canonicalTemplateHash
+    } : null,
+    lineage: {
+      refreshJournalPath: paths.refreshJournalPath,
+      refreshJournalHash: refreshFile?.hash ?? "ABSENT",
+      refreshJournal,
+      archivePath: paths.archiveDirectory,
+      archiveHash: archive.hash,
+      archiveFiles: archive.files,
+      archiveIdentity: archiveManifest ? {
+        siteId: archiveManifest.siteId,
+        ecosystemType: archiveManifest.ecosystemType,
+        publicHost: archiveManifest.publicHost,
+        canonicalTemplateHash: archiveManifest.canonicalTemplateHash
+      } : null,
+      legacyJournalPath: paths.journalPath,
+      legacyJournalHash: journalFile?.hash ?? "ABSENT",
+      legacyJournal: journal,
+      validated: lineageValid
+    }
   };
-  const alreadyApplied = destination.exists && destination.hash === expectedPackage.hash && typographyPresent;
+  const destinationIsCanonical = destination.exists
+    && destination.hash === expectedPackage.hash
+    && typographyPresent
+    && destinationIdentityValid;
+  const alreadyApplied = destinationIsCanonical && (lineageValid || (!lineageExpected && journalMatchesCurrentPackage));
   return {
     requestId: REQUEST_ID,
     mode: "PREVIEW",
