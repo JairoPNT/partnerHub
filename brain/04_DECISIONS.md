@@ -199,3 +199,17 @@ Implication:
 - missing or invalid artifacts produce bounded non-secret outcome codes and no publication;
 - worker regeneration does not recursively create jobs;
 - existing customers require a separately reviewed backfill preview and explicit production authorization.
+
+## Decision 18: Google Ads Conversion Semantics and Reporting Boundaries
+
+Date: 2026-10-20
+
+Decision approved by Jairo:
+
+- Analytics and Metrics may be extended to show Google Ads conversion metrics per authorized partner/site/ecosystem only when backed by an identified source.
+- A WhatsApp click is a contact-intent click, not a conversation, registration, sale, or purchase.
+- A purchase requires a trusted transaction confirmation; a click on a purchase link or a PartnerHub activation status is not proof of a partner-product sale.
+- Do not show ROI or ROAS without complete, authorized ad-spend data attributable to the same account, scope, and period.
+- The initial scope is read-only and does not modify Ads accounts, campaigns, budgets, bids, audiences, or conversion actions.
+
+The technical design, account ownership/access model, event contract, and implementation sequencing are tracked in `brain/PH-044_GOOGLE_ADS_CONVERSION_ANALYTICS.md`. No Google Ads API or production tracking is currently asserted as active.
