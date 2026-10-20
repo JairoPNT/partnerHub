@@ -22,6 +22,7 @@ import { assertPartnerEcosystemGenerationAllowed } from "@/server/services/partn
 import { buildBusinessWhatsappCta } from "@/server/services/businessWhatsappCta";
 import { composeBusinessMasterContent, loadBusinessMasterContent } from "@/server/services/businessMasterContent";
 import { assertBusinessPublicationSiteIdentity, isBusinessPublicationSiteId, withBusinessPublicationSite } from "@/server/services/businessPublicationSiteCoordinator";
+import { needsProductMutation, withProductMutation } from "@/server/services/productMutationCoordinator";
 
 const siteIdSchema = z
   .string()
@@ -446,7 +447,8 @@ export const productPageGenerationService = {
         ...(heroSync.warning ? { warnings: [heroSync.warning] } : {})
       };
     };
-    return isBusinessPublicationSiteId(input.site.id) ? withBusinessPublicationSite(input.site.id, action) : action();
+    return isBusinessPublicationSiteId(input.site.id) ? withBusinessPublicationSite(input.site.id, action)
+      : needsProductMutation(input.site.id, input.ecosystemType) ? withProductMutation(input.site.id, action) : action();
   },
 
   async regenerateFromSavedSource(
@@ -458,6 +460,7 @@ export const productPageGenerationService = {
       assertBusinessPublicationSiteIdentity(siteId, input.ecosystemType);
       return this.generate(input, options);
     };
-    return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action) : action();
+    return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action)
+      : needsProductMutation(siteId) ? withProductMutation(siteId, action) : action();
   }
 };

@@ -13,6 +13,7 @@ import {
 } from "@/server/services/publicationJobService";
 import { productPageGenerationService } from "@/server/services/productPageGenerationService";
 import { BusinessSiteBusyError, withBusinessPublicationSite, withoutBusinessPublicationSiteOwnership } from "@/server/services/businessPublicationSiteCoordinator";
+import { ProductMutationBusyError, withProductMutation, withoutProductMutationOwnership } from "@/server/services/productMutationCoordinator";
 import {
   APPLY_CONFIRMATION,
   APPLY_MODE,
@@ -36,7 +37,7 @@ const exists = (path: string) => access(path).then(() => true, () => false);
 
 type JobStore = Pick<typeof publicationJobService,
   "claimNext" | "advance" | "complete" | "fail" | "toSafeJob" | "isBusinessMasterPackageRefreshActive" | "deferClaimedBusinessJob" |
-  "deferClaimedJob" | "withBusinessPublicationSite" | "list">;
+  "deferClaimedJob" | "withBusinessPublicationSite" | "withProductMutation" | "list">;
 type Advance = (
   phase: PublicationJobPhase,
   evidence?: Omit<PublicationJobEvidence, "phase" | "recordedAt">
@@ -365,6 +366,7 @@ export function createPublicationJobWorker(options: {
             return { outcome: "SUCCEEDED" as const, job: jobs.toSafeJob(completed) };
           } catch (error) {
             if (job.intent.ecosystemType === "BUSINESS" && error instanceof BusinessSiteBusyError) throw error;
+            if (job.intent.ecosystemType === "PRODUCT" && error instanceof ProductMutationBusyError) throw error;
             if (job.intent.ecosystemType === "BUSINESS" && error instanceof Error &&
                 error.message === "PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS") {
               return deferForMasterRefresh();
@@ -373,14 +375,16 @@ export function createPublicationJobWorker(options: {
             return { outcome: "FAILED" as const, job: jobs.toSafeJob(failed) };
           }
         };
-        if (job.intent.ecosystemType !== "BUSINESS") return executeOwned();
+        if (job.intent.ecosystemType !== "BUSINESS" && job.intent.ecosystemType !== "PRODUCT") return executeOwned();
         // claimNext has already released its metadata mutex. Always site -> short job mutex.
         // Keep the site claim through execute (including journal recovery), complete/fail and cleanup.
         try {
-          return await withoutBusinessPublicationSiteOwnership(() =>
-            (jobs.withBusinessPublicationSite ?? withBusinessPublicationSite)(job.intent.siteId, executeOwned));
+          return await withoutBusinessPublicationSiteOwnership(() => withoutProductMutationOwnership(() =>
+            job.intent.ecosystemType === "PRODUCT"
+              ? (jobs.withProductMutation ?? withProductMutation)(job.intent.siteId, executeOwned)
+              : (jobs.withBusinessPublicationSite ?? withBusinessPublicationSite)(job.intent.siteId, executeOwned)));
         } catch (error) {
-          if (!(error instanceof BusinessSiteBusyError)) throw error;
+          if (!(error instanceof BusinessSiteBusyError) && !(error instanceof ProductMutationBusyError)) throw error;
           let deferred: PublicationJob;
           try {
             deferred = await jobs.deferClaimedJob(job.id, leaseToken);

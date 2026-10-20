@@ -68,6 +68,27 @@ test("a symlinked claims namespace cannot redirect writes into foreign storage",
   await assert.rejects(fx.withSite("legacy-client", async () => assert.fail("unsafe root")), ProductMutationBusyError);
 });
 
+test("an incomplete or ancient orphan claim is never removed automatically", async (t) => {
+  const fx = await fixture(t);
+  await mkdir(fx.claim, { recursive: true });
+  await assert.rejects(fx.withSite("legacy-client", async () => assert.fail("incomplete claim stolen")), ProductMutationBusyError);
+  const bytes = '{"token":"orphan","acquiredAt":"2000-01-01T00:00:00Z"}';
+  await writeFile(fx.owner, bytes);
+  await assert.rejects(fx.withSite("legacy-client", async () => assert.fail("old claim stolen")), ProductMutationBusyError);
+  assert.equal(await readFile(fx.owner, "utf8"), bytes);
+});
+
+test("a replaced claim directory with copied marker is not removed by the original owner", async (t) => {
+  const fx = await fixture(t);
+  await fx.withSite("legacy-client", async () => {
+    const bytes = await readFile(fx.owner);
+    await rename(fx.claim, `${fx.claim}.old`);
+    await mkdir(fx.claim); await writeFile(fx.owner, bytes);
+    await assert.rejects(fx.withSite("legacy-client", async () => assert.fail("foreign claim entered")), ProductMutationBusyError);
+  });
+  await assert.rejects(fx.withSite("legacy-client", async () => 1), ProductMutationBusyError);
+});
+
 test("real second process cannot steal a live ancient owner; custom roots remain independent", { timeout: 15_000 }, async (t) => {
   const fx = await fixture(t);
   const child = fork(resolve("scripts/product-mutation-coordinator-child.mjs"), [fx.root], { execArgv: ["--experimental-strip-types"], stdio: ["ignore", "ignore", "pipe", "ipc"] });
