@@ -1,12 +1,14 @@
 # CDX-20261020-021 — Product destination prevention
 
-Status: implementation frozen, awaiting independent review/integration. Date: 2026-10-20.
+Status: independent corrective review approved; ready for reviewed GitHub integration. Date: 2026-10-20.
 Owner: Codex backend; balanced implementation with independent premium tenant/security review required.
 Branch: `codex/CDX-20261020-021-product-destination-prevention`.
 Base: `17c5fab25bff3b9a34dd94e4f60be6f17a057d8a`.
 Current source freeze: `ca1f1cf35911918e83455adc5349393e027ac457` (P1 review fixes). Original source freeze: `79823db71d45ffe8a3d542d18aaba11c2f036089`. No push, PR, merge, deployment, provider action, or real runtime metadata write.
 
 ## Outcome and scoped files
+
+Controller release evidence: original independent review reproduced two P1 tenant-isolation failures; both corrected in ca1f1cf. Scoped independent re-review approved with no remaining Critical/Important/Minor findings, 61/61 focused and46/46 supplemental/adversarial checks. Controller freshly verified61/61, lint/build exit0 (39pages), clean diff. Existing nine baseline failures remain explicitly disclosed below. Approval covers021 only:023 writer coverage and022 reviewed metadata APPLY/deployment remain separate blocked gates. No real runtime metadata was changed by this verification.
 
 - `app/web/server/services/productPageLeadSyncService.ts` and new test: preserve onboarding base-domain value and legacy IDs; canonical effective Product host; later edits cannot restore apex. Missing ecosystem defaults Product, explicit Business/Brand and masters retain previous behavior. Preserve existing Product root/site/distributor metadata while schema-validating the editable data. Preserve-existing mode retains the selected source's tenant/domain.
 - `app/web/server/services/productPublicationDestinationPolicy.ts`: narrow Product-only destination policy. Derives canonical hostname through existing hostname contract. Rejects missing/ambiguous/foreign source, lead, target, account/root evidence. Does not infer owner from names or target self-assertion.

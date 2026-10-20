@@ -1,6 +1,6 @@
 # CDX-20261020-021 — Prevent Product publications from reverting to apex
 
-Owner: Codex backend. Status: REVIEW FIXES IMPLEMENTED locally; source re-frozen at ca1f1cf35911918e83455adc5349393e027ac457 after two P1 tenant-boundary findings, awaiting independent re-review and integration. No production deployment or runtime reconciliation performed. Report: ../reports/CDX-20261020-021_product_destination_prevention_DONE.md.
+Owner: Codex backend. Status: INDEPENDENT REVIEW APPROVED for source ca1f1cf35911918e83455adc5349393e027ac457 after two P1 tenant-boundary fixes; ready for GitHub integration. No production deployment or runtime reconciliation performed. Report: ../reports/CDX-20261020-021_product_destination_prevention_DONE.md.
 
 Goal: preserve the user-approved Producto canonical destination across later partner edits and publication. Hostinger cutover020 is live, but runtime sources still use apex and lack Product targets; do not declare PartnerHub reconciled.
 
