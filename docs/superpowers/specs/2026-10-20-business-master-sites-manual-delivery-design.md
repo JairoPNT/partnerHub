@@ -1,6 +1,6 @@
 # Master Sites — entrega manual de Negocio
 
-Estado: propuesta para aprobación de especificación. Ticket de diseño: CDX-20261020-006.
+Estado: especificación aprobada por Jairo el 2026-10-20. Ticket de diseño: CDX-20261020-006.
 
 ## Objetivo acordado
 
@@ -76,6 +76,6 @@ No se ejecutan dos tickets sobre los mismos archivos. Producto/Brand, catálogo 
 
 Importador de código o ZIP, marketplace, variantes por cliente, editor visual nuevo, reescritura de automatizaciones, cambios de cobros/cortesías, Personal Brand, republicación masiva, compra de dominios, campañas o inversión publicitaria. El detalle menor del pie de duración del VSL se registra en otro request.
 
-## Gate pendiente
+## Gate de ejecución
 
-Jairo debe revisar esta especificación. Su aprobación permite preparar el plan técnico y cerrar el contrato frontend/backend; no se ha implementado ni desplegado todavía este nuevo control de Master Sites. La configuración de autorización Super Admin debe verificarse antes de cualquier prueba productiva.
+Jairo aprobó esta especificación y autorizó preparar el siguiente paso. Plan técnico: `docs/superpowers/plans/2026-10-20-business-master-sites-manual-delivery.md`, pendiente su revisión antes de implementar. Se conserva el método solicitado: subagentes por tarea y revisión entre entregas; UI propiedad de Antigravity. La configuración de autorización Super Admin debe verificarse antes de cualquier prueba productiva.
