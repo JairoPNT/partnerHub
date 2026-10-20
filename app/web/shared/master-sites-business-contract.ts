@@ -33,7 +33,7 @@ export const masterSitesBusinessTemplateSchema = z.object({
   ecosystemType: z.literal("BUSINESS"),
   available: z.boolean(),
   revision: revisionSchema.nullable(),
-  previewUrl: z.string().url().nullable(),
+  previewUrl: z.string().min(1).nullable(),
   blockedReasons: blockedReasonsSchema
 }).strict();
 export type MasterSitesBusinessTemplate = z.infer<typeof masterSitesBusinessTemplateSchema>;

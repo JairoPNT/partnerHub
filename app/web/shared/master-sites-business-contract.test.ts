@@ -57,3 +57,9 @@ test("validates safe read/result DTOs including absent source and pending target
   assert.equal(masterSitesErrorResponseSchema.safeParse({ error: "SAFE_FAILURE", blockedReasons: ["TARGET_REQUIRED"] }).success, true);
   assert.equal(masterSitesErrorResponseSchema.safeParse({ error: "Failed at /secret/path", stack: "private" }).success, false);
 });
+
+test("accepts same-origin preview paths without requiring an absolute URL", () => {
+  assert.equal(masterSitesBusinessReadResponseSchema.safeParse({
+    ...response, template: { ...response.template, previewUrl: "/api/internal/product-pages/master/preview?ecosystemType=BUSINESS" }
+  }).success, true);
+});
