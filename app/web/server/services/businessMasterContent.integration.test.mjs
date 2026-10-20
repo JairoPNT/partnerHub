@@ -53,6 +53,7 @@ test("Business generation and saved-source regeneration retain master content wi
   }
   await productPageGenerationService.regenerateFromSavedSource(input().site.id);
   const regenerated = await configAt(generated.outputDirectory);
+  assert.doesNotThrow(() => productPageGenerationInputSchema.parse(regenerated));
   assert.equal(regenerated.benefits[0].title, "Socio Comercial Sólido");
   assert.equal(regenerated.methodology.steps.length, 3);
   assert.equal(regenerated.faq.items.length, 4);
@@ -73,6 +74,25 @@ test("Business generation and saved-source regeneration retain master content wi
     assert.equal(configuration.vsl, undefined);
     assert.equal(configuration.hero.desktop, "https://media.partnerhub.club/comunes/producto/v1/hero-desktop.webp");
   });
+
+  const malformedSections = [
+    ["VSL empty caption", { vsl: { ...template.vsl, caption: "" } }],
+    ["VSL provider", { vsl: { ...template.vsl, provider: "unsupported" } }],
+    ["VSL aspect ratio", { vsl: { ...template.vsl, aspectRatio: "9:16" } }],
+    ["VSL autoplay type", { vsl: { ...template.vsl, autoPlay: "false" } }],
+    ["comparison list", { comparison: { ...template.comparison, traditionalItems: "not an array" } }],
+    ["methodology item", { methodology: { ...template.methodology, steps: [{}] } }],
+    ["FAQ item", { faq: { ...template.faq, items: [{}] } }]
+  ];
+  for (const [name, section] of malformedSections) {
+    await t.test(`rejects malformed ${name} before deleting the existing package`, async () => {
+      const sentinel = resolve(generated.outputDirectory, "keep.txt");
+      await writeFile(sentinel, "existing package");
+      await writeFile(resolve(master, "config.js"), `const CONFIG=${JSON.stringify({ ...template, ...section })};`);
+      await assert.rejects(productPageGenerationService.generate(input()), /BUSINESS_MASTER_CONFIGURATION/);
+      assert.equal(await readFile(sentinel, "utf8"), "existing package");
+    });
+  }
 
   for (const [name, content] of [["foreign", "const CONFIG={ecosystemType:'PRODUCT',site:{id:'ganomaster'}};"], ["malformed", "const CONFIG={ecosystemType:'BUSINESS',site:{id:'ganomaster-business'},hero:{},benefits:[],comparison:{},methodology:{},faq:{},vsl:{}};"], ["invalid", "while(true){}"], ["missing", null]]) {
     await t.test(`${name} master fails before replacing an existing partner package`, async () => {

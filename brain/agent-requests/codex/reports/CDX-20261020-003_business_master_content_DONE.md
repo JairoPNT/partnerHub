@@ -30,3 +30,11 @@ RED: new integration test failed on `benefits[0].title`, actual undefined, expec
 Cherry-pick this ticket commit alongside CDX-20261020-004, independently review and run the final integrated build. No push, PR, merge or deploy performed by this task. Production still needs deployment and authorized generation/publication for Claudia.
 
 Separate preexisting issue observed: when input omits both metadata descriptions the normalizer persists empty strings, while saved-source parsing requires nonempty optional descriptions; regeneration then fails validation. The integration fixture supplies valid partner metadata. This ticket does not broaden into metadata validation changes.
+
+## Independent review follow-up
+
+Both P2 findings reproduced before the correction: seven new sentinel-preservation cases failed with `Missing expected rejection` for inherited empty VSL caption, unsupported provider/aspect ratio, string autoplay, string comparison list, empty methodology item and empty FAQ item. The generator accepted those malformed masters and would replace the existing package.
+
+The helper now validates inherited VSL fields against the generation input contract, including enums, nonempty optional text and boolean autoplay. Master theme presets likewise remain compatible with saved-source parsing. Comparison lists contain strings, methodology items require title/description, FAQ items require question/answer, and optional social-proof/testimonial collections validate their renderer-consumed structure. Validation still precedes output removal. The test explicitly parses the regenerated configuration with the real input schema.
+
+The exact focused command above now passes **24/24 tests**; scoped ESLint and `git diff --check` pass. Full integration build remains assigned to the orchestrator. No production/provider actions or expansion into the preexisting metadata issue.
