@@ -1,6 +1,10 @@
 # CDX-20261020-022 — Product destination metadata reconcile implementation
 
-Date: 2026-10-20. Owner: Codex Backend Lead. Status: **independent review approved; local integrated verification complete; controller PR/deployment/runtime gates pending**. No production reconciliation, provider action, publication, push, merge or deployment was performed by this implementer.
+## Cierre operativo posterior
+
+El controlador fusionó PR221 y verificó su despliegue con021/023. Los seis APPLY de metadatos y su readback terminaron el2026-10-20; las nuevas publicaciones siguen PENDING y no se ejecutaron. El estado vigente, hashes de planes, prueba Linux y límites están en [CDX-20261020-022_product_destination_metadata_reconcile_RUNTIME.md](CDX-20261020-022_product_destination_metadata_reconcile_RUNTIME.md). Los gates siguientes conservan el registro histórico de implementación previo al APPLY, no representan el estado operativo final.
+
+Registro histórico del implementador, previo al cierre operativo del controlador: 2026-10-20, Codex Backend Lead. En ese corte la revisión independiente y verificación local estaban aprobadas, con integración/despliegue/APPLY aún pendientes. Ese estado quedó superado por el cierre operativo enlazado arriba. El implementador no ejecutó las operaciones reales; el controlador sí completó después la integración, despliegue y conciliación de metadatos documentados en RUNTIME.
 
 ## Final approved integration checkpoint
 
