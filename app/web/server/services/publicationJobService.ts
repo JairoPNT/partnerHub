@@ -408,9 +408,15 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     }
   }
 
-  async function claimNext(workerId: string, leaseSeconds = 300) {
-    const jobs = (await list()).filter((job) => job.status === "QUEUED" ||
-      (job.status === "RUNNING" && job.lease && Date.parse(job.lease.expiresAt) <= now().getTime()));
+  async function claimNext(workerId: string, leaseSeconds = 300, selection: {
+    excludedSiteIds?: ReadonlySet<string>;
+    eligibleJobIds?: ReadonlySet<string>;
+  } = {}) {
+    const jobs = (await list()).filter((job) =>
+      !selection.excludedSiteIds?.has(job.intent.siteId) &&
+      (!selection.eligibleJobIds || selection.eligibleJobIds.has(job.id)) &&
+      (job.status === "QUEUED" ||
+      (job.status === "RUNNING" && job.lease && Date.parse(job.lease.expiresAt) <= now().getTime())));
     for (const candidate of jobs) {
       try {
         const result = await withJobLock(candidate.id, async () => {

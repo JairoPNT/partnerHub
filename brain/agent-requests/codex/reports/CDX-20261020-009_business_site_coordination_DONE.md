@@ -7,6 +7,7 @@
 - Branch: `codex/CDX-20261020-009-business-site-coordination`.
 - Base: `d9b737a793f27c8fc9ec8a861717e03e5206872f`.
 - Implementation commit: `97f6bf40d9e7ccd218b2db8c4604039215bd991d`.
+- Follow-up: independent review found P1 queue starvation; corrected in the follow-up commit after `60c46563c68a0879c315181887f0bd9c48d1c8aa` that includes the remediation section below. Independent re-review remains pending.
 - No push, merge, provider operation, production mutation, UI/auth/DTO/environment/migration change.
 - Parallel boundaries: only the coordinator, five assigned service adapters, dedicated tests and request/report009 changed. CDX-007/008 and Antigravity areas were untouched.
 
@@ -33,6 +34,7 @@ Other exports:
 - `assertBusinessPublicationSiteIdentity(siteId: string, ecosystemType: unknown): void`.
 - `withoutBusinessPublicationSiteOwnership<T>(action: () => Promise<T>): Promise<T>`: internal worker-boundary helper; clears inherited async ownership so a background worker woken from a manual action is a separate contender.
 - Job service adds `deferClaimedJob(id: string, leaseToken: string)` and its root-bound `withBusinessPublicationSite`. Existing `deferClaimedBusinessJob` remains for master-refresh compatibility. Deferral validates the lease, restores QUEUED/QUEUED, removes only the owned lease claim and subtracts only the attempt reserved by claimNext.
+- `claimNext(workerId, leaseSeconds?, selection?)` now accepts an optional internal selection object `{ excludedSiteIds?: ReadonlySet<string>; eligibleJobIds?: ReadonlySet<string> }`. Existing two-argument callers are unchanged; these filters do not authorize publication or replace lease validation.
 
 Root contract: the default coordinator reads `PRODUCT_PAGE_OUTPUT_DIR` (fallback `/data/generated-sites`) and stores claims in `.business-publication-site-claims/<sha256(siteId)>/owner.json` beneath that root. All app instances must share the SAME filesystem and output root. Job-service factories bind their coordinator to their resolved `outputDirectory`; workers use that exact binding. A consumer using custom job/output directories must use the bound coordinator and configure generator/source environment to the corresponding source/package directories. Do not mix a custom factory root with an unrelated default root, or pass roots/capabilities from HTTP JSON. Production configuration is unchanged.
 
@@ -47,6 +49,7 @@ The controller approved canonical `<ownerSiteId>-business` and reserved `ganomas
 - Async-local reentry is module-private, validates the persisted ownership token, and is scoped to an active internal callback. Every already-entered nested callback retains a reference until completion; expired parent contexts cannot start new reentrant work. This also protects detached work started before its enclosing callback returns.
 - Background worker entry explicitly drops inherited manual ownership. Worker -> regenerate -> generate -> save remains reentrant within the new worker scope.
 - Release is token-owned and non-recursive. Corrupt/replaced/incomplete claims stay closed rather than being deleted by a former owner.
+- Following a successful site-busy deferral, the worker excludes that site (all its intents) for this run and continues a fixed candidate-ID snapshot. It returns the next execution result, or DEFERRED after exhausting the snapshot. Ordinary master-refresh deferral retains its existing return behavior.
 
 ## Verification
 
@@ -106,3 +109,22 @@ Baseline result: **32 tests, 23 passed, same 9 failures** with identical names a
 - A dead process leaves a fail-closed site claim. Recovery is deliberately explicit: stop/verify all possible owning app/worker processes for that shared root, preserve the exact claim and source/target/job/journal evidence, reconcile partial publication, and only then obtain authorization to remove that exact orphan claim. Never infer safety from PID alone, elapsed time, an expired job lease or a missing/corrupt owner file. This ticket adds no automatic recovery/delete endpoint.
 - Source/package scripts that mutate files outside these app service adapters remain outside the mutex contract; do not run such maintenance operations concurrently with app publication without a separately coordinated operational gate.
 - The nine reproduced legacy failures and optional-description normalization discrepancy need separately owned follow-up if scheduled. They were not expanded into this coordination ticket.
+
+## Independent-review P1 remediation — queue progress
+
+Review reproduction confirmed: because `claimNext` orders by immutable `createdAt`, returning immediately after restoring the oldest busy job to QUEUED made every subsequent worker tick select it again. A live or orphan site claim could therefore block unrelated Business and Product jobs indefinitely.
+
+Only job selection, worker scanning and dedicated integration tests changed. After token-validated busy deferral, `runNext` records the site's exclusion, freezes candidate IDs once after the first such deferral, and continues scanning. Every busy site can be reserved/deferred at most once per run; all its other intent IDs are skipped before claiming. Jobs arriving after the snapshot wait for the next run, so an ongoing producer cannot extend the scan indefinitely. There is no arbitrary fixed-size cutoff that could starve a healthy job behind many orphans. Failed lease validation still returns DEFERRED without modifying a foreign lease; master-refresh behavior, claim retention, lock ordering and attempt restoration remain unchanged.
+
+RED:
+
+- `node --conditions=react-server --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test --test-name-pattern='does not starve|all-busy scan' scripts/business-publication-site-coordination.integration.test.mjs`: **3 failures** before the fix. Held and orphan oldest-site cases returned DEFERRED instead of advancing independent jobs; the all-busy scan stopped after one claim instead of inspecting both unique sites.
+- A mutation check for `new queue arrivals` without the snapshot membership filter failed because the late job reached revision 3 instead of remaining untouched at revision 1. Restoring the filter passed.
+
+GREEN after the fix:
+
+`node --conditions=react-server --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test server/services/businessPublicationSiteCoordinator.test.ts scripts/business-publication-site-coordination.integration.test.mjs server/services/publicationJobService.test.ts server/services/publicationJobWorkerService.test.ts server/services/publicationEventEnqueueService.test.ts scripts/business-master-package-drift-recovery.integration.test.mjs`
+
+**53/53 passed**: 19 coordinator/integration tests (four new progress/bounded-scan cases), 17 jobs, 9 worker, 7 events and 1 master-refresh integration. Held and orphan site A both allow separate Business B and Product C to reach SUCCEEDED; A remains QUEUED with zero attempts. Multiple intents of A do not loop or increment the untouched intent; an entirely busy snapshot finishes; late arrivals remain unclaimed.
+
+`npm run lint`, `npm run build` (including TypeScript and all 39 static pages), and `git diff --check`: **exit 0**. Existing warning classes unchanged. The previously recorded broad run and independent baseline proof remain historical evidence; the unrelated 632-test sweep was not repeated for this narrow follow-up. No provider, production, push, merge, root/config or coordinator-lifetime change.

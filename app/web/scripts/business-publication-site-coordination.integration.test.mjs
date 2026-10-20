@@ -337,3 +337,107 @@ test("workers in different processes never execute different intents of one site
   assert.equal(await completed, "SUCCEEDED");
   await owner.closed;
 });
+
+async function enqueueOtherSite(fx, ownerSiteId, ecosystemType = "BUSINESS") {
+  const siteId = `${ownerSiteId}-${ecosystemType === "BUSINESS" ? "business" : "product"}`;
+  const baseDomain = `${ownerSiteId}.pro`;
+  const publicHost = `${ecosystemType === "BUSINESS" ? "negocio" : "producto"}.${baseDomain}`;
+  await writeFile(resolve(fx.sourceDirectory, `${siteId}.json`), JSON.stringify({
+    ecosystemType, site: { id: siteId, domain: publicHost }
+  }));
+  await writeFile(resolve(fx.sourceDirectory, ".publishing-targets", `${siteId}.json`), JSON.stringify({
+    ...fx.target, siteId, ecosystemType, baseDomain, publicHost
+  }));
+  if (ecosystemType === "PRODUCT") {
+    await mkdir(resolve(fx.root, "ganomaster"), { recursive: true });
+    await writeFile(resolve(fx.root, "ganomaster", "index.html"), "product-master");
+  }
+  fx.advanceClock();
+  return fx.jobs.enqueue({ siteId }, "independent");
+}
+
+async function orphanSite(fx, siteId) {
+  const claim = resolve(fx.root, ".business-publication-site-claims", sha(siteId));
+  await mkdir(claim, { recursive: true });
+  await writeFile(resolve(claim, "owner.json"), JSON.stringify({ token: "orphan-owner", acquiredAt: "2000-01-01T00:00:00Z" }));
+  return claim;
+}
+
+for (const ownership of ["held", "orphan"]) {
+  test(`${ownership} oldest Business site does not starve other Business or Product jobs`, { timeout: 15_000 }, async (t) => {
+    const fx = await fixture(t);
+    const oldest = await fx.jobs.enqueue({ siteId: fx.siteId }, "oldest");
+    const business = await enqueueOtherSite(fx, "bea");
+    const product = await enqueueOtherSite(fx, "caro", "PRODUCT");
+    const entered = barrier(); const finish = barrier();
+    const owner = ownership === "held" ? withBusinessPublicationSite(fx.siteId, async () => {
+      entered.release(); await finish.promise;
+    }) : orphanSite(fx, fx.siteId).then(() => entered.release());
+    const executed = [];
+    const worker = createPublicationJobWorker({ jobs: fx.jobs, execution: { async execute(job, advance) {
+      executed.push(job.intent.siteId);
+      for (const phase of ["VALIDATING_CAPABILITY", "PLANNING_PUBLICATION", "PUBLISHING", "VERIFYING"]) await advance(phase);
+      return {};
+    } } });
+    try {
+      await entered.promise;
+      assert.equal((await worker.runNext()).outcome, "SUCCEEDED");
+      assert.equal((await worker.runNext()).outcome, "SUCCEEDED");
+      assert.deepEqual(executed, ["bea-business", "caro-product"]);
+      assert.equal((await fx.jobs.get(business.job.id)).status, "SUCCEEDED");
+      assert.equal((await fx.jobs.get(product.job.id)).status, "SUCCEEDED");
+      assert.equal((await worker.runNext()).outcome, "DEFERRED");
+      const blocked = await fx.jobs.get(oldest.job.id);
+      assert.equal(blocked.status, "QUEUED"); assert.equal(blocked.attemptCount, 0);
+      assert.equal(blocked.lastErrorCode, undefined);
+    } finally { finish.release(); await owner; }
+  });
+}
+
+test("all-busy scan is finite and defers at most one intent per busy site", { timeout: 15_000 }, async (t) => {
+  const fx = await fixture(t);
+  const first = await fx.jobs.enqueue({ siteId: fx.siteId }, "first");
+  fx.advanceClock();
+  await writeFile(resolve(fx.root, "ganomaster-business", "index.html"), "second-intent");
+  const duplicateSite = await fx.jobs.enqueue({ siteId: fx.siteId }, "same-site-other-intent");
+  const otherSite = await enqueueOtherSite(fx, "bea");
+  await orphanSite(fx, fx.siteId); await orphanSite(fx, "bea-business");
+  let claims = 0;
+  const worker = createPublicationJobWorker({
+    jobs: { ...fx.jobs, async claimNext(...args) { claims++; return fx.jobs.claimNext(...args); } },
+    execution: { async execute() { assert.fail("busy job executed"); } }
+  });
+  assert.equal((await worker.runNext()).outcome, "DEFERRED");
+  assert.equal(claims, 3);
+  for (const id of [first.job.id, duplicateSite.job.id, otherSite.job.id]) {
+    const item = await fx.jobs.get(id);
+    assert.equal(item.status, "QUEUED"); assert.equal(item.attemptCount, 0);
+  }
+  assert.equal((await fx.jobs.get(first.job.id)).revision, 3);
+  assert.equal((await fx.jobs.get(duplicateSite.job.id)).revision, 1);
+  assert.equal((await fx.jobs.get(otherSite.job.id)).revision, 3);
+});
+
+test("new queue arrivals cannot extend the fixed busy-site scan", { timeout: 15_000 }, async (t) => {
+  const fx = await fixture(t);
+  await fx.jobs.enqueue({ siteId: fx.siteId }, "first");
+  await enqueueOtherSite(fx, "bea");
+  await orphanSite(fx, fx.siteId); await orphanSite(fx, "bea-business");
+  let late;
+  const worker = createPublicationJobWorker({
+    jobs: { ...fx.jobs, async deferClaimedJob(...args) {
+      const deferred = await fx.jobs.deferClaimedJob(...args);
+      if (deferred.intent.siteId === "bea-business") {
+        late = await enqueueOtherSite(fx, "late");
+        await orphanSite(fx, "late-business");
+      }
+      return deferred;
+    } },
+    execution: { async execute() { assert.fail("busy job executed"); } }
+  });
+  assert.equal((await worker.runNext()).outcome, "DEFERRED");
+  assert.ok(late);
+  const untouched = await fx.jobs.get(late.job.id);
+  assert.equal(untouched.status, "QUEUED"); assert.equal(untouched.attemptCount, 0);
+  assert.equal(untouched.revision, 1);
+});
