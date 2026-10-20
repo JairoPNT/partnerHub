@@ -2,7 +2,9 @@
 
 Date: 2026-10-20. Owner: Codex Backend Lead. Model tier: Premium (concurrent filesystem, tenant isolation and audit risk).
 
-Status: implementation/source freeze ready for independent delta review. This is not deployment readiness or authorization for022 APPLY.
+Status: independent premium delta review approved for source8a76cc5; ready for GitHub integration. This is not deployment readiness or authorization for022 APPLY.
+
+Controller release evidence: independently reran114/114 combined Product/worker/provisioner tests, lint/build exit0 (39pages), clean whole-branch diff. Premium reviewer approved after original root-binding P1 fix:43/43 direct publisher,8/8 selected root/recovery/worker integration and legitimate nested publication/release passed; no remaining Critical/Important/Minor findings. Trusted-namespace assumption accepted explicitly; no unconditional guarantee against hostile same-UID concurrent namespace replacement. Existing nine baseline failures remain disclosed, not a full-suite-green claim. Deployment and022 integrated evidence/APPLY gates remain pending.
 
 Branch: `codex/CDX-20261020-023-product-mutation-coordination`.
 Reviewed021 base: `a049da04680529a392a7fab836aea123237bec22` (PR219).
