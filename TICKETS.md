@@ -146,6 +146,12 @@ Goal: record sync date, files changed, status, and errors so the sync queue rema
 
 The following items are intentionally deferred until the foundation is complete:
 
+### PH-044 Google Ads Conversion Analytics
+
+Status: Product scope approved; technical contract and implementation pending.
+
+Goal: extend the internal Analytics and Metrics module with correctly labeled, read-only Google Ads conversion status and metrics per authorized partner/site/ecosystem. WhatsApp clicks must remain contact-intent clicks, purchases require trusted transaction confirmation, and ROI/ROAS remain unavailable without attributable ad-spend data. See `brain/PH-044_GOOGLE_ADS_CONVERSION_ANALYTICS.md`.
+
 - tenant configuration management
 - partner hierarchy management
 - commission engine design

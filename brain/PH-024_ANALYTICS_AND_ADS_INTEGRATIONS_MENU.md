@@ -96,3 +96,28 @@ Se confirmo que el flujo operativo manual funciona:
 - `yenny-garcia`: Measurement ID creado y conectado.
 
 La automatizacion de creacion de propiedades y flujos GA4 queda separada en `PH-028_GA4_AUTOMATION_FUTURE.md`.
+
+## Evolucion aprobada: conversiones de Google Ads
+
+El alcance de conversiones para `Analitica y Metricas` se documenta en
+[`PH-044_GOOGLE_ADS_CONVERSION_ANALYTICS.md`](./PH-044_GOOGLE_ADS_CONVERSION_ANALYTICS.md).
+El MVP de GA4 descrito arriba no se considera una integración de reporting de
+Google Ads.
+
+La tarjeta Google Ads del dashboard sigue siendo solo un placeholder: el campo
+`googleAdsConversionId` y `integrations.googleAds.conversionId` que aparecen en
+algunos contratos conservan configuración, pero por sí solos no demuestran que
+el evento se inyecte, que Ads lo reciba o que el dashboard pueda consultar
+conversiones. No se debe etiquetar esa integración como publicada, verificada o
+funcional sin evidencia específica.
+
+Decisiones de producto aprobadas por Jairo el 2026-10-20:
+
+- Un clic en WhatsApp es una intención de contacto/clic; no es una conversación,
+  registro ni venta.
+- Una compra solo se contabiliza cuando exista confirmación de una fuente
+  transaccional confiable; hacer clic en un enlace de compra no basta.
+- Sin una fuente autorizada de inversión publicitaria no se presentan ROI ni
+  ROAS.
+- El trabajo inicial no modifica cuentas, campañas, presupuestos, pujas ni
+  conversiones en Google Ads; requiere diseño técnico y tickets separados.
