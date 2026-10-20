@@ -1,7 +1,7 @@
 # CDX-20261020-010 — Business manual commands and HTTP routes
 
 - Owner: Codex, Backend Lead.
-- Status: implementation / local verification; independent review required.
+- Status: implemented and locally verified; independent review required. See matching DONE report.
 - Approved authority: CDX-20261020-006 and `docs/superpowers/specs/2026-10-20-business-master-sites-manual-delivery-design.md`; task 4 of its approved implementation plan.
 - Outcome: authenticated single-partner review/prepare/publish APIs reusing the reviewed preview, input, coordinator, durable operation store, generator, Hostinger-only provisioning and publication queue.
 - Branch: `codex/CDX-20261020-010-master-sites-business-commands`.
