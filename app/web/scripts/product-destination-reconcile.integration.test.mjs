@@ -4,6 +4,7 @@ import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import process from 'node:process';
 import { Buffer } from 'node:buffer';
+import { spawnSync } from 'node:child_process';
 import test from 'node:test';
 import { fixture } from './product-destination-reconcile.test.mjs';
 import { runProductDestinationReconcile as run } from './product-destination-reconcile.mjs';
@@ -114,4 +115,59 @@ test('a live writer claim blocks CLI apply and a claimed apply blocks independen
     await assert.rejects(gate.withoutProductMutationOwnership(() => run(f.apply)), { code: /^PRODUCT_RECONCILE_/ });
   } });
   assert.equal(JSON.parse(await readFile(f.source)).site.domain, 'producto.blancastella.pro');
+});
+
+for (const failParentSync of [false, true]) test(`modeled Linux audit-parent fsync ${failParentSync ? 'failure stops all metadata writes' : 'precedes child audit and backup creation'}`, async (t) => {
+  const f = await ready(t);
+  // This child executes the real CLI/gate and real file writes. Only Linux directory
+  // handles and POSIX audit permission bits are modeled on Windows; no Linux/power-
+  // loss durability claim is made. The model exposes missing/late fsync calls.
+  const child = spawnSync(process.execPath, ['--experimental-strip-types', '--input-type=module', '-e', `
+    import fs from 'node:fs/promises';
+    import { constants } from 'node:fs';
+    import { syncBuiltinESMExports } from 'node:module';
+    import { join, resolve } from 'node:path';
+    import { pathToFileURL } from 'node:url';
+    const config = JSON.parse(process.argv[1]);
+    const original = { open: fs.open, mkdir: fs.mkdir, lstat: fs.lstat };
+    const events = [];
+    const auditRoot = join(config.outputDirectory, '.product-destination-reconcile');
+    fs.mkdir = async (path, ...args) => { events.push(['mkdir', path]); return original.mkdir(path, ...args); };
+    fs.lstat = async (path, ...args) => { const info = await original.lstat(path, ...args); if (path === auditRoot) info.mode &= ~0o077; return info; };
+    fs.open = async (path, flags, ...args) => {
+      const info = await original.lstat(path).catch(() => null);
+      if (info?.isDirectory()) return {
+        sync: async () => { events.push(['sync-directory', path]); if (config.failParentSync && path === config.outputDirectory) throw Object.assign(new Error('parent fsync failure'), { code: 'EIO' }); },
+        close: async () => {}
+      };
+      if (typeof flags === 'number' && (flags & constants.O_CREAT)) events.push(['create-file', path]);
+      return original.open(path, flags, ...args);
+    };
+    Object.defineProperty(process, 'platform', { value: 'linux' });
+    syncBuiltinESMExports();
+    const { runProductDestinationReconcile } = await import(pathToFileURL(resolve('scripts/product-destination-reconcile.mjs')));
+    const coordinatorModule = await import(pathToFileURL(config.gatePath));
+    let outcome;
+    try { outcome = await runProductDestinationReconcile({ ...config.options, now: () => new Date('2026-10-20T18:00:00.000Z'), coordinatorModule }); }
+    catch (error) { outcome = { error: error.code ?? error.message }; }
+    process.stdout.write(JSON.stringify({ events, outcome }));
+  `, JSON.stringify({ outputDirectory: f.outputDirectory, failParentSync, gatePath: resolve(process.env.PRODUCT_RECONCILE_TEST_GATE ?? 'server/services/productMutationCoordinator.ts'), options: { ...f.apply, coordinatorModule: undefined, now: undefined } })], { encoding: 'utf8' });
+  assert.equal(child.status, 0, child.stderr);
+  const { events, outcome } = JSON.parse(child.stdout);
+  const auditRoot = join(f.outputDirectory, '.product-destination-reconcile');
+  const rootCreated = events.findIndex(([action, path]) => action === 'mkdir' && path === auditRoot);
+  const parentSynced = events.findIndex(([action, path]) => action === 'sync-directory' && path === f.outputDirectory);
+  assert.ok(parentSynced > rootCreated, 'new audit root must be reachable through fsynced output parent');
+  if (failParentSync) {
+    assert.equal(outcome.error, 'EIO');
+    assert.equal(await readFile(f.source, 'utf8'), f.bytes);
+    await assert.rejects(stat(f.target), { code: 'ENOENT' });
+    assert.deepEqual(await readdir(auditRoot), []);
+  } else {
+    const childCreated = events.findIndex(([action, path]) => action === 'mkdir' && path === join(auditRoot, 'blanca-ruiz'));
+    const backupCreated = events.findIndex(([action, path]) => action === 'create-file' && path === join(auditRoot, 'blanca-ruiz', 'source.before.json'));
+    assert.ok(childCreated > parentSynced && backupCreated > childCreated);
+    assert.equal(outcome.outcome, 'APPLIED');
+    assert.equal(JSON.parse(await readFile(f.source)).site.domain, 'producto.blancastella.pro');
+  }
 });

@@ -192,3 +192,46 @@ test('malformed and oversized manifest cannot produce a plan', async (t) => {
   await writeFile(f.manifestPath, ' '.repeat(65537));
   await assert.rejects(implementation.runProductDestinationReconcile(f.options), { code: 'PRODUCT_RECONCILE_UNSAFE_FILE' });
 });
+
+for (const domain of ['BLANCASTELLA.PRO', 'blancastella.pro.', 'HTTPS://BLANCASTELLA.PRO/', 'PRODUCTO.BLANCASTELLA.PRO']) test(`normalized inventory source collision blocks ${domain}`, async (t) => {
+  const f = await fixture(t);
+  await writeFile(join(f.sourceDirectory, 'other-product.json'), JSON.stringify({ site: { id: 'other-product', domain } }));
+  const before = await tree(f.root);
+  await assert.rejects(implementation.runProductDestinationReconcile(f.options), { code: 'PRODUCT_RECONCILE_SOURCE_COLLISION' });
+  assert.deepEqual(await tree(f.root), before);
+});
+
+for (const [publicHost, baseDomain] of [['PRODUCTO.BLANCASTELLA.PRO', 'foreign.pro'], ['producto.blancastella.pro.', 'foreign.pro'], ['negocio.foreign.pro', 'BLANCASTELLA.PRO']]) test(`normalized inventory target identity blocks ${publicHost}/${baseDomain}`, async (t) => {
+  const f = await fixture(t);
+  await writeFile(join(f.targets, 'other-business.json'), JSON.stringify({ version: 2, ownerKey: 'a403f29e-95c8-4825-9320-967376443020', siteId: 'other-business', ecosystemType: 'BUSINESS', baseDomain, publicHost, remoteRoot: null }));
+  const before = await tree(f.root);
+  await assert.rejects(implementation.runProductDestinationReconcile(f.options), { code: 'PRODUCT_RECONCILE_TARGET_COLLISION' });
+  assert.deepEqual(await tree(f.root), before);
+});
+
+test('same canonical Product host under a Business source identity still blocks', async (t) => {
+  const f = await fixture(t);
+  await writeFile(join(f.sourceDirectory, 'other-business.json'), JSON.stringify({ ecosystemType: 'BUSINESS', site: { id: 'other-business', domain: 'PRODUCTO.BLANCASTELLA.PRO' } }));
+  await assert.rejects(implementation.runProductDestinationReconcile(f.options), { code: 'PRODUCT_RECONCILE_SOURCE_COLLISION' });
+});
+
+test('legitimate Jairo Brand apex source and same-owner Business target remain distinct from Product', async (t) => {
+  const f = await fixture(t, 'jairo-pinto-product', 'jairopinto.pro');
+  await writeFile(join(f.sourceDirectory, 'jairo-pinto.json'), JSON.stringify({ ownerKey, ecosystemType: 'PERSONAL_BRAND', site: { id: 'jairo-pinto', domain: 'JAIROPINTO.PRO' } }));
+  await writeFile(join(f.targets, 'jairo-pinto-business.json'), JSON.stringify({ version: 2, ownerKey, siteId: 'jairo-pinto-business', ecosystemType: 'BUSINESS', baseDomain: 'JAIROPINTO.PRO', publicHost: 'NEGOCIO.JAIROPINTO.PRO', remoteRoot: null }));
+  const before = await tree(f.root);
+  assert.equal((await implementation.runProductDestinationReconcile(f.options)).outcome, 'PREVIEW');
+  assert.deepEqual(await tree(f.root), before);
+});
+
+for (const domain of [null, 123, {}, 'blancastella.pro:443']) test(`ambiguous inventory source domain blocks ${JSON.stringify(domain)}`, async (t) => {
+  const f = await fixture(t);
+  await writeFile(join(f.sourceDirectory, 'other-product.json'), JSON.stringify({ site: { id: 'other-product', domain } }));
+  await assert.rejects(implementation.runProductDestinationReconcile(f.options), { code: 'PRODUCT_RECONCILE_SOURCE_INVENTORY_AMBIGUOUS' });
+});
+
+for (const [publicHost, baseDomain] of [[123, 'foreign.pro'], ['negocio.foreign.pro', null], ['PRODUCTO.BLANCASTELLA.PRO:443', 'foreign.pro']]) test(`ambiguous inventory target DNS fields block ${JSON.stringify([publicHost, baseDomain])}`, async (t) => {
+  const f = await fixture(t);
+  await writeFile(join(f.targets, 'other-business.json'), JSON.stringify({ version: 2, ownerKey: 'a403f29e-95c8-4825-9320-967376443020', siteId: 'other-business', ecosystemType: 'BUSINESS', baseDomain, publicHost, remoteRoot: null }));
+  await assert.rejects(implementation.runProductDestinationReconcile(f.options), { code: 'PRODUCT_RECONCILE_TARGET_INVENTORY_AMBIGUOUS' });
+});

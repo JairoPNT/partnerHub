@@ -12,6 +12,7 @@ const TICKET = 'CDX-20261020-022';
 const VERSION = 'product-mutation-v1';
 const HASH = /^[0-9a-f]{64}$/;
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
+const HOSTNAME = /^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/;
 const APPROVED = Object.freeze({ 'blanca-ruiz': 'blancastella.pro', 'claudia-calero': 'claudiacalero.pro', 'dorian-higuita': 'dorianhiguita.pro', 'jairo-pinto-product': 'jairopinto.pro', 'lida-castaneda': 'lidacastaneda.pro', 'yenny-garcia': 'yennygarcia.pro' });
 const sha = (bytes) => createHash('sha256').update(bytes).digest('hex');
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`;
@@ -156,8 +157,13 @@ async function checkIdentity(paths, m, source) {
     requireThat(entry.isFile() && /^[a-z0-9]+(?:-[a-z0-9]+)*\.json$/.test(entry.name), 'SOURCE_INVENTORY_AMBIGUOUS');
     const candidate = parse(await bytes(join(paths.source, entry.name)));
     requireThat(object(candidate.site) && candidate.site.id === entry.name.slice(0, -5), 'SOURCE_INVENTORY_AMBIGUOUS');
-    if (candidate.site.id !== m.siteId && (candidate.ecosystemType ?? 'PRODUCT') === 'PRODUCT') {
-      requireThat(![m.baseDomain, `producto.${m.baseDomain}`].includes(candidate.site.domain) && candidate.ownerKey !== m.ownerKey && candidate.site.ownerKey !== m.ownerKey, 'SOURCE_COLLISION');
+    const domain = normalizedDomain(candidate.site.domain);
+    requireThat(domain !== null && domain.length <= 253 && HOSTNAME.test(domain), 'SOURCE_INVENTORY_AMBIGUOUS');
+    if (candidate.site.id !== m.siteId) {
+      // DNS identity is case-insensitive. Brand/Business may legitimately own the
+      // apex, but no other source may alias this Product's canonical hostname.
+      requireThat(domain !== `producto.${m.baseDomain}`, 'SOURCE_COLLISION');
+      if ((candidate.ecosystemType ?? 'PRODUCT') === 'PRODUCT') requireThat(domain !== m.baseDomain && candidate.ownerKey !== m.ownerKey && candidate.site.ownerKey !== m.ownerKey, 'SOURCE_COLLISION');
     }
   }
   for (const entry of await entries(paths.targets)) {
@@ -166,8 +172,10 @@ async function checkIdentity(paths, m, source) {
     const candidate = parse(await bytes(join(paths.targets, entry.name)));
     requireThat(object(candidate) && [1, 2].includes(candidate.version) && candidate.siteId === entry.name.slice(0, -5) && UUID.test(candidate.ownerKey) && ['PRODUCT', 'BUSINESS', 'PERSONAL_BRAND'].includes(candidate.ecosystemType) && typeof candidate.publicHost === 'string' && typeof candidate.baseDomain === 'string' && (candidate.remoteRoot === null || typeof candidate.remoteRoot === 'string'), 'TARGET_INVENTORY_AMBIGUOUS');
     const remote = m.evidence.provider.remoteRoot;
-    requireThat(candidate.publicHost !== `producto.${m.baseDomain}` && !(candidate.ownerKey === m.ownerKey && candidate.ecosystemType === 'PRODUCT'), 'TARGET_COLLISION');
-    if (candidate.baseDomain === m.baseDomain) requireThat(candidate.ownerKey === m.ownerKey, 'TARGET_COLLISION');
+    const host = normalizedDomain(candidate.publicHost); const base = normalizedDomain(candidate.baseDomain);
+    requireThat(host.length <= 253 && base.length <= 253 && HOSTNAME.test(host) && HOSTNAME.test(base), 'TARGET_INVENTORY_AMBIGUOUS');
+    requireThat(host !== `producto.${m.baseDomain}` && !(candidate.ownerKey === m.ownerKey && candidate.ecosystemType === 'PRODUCT'), 'TARGET_COLLISION');
+    if (base === m.baseDomain) requireThat(candidate.ownerKey === m.ownerKey, 'TARGET_COLLISION');
     if (candidate.remoteRoot !== null) {
       requireThat(/^\/home\/[a-z0-9]+\/domains\/[a-z0-9.-]+\/public_html(?:\/[a-z0-9-]+)*$/.test(candidate.remoteRoot), 'TARGET_INVENTORY_AMBIGUOUS');
       requireThat(candidate.remoteRoot !== remote && !candidate.remoteRoot.startsWith(`${remote}/`) && !remote.startsWith(`${candidate.remoteRoot}/`), 'TARGET_ROOT_OVERLAP');
@@ -261,6 +269,9 @@ async function applyUnderClaim(options, state) {
   const assertOwned = async () => requireThat(sameFile(await stat(claim), claimIdentity) && sha(await bytes(claim)) === claimHash, 'CLAIM_LOST');
   await assertOwned(); await safeParents(paths.audit);
   await fs.mkdir(paths.audit, { recursive: true, mode: 0o700 });
+  // Persist the new audit root's directory entry in its parent before any backup,
+  // intent or metadata write can rely on that root surviving a Linux crash.
+  await syncDirectory(paths.output);
   if (process.platform !== 'win32') requireThat(((await stat(paths.audit)).mode & 0o077) === 0, 'UNSAFE_AUDIT_PERMISSIONS');
   await fs.mkdir(audit, { mode: 0o700 }); await syncDirectory(paths.audit);
   // Each durable file is create-only. Orphans remain blocked for explicit review.
