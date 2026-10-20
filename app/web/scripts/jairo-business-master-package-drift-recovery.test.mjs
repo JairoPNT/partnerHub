@@ -399,6 +399,49 @@ test("PREVIEW blocks every RUNNING Business job including expired leases, but no
   }
 });
 
+test("PREVIEW reads the configured publication job directory from the runtime environment", async () => {
+  const item = await fixture();
+  const previousValue = process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR;
+  const configuredJobsDirectory = join(item.outputRoot, ".runtime-configured-publication-jobs");
+  const options = { ...item.options };
+  delete options.businessJobsDirectory;
+  try {
+    await mkdir(configuredJobsDirectory, { recursive: true });
+    const job = runningJob();
+    await writeFile(join(configuredJobsDirectory, `${job.id}.json`), `${JSON.stringify(job, null, 2)}\n`, { flag: "wx" });
+    process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR = configuredJobsDirectory;
+    const preview = await planBusinessMasterPackageRefresh(options);
+    assert.equal(preview.blocked, true);
+    assert.ok(preview.blockedReasons.includes("BUSINESS_MASTER_PACKAGE_PUBLICATION_RUNNING"));
+    assert.equal(preview.planMaterial.activeBusinessJobs.length, 1);
+  } finally {
+    if (previousValue === undefined) delete process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR;
+    else process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR = previousValue;
+    await item.cleanup();
+  }
+});
+
+test("PREVIEW blocks a configured publication job directory outside its safe output root", async () => {
+  const item = await fixture();
+  const previousValue = process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR;
+  const configuredJobsDirectory = join(item.root, "outside-publication-jobs");
+  const options = { ...item.options };
+  delete options.businessJobsDirectory;
+  try {
+    await mkdir(configuredJobsDirectory, { recursive: true });
+    const job = runningJob();
+    await writeFile(join(configuredJobsDirectory, `${job.id}.json`), `${JSON.stringify(job, null, 2)}\n`, { flag: "wx" });
+    process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR = configuredJobsDirectory;
+    const preview = await planBusinessMasterPackageRefresh(options);
+    assert.equal(preview.blocked, true);
+    assert.ok(preview.blockedReasons.includes("BUSINESS_MASTER_PACKAGE_REFRESH_JOB_DIRECTORY_OUTSIDE_OUTPUT_ROOT"));
+  } finally {
+    if (previousValue === undefined) delete process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR;
+    else process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR = previousValue;
+    await item.cleanup();
+  }
+});
+
 test("PREVIEW blocks corrupt and unclassifiable publication job files fail-closed", async (t) => {
   for (const content of ["{", JSON.stringify({ schemaVersion: 1, status: "RUNNING", intent: {} })]) {
     await t.test(content === "{" ? "invalid-json" : "unknown-ecosystem", async () => {
@@ -548,6 +591,35 @@ test("APPLY rechecks Business jobs under its claim and aborts before changing th
     assert.equal((await inventory(item.destinationDirectory)).hash, LEGACY_PACKAGE_HASH);
     assert.equal(await exists(pathIn(item.outputRoot, ARCHIVE_RELATIVE)), false);
     assert.equal(await exists(pathIn(item.outputRoot, CLAIM_RELATIVE)), false);
+  } finally {
+    await item.cleanup();
+  }
+});
+
+test("APPLY rechecks claim ownership immediately before renaming the previous package", async () => {
+  const item = await fixture();
+  try {
+    const preview = await planBusinessMasterPackageRefresh(item.options);
+    const claimDirectory = pathIn(item.outputRoot, CLAIM_RELATIVE);
+    const foreignOwner = {
+      schemaVersion: 1,
+      operation: "REFRESH_CANONICAL_BUSINESS_MASTER_PACKAGE",
+      ownerToken: "foreign-owner-before-backup-rename",
+      planHash: "c".repeat(64),
+      acquiredAt: "2026-10-19T10:00:00.000Z"
+    };
+    await assert.rejects(
+      () => authorizedApply(item, preview, {
+        testHooks: {
+          beforePreviousBackupRename: async () => writeFile(join(claimDirectory, "owner.json"), `${JSON.stringify(foreignOwner)}\n`)
+        }
+      }),
+      /CLAIM|OWNERSHIP/
+    );
+    assert.equal((await inventory(item.destinationDirectory)).hash, LEGACY_PACKAGE_HASH);
+    assert.deepEqual(JSON.parse(await readFile(join(claimDirectory, "owner.json"), "utf8")), foreignOwner);
+    assert.equal(await exists(pathIn(item.outputRoot, ARCHIVE_RELATIVE)), true);
+    assert.equal((await readdir(item.outputRoot)).some((name) => name.endsWith(".previous")), false);
   } finally {
     await item.cleanup();
   }

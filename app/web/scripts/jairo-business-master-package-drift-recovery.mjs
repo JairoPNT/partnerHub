@@ -1,6 +1,6 @@
 import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import { access, link, lstat, mkdir, open, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
-import { dirname, relative, resolve, sep } from "node:path";
+import { dirname, isAbsolute, relative, resolve, sep } from "node:path";
 import process from "node:process";
 import vm from "node:vm";
 import { pathToFileURL } from "node:url";
@@ -40,6 +40,11 @@ function inside(root, child) {
   const target = resolve(base, child);
   if (target === base || !target.startsWith(`${base}${sep}`)) throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_PATH_ESCAPE");
   return target;
+}
+
+function isDescendant(root, target) {
+  const relativePath = relative(resolve(root), resolve(target));
+  return relativePath !== "" && relativePath !== ".." && !relativePath.startsWith(`..${sep}`) && !isAbsolute(relativePath);
 }
 
 function inventoryHash(entries) {
@@ -199,7 +204,7 @@ function resolvePaths(options = {}) {
     archiveDirectory: inside(outputRoot, ".master-package-archives/CDX-20261019-003/ganomaster-business"),
     archiveReservationPath: inside(outputRoot, ".master-package-archives/CDX-20261019-003/ganomaster-business.reservation.json"),
     claimDirectory: inside(outputRoot, ".master-package-claims/ganomaster-business"),
-    businessJobsDirectory: resolve(options.businessJobsDirectory ?? inside(outputRoot, ".publication-jobs"))
+    businessJobsDirectory: resolve(options.businessJobsDirectory ?? process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR ?? inside(outputRoot, ".publication-jobs"))
   };
 }
 
@@ -354,11 +359,21 @@ async function buildPreview(options = {}, { claimOwner = null } = {}) {
   let claimPresent = false;
   let archivePresent = false;
   let refreshJournalPresent = false;
-  const safeRoots = [paths.destinationDirectory, paths.historyJournalPath, paths.refreshJournalPath, paths.archiveDirectory, paths.archiveReservationPath, paths.claimDirectory, paths.businessJobsDirectory];
+  const safeRoots = [paths.destinationDirectory, paths.historyJournalPath, paths.refreshJournalPath, paths.archiveDirectory, paths.archiveReservationPath, paths.claimDirectory];
   try {
     for (const target of safeRoots) await assertSafeAncestors(paths.outputRoot, target);
   } catch {
     reasons.push("BUSINESS_MASTER_PACKAGE_REFRESH_PATH_UNSAFE");
+  }
+  const businessJobsDirectoryIsSafe = isDescendant(paths.outputRoot, paths.businessJobsDirectory);
+  if (!businessJobsDirectoryIsSafe) {
+    reasons.push("BUSINESS_MASTER_PACKAGE_REFRESH_JOB_DIRECTORY_OUTSIDE_OUTPUT_ROOT");
+  } else {
+    try {
+      await assertSafeAncestors(paths.outputRoot, paths.businessJobsDirectory);
+    } catch {
+      reasons.push("BUSINESS_MASTER_PACKAGE_REFRESH_PATH_UNSAFE");
+    }
   }
   try {
     template = await loadCanonicalTemplate(paths.templateDirectory);
@@ -400,13 +415,15 @@ async function buildPreview(options = {}, { claimOwner = null } = {}) {
   } catch {
     reasons.push("BUSINESS_MASTER_PACKAGE_PREVIOUS_JOURNAL_INVALID");
   }
-  try {
-    const jobState = await inspectBusinessJobs(paths.businessJobsDirectory);
-    businessJobs = jobState.jobs.filter((job) => job.ecosystemType === ECOSYSTEM_TYPE);
-    activeBusinessJobs = jobState.running;
-    if (activeBusinessJobs.length > 0) reasons.push("BUSINESS_MASTER_PACKAGE_PUBLICATION_RUNNING");
-  } catch {
-    reasons.push("BUSINESS_MASTER_PACKAGE_PUBLICATION_JOB_UNCLASSIFIABLE");
+  if (businessJobsDirectoryIsSafe) {
+    try {
+      const jobState = await inspectBusinessJobs(paths.businessJobsDirectory);
+      businessJobs = jobState.jobs.filter((job) => job.ecosystemType === ECOSYSTEM_TYPE);
+      activeBusinessJobs = jobState.running;
+      if (activeBusinessJobs.length > 0) reasons.push("BUSINESS_MASTER_PACKAGE_PUBLICATION_RUNNING");
+    } catch {
+      reasons.push("BUSINESS_MASTER_PACKAGE_PUBLICATION_JOB_UNCLASSIFIABLE");
+    }
   }
   try {
     claimPresent = (await pathKind(paths.claimDirectory)) !== "absent";
@@ -664,6 +681,8 @@ export async function applyBusinessMasterPackageRefresh(options = {}) {
     archiveReserved = true;
     if ((await inventory(paths.archiveDirectory)).hash !== LEGACY_PACKAGE_HASH) throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_ARCHIVE_HASH_DRIFT");
     await assertArchiveReservation(paths, owner);
+    await testHook(options, "beforePreviousBackupRename")?.({ destinationDirectory: paths.destinationDirectory, previousBackupDirectory });
+    await assertClaimOwner(paths.claimDirectory, owner);
     if ((await pathKind(previousBackupDirectory)) !== "absent") throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_BACKUP_OCCUPIED");
     await rename(paths.destinationDirectory, previousBackupDirectory);
     previousMovedToBackup = true;
