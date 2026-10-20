@@ -38,3 +38,9 @@ Both P2 findings reproduced before the correction: seven new sentinel-preservati
 The helper now validates inherited VSL fields against the generation input contract, including enums, nonempty optional text and boolean autoplay. Master theme presets likewise remain compatible with saved-source parsing. Comparison lists contain strings, methodology items require title/description, FAQ items require question/answer, and optional social-proof/testimonial collections validate their renderer-consumed structure. Validation still precedes output removal. The test explicitly parses the regenerated configuration with the real input schema.
 
 The exact focused command above now passes **24/24 tests**; scoped ESLint and `git diff --check` pass. Full integration build remains assigned to the orchestrator. No production/provider actions or expansion into the preexisting metadata issue.
+
+### Final integration review: inherited hero URLs
+
+On integration branch `codex/CDX-20261020-005-claudia-business-generation-integration`, base `0e4b923`, reproduced both inherited HTTP desktop/mobile hero cases RED (`Missing expected rejection`). Both values are persisted into fields validated as HTTPS by saved-source parsing. They now receive HTTPS URL validation when loading the master, before existing output removal. Other inherited passthrough fields are presentation-only: the saved-source input schema strips them; VSL and theme already use compatible explicit schemas.
+
+GREEN: **26/26** on the same four-file focused command above. Focused ESLint and `git diff --check` pass. Sentinel checks confirm the existing package survives either invalid inherited hero URL.

@@ -8,11 +8,15 @@ import { z } from "zod";
 // This is an operator-managed local template, never an uploaded partner script.
 // Select presentation data explicitly so master contacts and tracking never bleed into partners.
 const text = z.string().trim().min(1);
+const httpsUrl = z.string().url().refine((value) => /^https:\/\//i.test(value), "URL must use HTTPS");
 const sectionHeading = { enabled: z.boolean().optional(), badge: text.optional(), title: text.optional(), subtitle: text.optional() };
 const presentationSchema = z.object({
   ecosystemType: z.literal("BUSINESS"),
   site: z.object({ id: z.literal("ganomaster-business") }),
-  hero: z.object({ headline: z.string().min(1), subheadline: z.string().min(1) }).passthrough(),
+  hero: z.object({
+    headline: z.string().min(1), subheadline: z.string().min(1),
+    desktop: httpsUrl.optional(), mobile: httpsUrl.optional()
+  }).passthrough(),
   benefits: z.array(z.object({ title: z.string().min(1), description: z.string().min(1) }).passthrough()).min(1),
   comparison: z.object({
     ...sectionHeading,

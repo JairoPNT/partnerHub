@@ -76,6 +76,8 @@ test("Business generation and saved-source regeneration retain master content wi
   });
 
   const malformedSections = [
+    ["inherited desktop hero HTTP URL", { hero: { ...template.hero, desktop: "http://images.example/hero.webp" } }],
+    ["inherited mobile hero HTTP URL", { hero: { ...template.hero, mobile: "http://images.example/mobile.webp" } }],
     ["VSL empty caption", { vsl: { ...template.vsl, caption: "" } }],
     ["VSL provider", { vsl: { ...template.vsl, provider: "unsupported" } }],
     ["VSL aspect ratio", { vsl: { ...template.vsl, aspectRatio: "9:16" } }],
