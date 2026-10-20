@@ -302,6 +302,14 @@ export async function planBusinessMasterPackage(options = {}) {
   }
   const destination = await safeInventory(paths.destinationDirectory, reasons, "BUSINESS_MASTER_PACKAGE_DESTINATION_INVALID", paths.outputRoot);
   const archive = await safeInventory(paths.archiveDirectory, reasons, "BUSINESS_MASTER_PACKAGE_ARCHIVE_INVALID", paths.outputRoot);
+  let destinationDirectories = [];
+  if (destination.exists && destination.hash !== "INVALID") {
+    try {
+      destinationDirectories = await directoryPaths(paths.destinationDirectory);
+    } catch {
+      destinationDirectories = ["INVALID"];
+    }
+  }
   let archiveDirectories = [];
   if (archive.exists && archive.hash !== "INVALID") {
     try {
@@ -332,7 +340,8 @@ export async function planBusinessMasterPackage(options = {}) {
     });
     if (!destinationIdentityValid) reasons.push("BUSINESS_MASTER_PACKAGE_DESTINATION_IDENTITY_INVALID");
   }
-  if (destination.exists && (destination.hash !== expectedPackage.hash || !typographyPresent)) {
+  const destinationShapeMatchesPackage = JSON.stringify(destinationDirectories) === JSON.stringify(["tipografia"]);
+  if (destination.exists && (destination.hash !== expectedPackage.hash || !typographyPresent || !destinationShapeMatchesPackage)) {
     reasons.push("BUSINESS_MASTER_PACKAGE_DRIFT");
   }
   if (!options.ignoreClaim && await exists(paths.claimDirectory)) reasons.push("BUSINESS_MASTER_PACKAGE_CLAIM_PRESENT");
@@ -420,6 +429,7 @@ export async function planBusinessMasterPackage(options = {}) {
     expectedPackageFiles: expectedPackage.files,
     destinationHash: destination.hash,
     destinationFiles: destination.files,
+    destinationDirectories,
     destinationIdentity: destinationManifest ? {
       siteId: destinationManifest.siteId,
       ecosystemType: destinationManifest.ecosystemType,
@@ -450,6 +460,7 @@ export async function planBusinessMasterPackage(options = {}) {
   const destinationIsCanonical = destination.exists
     && destination.hash === expectedPackage.hash
     && typographyPresent
+    && destinationShapeMatchesPackage
     && destinationIdentityValid;
   const alreadyApplied = destinationIsCanonical && (lineageValid || (!lineageExpected && journalMatchesCurrentPackage));
   return {

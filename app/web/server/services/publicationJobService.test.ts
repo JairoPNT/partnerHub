@@ -139,6 +139,26 @@ test("safe failures can retry and queued jobs can cancel", async () => {
   const requeued = await fx.service.retry(job.id); assert.equal(requeued.status, "QUEUED"); assert.equal(requeued.cancelledAt, undefined);
 });
 
+test("Business retries fail closed during master refresh while Product retries remain available", async () => {
+  const businessFx = await fixture("BUSINESS");
+  const { job: businessJob } = await businessFx.service.enqueue({ siteId: businessFx.siteId }, "operator");
+  const businessClaim = await businessFx.service.claimNext("worker", 300);
+  assert.ok(businessClaim);
+  await businessFx.service.fail(businessJob.id, businessClaim.leaseToken, "SFTP_CAPABILITY_EXPIRED");
+  const businessRefreshClaim = resolve(businessFx.output, ".master-package-claims", "ganomaster-business");
+  await mkdir(businessRefreshClaim, { recursive: true });
+  await assert.rejects(businessFx.service.retry(businessJob.id), /PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS/);
+  assert.equal((await businessFx.service.get(businessJob.id))?.status, "FAILED");
+
+  const productFx = await fixture("PRODUCT");
+  const { job: productJob } = await productFx.service.enqueue({ siteId: productFx.siteId }, "operator");
+  const productClaim = await productFx.service.claimNext("worker", 300);
+  assert.ok(productClaim);
+  await productFx.service.fail(productJob.id, productClaim.leaseToken, "SFTP_CAPABILITY_EXPIRED");
+  await mkdir(resolve(productFx.output, ".master-package-claims", "ganomaster-business"), { recursive: true });
+  assert.equal((await productFx.service.retry(productJob.id)).status, "QUEUED");
+});
+
 test("an expired worker lease is recovered without allowing the old worker to commit", async () => {
   const fx = await fixture(); const { job } = await fx.service.enqueue({ siteId: fx.siteId }, "operator");
   const first = await fx.service.claimNext("worker-one", 30); assert.ok(first);

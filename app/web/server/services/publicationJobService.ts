@@ -507,6 +507,7 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     return withJobLock(id, async () => {
       const job = await readJob(id); if (!job) throw new Error("PUBLICATION_JOB_NOT_FOUND");
       if (job.status !== "FAILED" && job.status !== "CANCELLED") throw new Error("PUBLICATION_JOB_RETRY_INVALID");
+      await assertBusinessMasterPackageRefreshInactive(job.intent.ecosystemType);
       const acquired = await acquireClaim(job, `retry:${id}`, 30); if (!acquired) throw new Error("PUBLICATION_JOB_ACTIVE");
       const timestamp = now().toISOString();
       const queued = publicationJobSchema.parse({ ...job, status: "QUEUED", phase: "QUEUED", revision: job.revision + 1, updatedAt: timestamp,

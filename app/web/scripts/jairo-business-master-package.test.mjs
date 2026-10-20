@@ -538,6 +538,19 @@ test("PREVIEW rejects unlisted empty directories in the historical archive", asy
   }
 });
 
+test("PREVIEW blocks unlisted empty directories in the installed refreshed package", async () => {
+  const item = await refreshedFixture();
+  try {
+    await mkdir(resolve(item.options.outputRoot, "ganomaster-business", "unlisted-empty-directory"));
+    const preview = await planBusinessMasterPackage(item.options);
+    assert.equal(preview.blocked, true);
+    assert.notEqual(preview.disposition, "ALREADY_APPLIED");
+    assert.ok(preview.blockedReasons.includes("BUSINESS_MASTER_PACKAGE_DRIFT"));
+  } finally {
+    await item.cleanup();
+  }
+});
+
 test("PREVIEW blocks missing original evidence, tampered identity and non-allowlisted journal paths", async () => {
   const item = await refreshedFixture();
   try {
