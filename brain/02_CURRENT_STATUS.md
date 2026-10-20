@@ -2,7 +2,13 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
-## Current operating state
+## Verified checkpoint — 2026-10-20
+
+`negocio.claudiacalero.pro` is now published through the automatic guarded Business worker: SUCCEEDED/COMPLETE, target publication READY, DNS RESOLVED and SSL READY. Public poster, five WhatsApp CTA links and VSL playback were verified; the public MP4 contains AAC audio. PR #210 merged/deployed the generation/content and same-owner legacy Product poster corrections. Operational evidence: `brain/agent-requests/codex/reports/CDX-20261020-002_claudia_business_publication_DONE.md`.
+
+The hosting runtime now uses the migrated account/IP and the unchanged SFTP pin with required Base64 padding. No Product/apex or other-client publication was performed. Jairo's prior publication state below is historical, not fresh migration evidence. Personal Brand and public master-site publication remain separate gates. Next commercial step is campaign measurement/content validation, without implicit advertising spend.
+
+## Historical operating state (September; superseded where noted above)
 
 PartnerHub is in the multi-ecosystem publication phase.
 

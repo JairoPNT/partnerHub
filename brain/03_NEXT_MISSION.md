@@ -2,7 +2,13 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
-## Current gate
+## Current priority — 2026-10-20
+
+Claudia's urgent Business publication is complete and publicly verified. Preserve the successful current source/job; do not replay historical Jairo preparation scripts or old failed Claudia intents. Next: validate campaign measurement and landing/VSL content before a separately authorized campaign launch. Antigravity should correct the existing static 10-minute caption (actual VSL 2:49). Other partners, public master-site publication, migration-state reconciliation and Personal Brand remain independent tickets.
+
+See `brain/agent-requests/codex/reports/CDX-20261020-002_claudia_business_publication_DONE.md`. The older sequence below is historical context, not a directive to repeat completed gates.
+
+## Historical gate
 
 Business publication is no longer the blocking gate.
 
