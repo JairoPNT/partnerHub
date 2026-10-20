@@ -163,6 +163,7 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
   const token = options.token ?? randomUUID;
   const withBusinessPublicationSite = createBusinessPublicationSiteCoordinator({ outputDirectory });
   const withProductMutation = createProductMutationCoordinator({ outputDirectory });
+  const storageBinding = Object.freeze({ sourceDirectory, outputDirectory });
   const jobPath = (id: string) => inside(jobDirectory, `${z.string().regex(HASH).parse(id)}.json`);
   const claimPath = (id: string) => inside(claimsDirectory, `${z.string().regex(HASH).parse(id)}.json`);
   const lockPath = (id: string) => inside(locksDirectory, `${z.string().regex(HASH).parse(id)}.json`);
@@ -553,7 +554,7 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     });
   }
 
-  return { previewIntent, enqueue, enqueueReviewed, get: readJob, list, claimNext, advance, complete, fail, retry, cancel,
+  return { get storageBinding() { return storageBinding; }, previewIntent, enqueue, enqueueReviewed, get: readJob, list, claimNext, advance, complete, fail, retry, cancel,
     isBusinessMasterPackageRefreshActive, deferClaimedBusinessJob, deferClaimedJob, withBusinessPublicationSite, withProductMutation, toSafeJob: safeJob };
 }
 

@@ -10,6 +10,11 @@ type Ownership = { token: string; references: number; marker: Identity; director
 type Scope = { owner: Ownership; active: boolean };
 const context = new AsyncLocalStorage<Map<string, Scope>>();
 const same = (left: Identity, right: Identity) => left.dev === right.dev && left.ino === right.ino;
+
+// Trust boundary: this private namespace belongs to cooperating application writers.
+// Static symlink/type/inode/token changes fail closed, but Node pathname operations
+// cannot guarantee race-free unlink against a privileged/same-UID process replacing
+// paths between validation and removal. Do not grant untrusted write access here.
 export class ProductMutationBusyError extends Error {
   readonly code = "PRODUCT_MUTATION_BUSY";
   constructor() { super("PRODUCT_MUTATION_BUSY"); this.name = "ProductMutationBusyError"; }

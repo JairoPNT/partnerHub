@@ -414,6 +414,42 @@ test("journal recovery verifies remote and public evidence under the same site o
   } finally { finish.release(); await owner; }
 });
 
+for (const mismatch of ["execution-output", "execution-source", "default-generator"]) {
+  test(`real Product recovery rejects ${mismatch} root mismatch before provider access`, async (t) => {
+    const fx = await fixture(t);
+    const { job } = await fx.jobs.enqueue({ siteId: fx.siteId }, "root-binding");
+    const alternate = resolve(fx.root, "alternate");
+    const outputDirectory = mismatch === "execution-output" ? alternate : fx.root;
+    const sourceDirectory = mismatch === "execution-source" ? resolve(alternate, ".sources") : fx.sourceDirectory;
+    if (outputDirectory !== fx.root) await cp(resolve(fx.root, "ganomaster"), resolve(outputDirectory, "ganomaster"), { recursive: true });
+    if (sourceDirectory !== fx.sourceDirectory) await cp(fx.sourceDirectory, sourceDirectory, { recursive: true });
+    const targetPath = resolve(sourceDirectory, ".publishing-targets", `${fx.siteId}.json`);
+    const finalTarget = JSON.stringify({ ...fx.target, publicationState: "READY" });
+    await writeFile(targetPath, finalTarget);
+    const journalDirectory = resolve(fx.root, ".binding-journals");
+    await mkdir(resolve(journalDirectory, fx.siteId), { recursive: true });
+    await writeFile(resolve(journalDirectory, fx.siteId, "committed.json"), JSON.stringify({
+      publicationJobId: job.id, mode: APPLY_MODE, sourceHash: job.intent.sourceHash,
+      initialTargetHash: job.intent.targetHash, finalTargetHash: sha(finalTarget),
+      publicHost: fx.target.publicHost, remoteRoot: fx.target.remoteRoot, targetPath,
+      packageHash: "a".repeat(64), capabilityHash: "b".repeat(64), planHash: "c".repeat(64)
+    }));
+    if (mismatch === "default-generator") process.env.PRODUCT_PAGE_OUTPUT_DIR = alternate;
+    let providerCalls = 0;
+    const execution = createPublicationExecution({ sourceDirectory, outputDirectory, journalDirectory,
+      ...(mismatch === "default-generator" ? {} : { generate: async () => assert.fail("recovery cannot regenerate") }),
+      adapterFactory: async () => {
+        providerCalls++;
+        return { inventory: async () => ({ exists: true, hash: "a".repeat(64) }), close: async () => {} };
+      }, verifyPublic: async () => ({ passed: true, reasons: [] })
+    });
+    const result = await createPublicationJobWorker({ jobs: fx.jobs, execution }).runNext();
+    assert.equal(result.outcome, "FAILED");
+    assert.match((await fx.jobs.get(job.id)).lastErrorCode, /STORAGE_BINDING_MISMATCH/);
+    assert.equal(providerCalls, 0);
+  });
+}
+
 // External SFTP is replaced at its byte/directory boundary; source saves, generation,
 // staging, guarded publication and job metadata all remain the actual implementations.
 class MemorySftp {
@@ -495,7 +531,6 @@ test("contention surfaced by a Product execution is deferred rather than FAILED"
   assert.equal((await fx.jobs.get(job.id)).status, "QUEUED");
   assert.equal((await fx.jobs.get(job.id)).attemptCount, 0);
 });
-
 test("a worker started inside a manual owner's async context does not inherit its reentrant capability", async (t) => {
   const fx = await fixture(t);
   const { job } = await fx.jobs.enqueue({ siteId: fx.siteId }, "manual");
@@ -508,5 +543,3 @@ test("a worker started inside a manual owner's async context does not inherit it
   assert.equal((await fx.jobs.get(job.id)).status, "QUEUED");
   assert.equal((await fx.jobs.get(job.id)).attemptCount, 0);
 });
-
-

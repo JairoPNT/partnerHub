@@ -7,6 +7,9 @@ import SftpClient from "ssh2-sftp-client";
 
 import { productPagePublicationService } from "@/server/services/productPagePublicationService";
 import { productPageVerificationService } from "@/server/services/productPageVerificationService";
+import { productPageSourceService } from "@/server/services/productPageSourceService";
+import { productPageHistoryService } from "@/server/services/productPageHistoryService";
+import { ProductMutationBusyError, withProductMutation } from "@/server/services/productMutationCoordinator";
 
 const owner = "f403f29e-95c8-4825-9320-967376443020";
 const foreign = "19b88a1d-e24d-48b0-a940-e9d35492266f";
@@ -15,6 +18,51 @@ const expectedRoot = "/home/u123456789/domains/partner.pro/public_html/producto"
 const source = { site: { id: siteId, domain: "producto.partner.pro", title: "Partner" } };
 const lead = { id: owner, siteId, fullName: "Partner Name", brandName: "Partner", whatsapp: "573001234567", onboardingData: { domain: "partner.pro" } };
 const readyTarget = { version: 2, ownerKey: owner, siteId, ecosystemType: "PRODUCT", rootEcosystemType: "PRODUCT", baseDomain: "partner.pro", publicHost: "producto.partner.pro", remoteRoot: expectedRoot, provisioningState: "READY", hostingerState: "READY", dnsState: "RESOLVED", sslState: "READY", publicationState: "READY", createdAt: "2026-10-20T00:00:00.000Z", updatedAt: "2026-10-20T00:00:00.000Z" };
+
+function barrier() {
+  let release!: () => void;
+  const promise = new Promise<void>((done) => { release = done; });
+  return { promise, release };
+}
+
+test("direct legacy Product publish claims before reading source or contacting transport", async (t) => {
+  const fx = await fixture(t); const entered = barrier(); const finish = barrier();
+  const originalGet = productPageSourceService.get;
+  let reads = 0;
+  t.mock.method(productPageSourceService, "get", async (id: string) => { reads++; return originalGet(id); });
+  const owner = withProductMutation(siteId, async () => { entered.release(); await finish.promise; });
+  try {
+    await entered.promise;
+    await assert.rejects(productPagePublicationService.publish({ siteId }), ProductMutationBusyError);
+    assert.equal(reads, 0); assert.deepEqual(fx.effects, []);
+  } finally { finish.release(); await owner; }
+});
+
+for (const phase of ["upload", "verification", "history"] as const) {
+  test(`direct Product publish retains ownership through ${phase} and releases after completion`, async (t) => {
+    await fixture(t); const entered = barrier(); const finish = barrier();
+    if (phase === "upload") t.mock.method(SftpClient.prototype, "put", async () => { entered.release(); await finish.promise; });
+    if (phase === "verification") t.mock.method(productPageVerificationService, "verify", async () => {
+      entered.release(); await finish.promise;
+      return { domain: "producto.partner.pro", verifiedAt: "2026-10-20T00:00:00.000Z", status: "VERIFIED" as const, checks: [] };
+    });
+    if (phase === "history") {
+      const append = productPageHistoryService.append;
+      t.mock.method(productPageHistoryService, "append", async (event: Parameters<typeof append>[0]) => {
+        entered.release(); await finish.promise; return append(event);
+      });
+    }
+    const publication = productPagePublicationService.publish({ siteId });
+    try {
+      await Promise.race([entered.promise, publication.then(() => assert.fail("publication finished before pause"))]);
+      await assert.rejects(productPageSourceService.save(siteId, source), ProductMutationBusyError);
+      await assert.rejects(productPagePublicationService.publish({ siteId }), ProductMutationBusyError);
+      finish.release();
+      assert.equal((await publication).publicationState, "VERIFIED");
+      await productPageSourceService.save(siteId, source);
+    } finally { finish.release(); await publication; }
+  });
+}
 
 async function fixture(t: test.TestContext, overrides: { siteId?: string; source?: unknown; target?: unknown; leads?: unknown[]; environment?: Record<string, string> } = {}) {
   const publicationSiteId = overrides.siteId ?? siteId;
