@@ -7,6 +7,7 @@
 - Checkout: `C:/Users/jairo/.codex/worktrees/cdx-20261019-005-drift-integration/PartnerHub`.
 - Implementer base: `d1dcf52c79a3ade5f717a3024f086dd74a5b2610`.
 - Code/request commit: `04a1d6435aae32e68795967a788858f06c392b2e`. This report and request-status update are a subsequent docs-only commit.
+- Review-remediation source commit: `54a5bcb0c0c3053f063301ab5e1d0b8f708e1c93`; latest evidence and recovery semantics are in the addendum below.
 - Reviewed foundation base: `262c1ebea6536f41e371e7eca19047bd38978e27`; the intervening controller docs-only execution split was preserved.
 - No push, merge, PR, frontend/config/shared-status edit, provider call, production/customer write or allowlist configuration.
 
@@ -123,3 +124,15 @@ Author self-review covered every task-4 item, strict projection, auth ordering, 
 Rulings within the approved brief: use enqueueReviewed for exact reviewed-intent protection; distinguish immutable browser revision from the stable internal recovery-authority pin; fail closed rather than infer completion of uncheckpointed generation/provisioning. Cost: uncertain effects require explicit reconciliation/review and cannot be transparently retried. No architecture expansion, new automatic trigger, DTO change or delegated subagent.
 
 Required next gates: controller independent review; CDX-011 complete script/integration sweep and Antigravity contract integration; separately authorized real operator allowlist and selected-partner production operation. Opening Master Sites must remain read-only. No assertion that the feature is productively enabled or that any customer was published by this ticket.
+
+## Review remediation — 2026-10-20
+
+Independent review identified two P2 findings after the initial report. Both were reproduced with real queue/store fixtures and corrected only in the owned command service/test; receiving-code-review and TDD guided the bounded changes.
+
+- A fresh publication request with the same approved normalized input and exact terminal intent now calls existing `jobs.retry` for FAILED or CANCELLED under the site lock, without regenerating source/package or provisioning. Fresh authority, source/target/master, input and package pins are checked at the effect boundary. Current actor audit stays in the new operation; original job actor audit is retained by the existing retry API. Both updateExisting values work.
+- Before retry, ENQUEUEING persists a safe internal RETRY_REQUIRED result carrying `MASTER_SITES_RETRY_PENDING` and the exact job/artifact pins. This marker is never success. Replay can reconcile a matching active job (or verified CURRENT progression) but never repeats retry or falls through to enqueue when terminal/missing. After successful retry, ENQUEUED clears the internal marker and COMPLETE stores the public result. No store/schema/DTO or job/journal implementation edits.
+- Missing pinned job in durable ENQUEUED or COMPLETE now returns RETRY_REQUIRED, including when the final result was never checkpointed. It cannot recreate lost queue evidence.
+
+Observed RED: missing-job ENQUEUED and COMPLETE-without-result recreated a job; four explicit terminal retries returned RETRY_REQUIRED; five retry effect-fault cases failed to reach the retry transition. GREEN adds preserved manifest/source/target and actor audit assertions, lost response and post-effect checkpoint faults, terminal/missing replay, stale authority/source/target/master/package before effect and after response loss, and actual worker progression after explicit retry.
+
+Final same combined command above: **249/249, exit 0** (command/routes now 61 checks, 29 additional checks including subtests). Full local log: `.superpowers/sdd/2026-10-20-business-master-sites-manual-delivery/task-4-review-fixes-tests.log`. `npm.cmd run lint`, `npm.cmd run build` (39 pages) and `git diff --check` all exit 0. Existing Node/Next warnings unchanged. Source frozen at `54a5bcb0c0c3053f063301ab5e1d0b8f708e1c93` for scoped independent rereview. APIs, route factory and public error/status contract unchanged. No push/merge/providers/production; final 011 and productive enablement gates remain open.
