@@ -157,6 +157,7 @@ async function checkIdentity(paths, m, source) {
     requireThat(entry.isFile() && /^[a-z0-9]+(?:-[a-z0-9]+)*\.json$/.test(entry.name), 'SOURCE_INVENTORY_AMBIGUOUS');
     const candidate = parse(await bytes(join(paths.source, entry.name)));
     requireThat(object(candidate.site) && candidate.site.id === entry.name.slice(0, -5), 'SOURCE_INVENTORY_AMBIGUOUS');
+    requireThat(candidate.ecosystemType === undefined || ['PRODUCT', 'BUSINESS', 'PERSONAL_BRAND'].includes(candidate.ecosystemType), 'SOURCE_INVENTORY_AMBIGUOUS');
     const domain = normalizedDomain(candidate.site.domain);
     requireThat(domain !== null && domain.length <= 253 && HOSTNAME.test(domain), 'SOURCE_INVENTORY_AMBIGUOUS');
     if (candidate.site.id !== m.siteId) {

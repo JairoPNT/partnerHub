@@ -235,3 +235,11 @@ for (const [publicHost, baseDomain] of [[123, 'foreign.pro'], ['negocio.foreign.
   await writeFile(join(f.targets, 'other-business.json'), JSON.stringify({ version: 2, ownerKey: 'a403f29e-95c8-4825-9320-967376443020', siteId: 'other-business', ecosystemType: 'BUSINESS', baseDomain, publicHost, remoteRoot: null }));
   await assert.rejects(implementation.runProductDestinationReconcile(f.options), { code: 'PRODUCT_RECONCILE_TARGET_INVENTORY_AMBIGUOUS' });
 });
+
+for (const ecosystemType of ['TYPO', 'product', null, 123, {}, []]) test(`invalid raw source ecosystem blocks ${JSON.stringify(ecosystemType)} instead of disguising legacy Product`, async (t) => {
+  const f = await fixture(t);
+  await writeFile(join(f.sourceDirectory, 'other-product.json'), JSON.stringify({ ecosystemType, site: { id: 'other-product', domain: 'BLANCASTELLA.PRO' } }));
+  const before = await tree(f.root);
+  await assert.rejects(implementation.runProductDestinationReconcile(f.options), { code: 'PRODUCT_RECONCILE_SOURCE_INVENTORY_AMBIGUOUS' });
+  assert.deepEqual(await tree(f.root), before);
+});
