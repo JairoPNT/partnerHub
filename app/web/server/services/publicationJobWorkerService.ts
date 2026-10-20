@@ -33,7 +33,8 @@ const json = (value: unknown) => `${JSON.stringify(value, null, 2)}\n`;
 const sha256 = (value: string | Buffer) => createHash("sha256").update(value).digest("hex");
 const exists = (path: string) => access(path).then(() => true, () => false);
 
-type JobStore = Pick<typeof publicationJobService, "claimNext" | "advance" | "complete" | "fail" | "toSafeJob">;
+type JobStore = Pick<typeof publicationJobService,
+  "claimNext" | "advance" | "complete" | "fail" | "toSafeJob" | "isBusinessMasterPackageRefreshActive" | "deferClaimedBusinessJob">;
 type Advance = (
   phase: PublicationJobPhase,
   evidence?: Omit<PublicationJobEvidence, "phase" | "recordedAt">
@@ -319,11 +320,27 @@ export function createPublicationJobWorker(options: {
       const claimed = await jobs.claimNext(workerId, leaseSeconds);
       if (!claimed) return { outcome: "IDLE" as const };
       const { job, leaseToken } = claimed;
+      const deferForMasterRefresh = async () => {
+        try {
+          const deferred = await jobs.deferClaimedBusinessJob(job.id, leaseToken);
+          return { outcome: "DEFERRED" as const, job: jobs.toSafeJob(deferred) };
+        } catch {
+          // A lost lease or storage race is not a publication failure and must not be committed as one.
+          return { outcome: "DEFERRED" as const, job: jobs.toSafeJob(job) };
+        }
+      };
+      if (job.intent.ecosystemType === "BUSINESS" && await jobs.isBusinessMasterPackageRefreshActive()) {
+        return deferForMasterRefresh();
+      }
       try {
         const evidence = await execution.execute(job, (phase, item = {}) => jobs.advance(job.id, leaseToken, phase, item));
         const completed = await jobs.complete(job.id, leaseToken, evidence);
         return { outcome: "SUCCEEDED" as const, job: jobs.toSafeJob(completed) };
       } catch (error) {
+        if (job.intent.ecosystemType === "BUSINESS" && error instanceof Error &&
+            error.message === "PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS") {
+          return deferForMasterRefresh();
+        }
         const failed = await jobs.fail(job.id, leaseToken, safeErrorCode(error));
         return { outcome: "FAILED" as const, job: jobs.toSafeJob(failed) };
       }

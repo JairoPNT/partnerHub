@@ -45,16 +45,32 @@ const job: PublicationJob = {
   evidence: []
 };
 
-function fixture(execution: PublicationExecution | null) {
+function fixture(execution: PublicationExecution | null, activeJob = job) {
   const calls: string[] = [];
+  let refreshActive = false;
+  let activateRefreshAfterClaim = false;
   const jobs = {
-    async claimNext() { calls.push("claim"); return execution ? { job, leaseToken: "RAW_LEASE_SECRET" } : null; },
+    async claimNext() {
+      calls.push("claim");
+      if (activateRefreshAfterClaim) refreshActive = true;
+      return execution ? { job: activeJob, leaseToken: "RAW_LEASE_SECRET" } : null;
+    },
+    async isBusinessMasterPackageRefreshActive() { calls.push("refresh-check"); return refreshActive; },
+    async deferClaimedBusinessJob(id: string, token: string) {
+      assert.equal(id, activeJob.id); assert.equal(token, "RAW_LEASE_SECRET"); calls.push("defer");
+      return { ...activeJob, status: "QUEUED", phase: "QUEUED", revision: activeJob.revision + 1, attemptCount: activeJob.attemptCount - 1, lease: undefined };
+    },
     async advance(_id: string, token: string, phase: string) { assert.equal(token, "RAW_LEASE_SECRET"); calls.push(`advance:${phase}`); return job; },
     async complete(_id: string, token: string) { assert.equal(token, "RAW_LEASE_SECRET"); calls.push("complete"); return { ...job, status: "SUCCEEDED", phase: "COMPLETE" }; },
     async fail(_id: string, token: string, code: string) { assert.equal(token, "RAW_LEASE_SECRET"); calls.push(`fail:${code}`); return { ...job, status: "FAILED", lastErrorCode: code }; },
     toSafeJob(value: Record<string, unknown>) { return { status: value.status, lastErrorCode: value.lastErrorCode }; }
   };
-  return { calls, jobs };
+  return {
+    calls,
+    jobs,
+    setRefreshActive(value: boolean) { refreshActive = value; },
+    setActivateRefreshAfterClaim(value: boolean) { activateRefreshAfterClaim = value; }
+  };
 }
 
 test("returns IDLE without executing when the durable queue is empty", async () => {
@@ -72,7 +88,7 @@ test("completes only after the executor advances every guarded phase", async () 
   const fx = fixture(execution);
   const result = await createPublicationJobWorker({ jobs: fx.jobs as never, execution, workerId: "worker" }).runNext();
   assert.equal(result.outcome, "SUCCEEDED");
-  assert.deepEqual(fx.calls, ["claim", "advance:VALIDATING_CAPABILITY", "advance:PLANNING_PUBLICATION", "advance:PUBLISHING", "advance:VERIFYING", "complete"]);
+  assert.deepEqual(fx.calls, ["claim", "refresh-check", "advance:VALIDATING_CAPABILITY", "advance:PLANNING_PUBLICATION", "advance:PUBLISHING", "advance:VERIFYING", "complete"]);
   assert.doesNotMatch(JSON.stringify(result), /RAW_LEASE_SECRET/);
 });
 
@@ -83,6 +99,36 @@ test("fails closed with a redacted stable code and never exposes provider secret
   assert.equal(result.outcome, "FAILED");
   assert.match(String(result.job.lastErrorCode), /^PUBLICATION_WORKER_GETCONNECTION$/);
   assert.doesNotMatch(JSON.stringify(result), /super-secret|token=abc|RAW_LEASE_SECRET/);
+  assert.deepEqual(fx.calls.slice(0, 2), ["claim", "refresh-check"]);
+});
+
+test("defers a claimed Business job if the master refresh claim appears before execution", async () => {
+  let executionCalls = 0;
+  const execution: PublicationExecution = { async execute() { executionCalls += 1; return {}; } };
+  const fx = fixture(execution);
+  fx.setActivateRefreshAfterClaim(true);
+
+  const result = await createPublicationJobWorker({ jobs: fx.jobs as never, execution, workerId: "worker" }).runNext();
+
+  assert.equal(result.outcome, "DEFERRED");
+  assert.equal(result.job.status, "QUEUED");
+  assert.equal(executionCalls, 0);
+  assert.deepEqual(fx.calls, ["claim", "refresh-check", "defer"]);
+  assert.doesNotMatch(JSON.stringify(result), /RAW_LEASE_SECRET/);
+});
+
+test("Product jobs execute while the Business master refresh claim is active", async () => {
+  let executionCalls = 0;
+  const execution: PublicationExecution = { async execute() { executionCalls += 1; return {}; } };
+  const productJob: PublicationJob = { ...job, intent: { ...job.intent, ecosystemType: "PRODUCT" } };
+  const fx = fixture(execution, productJob);
+  fx.setRefreshActive(true);
+
+  const result = await createPublicationJobWorker({ jobs: fx.jobs as never, execution, workerId: "worker" }).runNext();
+
+  assert.equal(result.outcome, "SUCCEEDED");
+  assert.equal(executionCalls, 1);
+  assert.deepEqual(fx.calls, ["claim", "complete"]);
 });
 
 class MemorySftp {

@@ -154,4 +154,110 @@ test("list filters jobs and corrupt durable records fail closed", async () => {
   assert.equal((await fx.service.list({ status: "SUCCEEDED" })).length, 0);
   await writeFile(resolve(fx.jobs, `${job.id}.json`), "{}\n");
   await assert.rejects(fx.service.get(job.id), /PUBLICATION_JOB_CORRUPT/);
+  await assert.rejects(fx.service.claimNext("worker"), /PUBLICATION_JOB_CORRUPT/);
+});
+
+test("Business enqueue APIs fail closed while the fixed master-refresh claim exists", async () => {
+  const fx = await fixture();
+  const preview = await fx.service.previewIntent({ siteId: fx.siteId });
+  const claimDirectory = resolve(fx.output, ".master-package-claims", "ganomaster-business");
+  await mkdir(claimDirectory, { recursive: true });
+  await writeFile(resolve(claimDirectory, "owner.json"), "{\"ownerToken\":\"must-not-leak\"\n");
+
+  await assert.rejects(fx.service.enqueue({ siteId: fx.siteId }, "operator"), (error: unknown) => {
+    assert.equal((error as Error).message, "PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS");
+    assert.doesNotMatch((error as Error).message, /must-not-leak/);
+    return true;
+  });
+  await assert.rejects(
+    fx.service.enqueueReviewed({ siteId: fx.siteId }, "operator", preview.intentHash),
+    /PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS/
+  );
+  assert.deepEqual(await fx.service.list(), []);
+});
+
+test("claimNext skips Business while refreshing but continues with Product", async () => {
+  const fx = await fixture("PRODUCT");
+  const product = await fx.service.enqueue({ siteId: fx.siteId }, "operator");
+  fx.setClock("2026-09-02T20:00:01.000Z");
+
+  const businessSiteId = "client-one-business";
+  const businessHost = "negocio.clientone.pro";
+  const businessSource = { ecosystemType: "BUSINESS", site: { id: businessSiteId, domain: businessHost } };
+  const businessTarget = { ...fx.target, siteId: businessSiteId, ecosystemType: "BUSINESS", baseDomain: "clientone.pro", publicHost: businessHost,
+    remoteRoot: "/home/client/public_html/negocio" };
+  await writeFile(resolve(fx.sources, `${businessSiteId}.json`), `${JSON.stringify(businessSource)}\n`);
+  await writeFile(resolve(fx.targets, `${businessSiteId}.json`), `${JSON.stringify(businessTarget)}\n`);
+  const businessMaster = resolve(fx.output, "ganomaster-business");
+  await mkdir(businessMaster);
+  await writeFile(resolve(businessMaster, "index.html"), "master-BUSINESS");
+  const business = await fx.service.enqueue({ siteId: businessSiteId }, "operator");
+
+  fx.setClock("2026-09-02T20:00:02.000Z");
+  const brandSiteId = "client-one";
+  const brandSource = { ecosystemType: "PERSONAL_BRAND", site: { id: brandSiteId, domain: "brand.clientone.pro" } };
+  const brandTarget = { ...fx.target, siteId: brandSiteId, ecosystemType: "PERSONAL_BRAND", baseDomain: "clientone.pro", publicHost: "brand.clientone.pro",
+    remoteRoot: "/home/client/public_html/brand" };
+  await writeFile(resolve(fx.sources, `${brandSiteId}.json`), `${JSON.stringify(brandSource)}\n`);
+  await writeFile(resolve(fx.targets, `${brandSiteId}.json`), `${JSON.stringify(brandTarget)}\n`);
+  const brandMaster = resolve(fx.output, "ganomaster-personal-brand");
+  await mkdir(brandMaster);
+  await writeFile(resolve(brandMaster, "index.html"), "master-PERSONAL_BRAND");
+  const brand = await fx.service.enqueue({ siteId: brandSiteId }, "operator");
+
+  await mkdir(resolve(fx.output, ".master-package-claims", "ganomaster-business"), { recursive: true });
+  const productClaim = await fx.service.claimNext("worker", 300);
+  const brandClaim = await fx.service.claimNext("worker", 300);
+
+  assert.equal(productClaim?.job.id, product.job.id);
+  assert.equal(productClaim?.job.intent.ecosystemType, "PRODUCT");
+  assert.equal(brandClaim?.job.id, brand.job.id);
+  assert.equal(brandClaim?.job.intent.ecosystemType, "PERSONAL_BRAND");
+  assert.equal((await fx.service.get(business.job.id))?.status, "QUEUED");
+});
+
+test("a Business job already RUNNING is not changed when enqueue observes the refresh claim", async () => {
+  const fx = await fixture();
+  const { job } = await fx.service.enqueue({ siteId: fx.siteId }, "operator");
+  const claim = await fx.service.claimNext("worker", 300);
+  assert.ok(claim);
+  const before = await readFile(resolve(fx.jobs, `${job.id}.json`), "utf8");
+  await mkdir(resolve(fx.output, ".master-package-claims", "ganomaster-business"), { recursive: true });
+
+  await assert.rejects(fx.service.enqueue({ siteId: fx.siteId }, "operator"), /PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS/);
+
+  assert.equal(await readFile(resolve(fx.jobs, `${job.id}.json`), "utf8"), before);
+});
+
+test("deferClaimedBusinessJob resets only the owned lease and rolls back its reserved attempt", async () => {
+  const fx = await fixture();
+  const { job } = await fx.service.enqueue({ siteId: fx.siteId }, "operator");
+  const claim = await fx.service.claimNext("worker", 300);
+  assert.ok(claim);
+  const deferred = await fx.service.deferClaimedBusinessJob(job.id, claim.leaseToken);
+
+  assert.equal(deferred.status, "QUEUED");
+  assert.equal(deferred.phase, "QUEUED");
+  assert.equal(deferred.revision, claim.job.revision + 1);
+  assert.equal(deferred.attemptCount, job.attemptCount);
+  assert.equal(deferred.lease, undefined);
+  await assert.rejects(readFile(resolve(fx.jobs, ".claims", `${job.id}.json`)), { code: "ENOENT" });
+  await assert.rejects(fx.service.advance(job.id, claim.leaseToken, "VALIDATING_CAPABILITY"), /PUBLICATION_JOB_LEASE_OWNERSHIP_LOST/);
+});
+
+test("deferClaimedBusinessJob requires the current lease owner and never defers another ecosystem", async () => {
+  const businessFx = await fixture();
+  const { job } = await businessFx.service.enqueue({ siteId: businessFx.siteId }, "operator");
+  const claim = await businessFx.service.claimNext("worker", 300);
+  assert.ok(claim);
+  const before = await readFile(resolve(businessFx.jobs, `${job.id}.json`), "utf8");
+  await assert.rejects(businessFx.service.deferClaimedBusinessJob(job.id, "wrong-lease-token"), /PUBLICATION_JOB_LEASE_OWNERSHIP_LOST/);
+  assert.equal(await readFile(resolve(businessFx.jobs, `${job.id}.json`), "utf8"), before);
+
+  const productFx = await fixture("PRODUCT");
+  const product = await productFx.service.enqueue({ siteId: productFx.siteId }, "operator");
+  const productClaim = await productFx.service.claimNext("worker", 300);
+  assert.ok(productClaim);
+  await assert.rejects(productFx.service.deferClaimedBusinessJob(product.job.id, productClaim.leaseToken), /PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_ONLY/);
+  assert.equal((await productFx.service.get(product.job.id))?.status, "RUNNING");
 });
