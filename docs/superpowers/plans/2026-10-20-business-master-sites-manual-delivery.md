@@ -49,7 +49,8 @@
 - `app/web/server/auth/masterSitesOperatorAuth.ts` y test: autenticación/autorización/origen (007).
 - `app/web/server/services/masterSitesBusinessPreviewService.ts`, `masterSitesBusinessInput.ts` y sus respectivos `.test.ts`: lectura y payload desde fuentes autoritativas (008).
 - `app/web/server/services/businessPublicationSiteCoordinator.ts` y `.test.ts`: exclusión compartida; hooks mínimos en generación/job service/worker/source save/publicación legacy (009).
-- `app/web/server/services/masterSitesBusinessCommandService.ts`, `masterSitesBusinessOperationStore.ts` y tests: comandos e idempotencia (010).
+- `app/web/server/services/masterSitesBusinessOperationStore.ts` y test: persistencia/idempotencia del request (012, división de ejecución de010).
+- `app/web/server/services/masterSitesBusinessCommandService.ts` y test: comandos e integración de la persistencia revisada (010).
 - `app/web/app/api/internal/master-sites/business/route.ts`, `prepare-target/route.ts`, `publish/route.ts` y `app/web/server/services/masterSitesBusinessRoutes.test.ts`: wrappers y tests reales de handlers (010).
 - `app/web/components/master-sites-business-delivery-view.tsx`, `master-sites-business-delivery-model.ts` y tests; integración mínima en `master-site-management-view.tsx` (AGR-001).
 - Requests/reportes con ID propio en `brain/agent-requests/`; documentación/env de la allowlist en ticket 007, no variables de credenciales reales.
@@ -94,7 +95,9 @@ Hook exacto del worker: después de `claimNext` (ya liberado su mutex de metadat
 
 ## Task 4 — CDX-20261020-010: comandos manuales y rutas
 
-Owner: Codex. Branch `codex/CDX-20261020-010-master-sites-business-commands`. Áreas: command/store/routes/tests nuevos. Depends 007/008/009; no edita sus módulos ni frontend sin follow-up. Paralelo seguro con AGR-001 sobre contrato congelado.
+Owner: Codex. Branch `codex/CDX-20261020-010-master-sites-business-commands`. Áreas: command/routes/tests nuevos; consume store revisado de012. Depends 007/008/009/012; no edita sus módulos ni frontend sin follow-up. Paralelo seguro con AGR-001 sobre contrato congelado.
+
+Refinamiento de ejecución2026-10-20: la persistencia independiente se separa en **CDX-20261020-012**, owner Codex, branch `codex/CDX-20261020-012-master-sites-operation-store`. Solo OperationStore/test, helper de proceso hijo si hace falta y request/reporte propios. Puede implementarse en paralelo con correcciones de008 porque no consume su snapshot ni toca sus archivos;010 espera su contrato/revisión. Esto no añade comportamiento ni cambia la arquitectura aprobada: extrae la persistencia ya prevista para respetar tareas pequeñas sin solapamiento. Store persiste binding inmutable request/actor/acción/partner/sitio/versión/updateExisting, CAS/versiones y checkpoints/resultados seguros; no genera/encola ni llama proveedores. Pruebas multiproceso/atomicidad/replay/conflicto, revisión independiente y exportaciones congeladas antes de010.
 
 **Interfaces:** `createMasterSitesBusinessCommandService(deps).prepareTarget(command,operator):Promise<BusinessCommandResult>` y `.publish(command,operator):Promise<BusinessCommandResult>`. Store file-backed bajo `.master-sites-business-operations/`; operationId=requestId con vinculación a actor/acción/partner/revisión, creación exclusiva y checkpoints durables. Los handlers inyectan servicios existentes en proceso, no hacen fetch a sus propios endpoints ni solicitan cookies/tokens del navegador.
 
