@@ -19,6 +19,7 @@ import {
 import { productPageHistoryService } from "@/server/services/productPageHistoryService";
 import { resolvePublicationTargetForSite } from "@/server/services/publicationTargetService";
 import { assertBusinessPublicationSiteIdentity, isBusinessPublicationSiteId, withBusinessPublicationSite } from "@/server/services/businessPublicationSiteCoordinator";
+import { needsProductMutation, withProductMutation } from "@/server/services/productMutationCoordinator";
 import type { ProductPublicationSource } from "@/server/services/productPublicationDestinationPolicy";
 
 const siteIdSchema = z
@@ -329,6 +330,7 @@ export const productPagePublicationService = {
         checks: verification.checks
       };
     };
-    return isBusinessPublicationSiteId(input.siteId) ? withBusinessPublicationSite(input.siteId, action) : action();
+    return isBusinessPublicationSiteId(input.siteId) ? withBusinessPublicationSite(input.siteId, action)
+      : needsProductMutation(input.siteId) ? withProductMutation(input.siteId, action) : action();
   }
 };

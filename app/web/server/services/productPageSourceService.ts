@@ -5,6 +5,7 @@ import { resolve, sep } from "node:path";
 
 import { z } from "zod";
 import { assertBusinessPublicationSiteIdentity, isBusinessPublicationSiteId, withBusinessPublicationSite } from "@/server/services/businessPublicationSiteCoordinator";
+import { needsProductMutation, withProductMutation } from "@/server/services/productMutationCoordinator";
 
 const siteIdSchema = z
   .string()
@@ -50,7 +51,8 @@ async function save(siteId: string, configuration: unknown) {
     await writeFile(temporary, `${JSON.stringify(configuration, null, 2)}\n`, "utf8");
     await rename(temporary, target);
   };
-  return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action) : action();
+  return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action)
+    : needsProductMutation(siteId, ecosystemType) ? withProductMutation(siteId, action) : action();
 }
 
 async function clearLastVerification(siteId: string) {

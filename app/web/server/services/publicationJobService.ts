@@ -9,6 +9,7 @@ import { z } from "zod";
 import { getPartnerPublicHost } from "@/server/services/partnerHostnameContract";
 import { MASTER_SITE_IDS } from "@/server/services/ecosystemTemplateResolver";
 import { createBusinessPublicationSiteCoordinator, isBusinessPublicationSiteId } from "@/server/services/businessPublicationSiteCoordinator";
+import { createProductMutationCoordinator, needsProductMutation } from "@/server/services/productMutationCoordinator";
 
 const HASH = /^[0-9a-f]{64}$/;
 const SAFE_ERROR_CODE = /^[A-Z0-9_:-]{1,160}$/;
@@ -161,6 +162,8 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
   const now = options.now ?? (() => new Date());
   const token = options.token ?? randomUUID;
   const withBusinessPublicationSite = createBusinessPublicationSiteCoordinator({ outputDirectory });
+  const withProductMutation = createProductMutationCoordinator({ outputDirectory });
+  const storageBinding = Object.freeze({ sourceDirectory, outputDirectory });
   const jobPath = (id: string) => inside(jobDirectory, `${z.string().regex(HASH).parse(id)}.json`);
   const claimPath = (id: string) => inside(claimsDirectory, `${z.string().regex(HASH).parse(id)}.json`);
   const lockPath = (id: string) => inside(locksDirectory, `${z.string().regex(HASH).parse(id)}.json`);
@@ -351,7 +354,8 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
       const { intent, intentHash } = await previewIntent(input);
       return persistQueuedJob(intent, intentHash, requestedBySubject);
     };
-    return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action) : action();
+    return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action)
+      : needsProductMutation(siteId) ? withProductMutation(siteId, action) : action();
   }
 
   async function enqueueReviewed(
@@ -366,7 +370,8 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
       if (intentHash !== expectedIntentHash) throw new Error("PUBLICATION_JOB_REVIEWED_INTENT_DRIFT");
       return persistQueuedJob(intent, intentHash, requestedBySubject);
     };
-    return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action) : action();
+    return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action)
+      : needsProductMutation(siteId) ? withProductMutation(siteId, action) : action();
   }
 
   async function list(filters: { siteId?: string; status?: z.infer<typeof statusSchema> } = {}) {
@@ -463,9 +468,9 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     }
   }
 
-  async function deferClaimedBusinessJobUnderLock(id: string, rawToken: string) {
+  async function deferClaimedBusinessJobUnderLock(id: string, rawToken: string, allowProduct = false) {
     const job = await assertLease(id, rawToken);
-    if (job.intent.ecosystemType !== "BUSINESS") throw new Error("PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_ONLY");
+    if (job.intent.ecosystemType !== "BUSINESS" && !(allowProduct && job.intent.ecosystemType === "PRODUCT")) throw new Error("PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_ONLY");
     const timestamp = now().toISOString();
     const queued = publicationJobSchema.parse({ ...job, status: "QUEUED", phase: "QUEUED", revision: job.revision + 1,
       attemptCount: Math.max(0, job.attemptCount - 1), updatedAt: timestamp, lease: undefined, lastErrorCode: undefined });
@@ -480,7 +485,7 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
 
   // Same lease-validated rollback as the refresh barrier; normal site contention is not an attempt.
   async function deferClaimedJob(id: string, leaseToken: string) {
-    return withJobLock(id, () => deferClaimedBusinessJobUnderLock(id, leaseToken));
+    return withJobLock(id, () => deferClaimedBusinessJobUnderLock(id, leaseToken, true));
   }
 
   async function advance(id: string, rawToken: string, phase: PublicationJobPhase, evidence: Omit<PublicationJobEvidence, "phase" | "recordedAt"> = {}) {
@@ -549,8 +554,8 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     });
   }
 
-  return { previewIntent, enqueue, enqueueReviewed, get: readJob, list, claimNext, advance, complete, fail, retry, cancel,
-    isBusinessMasterPackageRefreshActive, deferClaimedBusinessJob, deferClaimedJob, withBusinessPublicationSite, toSafeJob: safeJob };
+  return { get storageBinding() { return storageBinding; }, previewIntent, enqueue, enqueueReviewed, get: readJob, list, claimNext, advance, complete, fail, retry, cancel,
+    isBusinessMasterPackageRefreshActive, deferClaimedBusinessJob, deferClaimedJob, withBusinessPublicationSite, withProductMutation, toSafeJob: safeJob };
 }
 
 export const publicationJobService = createPublicationJobService();

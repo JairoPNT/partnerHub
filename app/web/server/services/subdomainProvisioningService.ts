@@ -8,6 +8,7 @@ import { z } from "zod";
 import type { HostingerDnsRoutingMode, HostingerEnsureDnsResult } from "../integrations/hostingerDnsClient.ts";
 import type { HostingerEnsureSubdomainResult, HostingerWebsite } from "../integrations/hostingerSubdomainClient.ts";
 import { getPartnerCanonicalPublicHost, getPartnerPublicHost, PARTNER_HOST_LABELS } from "#partner-hostname-contract";
+import { createProductMutationCoordinator, needsProductMutation } from "#product-mutation-coordinator";
 
 const siteIdSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
 const ownerKeySchema = z.string().uuid();
@@ -78,7 +79,7 @@ type ReadinessProbe = {
   dnsResolves(hostname: string, ipv4: string, routingMode: HostingerDnsRoutingMode): Promise<boolean>;
   httpsReady(hostname: string, routingMode: HostingerDnsRoutingMode): Promise<boolean>;
 };
-type Dependencies = { hostingerClient: HostingerClient; dnsClient: DnsClient; readinessProbe?: ReadinessProbe; storageDirectory?: string; now?: () => Date };
+type Dependencies = { hostingerClient: HostingerClient; dnsClient: DnsClient; readinessProbe?: ReadinessProbe; storageDirectory?: string; outputDirectory?: string; now?: () => Date };
 
 export class ProvisioningError extends Error {
   public readonly code: "PROVISIONING_TARGET_CONFLICT" | "PROVISIONING_MIGRATION_CONFLICT" | "PROVISIONING_PROVIDER_FAILED" | "PROVISIONING_STORAGE_FAILED" | "PROVISIONING_ROOT_TARGET_REQUIRES_SEPARATE_GATE";
@@ -124,20 +125,33 @@ async function persistTarget(root: string, target: PublishingTarget) {
   await mkdir(root, { recursive: true }); await writeFile(temporary, `${JSON.stringify(target, null, 2)}\n`); await rename(temporary, destination);
   return target;
 }
-export async function getPublishingTarget(siteId: string, root = defaultStorageDirectory(), rootEcosystemType?: z.infer<typeof publishingEcosystemTypeSchema>) {
+export async function getPublishingTarget(siteId: string, root = defaultStorageDirectory(), rootEcosystemType?: z.infer<typeof publishingEcosystemTypeSchema>, outputDirectory?: string) {
   try {
     const raw = JSON.parse(await readFile(targetPath(root, siteId), "utf8"));
+    if (raw?.ecosystemType === "PRODUCT" && raw.siteId !== siteId) {
+      throw new ProvisioningError("PROVISIONING_MIGRATION_CONFLICT", "Product target site identity does not match its storage key.");
+    }
     const current = publishingTargetSchema.safeParse(raw);
     if (current.success) { assertNotMaster(current.data.baseDomain); return current.data; }
-    const migrated = migrateLegacyTarget(raw, rootEcosystemType);
-    return persistTarget(root, migrated);
+    const migrate = async () => {
+      // Classification above grants no write authority: reload under the Product claim.
+      const latest = JSON.parse(await readFile(targetPath(root, siteId), "utf8"));
+      if (latest?.ecosystemType === "PRODUCT" && latest.siteId !== siteId) {
+        throw new ProvisioningError("PROVISIONING_MIGRATION_CONFLICT", "Product target site identity does not match its storage key.");
+      }
+      const current = publishingTargetSchema.safeParse(latest);
+      if (current.success) { assertNotMaster(current.data.baseDomain); return current.data; }
+      return persistTarget(root, migrateLegacyTarget(latest, rootEcosystemType));
+    };
+    return needsProductMutation(siteId, raw.ecosystemType)
+      ? createProductMutationCoordinator({ outputDirectory })(siteId, migrate) : migrate();
   }
   catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
 }
-export async function listPublishingTargets(root = defaultStorageDirectory()) {
+export async function listPublishingTargets(root = defaultStorageDirectory(), outputDirectory?: string) {
   try {
     const entries = await readdir(root, { withFileTypes: true });
-    const values = await Promise.all(entries.filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => getPublishingTarget(entry.name.slice(0, -5), root)));
+    const values = await Promise.all(entries.filter((entry) => entry.isFile() && entry.name.endsWith(".json")).map((entry) => getPublishingTarget(entry.name.slice(0, -5), root, undefined, outputDirectory)));
     return values.filter((value): value is PublishingTarget => Boolean(value));
   } catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return []; throw error; }
 }
@@ -172,12 +186,13 @@ export function createHostingerReadinessProbe(overrides: {
 
 export function createSubdomainProvisioningService(deps: Dependencies) {
   const root = resolve(deps.storageDirectory ?? defaultStorageDirectory()); const now = deps.now ?? (() => new Date());
+  const withProductMutation = createProductMutationCoordinator({ outputDirectory: deps.outputDirectory });
   const probe = deps.readinessProbe ?? createHostingerReadinessProbe();
   async function save(target: PublishingTarget) { return persistTarget(root, publishingTargetSchema.parse(target)); }
-  const get = (siteId: string) => getPublishingTarget(siteId, root); const list = () => listPublishingTargets(root);
+  const get = (siteId: string) => getPublishingTarget(siteId, root, undefined, deps.outputDirectory); const list = () => listPublishingTargets(root, deps.outputDirectory);
   async function update(target: PublishingTarget, changes: Partial<PublishingTarget>) { return save({ ...target, ...changes, updatedAt: now().toISOString() }); }
   async function createOrLoad(input: ProvisionSubdomainInput) {
-    const host = publicHost(input); const existing = await getPublishingTarget(input.siteId, root, input.rootEcosystemType);
+    const host = publicHost(input); const existing = await getPublishingTarget(input.siteId, root, input.rootEcosystemType, deps.outputDirectory);
     if (existing) {
       if (existing.ownerKey !== input.ownerKey || existing.ecosystemType !== input.ecosystemType || existing.rootEcosystemType !== input.rootEcosystemType || existing.baseDomain !== input.baseDomain || existing.publicHost !== host) throw new ProvisioningError("PROVISIONING_TARGET_CONFLICT", "Publishing target has a different immutable identity.");
       return existing;
@@ -189,6 +204,10 @@ export function createSubdomainProvisioningService(deps: Dependencies) {
   }
   async function provision(raw: ProvisionSubdomainInput) {
     const input = provisionSubdomainInputSchema.parse(raw);
+    return needsProductMutation(input.siteId, input.ecosystemType)
+      ? withProductMutation(input.siteId, () => provisionOwned(input)) : provisionOwned(input);
+  }
+  async function provisionOwned(input: ProvisionSubdomainInput) {
     const host = publicHost(input);
     if (input.ecosystemType === "PERSONAL_BRAND" && host === input.baseDomain) {
       throw new ProvisioningError("PROVISIONING_ROOT_TARGET_REQUIRES_SEPARATE_GATE", "Personal Brand apex provisioning requires a separate root-target gate.");

@@ -13,6 +13,7 @@ import {
 } from "@/server/services/publicationJobService";
 import { productPageGenerationService } from "@/server/services/productPageGenerationService";
 import { BusinessSiteBusyError, withBusinessPublicationSite, withoutBusinessPublicationSiteOwnership } from "@/server/services/businessPublicationSiteCoordinator";
+import { ProductMutationBusyError, withProductMutation, withoutProductMutationOwnership } from "@/server/services/productMutationCoordinator";
 import {
   APPLY_CONFIRMATION,
   APPLY_MODE,
@@ -36,13 +37,14 @@ const exists = (path: string) => access(path).then(() => true, () => false);
 
 type JobStore = Pick<typeof publicationJobService,
   "claimNext" | "advance" | "complete" | "fail" | "toSafeJob" | "isBusinessMasterPackageRefreshActive" | "deferClaimedBusinessJob" |
-  "deferClaimedJob" | "withBusinessPublicationSite" | "list">;
+  "deferClaimedJob" | "withBusinessPublicationSite" | "withProductMutation" | "storageBinding" | "list">;
 type Advance = (
   phase: PublicationJobPhase,
   evidence?: Omit<PublicationJobEvidence, "phase" | "recordedAt">
 ) => Promise<PublicationJob>;
 
 export type PublicationExecution = {
+  readonly storageBinding?: Readonly<{ sourceDirectory: string; outputDirectory: string }>;
   execute(job: PublicationJob, advance: Advance): Promise<Omit<PublicationJobEvidence, "phase" | "recordedAt">>;
 };
 
@@ -177,6 +179,16 @@ export function createPublicationExecution(options: {
   const isBusinessMasterPackageRefreshActive = options.isBusinessMasterPackageRefreshActive ??
     publicationJobService.isBusinessMasterPackageRefreshActive;
   const now = options.now ?? (() => new Date());
+  const storageBinding = Object.freeze({ sourceDirectory, outputDirectory });
+  const assertGenerationStorageBinding = (job: PublicationJob) => {
+    // Generator/source adapters resolve the process environment. Refuse a split even
+    // on recovery or with an injected generator, before pinned reads/providers.
+    if (job.intent.ecosystemType === "PRODUCT" &&
+        (sourceDirectory !== resolve(process.env.PRODUCT_PAGE_SOURCE_DIR ?? "/data/generated-sites/.sources") ||
+         outputDirectory !== resolve(process.env.PRODUCT_PAGE_OUTPUT_DIR ?? "/data/generated-sites"))) {
+      throw new Error("PRODUCT_STORAGE_BINDING_MISMATCH");
+    }
+  };
 
   async function assertBusinessMasterRefreshInactive(job: PublicationJob) {
     if (job.intent.ecosystemType === "BUSINESS" && await isBusinessMasterPackageRefreshActive()) {
@@ -185,7 +197,9 @@ export function createPublicationExecution(options: {
   }
 
   return {
+    get storageBinding() { return storageBinding; },
     async execute(job, advance) {
+      assertGenerationStorageBinding(job);
       const sourcePath = inside(sourceDirectory, `${job.intent.siteId}.json`);
       const targetPath = inside(inside(sourceDirectory, ".publishing-targets"), `${job.intent.siteId}.json`);
       const [sourceBefore, targetBefore] = await Promise.all([required(sourcePath), required(targetPath)]);
@@ -236,6 +250,7 @@ export function createPublicationExecution(options: {
       if (!["PENDING", "READY"].includes(String(target.publicationState))) throw new Error("TARGET_PUBLICATION_STATE_INVALID");
 
       await assertBusinessMasterRefreshInactive(job);
+      assertGenerationStorageBinding(job);
       await generate(job.intent.siteId, {
         templateSource: "master",
         masterSiteId: MASTER_SITE_IDS[job.intent.ecosystemType as EcosystemType]
@@ -334,6 +349,8 @@ export function createPublicationJobWorker(options: {
 } = {}) {
   const jobs = options.jobs ?? publicationJobService;
   const execution = options.execution ?? createPublicationExecution();
+  const executionBinding = execution.storageBinding;
+  const jobBinding = jobs.storageBinding;
   const workerId = options.workerId ?? `partnerhub-publication-${process.pid}-${randomUUID()}`;
   const leaseSeconds = options.leaseSeconds ?? 1800;
 
@@ -360,11 +377,17 @@ export function createPublicationJobWorker(options: {
             return deferForMasterRefresh();
           }
           try {
+            if (job.intent.ecosystemType === "PRODUCT" && executionBinding &&
+                (!jobBinding || executionBinding.outputDirectory !== jobBinding.outputDirectory ||
+                 executionBinding.sourceDirectory !== jobBinding.sourceDirectory)) {
+              throw new Error("PRODUCT_STORAGE_BINDING_MISMATCH");
+            }
             const evidence = await execution.execute(job, (phase, item = {}) => jobs.advance(job.id, leaseToken, phase, item));
             const completed = await jobs.complete(job.id, leaseToken, evidence);
             return { outcome: "SUCCEEDED" as const, job: jobs.toSafeJob(completed) };
           } catch (error) {
             if (job.intent.ecosystemType === "BUSINESS" && error instanceof BusinessSiteBusyError) throw error;
+            if (job.intent.ecosystemType === "PRODUCT" && error instanceof ProductMutationBusyError) throw error;
             if (job.intent.ecosystemType === "BUSINESS" && error instanceof Error &&
                 error.message === "PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS") {
               return deferForMasterRefresh();
@@ -373,14 +396,16 @@ export function createPublicationJobWorker(options: {
             return { outcome: "FAILED" as const, job: jobs.toSafeJob(failed) };
           }
         };
-        if (job.intent.ecosystemType !== "BUSINESS") return executeOwned();
+        if (job.intent.ecosystemType !== "BUSINESS" && job.intent.ecosystemType !== "PRODUCT") return executeOwned();
         // claimNext has already released its metadata mutex. Always site -> short job mutex.
         // Keep the site claim through execute (including journal recovery), complete/fail and cleanup.
         try {
-          return await withoutBusinessPublicationSiteOwnership(() =>
-            (jobs.withBusinessPublicationSite ?? withBusinessPublicationSite)(job.intent.siteId, executeOwned));
+          return await withoutBusinessPublicationSiteOwnership(() => withoutProductMutationOwnership(() =>
+            job.intent.ecosystemType === "PRODUCT"
+              ? (jobs.withProductMutation ?? withProductMutation)(job.intent.siteId, executeOwned)
+              : (jobs.withBusinessPublicationSite ?? withBusinessPublicationSite)(job.intent.siteId, executeOwned)));
         } catch (error) {
-          if (!(error instanceof BusinessSiteBusyError)) throw error;
+          if (!(error instanceof BusinessSiteBusyError) && !(error instanceof ProductMutationBusyError)) throw error;
           let deferred: PublicationJob;
           try {
             deferred = await jobs.deferClaimedJob(job.id, leaseToken);

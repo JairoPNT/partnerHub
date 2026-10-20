@@ -3,7 +3,8 @@
   "private": true,
   "version": "0.2.0",
   "imports": {
-    "#partner-hostname-contract": "./server/services/partnerHostnameContract.ts"
+    "#partner-hostname-contract": "./server/services/partnerHostnameContract.ts",
+    "#product-mutation-coordinator": "./server/services/productMutationCoordinator.ts"
   },
   "scripts": {
     "dev": "next dev",

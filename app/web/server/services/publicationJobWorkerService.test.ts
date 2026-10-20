@@ -272,10 +272,14 @@ class MemorySftp {
   async close() {}
 }
 
-test("the production execution generates, probes, atomically publishes and journals one generic customer without persisting credentials", async () => {
+test("the production execution generates, probes, atomically publishes and journals one generic customer without persisting credentials", async (t) => {
   const root = await mkdtemp(resolve(tmpdir(), "publication-worker-execution-"));
   const sources = resolve(root, "sources"); const targets = resolve(sources, ".publishing-targets");
   const output = resolve(root, "output"); const work = resolve(root, "work"); const journals = resolve(root, "journals");
+  const previousEnvironment = { ...process.env };
+  process.env.PRODUCT_PAGE_SOURCE_DIR = sources;
+  process.env.PRODUCT_PAGE_OUTPUT_DIR = output;
+  t.after(() => { process.env = previousEnvironment; });
   await mkdir(targets, { recursive: true }); await mkdir(output); await mkdir(journals);
   const source = { ecosystemType: "PRODUCT", site: { id: "ana-segura-product", domain: "producto.anasegura.pro" } };
   const target = { version: 2, ownerKey: job.intent.ownerKey, siteId: "ana-segura-product", ecosystemType: "PRODUCT", rootEcosystemType: "PERSONAL_BRAND",
