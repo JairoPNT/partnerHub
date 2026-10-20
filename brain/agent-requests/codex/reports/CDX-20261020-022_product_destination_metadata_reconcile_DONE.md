@@ -1,6 +1,25 @@
 # CDX-20261020-022 — Product destination metadata reconcile implementation
 
-Date: 2026-10-20. Owner: Codex Backend Lead. Status: **implementation frozen, independent review / integration pending**. No production reconciliation, provider action, publication, push, merge or deployment was performed.
+Date: 2026-10-20. Owner: Codex Backend Lead. Status: **independent review approved; local integrated verification complete; controller PR/deployment/runtime gates pending**. No production reconciliation, provider action, publication, push, merge or deployment was performed by this implementer.
+
+## Final approved integration checkpoint
+
+The controller reported final premium re-review APPROVED on source `62d42b02965eb7cb26616547a28be5a43268149d`, with no findings and 14/14 classification plus 14/14 compatibility checks. The authorized rebase introduced no conflict or change to the approved 022 source/test/Docker files. Rebased verification HEAD is `47418f919d70afbcf047ddad7ed63d41aba97375`; rebased source commit is `39ffd2b` (the replay of approved `62d42b0`). Subsequent changes are this handoff documentation only.
+
+Network qualification: HTTP/1.1 fetch and a bounded low-speed retry failed to connect to GitHub port443; the exact remote merge object `21aba6e13e44bcfb66ed202d73272135454a57dd` was unavailable locally. The controller explicitly authorized rebasing onto its content-equivalent parent `2616ac9d1f7b1c916b073631b27638498da3c54d`, having independently confirmed through GitHub comparison that 21aba6e is ahead by one merge commit with no changed files. Local parent tree was verified as `e1bd8c3eb2de270e32340d0ca0b02fbc9f0f04b8`. **This is main-equivalent content, not a claim that the branch contains the remote main merge commit.** Controller owns the final GitHub base diff/PR verification. Git automatically skipped mapping commit `a5f3a2d` as already applied; the branch's package diff now contains only the three maintenance/test command entries.
+
+Final verification on that integrated checkout, with `PRODUCT_RECONCILE_TEST_GATE` explicitly unset (default local 023 module, not the other worktree):
+
+- Reconcile integration: **77/77 passed**.
+- Production-shaped real Node20 packaging: **58/58 passed**. Executable: `C:/Users/jairo/AppData/Local/npm-cache/_npx/ebaba8b9e55fd0a9/node_modules/node/bin/node.exe`, v20.20.2, supplied by `PRODUCT_RECONCILE_NODE20`. Both bundle source and CLI came from this integrated checkout.
+- Explicit real coordinator, lead sync, target resolver and Product publisher service regression set: **70/70 passed**.
+- `scripts/product-mutation-coordination.integration.test.mjs`: **21/21 passed**, including normal writer adapters, custom-root binding, worker ownership/recovery and cross-process exclusion.
+- All72 configured test scripts: **69 passed / 3 failed**, exactly the same nine baseline Business failures listed below; no new failures.
+- Forced scoped ESLint (all four CLI/test files), `git diff --check`, and Next production build: passed. Build retained the existing multiple-lockfile and NFT tracing warnings.
+
+Local integrated coordinator hash remains Git/LF `3B6A52DEB6136393756BF90A8137006088459CBCADA04128D4A354081019E7AE` / Windows CRLF `E7544D6CA0E1947FBE2D4DC8AB94EAFA5ECD4CF52B26D686897760B8E1E3FCA8`. No coordinator copy, override or test-only implementation was substituted. All earlier review rounds below are historical checkpoints superseded by this section.
+
+Still unperformed: Docker image execution, actual Linux directory-fsync/power-loss durability, deployment and six real metadata applies. Controller owns PR/deploy/runtime approval and must use fresh tenant evidence and exact plan hashes. No runtime authority is implied by this completed local verification.
 
 ## Round 3 — bounded source classification guard
 
@@ -22,8 +41,8 @@ Round-2 tests consume the stable real 023 module from final source freeze `8a76c
 ## Branch and source freeze
 
 - Branch: `codex/CDX-20261020-022-product-destination-reconcile`.
-- Base: `17c5fab25bff3b9a34dd94e4f60be6f17a057d8a`.
-- Current source freeze: `62d42b02965eb7cb26616547a28be5a43268149d`; previous review freeze: `c62e1eda097e4faccdac33b343e98ba75b702d01`; initial source freeze: `3079985623c7968259c40a0ce20c3466a5c1a396`.
+- Integrated content-equivalent base: `2616ac9d1f7b1c916b073631b27638498da3c54d`; original ticket base: `17c5fab25bff3b9a34dd94e4f60be6f17a057d8a`.
+- Current rebased source freeze: `39ffd2b`; reviewed pre-rebase equivalent: `62d42b02965eb7cb26616547a28be5a43268149d`; previous review freeze: `c62e1eda097e4faccdac33b343e98ba75b702d01`; initial source freeze: `3079985623c7968259c40a0ce20c3466a5c1a396`.
 - Separate runtime import mapping commit: `a5f3a2d9c15b11c39bf626e0ffe888e1680ca7ac`. This exact mapping was also applied by the 022 package owner, with controller authorization, in the 023 checkout as a borrowed dependency. Controller owns its integration.
 - No PR created by this implementer. Final release requires controller review and integration of 021 + 023.
 
