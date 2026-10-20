@@ -60,6 +60,7 @@ COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-sftp-capability
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-publication-preview.mjs ./scripts/prepare-jairo-business-publication-preview.mjs
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-personal-brand-publication-preview.mjs ./scripts/prepare-jairo-personal-brand-publication-preview.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-master-package.mjs ./scripts/jairo-business-master-package.mjs
+COPY --from=builder /repo/app/web/scripts/jairo-business-master-package-drift-recovery.mjs ./scripts/jairo-business-master-package-drift-recovery.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-personal-brand-master-package.mjs ./scripts/jairo-personal-brand-master-package.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-sftp-capability-renewal.mjs ./scripts/jairo-business-sftp-capability-renewal.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-guarded-provisioning.mjs ./scripts/jairo-business-guarded-provisioning.mjs

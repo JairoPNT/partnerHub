@@ -1,7 +1,7 @@
 import "server-only";
 
 import { createHash, randomUUID } from "node:crypto";
-import { access, link, mkdir, open, readFile, readdir, rename, rm } from "node:fs/promises";
+import { access, link, lstat, mkdir, open, readFile, readdir, rename, rm } from "node:fs/promises";
 import { dirname, relative, resolve, sep } from "node:path";
 
 import { z } from "zod";
@@ -156,11 +156,29 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
   const jobDirectory = resolve(options.jobDirectory ?? process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR ?? "/data/generated-sites/.publication-jobs");
   const claimsDirectory = inside(jobDirectory, ".claims");
   const locksDirectory = inside(jobDirectory, ".locks");
+  const businessMasterRefreshClaimDirectory = inside(outputDirectory, ".master-package-claims/ganomaster-business");
   const now = options.now ?? (() => new Date());
   const token = options.token ?? randomUUID;
   const jobPath = (id: string) => inside(jobDirectory, `${z.string().regex(HASH).parse(id)}.json`);
   const claimPath = (id: string) => inside(claimsDirectory, `${z.string().regex(HASH).parse(id)}.json`);
   const lockPath = (id: string) => inside(locksDirectory, `${z.string().regex(HASH).parse(id)}.json`);
+
+  async function isBusinessMasterPackageRefreshActive() {
+    try {
+      await lstat(businessMasterRefreshClaimDirectory);
+      return true;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code === "ENOENT") return false;
+      // An unreadable or otherwise ambiguous marker must never open the Business path.
+      return true;
+    }
+  }
+
+  async function assertBusinessMasterPackageRefreshInactive(ecosystemType: z.infer<typeof ecosystemTypeSchema>) {
+    if (ecosystemType === "BUSINESS" && await isBusinessMasterPackageRefreshActive()) {
+      throw new Error("PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS");
+    }
+  }
 
   async function atomicCreate(path: string, value: unknown) {
     await mkdir(dirname(path), { recursive: true, mode: 0o700 });
@@ -270,6 +288,7 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     if (target.siteId !== safeSiteId || source.site.id !== safeSiteId || source.ecosystemType !== target.ecosystemType ||
         source.site.domain !== target.publicHost || target.publicHost !== getPartnerPublicHost(target.baseDomain, target.ecosystemType) ||
         (target.ecosystemType !== "PERSONAL_BRAND" && !ownerSite)) throw new Error("PUBLICATION_JOB_SOURCE_TARGET_IDENTITY_MISMATCH");
+    await assertBusinessMasterPackageRefreshInactive(target.ecosystemType);
     return intentSchema.parse({
       schemaVersion: 1,
       operation: "PUBLISH_PARTNER_ECOSYSTEM",
@@ -297,6 +316,7 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     requestedBySubject: string
   ) {
     if (!requestedBySubject.trim()) throw new Error("PUBLICATION_JOB_REQUESTOR_MISSING");
+    await assertBusinessMasterPackageRefreshInactive(intent.ecosystemType);
     const timestamp = now().toISOString();
     const job = publicationJobSchema.parse({
       schemaVersion: 1,
@@ -387,12 +407,18 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
           const current = await readJob(candidate.id);
           const recoverable = current?.status === "RUNNING" && current.lease && Date.parse(current.lease.expiresAt) <= now().getTime();
           if (!current || (current.status !== "QUEUED" && !recoverable)) return null;
+          if (current.intent.ecosystemType === "BUSINESS" && await isBusinessMasterPackageRefreshActive()) return null;
           const acquired = await acquireClaim(current, workerId, leaseSeconds);
           if (!acquired) return null;
           const timestamp = now().toISOString();
           const claimed = publicationJobSchema.parse({ ...current, status: "RUNNING", phase: "PREPARING_PACKAGE", revision: current.revision + 1,
             attemptCount: current.attemptCount + 1, updatedAt: timestamp, lease: acquired.claim, lastErrorCode: undefined });
           await atomicReplace(jobPath(candidate.id), claimed);
+          // Close the race where the master-refresh marker appears after the first check.
+          if (claimed.intent.ecosystemType === "BUSINESS" && await isBusinessMasterPackageRefreshActive()) {
+            await deferClaimedBusinessJobUnderLock(candidate.id, acquired.rawToken);
+            return null;
+          }
           return { job: claimed, leaseToken: acquired.rawToken };
         });
         if (result) return result;
@@ -410,6 +436,30 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     const claim = leaseSchema.parse(JSON.parse(await readFile(claimPath(id), "utf8")));
     if (claim.tokenHash !== job.lease.tokenHash || Date.parse(claim.expiresAt) <= now().getTime()) throw new Error("PUBLICATION_JOB_LEASE_OWNERSHIP_LOST");
     return job;
+  }
+
+  async function releaseLeaseClaimIfOwned(id: string, tokenHash: string) {
+    try {
+      const current = leaseSchema.parse(JSON.parse(await readFile(claimPath(id), "utf8")));
+      if (current.tokenHash === tokenHash) await rm(claimPath(id), { force: true });
+    } catch {
+      // Missing, malformed, or replaced claim files are preserved unless ownership is proven.
+    }
+  }
+
+  async function deferClaimedBusinessJobUnderLock(id: string, rawToken: string) {
+    const job = await assertLease(id, rawToken);
+    if (job.intent.ecosystemType !== "BUSINESS") throw new Error("PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_ONLY");
+    const timestamp = now().toISOString();
+    const queued = publicationJobSchema.parse({ ...job, status: "QUEUED", phase: "QUEUED", revision: job.revision + 1,
+      attemptCount: Math.max(0, job.attemptCount - 1), updatedAt: timestamp, lease: undefined, lastErrorCode: undefined });
+    await atomicReplace(jobPath(id), queued);
+    await releaseLeaseClaimIfOwned(id, sha256(rawToken));
+    return queued;
+  }
+
+  async function deferClaimedBusinessJob(id: string, leaseToken: string) {
+    return withJobLock(id, () => deferClaimedBusinessJobUnderLock(id, leaseToken));
   }
 
   async function advance(id: string, rawToken: string, phase: PublicationJobPhase, evidence: Omit<PublicationJobEvidence, "phase" | "recordedAt"> = {}) {
@@ -457,6 +507,7 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     return withJobLock(id, async () => {
       const job = await readJob(id); if (!job) throw new Error("PUBLICATION_JOB_NOT_FOUND");
       if (job.status !== "FAILED" && job.status !== "CANCELLED") throw new Error("PUBLICATION_JOB_RETRY_INVALID");
+      await assertBusinessMasterPackageRefreshInactive(job.intent.ecosystemType);
       const acquired = await acquireClaim(job, `retry:${id}`, 30); if (!acquired) throw new Error("PUBLICATION_JOB_ACTIVE");
       const timestamp = now().toISOString();
       const queued = publicationJobSchema.parse({ ...job, status: "QUEUED", phase: "QUEUED", revision: job.revision + 1, updatedAt: timestamp,
@@ -477,7 +528,8 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     });
   }
 
-  return { previewIntent, enqueue, enqueueReviewed, get: readJob, list, claimNext, advance, complete, fail, retry, cancel, toSafeJob: safeJob };
+  return { previewIntent, enqueue, enqueueReviewed, get: readJob, list, claimNext, advance, complete, fail, retry, cancel,
+    isBusinessMasterPackageRefreshActive, deferClaimedBusinessJob, toSafeJob: safeJob };
 }
 
 export const publicationJobService = createPublicationJobService();
