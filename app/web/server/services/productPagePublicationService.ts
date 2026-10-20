@@ -19,6 +19,7 @@ import {
 import { productPageHistoryService } from "@/server/services/productPageHistoryService";
 import { resolvePublicationTargetForSite } from "@/server/services/publicationTargetService";
 import { assertBusinessPublicationSiteIdentity, isBusinessPublicationSiteId, withBusinessPublicationSite } from "@/server/services/businessPublicationSiteCoordinator";
+import type { ProductPublicationSource } from "@/server/services/productPublicationDestinationPolicy";
 
 const siteIdSchema = z
   .string()
@@ -122,7 +123,7 @@ function getSftpConfiguration(): SftpConfiguration {
     password: requiredEnvironmentVariable("HOSTINGER_SFTP_PASSWORD"),
     remoteRoot,
     remoteRoots,
-    remoteRootTemplate: process.env.HOSTINGER_SFTP_REMOTE_ROOT_TEMPLATE?.trim() || DEFAULT_HOSTINGER_REMOTE_ROOT_TEMPLATE,
+    remoteRootTemplate: process.env.HOSTINGER_SFTP_REMOTE_ROOT_TEMPLATE?.trim() || undefined,
     masterRemoteRoot
   };
 }
@@ -225,12 +226,15 @@ async function replaceRemoteFile(sftp: SftpClient, temporaryRemoteFile: string, 
 export const productPagePublicationService = {
   async publish(input: ProductPagePublicationInput): Promise<ProductPagePublicationResult> {
     const action = async (): Promise<ProductPagePublicationResult> => {
-      const source = await productPageSourceService.get(input.siteId) as { ecosystemType?: unknown } | null;
+      const source = await productPageSourceService.get(input.siteId) as ProductPublicationSource | null;
       assertBusinessPublicationSiteIdentity(input.siteId, source?.ecosystemType);
       const configuration = getSftpConfiguration();
       const localDirectory = resolveInsideDirectory(getOutputRoot(), input.siteId);
-      const legacyRemoteRoot = await getRemoteRoot(configuration, input.siteId);
-      const publicationTarget = await resolvePublicationTargetForSite(input.siteId, legacyRemoteRoot);
+      const productContext = !getMasterEcosystemType(input.siteId) && source?.ecosystemType !== "BUSINESS" && source?.ecosystemType !== "PERSONAL_BRAND"
+        ? { source, hosting: configuration } : undefined;
+      // Product never enters the legacy fallback/mapping path.
+      const legacyRemoteRoot = productContext ? "" : await getRemoteRoot(configuration, input.siteId);
+      const publicationTarget = await resolvePublicationTargetForSite(input.siteId, legacyRemoteRoot, productContext);
       const remoteRoot = publicationTarget.remoteRoot;
 
       try {
