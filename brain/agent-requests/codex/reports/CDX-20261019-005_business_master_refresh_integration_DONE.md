@@ -4,7 +4,7 @@
 - **Status:** Complete; PR prepared for review, not merged.
 - **Branch:** `codex/CDX-20261019-005-business-master-refresh-integration`
 - **Commit:** `947912a` (`fix: tighten Business master refresh guards`)
-- **PR:** Pending creation.
+- **PR:** [#209](https://github.com/JairoPNT/partnerHub/pull/209), abierto contra `main`, sin merge.
 
 ## Result
 
