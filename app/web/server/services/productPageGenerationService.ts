@@ -20,6 +20,7 @@ import { businessProductHeroCorrelationService } from "@/server/services/busines
 import { partnerEcosystemEntitlementService } from "@/server/services/partnerEcosystemEntitlementService";
 import { assertPartnerEcosystemGenerationAllowed } from "@/server/services/partnerEcosystemGenerationGuard";
 import { buildBusinessWhatsappCta } from "@/server/services/businessWhatsappCta";
+import { composeBusinessMasterContent, loadBusinessMasterContent } from "@/server/services/businessMasterContent";
 
 const siteIdSchema = z
   .string()
@@ -373,12 +374,16 @@ export const productPageGenerationService = {
     const productHero = isPartnerBusiness
       ? await businessProductHeroCorrelationService.resolveForBusinessSite(input.site.id)
       : {};
-    const configuration = applyBusinessVslPoster(baseConfiguration, isPartnerBusiness, productHero);
     const templateDirectory = await resolveTemplateDirectory(
-      configuration.site.id,
-      configuration.ecosystemType,
+      baseConfiguration.site.id,
+      baseConfiguration.ecosystemType,
       options
     );
+    const presentation = input.ecosystemType === "BUSINESS"
+      ? await loadBusinessMasterContent(templateDirectory)
+      : undefined;
+    const composed = presentation ? composeBusinessMasterContent(baseConfiguration, presentation) : baseConfiguration;
+    const configuration = applyBusinessVslPoster(composed, isPartnerBusiness, productHero);
     const outputDirectory = resolveInsideDirectory(getOutputRoot(), configuration.site.id);
 
     await rm(outputDirectory, { recursive: true, force: true });
