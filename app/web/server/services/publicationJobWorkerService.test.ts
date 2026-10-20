@@ -131,6 +131,98 @@ test("Product jobs execute while the Business master refresh claim is active", a
   assert.deepEqual(fx.calls, ["claim", "complete"]);
 });
 
+test("the real Business executor rechecks the refresh claim before reading the master or starting work", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "publication-worker-business-claim-race-"));
+  const sources = resolve(root, "sources"); const targets = resolve(sources, ".publishing-targets");
+  const output = resolve(root, "output"); const journals = resolve(root, "journals");
+  await mkdir(targets, { recursive: true }); await mkdir(output); await mkdir(journals);
+  const siteId = "ana-segura-business";
+  const source = { ecosystemType: "BUSINESS", site: { id: siteId, domain: "negocio.anasegura.pro" } };
+  const target = { version: 2, ownerKey: job.intent.ownerKey, siteId, ecosystemType: "BUSINESS", rootEcosystemType: "PERSONAL_BRAND",
+    baseDomain: "anasegura.pro", publicHost: "negocio.anasegura.pro", remoteRoot: "/hosting/negocio", provisioningState: "READY", publicationState: "PENDING" };
+  const sourceText = stringify(source); const targetText = stringify(target);
+  await writeFile(resolve(sources, `${siteId}.json`), sourceText); await writeFile(resolve(targets, `${siteId}.json`), targetText);
+  const master = resolve(output, "ganomaster-business"); await mkdir(master); await writeFile(resolve(master, "index.html"), "business-master");
+  const executionJob: PublicationJob = { ...job, id: sha("business-race-job"), intentHash: sha("business-race-intent"),
+    intent: { ...job.intent, siteId, ecosystemType: "BUSINESS", publicHost: target.publicHost, sourceHash: sha(sourceText), targetHash: sha(targetText), masterPackageHash: hash } };
+  let refreshChecks = 0; let generationCalls = 0; let adapterFactoryCalls = 0; let providerCalls = 0;
+  const isRefreshActive = async () => ++refreshChecks >= 2;
+  const execution = createPublicationExecution({ sourceDirectory: sources, outputDirectory: output, journalDirectory: journals,
+    isBusinessMasterPackageRefreshActive: isRefreshActive,
+    generate: async () => { generationCalls += 1; throw new Error("generation should not begin"); },
+    adapterFactory: async () => { adapterFactoryCalls += 1; return {
+      async inventory() { providerCalls += 1; throw new Error("provider access should not begin"); },
+      async close() {}
+    } as never; },
+    verifyPublic: async () => { providerCalls += 1; return { passed: true, reasons: [] }; } });
+  const jobs = {
+    async claimNext() { return { job: executionJob, leaseToken: "RAW_LEASE_SECRET" }; },
+    isBusinessMasterPackageRefreshActive: isRefreshActive,
+    async deferClaimedBusinessJob() { return { ...executionJob, status: "QUEUED", phase: "QUEUED", lease: undefined }; },
+    async advance() { return executionJob; }, async complete() { return executionJob; }, async fail() { throw new Error("must defer, not fail"); },
+    toSafeJob(value: Record<string, unknown>) { return { status: value.status }; }
+  };
+
+  const result = await createPublicationJobWorker({ jobs: jobs as never, execution, workerId: "worker" }).runNext();
+
+  assert.equal(result.outcome, "DEFERRED");
+  assert.equal(result.job.status, "QUEUED");
+  assert.equal(refreshChecks, 2);
+  assert.equal(generationCalls, 0);
+  assert.equal(adapterFactoryCalls, 0);
+  assert.equal(providerCalls, 0);
+  assert.doesNotMatch(JSON.stringify(result), /RAW_LEASE_SECRET/);
+});
+
+test("the real Business executor stops before SFTP adapter creation when refresh starts mid-run", async () => {
+  const root = await mkdtemp(resolve(tmpdir(), "publication-worker-business-adapter-race-"));
+  const sources = resolve(root, "sources"); const targets = resolve(sources, ".publishing-targets");
+  const output = resolve(root, "output"); const journals = resolve(root, "journals");
+  await mkdir(targets, { recursive: true }); await mkdir(output); await mkdir(journals);
+  const siteId = "ana-segura-business";
+  const source = { ecosystemType: "BUSINESS", site: { id: siteId, domain: "negocio.anasegura.pro" } };
+  const target = { version: 2, ownerKey: job.intent.ownerKey, siteId, ecosystemType: "BUSINESS", rootEcosystemType: "PERSONAL_BRAND",
+    baseDomain: "anasegura.pro", publicHost: "negocio.anasegura.pro", remoteRoot: "/hosting/negocio", provisioningState: "READY", publicationState: "PENDING" };
+  const sourceText = stringify(source); const targetText = stringify(target); const masterText = "business-master";
+  await writeFile(resolve(sources, `${siteId}.json`), sourceText); await writeFile(resolve(targets, `${siteId}.json`), targetText);
+  const master = resolve(output, "ganomaster-business"); await mkdir(master); await writeFile(resolve(master, "index.html"), masterText);
+  const executionJob: PublicationJob = { ...job, id: sha("business-adapter-race-job"), intentHash: sha("business-adapter-race-intent"),
+    intent: { ...job.intent, siteId, ecosystemType: "BUSINESS", publicHost: target.publicHost, sourceHash: sha(sourceText), targetHash: sha(targetText),
+      masterPackageHash: sha(JSON.stringify([{ path: "index.html", hash: sha(masterText) }])) } };
+  let refreshActive = false; let generationCalls = 0; let adapterFactoryCalls = 0; let providerCalls = 0;
+  const isRefreshActive = async () => refreshActive;
+  const execution = createPublicationExecution({ sourceDirectory: sources, outputDirectory: output, workDirectory: resolve(root, "work"),
+    journalDirectory: journals, isBusinessMasterPackageRefreshActive: isRefreshActive,
+    generate: async (id) => {
+      generationCalls += 1;
+      const destination = resolve(output, id); await mkdir(destination); await writeFile(resolve(destination, "index.html"), "generated-business");
+      return { siteId: id, generatedAt: "2026-10-19T12:00:00.000Z", outputDirectory: destination, previewUrl: "", files: [] };
+    },
+    adapterFactory: async () => { adapterFactoryCalls += 1; return {
+      async inventory() { providerCalls += 1; throw new Error("provider access should not begin"); },
+      async close() {}
+    } as never; },
+    verifyPublic: async () => { providerCalls += 1; return { passed: true, reasons: [] }; } });
+  const jobs = {
+    async claimNext() { return { job: executionJob, leaseToken: "RAW_LEASE_SECRET" }; },
+    isBusinessMasterPackageRefreshActive: isRefreshActive,
+    async deferClaimedBusinessJob() { return { ...executionJob, status: "QUEUED", phase: "QUEUED", lease: undefined }; },
+    async advance(_id: string, _token: string, phase: string) {
+      if (phase === "VALIDATING_CAPABILITY") refreshActive = true;
+      return executionJob;
+    }, async complete() { return executionJob; }, async fail() { throw new Error("must defer, not fail"); },
+    toSafeJob(value: Record<string, unknown>) { return { status: value.status }; }
+  };
+
+  const result = await createPublicationJobWorker({ jobs: jobs as never, execution, workerId: "worker" }).runNext();
+
+  assert.equal(result.outcome, "DEFERRED");
+  assert.equal(result.job.status, "QUEUED");
+  assert.equal(generationCalls, 1);
+  assert.equal(adapterFactoryCalls, 0);
+  assert.equal(providerCalls, 0);
+});
+
 class MemorySftp {
   files = new Map<string, Buffer>();
   directories = new Set(["/", "/hosting"]);

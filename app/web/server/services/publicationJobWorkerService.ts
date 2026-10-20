@@ -161,6 +161,7 @@ export function createPublicationExecution(options: {
   generate?: typeof productPageGenerationService.regenerateFromSavedSource;
   adapterFactory?: typeof createSftpAdapter;
   verifyPublic?: typeof verifyPublicPackage;
+  isBusinessMasterPackageRefreshActive?: () => Promise<boolean>;
   now?: () => Date;
 } = {}): PublicationExecution {
   const environment = options.environment ?? process.env;
@@ -171,7 +172,15 @@ export function createPublicationExecution(options: {
   const generate = options.generate ?? productPageGenerationService.regenerateFromSavedSource.bind(productPageGenerationService);
   const adapterFactory = options.adapterFactory ?? createSftpAdapter;
   const verifyPublic = options.verifyPublic ?? verifyPublicPackage;
+  const isBusinessMasterPackageRefreshActive = options.isBusinessMasterPackageRefreshActive ??
+    publicationJobService.isBusinessMasterPackageRefreshActive;
   const now = options.now ?? (() => new Date());
+
+  async function assertBusinessMasterRefreshInactive(job: PublicationJob) {
+    if (job.intent.ecosystemType === "BUSINESS" && await isBusinessMasterPackageRefreshActive()) {
+      throw new Error("PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS");
+    }
+  }
 
   return {
     async execute(job, advance) {
@@ -179,6 +188,7 @@ export function createPublicationExecution(options: {
       const targetPath = inside(inside(sourceDirectory, ".publishing-targets"), `${job.intent.siteId}.json`);
       const [sourceBefore, targetBefore] = await Promise.all([required(sourcePath), required(targetPath)]);
       if (sourceBefore.hash !== job.intent.sourceHash) throw new Error("SOURCE_HASH_DRIFT");
+      await assertBusinessMasterRefreshInactive(job);
       const masterDirectory = inside(outputDirectory, MASTER_SITE_IDS[job.intent.ecosystemType as EcosystemType]);
       if ((await inventory(masterDirectory)).hash !== job.intent.masterPackageHash) throw new Error("MASTER_PACKAGE_HASH_DRIFT");
 
@@ -201,10 +211,14 @@ export function createPublicationExecution(options: {
               value.finalTargetHash !== targetBefore.hash || value.publicHost !== job.intent.publicHost || value.remoteRoot !== target.remoteRoot ||
               value.targetPath !== targetPath || !HASH.test(String(value.packageHash ?? "")) || !HASH.test(String(value.capabilityHash ?? "")) ||
               !HASH.test(String(value.planHash ?? "")) || target.publicationState !== "READY") throw new Error("PUBLICATION_RECOVERY_JOURNAL_INVALID");
+          await assertBusinessMasterRefreshInactive(job);
           const adapter = await adapterFactory(environment);
           try {
+            await assertBusinessMasterRefreshInactive(job);
             const remote = await adapter.inventory(String(target.remoteRoot));
+            await assertBusinessMasterRefreshInactive(job);
             if (!remote.exists || remote.hash !== value.packageHash) throw new Error("PUBLICATION_RECOVERY_REMOTE_DRIFT");
+            await assertBusinessMasterRefreshInactive(job);
             const verification = await verifyPublic({ ...job.intent }, source);
             if (!verification.passed) throw new Error("PUBLICATION_RECOVERY_PUBLIC_VERIFICATION_FAILED");
           } finally { await adapter.close(); }
@@ -219,6 +233,7 @@ export function createPublicationExecution(options: {
       if (targetBefore.hash !== job.intent.targetHash) throw new Error("TARGET_HASH_DRIFT");
       if (!["PENDING", "READY"].includes(String(target.publicationState))) throw new Error("TARGET_PUBLICATION_STATE_INVALID");
 
+      await assertBusinessMasterRefreshInactive(job);
       await generate(job.intent.siteId, {
         templateSource: "master",
         masterSiteId: MASTER_SITE_IDS[job.intent.ecosystemType as EcosystemType]
@@ -227,6 +242,7 @@ export function createPublicationExecution(options: {
       const [sourceAfter, targetAfter] = await Promise.all([required(sourcePath), required(targetPath)]);
       if (sourceAfter.hash !== job.intent.sourceHash) throw new Error("SOURCE_HASH_DRIFT_AFTER_GENERATION");
       if (targetAfter.hash !== job.intent.targetHash) throw new Error("TARGET_HASH_DRIFT_AFTER_GENERATION");
+      await assertBusinessMasterRefreshInactive(job);
       if ((await inventory(masterDirectory)).hash !== job.intent.masterPackageHash) throw new Error("MASTER_PACKAGE_HASH_DRIFT_AFTER_GENERATION");
       const packageDirectory = inside(outputDirectory, job.intent.siteId);
       const packageState = await inventory(packageDirectory);
@@ -246,11 +262,14 @@ export function createPublicationExecution(options: {
       const publicationManifestPath = inside(attemptDirectory, "manifest.json");
       await writeExclusive(probeManifestPath, probeManifest(job, target, targetAfter.hash));
 
+      await assertBusinessMasterRefreshInactive(job);
       const adapter = await adapterFactory(environment);
       try {
+        await assertBusinessMasterRefreshInactive(job);
         const remote = await adapter.inventory(String(target.remoteRoot));
         const probePreview = await planSftpCapabilityProbe({ manifestPath: probeManifestPath, sourceDirectory, environment });
         if (probePreview.blocked) throw new Error(`SFTP_PROBE_BLOCKED:${probePreview.blockedReasons.join("|")}`);
+        await assertBusinessMasterRefreshInactive(job);
         const capability = await runSftpCapabilityProbe({
           manifestPath: probeManifestPath,
           sourceDirectory,
@@ -278,6 +297,7 @@ export function createPublicationExecution(options: {
         if (!HASH.test(preview.planHash ?? "")) throw new Error("PUBLICATION_PLAN_HASH_INVALID");
         await advance("PUBLISHING", { packageHash: packageState.hash, capabilityHash: capability.capabilityHash, planHash: preview.planHash });
 
+        await assertBusinessMasterRefreshInactive(job);
         const applied = await runGuardedPublication({
           manifestPath: publicationManifestPath,
           sourceDirectory,
