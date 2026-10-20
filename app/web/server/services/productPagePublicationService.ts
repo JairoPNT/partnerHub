@@ -230,11 +230,11 @@ export const productPagePublicationService = {
       assertBusinessPublicationSiteIdentity(input.siteId, source?.ecosystemType);
       const configuration = getSftpConfiguration();
       const localDirectory = resolveInsideDirectory(getOutputRoot(), input.siteId);
-      const productContext = !getMasterEcosystemType(input.siteId) && source?.ecosystemType !== "BUSINESS" && source?.ecosystemType !== "PERSONAL_BRAND"
-        ? { source, hosting: configuration } : undefined;
-      // Product never enters the legacy fallback/mapping path.
-      const legacyRemoteRoot = productContext ? "" : await getRemoteRoot(configuration, input.siteId);
-      const publicationTarget = await resolvePublicationTargetForSite(input.siteId, legacyRemoteRoot, productContext);
+      const siteContext = !getMasterEcosystemType(input.siteId)
+        ? { source, hosting: configuration, resolveLegacyRemoteRoot: () => getRemoteRoot(configuration, input.siteId) } : undefined;
+      // Validate nonmaster source/target ecosystems before allowing a legacy exception.
+      const legacyRemoteRoot = siteContext ? "" : await getRemoteRoot(configuration, input.siteId);
+      const publicationTarget = await resolvePublicationTargetForSite(input.siteId, legacyRemoteRoot, siteContext);
       const remoteRoot = publicationTarget.remoteRoot;
 
       try {

@@ -59,6 +59,11 @@ async function fixture(t: test.TestContext, overrides: { siteId?: string; source
 
 // Each mutation would otherwise let the real publisher reach transport/overwrite.
 const invalidCases: [string, Parameters<typeof fixture>[1]][] = [
+  ["Brand source contradicts Product target and foreign apex root", {
+    source: { ...source, ecosystemType: "PERSONAL_BRAND" },
+    target: { ...readyTarget, ownerKey: foreign, remoteRoot: "/home/u123456789/domains/foreign.pro/public_html" }
+  }],
+  ["Brand source contradicts otherwise valid Product target", { source: { ...source, ecosystemType: "PERSONAL_BRAND" } }],
   ["missing target", { target: null }],
   ["non-READY target", { target: { ...readyTarget, provisioningState: "SSL_PENDING" } }],
   ["foreign site", { target: { ...readyTarget, siteId: "foreign-product" } }],
@@ -83,6 +88,16 @@ const invalidCases: [string, Parameters<typeof fixture>[1]][] = [
   ["old configured template", { environment: { HOSTINGER_SFTP_REMOTE_ROOT_TEMPLATE: "/home/u658137804/domains/{domain}/public_html" } }],
   ["ambiguous configured account", { environment: { HOSTINGER_SFTP_REMOTE_ROOT: "/home/u658137804/domains/partner.pro/public_html" } }]
 ];
+
+test("Business source cannot route a contradictory Product target through generic resolution", async (t) => {
+  const fx = await fixture(t, {
+    siteId: "partner-business",
+    source: { ecosystemType: "BUSINESS", site: { id: "partner-business", domain: "negocio.partner.pro" } },
+    target: { ...readyTarget, siteId: "partner-business", ownerKey: foreign, remoteRoot: "/home/u123456789/domains/foreign.pro/public_html" }
+  });
+  await assert.rejects(productPagePublicationService.publish({ siteId: "partner-business" }));
+  assert.deepEqual(fx.effects, []);
+});
 
 for (const [name, overrides] of invalidCases) {
   test(`Product publisher blocks ${name} before transport`, async (t) => {
@@ -122,6 +137,25 @@ for (const template of ["/home/u123456789/domains/{domain}/public_html", "/home/
 test("derived Product ID binds a unique primary lead with matching canonical domain", async (t) => {
   const fx = await fixture(t, { siteId: "legacy-partner-product" });
   assert.equal((await productPagePublicationService.publish({ siteId: "legacy-partner-product" })).remoteRoot, expectedRoot);
+  assert.ok(fx.effects.includes(`rename:${expectedRoot}/index.html`));
+});
+
+for (const publicationSiteId of [siteId, "legacy-partner-product"]) {
+  for (const conflictingDomain of ["partner.pro", " WWW.Partner.Pro "]) {
+    test(`${publicationSiteId} rejects a distinct owner claiming normalized base ${conflictingDomain}`, async (t) => {
+      const fx = await fixture(t, {
+        siteId: publicationSiteId,
+        leads: [lead, { ...lead, id: foreign, siteId: "other-partner", onboardingData: { domain: conflictingDomain } }]
+      });
+      await assert.rejects(productPagePublicationService.publish({ siteId: publicationSiteId }));
+      assert.deepEqual(fx.effects, []);
+    });
+  }
+}
+
+test("a different owner's unrelated base does not block the legitimate Product destination", async (t) => {
+  const fx = await fixture(t, { leads: [lead, { ...lead, id: foreign, siteId: "other-partner", onboardingData: { domain: "other.pro" } }] });
+  assert.equal((await productPagePublicationService.publish({ siteId })).remoteRoot, expectedRoot);
   assert.ok(fx.effects.includes(`rename:${expectedRoot}/index.html`));
 });
 

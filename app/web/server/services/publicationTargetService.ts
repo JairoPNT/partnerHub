@@ -1,4 +1,4 @@
-import { resolvePublicationTarget } from "@/server/services/publicationTargetResolver";
+import { PublicationTargetError, resolvePublicationTarget } from "@/server/services/publicationTargetResolver";
 import { getPublishingTarget } from "@/server/services/subdomainProvisioningService";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
@@ -9,9 +9,9 @@ import type { PublicationTargetSnapshot } from "@/server/services/publicationTar
 export async function resolvePublicationTargetForSite(
   siteId: string,
   legacyRemoteRoot: string,
-  productContext?: { source: ProductPublicationSource | null; hosting: ProductPublicationHosting }
+  siteContext?: { source: ProductPublicationSource | null; hosting: ProductPublicationHosting; resolveLegacyRemoteRoot: () => Promise<string> }
 ) {
-  if (productContext) {
+  if (siteContext) {
     if (!/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(siteId)) throw new Error("Invalid Product publication site ID.");
     let target: PublicationTargetSnapshot | null = null;
     try {
@@ -20,7 +20,20 @@ export async function resolvePublicationTargetForSite(
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
     }
-    return resolveProductPublicationDestination({ siteId, ...productContext, target, leads: await activationLeadService.list({ includeArchived: true }) });
+    const sourceEcosystem = siteContext.source?.ecosystemType ?? "PRODUCT";
+    // A mutable source discriminator cannot exempt a contradictory Product target.
+    // Check both identities before selecting any generic fallback or v1 migration.
+    if (target && target.ecosystemType !== sourceEcosystem) {
+      throw new PublicationTargetError("PUBLICATION_TARGET_INVALID", "Publication source and target ecosystems do not match.");
+    }
+    if (sourceEcosystem !== "BUSINESS" && sourceEcosystem !== "PERSONAL_BRAND") {
+      return resolveProductPublicationDestination({ siteId, ...siteContext, target, leads: await activationLeadService.list({ includeArchived: true }) });
+    }
+    const genericTarget = await getPublishingTarget(siteId);
+    if (genericTarget && genericTarget.ecosystemType !== sourceEcosystem) {
+      throw new PublicationTargetError("PUBLICATION_TARGET_INVALID", "Publication source and target ecosystems do not match.");
+    }
+    return resolvePublicationTarget(await siteContext.resolveLegacyRemoteRoot(), genericTarget);
   }
   return resolvePublicationTarget(legacyRemoteRoot, await getPublishingTarget(siteId));
 }

@@ -60,6 +60,14 @@ export function resolveProductPublicationDestination(input: {
   const lead = candidates[0];
   if (!z.string().uuid().safeParse(lead.id).success) return invalid();
   const base = normalizeProductBaseDomain(lead.onboardingData?.domain);
+  // Distinct owners cannot share the same physical Product root, even when their
+  // assigned site IDs differ. Compare canonical bases across authoritative leads.
+  const domainCollision = input.leads.some((other) => {
+    if (other.id === lead.id) return false;
+    try { return normalizeProductBaseDomain(other.onboardingData?.domain) === base; }
+    catch { return false; } // An unrelated missing/invalid domain is not a claim to this base.
+  });
+  if (domainCollision) return invalid();
   const host = canonicalProductHost(base);
   if (source.site.domain !== host) return invalid();
   for (const evidence of [source, source.site]) {
