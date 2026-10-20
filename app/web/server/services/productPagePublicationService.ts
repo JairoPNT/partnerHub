@@ -18,6 +18,7 @@ import {
 } from "@/server/services/productPageVerificationService";
 import { productPageHistoryService } from "@/server/services/productPageHistoryService";
 import { resolvePublicationTargetForSite } from "@/server/services/publicationTargetService";
+import { assertBusinessPublicationSiteIdentity, isBusinessPublicationSiteId, withBusinessPublicationSite } from "@/server/services/businessPublicationSiteCoordinator";
 
 const siteIdSchema = z
   .string()
@@ -223,102 +224,107 @@ async function replaceRemoteFile(sftp: SftpClient, temporaryRemoteFile: string, 
 
 export const productPagePublicationService = {
   async publish(input: ProductPagePublicationInput): Promise<ProductPagePublicationResult> {
-    const configuration = getSftpConfiguration();
-    const localDirectory = resolveInsideDirectory(getOutputRoot(), input.siteId);
-    const legacyRemoteRoot = await getRemoteRoot(configuration, input.siteId);
-    const publicationTarget = await resolvePublicationTargetForSite(input.siteId, legacyRemoteRoot);
-    const remoteRoot = publicationTarget.remoteRoot;
+    const action = async (): Promise<ProductPagePublicationResult> => {
+      const source = await productPageSourceService.get(input.siteId) as { ecosystemType?: unknown } | null;
+      assertBusinessPublicationSiteIdentity(input.siteId, source?.ecosystemType);
+      const configuration = getSftpConfiguration();
+      const localDirectory = resolveInsideDirectory(getOutputRoot(), input.siteId);
+      const legacyRemoteRoot = await getRemoteRoot(configuration, input.siteId);
+      const publicationTarget = await resolvePublicationTargetForSite(input.siteId, legacyRemoteRoot);
+      const remoteRoot = publicationTarget.remoteRoot;
 
-    try {
-      await access(localDirectory);
-    } catch {
-      throw new Error(`No generated package exists for siteId: ${input.siteId}.`);
-    }
+      try {
+        await access(localDirectory);
+      } catch {
+        throw new Error(`No generated package exists for siteId: ${input.siteId}.`);
+      }
 
-    const localFiles = await listFiles(localDirectory);
+      const localFiles = await listFiles(localDirectory);
 
-    if (localFiles.length === 0) {
-      throw new Error(`The generated package for siteId ${input.siteId} is empty.`);
-    }
+      if (localFiles.length === 0) {
+        throw new Error(`The generated package for siteId ${input.siteId} is empty.`);
+      }
 
-    const sftp = new SftpClient();
-    const temporaryRemotePaths: string[] = [];
-    let connected = false;
+      const sftp = new SftpClient();
+      const temporaryRemotePaths: string[] = [];
+      let connected = false;
 
-    try {
-      await sftp.connect({
-        host: configuration.host,
-        port: configuration.port,
-        username: configuration.username,
-        password: configuration.password,
-        readyTimeout: 15_000
-      });
-      connected = true;
+      try {
+        await sftp.connect({
+          host: configuration.host,
+          port: configuration.port,
+          username: configuration.username,
+          password: configuration.password,
+          readyTimeout: 15_000
+        });
+        connected = true;
 
-      // Upload temporary files first. index.html is replaced last so visitors do not receive a partial page.
-      const orderedFiles = [...localFiles].sort((left, right) => {
-        const leftIsIndex = basename(left) === "index.html";
-        const rightIsIndex = basename(right) === "index.html";
-        return Number(leftIsIndex) - Number(rightIsIndex);
-      });
+        // Upload temporary files first. index.html is replaced last so visitors do not receive a partial page.
+        const orderedFiles = [...localFiles].sort((left, right) => {
+          const leftIsIndex = basename(left) === "index.html";
+          const rightIsIndex = basename(right) === "index.html";
+          return Number(leftIsIndex) - Number(rightIsIndex);
+        });
 
-      for (const localFile of orderedFiles) {
-        const relativePath = relative(localDirectory, localFile);
-        const remoteFile = remotePathInsideRoot(remoteRoot, relativePath);
-        const remoteDirectory = posix.dirname(remoteFile);
-        const temporaryRemoteFile = posix.join(
-          remoteDirectory,
-          `.${basename(remoteFile)}.partnerhub-upload-${Date.now()}`
+        for (const localFile of orderedFiles) {
+          const relativePath = relative(localDirectory, localFile);
+          const remoteFile = remotePathInsideRoot(remoteRoot, relativePath);
+          const remoteDirectory = posix.dirname(remoteFile);
+          const temporaryRemoteFile = posix.join(
+            remoteDirectory,
+            `.${basename(remoteFile)}.partnerhub-upload-${Date.now()}`
+          );
+
+          await ensureRemoteDirectory(sftp, remoteDirectory);
+          await sftp.put(localFile, temporaryRemoteFile);
+          temporaryRemotePaths.push(temporaryRemoteFile);
+          await replaceRemoteFile(sftp, temporaryRemoteFile, remoteFile);
+        }
+      } finally {
+        await Promise.all(
+          temporaryRemotePaths.map(async (temporaryRemoteFile) => {
+            try {
+              await sftp.delete(temporaryRemoteFile);
+            } catch {
+              // The file was usually renamed successfully; cleanup failures are non-fatal.
+            }
+          })
         );
-
-        await ensureRemoteDirectory(sftp, remoteDirectory);
-        await sftp.put(localFile, temporaryRemoteFile);
-        temporaryRemotePaths.push(temporaryRemoteFile);
-        await replaceRemoteFile(sftp, temporaryRemoteFile, remoteFile);
+        if (connected) {
+          await sftp.end();
+        }
       }
-    } finally {
-      await Promise.all(
-        temporaryRemotePaths.map(async (temporaryRemoteFile) => {
-          try {
-            await sftp.delete(temporaryRemoteFile);
-          } catch {
-            // The file was usually renamed successfully; cleanup failures are non-fatal.
-          }
-        })
-      );
-      if (connected) {
-        await sftp.end();
-      }
-    }
 
-    await activationLeadService.updatePublicationStateBySiteId(input.siteId, "PUBLISHED");
+      await activationLeadService.updatePublicationStateBySiteId(input.siteId, "PUBLISHED");
 
-    const verification = await productPageVerificationService.verify(input);
-    const publishedAt = new Date().toISOString();
-    await productPageHistoryService.append({
-      siteId: input.siteId,
-      type: "PUBLISHED",
-      occurredAt: publishedAt,
-      domain: verification.domain,
-      remoteRoot,
-      fileCount: localFiles.length,
-      verificationStatus: verification.status,
-      failedChecks: verification.checks.filter((check) => check.status === "FAIL"),
-      message:
-        verification.status === "VERIFIED"
-          ? "Product page published and verified."
-          : "Product page published, but verification failed."
-    });
+      const verification = await productPageVerificationService.verify(input);
+      const publishedAt = new Date().toISOString();
+      await productPageHistoryService.append({
+        siteId: input.siteId,
+        type: "PUBLISHED",
+        occurredAt: publishedAt,
+        domain: verification.domain,
+        remoteRoot,
+        fileCount: localFiles.length,
+        verificationStatus: verification.status,
+        failedChecks: verification.checks.filter((check) => check.status === "FAIL"),
+        message:
+          verification.status === "VERIFIED"
+            ? "Product page published and verified."
+            : "Product page published, but verification failed."
+      });
 
-    return {
-      siteId: input.siteId,
-      publishedAt,
-      verifiedAt: verification.verifiedAt,
-      publicationState: verification.status,
-      verificationStatus: verification.status,
-      remoteRoot,
-      files: localFiles.map((localFile) => relative(localDirectory, localFile).split(sep).join("/")),
-      checks: verification.checks
+      return {
+        siteId: input.siteId,
+        publishedAt,
+        verifiedAt: verification.verifiedAt,
+        publicationState: verification.status,
+        verificationStatus: verification.status,
+        remoteRoot,
+        files: localFiles.map((localFile) => relative(localDirectory, localFile).split(sep).join("/")),
+        checks: verification.checks
+      };
     };
+    return isBusinessPublicationSiteId(input.siteId) ? withBusinessPublicationSite(input.siteId, action) : action();
   }
 };

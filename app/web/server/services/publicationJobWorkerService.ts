@@ -12,6 +12,7 @@ import {
   type PublicationJobPhase
 } from "@/server/services/publicationJobService";
 import { productPageGenerationService } from "@/server/services/productPageGenerationService";
+import { BusinessSiteBusyError, withBusinessPublicationSite, withoutBusinessPublicationSiteOwnership } from "@/server/services/businessPublicationSiteCoordinator";
 import {
   APPLY_CONFIRMATION,
   APPLY_MODE,
@@ -34,7 +35,8 @@ const sha256 = (value: string | Buffer) => createHash("sha256").update(value).di
 const exists = (path: string) => access(path).then(() => true, () => false);
 
 type JobStore = Pick<typeof publicationJobService,
-  "claimNext" | "advance" | "complete" | "fail" | "toSafeJob" | "isBusinessMasterPackageRefreshActive" | "deferClaimedBusinessJob">;
+  "claimNext" | "advance" | "complete" | "fail" | "toSafeJob" | "isBusinessMasterPackageRefreshActive" | "deferClaimedBusinessJob" |
+  "deferClaimedJob" | "withBusinessPublicationSite">;
 type Advance = (
   phase: PublicationJobPhase,
   evidence?: Omit<PublicationJobEvidence, "phase" | "recordedAt">
@@ -349,20 +351,39 @@ export function createPublicationJobWorker(options: {
           return { outcome: "DEFERRED" as const, job: jobs.toSafeJob(job) };
         }
       };
-      if (job.intent.ecosystemType === "BUSINESS" && await jobs.isBusinessMasterPackageRefreshActive()) {
-        return deferForMasterRefresh();
-      }
-      try {
-        const evidence = await execution.execute(job, (phase, item = {}) => jobs.advance(job.id, leaseToken, phase, item));
-        const completed = await jobs.complete(job.id, leaseToken, evidence);
-        return { outcome: "SUCCEEDED" as const, job: jobs.toSafeJob(completed) };
-      } catch (error) {
-        if (job.intent.ecosystemType === "BUSINESS" && error instanceof Error &&
-            error.message === "PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS") {
+      const executeOwned = async () => {
+        if (job.intent.ecosystemType === "BUSINESS" && await jobs.isBusinessMasterPackageRefreshActive()) {
           return deferForMasterRefresh();
         }
-        const failed = await jobs.fail(job.id, leaseToken, safeErrorCode(error));
-        return { outcome: "FAILED" as const, job: jobs.toSafeJob(failed) };
+        try {
+          const evidence = await execution.execute(job, (phase, item = {}) => jobs.advance(job.id, leaseToken, phase, item));
+          const completed = await jobs.complete(job.id, leaseToken, evidence);
+          return { outcome: "SUCCEEDED" as const, job: jobs.toSafeJob(completed) };
+        } catch (error) {
+          if (job.intent.ecosystemType === "BUSINESS" && error instanceof BusinessSiteBusyError) throw error;
+          if (job.intent.ecosystemType === "BUSINESS" && error instanceof Error &&
+              error.message === "PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS") {
+            return deferForMasterRefresh();
+          }
+          const failed = await jobs.fail(job.id, leaseToken, safeErrorCode(error));
+          return { outcome: "FAILED" as const, job: jobs.toSafeJob(failed) };
+        }
+      };
+      if (job.intent.ecosystemType !== "BUSINESS") return executeOwned();
+      // claimNext has already released its metadata mutex. Always site -> short job mutex.
+      // Keep the site claim through execute (including journal recovery), complete/fail and cleanup.
+      try {
+        return await withoutBusinessPublicationSiteOwnership(() =>
+          (jobs.withBusinessPublicationSite ?? withBusinessPublicationSite)(job.intent.siteId, executeOwned));
+      } catch (error) {
+        if (!(error instanceof BusinessSiteBusyError)) throw error;
+        try {
+          const deferred = await jobs.deferClaimedJob(job.id, leaseToken);
+          return { outcome: "DEFERRED" as const, job: jobs.toSafeJob(deferred) };
+        } catch {
+          // A lost lease cannot authorize changing the new owner's job or marking it FAILED.
+          return { outcome: "DEFERRED" as const, job: jobs.toSafeJob(job) };
+        }
       }
     }
   };

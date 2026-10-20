@@ -8,6 +8,7 @@ import { z } from "zod";
 
 import { getPartnerPublicHost } from "@/server/services/partnerHostnameContract";
 import { MASTER_SITE_IDS } from "@/server/services/ecosystemTemplateResolver";
+import { createBusinessPublicationSiteCoordinator, isBusinessPublicationSiteId } from "@/server/services/businessPublicationSiteCoordinator";
 
 const HASH = /^[0-9a-f]{64}$/;
 const SAFE_ERROR_CODE = /^[A-Z0-9_:-]{1,160}$/;
@@ -159,6 +160,7 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
   const businessMasterRefreshClaimDirectory = inside(outputDirectory, ".master-package-claims/ganomaster-business");
   const now = options.now ?? (() => new Date());
   const token = options.token ?? randomUUID;
+  const withBusinessPublicationSite = createBusinessPublicationSiteCoordinator({ outputDirectory });
   const jobPath = (id: string) => inside(jobDirectory, `${z.string().regex(HASH).parse(id)}.json`);
   const claimPath = (id: string) => inside(claimsDirectory, `${z.string().regex(HASH).parse(id)}.json`);
   const lockPath = (id: string) => inside(locksDirectory, `${z.string().regex(HASH).parse(id)}.json`);
@@ -344,8 +346,12 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
   }
 
   async function enqueue(input: z.input<typeof publicationJobCreateInputSchema>, requestedBySubject: string) {
-    const { intent, intentHash } = await previewIntent(input);
-    return persistQueuedJob(intent, intentHash, requestedBySubject);
+    const { siteId } = publicationJobCreateInputSchema.parse(input);
+    const action = async () => {
+      const { intent, intentHash } = await previewIntent(input);
+      return persistQueuedJob(intent, intentHash, requestedBySubject);
+    };
+    return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action) : action();
   }
 
   async function enqueueReviewed(
@@ -354,9 +360,13 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     expectedIntentHash: string
   ) {
     if (!HASH.test(expectedIntentHash)) throw new Error("PUBLICATION_JOB_EXPECTED_INTENT_HASH_INVALID");
-    const { intent, intentHash } = await previewIntent(input);
-    if (intentHash !== expectedIntentHash) throw new Error("PUBLICATION_JOB_REVIEWED_INTENT_DRIFT");
-    return persistQueuedJob(intent, intentHash, requestedBySubject);
+    const { siteId } = publicationJobCreateInputSchema.parse(input);
+    const action = async () => {
+      const { intent, intentHash } = await previewIntent(input);
+      if (intentHash !== expectedIntentHash) throw new Error("PUBLICATION_JOB_REVIEWED_INTENT_DRIFT");
+      return persistQueuedJob(intent, intentHash, requestedBySubject);
+    };
+    return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action) : action();
   }
 
   async function list(filters: { siteId?: string; status?: z.infer<typeof statusSchema> } = {}) {
@@ -462,6 +472,11 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
     return withJobLock(id, () => deferClaimedBusinessJobUnderLock(id, leaseToken));
   }
 
+  // Same lease-validated rollback as the refresh barrier; normal site contention is not an attempt.
+  async function deferClaimedJob(id: string, leaseToken: string) {
+    return withJobLock(id, () => deferClaimedBusinessJobUnderLock(id, leaseToken));
+  }
+
   async function advance(id: string, rawToken: string, phase: PublicationJobPhase, evidence: Omit<PublicationJobEvidence, "phase" | "recordedAt"> = {}) {
     return withJobLock(id, async () => {
       const job = await assertLease(id, rawToken);
@@ -529,7 +544,7 @@ export function createPublicationJobService(options: ServiceOptions = {}) {
   }
 
   return { previewIntent, enqueue, enqueueReviewed, get: readJob, list, claimNext, advance, complete, fail, retry, cancel,
-    isBusinessMasterPackageRefreshActive, deferClaimedBusinessJob, toSafeJob: safeJob };
+    isBusinessMasterPackageRefreshActive, deferClaimedBusinessJob, deferClaimedJob, withBusinessPublicationSite, toSafeJob: safeJob };
 }
 
 export const publicationJobService = createPublicationJobService();
