@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash, randomUUID } from 'node:crypto';
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { test, type TestContext } from 'node:test';
@@ -311,7 +311,9 @@ test('lost_enqueue_response_recovers_exact_job_without_new_generation', async (t
 });
 
 test('completed_worker_target_progression_replays_current_and_current_noop_preserves_package', async (t) => {
+  for (const previousFailure of [false, true]) await t.test(previousFailure ? 'explicit retry' : 'initial publication', async (t) => {
   const f = await fixture(t);
+  if (previousFailure) await terminalPublication(f);
   const command = await f.publishCommand();
   await f.service.publish(command, operator);
   // Real worker, leases and job transitions; only external publication/verification is modeled.
@@ -348,6 +350,7 @@ test('completed_worker_target_progression_replays_current_and_current_noop_prese
   const explicit = { ...await f.publishCommand(), updateExisting: true };
   assert.equal((await f.service.publish(explicit, operator)).outcome, 'ENQUEUED');
   assert.equal((await f.jobs.list()).length, 2);
+  });
 });
 
 test('failed_worker_requires_explicit_review_instead_of_replaying_enqueued_success', async (t) => {
@@ -391,4 +394,176 @@ test('bound_storage_root_cannot_mutate_different_generator_root', async (t) => {
   await assert.rejects(f.service.publish(command, operator), { message: 'MASTER_SITES_STORAGE_CONFIGURATION_INVALID' });
   await assert.rejects(readFile(f.sourcePath), { code: 'ENOENT' });
   assert.equal(await f.operations.get(command.requestId), null);
+});
+
+test('durable_enqueued_or_complete_operation_never_recreates_a_missing_job', async (t) => {
+  for (const phase of ['ENQUEUED', 'COMPLETE', 'COMPLETE_NO_RESULT']) await t.test(phase, async (t) => {
+    const f = await fixture(t);
+    const service = createMasterSitesBusinessCommandService({ ...f.dependencies, operations: {
+      ...f.operations, async checkpoint(requestId: string, version: number, patch: MasterSitesBusinessOperationPatch) {
+        if (patch.phase === 'COMPLETE' && phase === 'ENQUEUED')
+          throw new MasterSitesBusinessOperationStoreError('MASTER_SITES_OPERATION_STORAGE_ERROR');
+        return f.operations.checkpoint(requestId, version,
+          patch.phase === 'COMPLETE' && phase === 'COMPLETE_NO_RESULT' ? { ...patch, result: null } : patch);
+      }
+    } });
+    const command = await f.publishCommand();
+    if (phase === 'ENQUEUED') await assert.rejects(service.publish(command, operator));
+    else await service.publish(command, operator);
+    const operation = await f.operations.get(command.requestId);
+    assert.equal(operation?.phase, phase === 'ENQUEUED' ? 'ENQUEUED' : 'COMPLETE');
+    const job = (await f.jobs.list())[0];
+    // Preserve removed fixture evidence rather than deleting a job as a recovery action.
+    const retained = resolve(f.root, 'retained-job.json');
+    await rename(resolve(f.root, '.jobs', `${job.id}.json`), retained);
+    const source = await readFile(f.sourcePath, 'utf8');
+    const manifest = await readFile(resolve(f.root, f.target.siteId, 'manifest.json'), 'utf8');
+    assert.equal((await f.service.publish(command, operator)).outcome, 'RETRY_REQUIRED');
+    assert.deepEqual(await f.jobs.list(), []);
+    assert.equal(JSON.parse(await readFile(retained, 'utf8')).id, job.id);
+    assert.equal(await readFile(f.sourcePath, 'utf8'), source);
+    assert.equal(await readFile(resolve(f.root, f.target.siteId, 'manifest.json'), 'utf8'), manifest);
+  });
+});
+
+async function terminalPublication(f: Awaited<ReturnType<typeof fixture>>, status: 'FAILED' | 'CANCELLED' = 'FAILED') {
+  const original = await f.publishCommand();
+  const published = await f.service.publish(original, operator);
+  if (status === 'CANCELLED') await f.jobs.cancel(published.job!.id);
+  else {
+    const claim = await f.jobs.claimNext('test-transient-worker');
+    assert.ok(claim);
+    await f.jobs.fail(claim.job.id, claim.leaseToken, 'TEST_TRANSIENT_FAILURE');
+  }
+  return { original, job: (await f.jobs.list())[0] };
+}
+
+test('new_review_explicitly_retries_matching_terminal_job_without_regeneration', async (t) => {
+  for (const status of ['FAILED', 'CANCELLED'] as const) for (const updateExisting of [false, true])
+    await t.test(`${status} updateExisting=${updateExisting}`, async (t) => {
+      const f = await fixture(t);
+      const { original, job } = await terminalPublication(f, status);
+      const manifestPath = resolve(f.root, f.target.siteId, 'manifest.json');
+      const manifest = await readFile(manifestPath, 'utf8');
+      const source = await readFile(f.sourcePath, 'utf8');
+      const target = await readFile(f.targetPath, 'utf8');
+      assert.equal((await f.service.publish(original, operator)).outcome, 'RETRY_REQUIRED');
+      const command = { ...await f.publishCommand(), updateExisting };
+      const retryOperator = { ...operator, subject: 'second-verified-operator' };
+      const result = await f.service.publish(command, retryOperator);
+      assert.equal(result.outcome, 'ENQUEUED');
+      assert.equal(result.job?.id, job.id);
+      assert.equal(result.job?.status, 'QUEUED');
+      const retried = (await f.jobs.list())[0];
+      assert.equal(retried.revision, job.revision + 1);
+      assert.equal(retried.requestedBySubjectHash, sha(operator.subject), 'original job audit is immutable');
+      assert.equal((await f.operations.get(command.requestId))?.binding.actorHash, sha(retryOperator.subject));
+      assert.equal(await readFile(manifestPath, 'utf8'), manifest);
+      assert.equal(await readFile(f.sourcePath, 'utf8'), source);
+      assert.equal(await readFile(f.targetPath, 'utf8'), target);
+      assert.equal((await f.service.publish(command, retryOperator)).outcome, 'ALREADY_SCHEDULED');
+      assert.equal((await f.service.publish(original, operator)).outcome, 'RETRY_REQUIRED');
+      assert.equal((await f.jobs.list())[0].revision, retried.revision);
+      assert.equal((await f.jobs.list()).length, 1);
+    });
+});
+
+test('retry_effect_ambiguity_never_retries_again_or_recreates_missing_job', async (t) => {
+  for (const fault of ['before-retry', 'lost-response', 'post-effect-checkpoint', 'missing-after-effect', 'terminal-after-effect']) await t.test(fault, async (t) => {
+    const f = await fixture(t);
+    const { job } = await terminalPublication(f);
+    let retries = 0;
+    const command = await f.publishCommand();
+    const service = createMasterSitesBusinessCommandService({ ...f.dependencies,
+      jobs: { ...f.jobs, async retry(jobId: string) {
+        retries++;
+        if (fault === 'before-retry') throw new Error('retry unavailable before effect');
+        const retried = await f.jobs.retry(jobId);
+        if (fault === 'lost-response') throw new Error('retry response lost');
+        if (fault === 'missing-after-effect') {
+          await rename(resolve(f.root, '.jobs', `${jobId}.json`), resolve(f.root, 'retained-retried-job.json'));
+          throw new Error('retry evidence disappeared');
+        }
+        if (fault === 'terminal-after-effect') {
+          await f.jobs.cancel(jobId);
+          throw new Error('response lost and another authorized operation cancelled job');
+        }
+        return retried;
+      } },
+      operations: { ...f.operations, async checkpoint(requestId: string, version: number, patch: MasterSitesBusinessOperationPatch) {
+        if (patch.phase === 'ENQUEUED') throw new MasterSitesBusinessOperationStoreError('MASTER_SITES_OPERATION_STORAGE_ERROR');
+        return f.operations.checkpoint(requestId, version, patch);
+      } }
+    });
+    const manifest = await readFile(resolve(f.root, f.target.siteId, 'manifest.json'), 'utf8');
+    await assert.rejects(service.publish(command, operator));
+    assert.equal(retries, 1);
+    const pending = await f.operations.get(command.requestId);
+    assert.equal(pending?.phase, 'ENQUEUEING');
+    assert.equal(pending?.pins.jobId, job.id);
+    const replay = await service.publish(command, operator);
+    assert.equal(replay.outcome, ['lost-response', 'post-effect-checkpoint'].includes(fault) ? 'ALREADY_SCHEDULED' : 'RETRY_REQUIRED');
+    assert.equal(retries, 1);
+    assert.equal((await f.jobs.list()).length, fault === 'missing-after-effect' ? 0 : 1);
+    assert.equal(await readFile(resolve(f.root, f.target.siteId, 'manifest.json'), 'utf8'), manifest);
+  });
+});
+
+test('retry_review_and_effect_pins_reject_stale_authority_or_package', async (t) => {
+  for (const changed of ['authority', 'package', 'source', 'target', 'master']) await t.test(changed, async (t) => {
+    const f = await fixture(t);
+    const { job } = await terminalPublication(f);
+    let retries = 0;
+    const service = createMasterSitesBusinessCommandService({ ...f.dependencies,
+      jobs: { ...f.jobs, async retry(jobId: string) { retries++; return f.jobs.retry(jobId); } },
+      operations: { ...f.operations, async checkpoint(requestId: string, version: number, patch: MasterSitesBusinessOperationPatch) {
+        const saved = await f.operations.checkpoint(requestId, version, patch);
+        if (patch.phase === 'ENQUEUEING') {
+          if (changed === 'authority') {
+            f.lead.whatsapp = f.lead.onboardingData.whatsapp = '573109876543';
+            await writeFile(f.leadPath, JSON.stringify([f.lead]));
+          } else {
+            const path = changed === 'source' ? f.sourcePath : changed === 'target' ? f.targetPath
+              : resolve(f.root, changed === 'master' ? 'ganomaster-business' : f.target.siteId, 'app.js');
+            await writeFile(path, `${await readFile(path, 'utf8')}\n `);
+          }
+        }
+        return saved;
+      } }
+    });
+    const command = await f.publishCommand();
+    assert.equal((await service.publish(command, operator)).outcome, 'RETRY_REQUIRED');
+    assert.equal(retries, 0);
+    assert.equal((await f.jobs.get(job.id))?.revision, job.revision);
+  });
+});
+
+test('retry_lost_response_replay_rejects_stale_pins_without_another_effect', async (t) => {
+  for (const changed of ['authority', 'package', 'source', 'target', 'master']) await t.test(changed, async (t) => {
+    const f = await fixture(t);
+    const { job } = await terminalPublication(f);
+    let retries = 0;
+    const command = await f.publishCommand();
+    const service = createMasterSitesBusinessCommandService({ ...f.dependencies,
+      jobs: { ...f.jobs, async retry(jobId: string) {
+        retries++;
+        await f.jobs.retry(jobId);
+        throw new Error('retry response lost');
+      } }
+    });
+    await assert.rejects(service.publish(command, operator), /retry response lost/);
+    const revision = (await f.jobs.get(job.id))!.revision;
+    if (changed === 'authority') {
+      f.lead.whatsapp = f.lead.onboardingData.whatsapp = '573109876543';
+      await writeFile(f.leadPath, JSON.stringify([f.lead]));
+    } else {
+      const path = changed === 'source' ? f.sourcePath : changed === 'target' ? f.targetPath
+        : resolve(f.root, changed === 'master' ? 'ganomaster-business' : f.target.siteId, 'app.js');
+      await writeFile(path, `${await readFile(path, 'utf8')}\n `);
+    }
+    assert.equal((await service.publish(command, operator)).outcome, 'RETRY_REQUIRED');
+    assert.equal(retries, 1);
+    assert.equal((await f.jobs.get(job.id))!.revision, revision);
+    assert.equal((await f.jobs.list()).length, 1);
+  });
 });

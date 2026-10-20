@@ -61,6 +61,7 @@ function canonical(value: unknown): string {
 }
 const hash = (value: unknown) => sha(canonical(value));
 const absent = hash(null);
+const retryPendingReason = 'MASTER_SITES_RETRY_PENDING';
 function reject(code: string, reasons: string[] = []): never { throw new MasterSitesBusinessCommandError(code, 409, reasons); }
 
 // Review continuity excludes only the source/target effects owned by this command.
@@ -274,6 +275,38 @@ export function createMasterSitesBusinessCommandService(dependencies: MasterSite
         }
         if (!snapshot.partner.canPublish) reject('MASTER_SITES_BUSINESS_BLOCKED');
         const input = buildMasterSitesBusinessInput(snapshot);
+        // A fresh explicit command can retry the same approved artifact. Replaying
+        // an old command cannot enter this branch or perform this effect again.
+        if (snapshot.source && inputHash(snapshot.source, snapshot) === inputHash(input, snapshot)) {
+          const reviewed = await jobs.previewIntent({ siteId });
+          const terminal = snapshot.jobs.find((job) => job.id === reviewed.intentHash &&
+            ['FAILED', 'CANCELLED'].includes(job.status));
+          if (terminal) {
+            let artifactHash: string;
+            try { artifactHash = await packageHash(resolve(outputDirectory, siteId)); }
+            catch { return retry(operation, snapshot); }
+            operation = await checkpoint(operation, { phase: 'ENQUEUEING', pins: {
+              jobId: terminal.id, generationInputHash: inputHash(input, snapshot), packageHash: artifactHash
+            }, result: result(operation, snapshot, 'RETRY_REQUIRED', terminal, [retryPendingReason]) });
+            const fresh = await preview.getPartner(command.activationLeadId);
+            let artifactMatches = false;
+            try { artifactMatches = await packageHash(resolve(outputDirectory, siteId)) === operation.pins.packageHash; }
+            catch { /* Missing/unsafe output never authorizes a retry. */ }
+            if (!fresh.partner.canPublish || authority(fresh) !== operation.pins.reviewedRevision ||
+                fresh.sourceHash !== operation.pins.sourceHash || fresh.targetHash !== operation.pins.targetHash ||
+                fresh.master?.packageHash !== operation.pins.masterPackageHash ||
+                !fresh.input || inputHash(fresh.input, fresh) !== operation.pins.generationInputHash ||
+                !artifactMatches || !matchingJob(terminal, operation, fresh)) return retry(operation, fresh);
+            assertRoots();
+            // The existing queue owns the retry transition and its immutable audit.
+            // The new actor and exact effect pins are retained in this operation.
+            const retried = await jobs.retry(terminal.id);
+            if (!matchingJob(retried, operation, fresh) || !['QUEUED', 'RUNNING'].includes(retried.status))
+              return retry(operation, fresh);
+            operation = await checkpoint(operation, { phase: 'ENQUEUED', result: null });
+            return finish(operation, result(operation, fresh, 'ENQUEUED', retried));
+          }
+        }
         operation = await checkpoint(operation, { phase: 'GENERATING', pins: { generationInputHash: inputHash(input, snapshot) } });
         const fresh = await preview.getPartner(command.activationLeadId);
         if (fresh.reviewRevision !== snapshot.reviewRevision || !fresh.partner.canPublish) return retry(operation, fresh);
@@ -295,6 +328,12 @@ export function createMasterSitesBusinessCommandService(dependencies: MasterSite
             snapshot.master?.packageHash !== operation.pins.masterPackageHash ||
             (snapshot.sourceHash ?? absent) !== operation.pins.sourceHash) return retry(operation, snapshot);
         const pinnedJob = snapshot.jobs.find((job) => job.id === operation!.pins.jobId) ?? null;
+        const retryPending = operation.phase === 'ENQUEUEING' &&
+          operation.result?.blockedReasons.includes(retryPendingReason);
+        // These phases prove the queue effect already happened. Missing evidence
+        // is not permission to recreate it, even when the final response was lost.
+        if (!pinnedJob && operation.pins.jobId && (retryPending || ['ENQUEUED', 'COMPLETE'].includes(operation.phase)))
+          return retry(operation, snapshot);
         const ownedCompletion = pinnedJob && matchingJob(pinnedJob, operation, snapshot, false) &&
           snapshot.partner.status === 'CURRENT' && snapshot.partner.currentJob?.id === pinnedJob.id;
         if ((snapshot.targetHash ?? absent) !== operation.pins.targetHash && !ownedCompletion) return retry(operation, snapshot);
@@ -305,7 +344,7 @@ export function createMasterSitesBusinessCommandService(dependencies: MasterSite
           try { matches = await packageHash(resolve(outputDirectory, siteId)) === operation.pins.packageHash; } catch { /* Missing/unsafe output is not recoverable evidence. */ }
           if (!matches) return retry(operation, snapshot);
         }
-        if (operation.result) {
+        if (operation.result && !retryPending) {
           if (operation.pins.jobId && !pinnedJob) return retry(operation, snapshot);
           return { ...operation.result, job: safeJob(pinnedJob),
             ...(ownedCompletion ? { outcome: 'ALREADY_CURRENT' as const }
