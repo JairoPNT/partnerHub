@@ -1,6 +1,9 @@
 import { posix } from "node:path";
 
 export type PublicationTargetSnapshot = {
+  version?: number;
+  ownerKey?: string;
+  baseDomain?: string;
   siteId: string;
   publicHost: string;
   remoteRoot: string | null;

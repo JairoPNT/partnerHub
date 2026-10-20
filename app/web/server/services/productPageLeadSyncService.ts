@@ -2,6 +2,8 @@ import "server-only";
 
 import { productPageGenerationInputSchema } from "@/server/services/productPageGenerationService";
 import { productPageSourceService } from "@/server/services/productPageSourceService";
+import { isMasterSiteId } from "@/server/services/ecosystemService";
+import { canonicalProductHost } from "@/server/services/productPublicationDestinationPolicy";
 
 type LeadSnapshot = {
   siteId: string | null;
@@ -39,6 +41,7 @@ type LeadSnapshot = {
 };
 
 type ProductPageSource = {
+  ecosystemType?: unknown;
   site?: Record<string, unknown>;
   distributor?: Record<string, unknown>;
   hero?: Record<string, unknown>;
@@ -108,6 +111,16 @@ export const productPageLeadSyncService = {
     const existingSite = existing?.site ?? {};
     const existingDistributor = existing?.distributor ?? {};
     const existingHero = existing?.hero ?? {};
+    const leadDomain = optionalTrimmed(onboarding.domain);
+    const sourceDomain = typedString(existingSite.domain);
+    const selectedDomain = pickValue(leadDomain, sourceDomain, overwriteExistingValues);
+    const isPartnerProduct = !isMasterSiteId(lead.siteId) && (existing?.ecosystemType === undefined || existing.ecosystemType === "PRODUCT");
+    // Onboarding retains the partner's base domain; only the effective Product host changes.
+    // An existing canonical source may supply the base when no onboarding domain is present.
+    const domainComesFromLead = leadDomain && (overwriteExistingValues || !sourceDomain);
+    const domain = isPartnerProduct && selectedDomain
+      ? canonicalProductHost(domainComesFromLead ? selectedDomain : selectedDomain.trim().toLowerCase().replace(/^www\./, "").replace(/^producto\./, ""))
+      : selectedDomain;
     const purchaseUrl = pickValue(
       validPurchaseUrl(optionalTrimmed(onboarding.purchaseUrl)),
       validPurchaseUrl(typedString(existingDistributor.purchaseUrl)),
@@ -162,7 +175,7 @@ export const productPageLeadSyncService = {
       site: {
         ...existingSite,
         id: lead.siteId,
-        domain: pickValue(optionalTrimmed(onboarding.domain), typedString(existingSite.domain), overwriteExistingValues),
+        domain,
         title: pickValue(title, typedString(existingSite.title), overwriteExistingValues) ?? title,
         appName: typedString(existingSite.appName) ?? lead.siteId.replaceAll("-", "_"),
         ogTitle: pickValue(title, typedString(existingSite.ogTitle), overwriteExistingValues) ?? title,
@@ -211,7 +224,12 @@ export const productPageLeadSyncService = {
     };
 
     const parsed = productPageGenerationInputSchema.parse(nextSource);
-    await productPageSourceService.save(lead.siteId, parsed);
+    // Schema validation must not erase pre-existing identity/commercial metadata.
+    await productPageSourceService.save(lead.siteId, isPartnerProduct ? {
+      ...existing, ...parsed,
+      site: { ...existingSite, ...parsed.site },
+      distributor: { ...existingDistributor, ...parsed.distributor }
+    } : parsed);
     return parsed;
   }
 };
