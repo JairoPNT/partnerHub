@@ -83,3 +83,29 @@ The controller identified a valid tenant-boundary gap: `lead.siteId=ganomaster` 
 Regression `reserved_master_partner_identity_cannot_build_or_publish_business_input` was observed RED (`TARGET_REQUIRED !== BLOCKED` for ganomaster without target), then GREEN. It covers all three reserved master owner IDs, absent and falsely matching READY targets, null input, denied prepare/publish and builder rejection. Readonly template remains available; legitimate `ganomaster-client` is not rejected by prefix.
 
 After this correction the same final combined command passes **65/65** (16 new tests), exact four-file ESLint exits 0 and a fresh `npm.cmd run build` exits 0 with TypeScript complete / 39 static pages. Existing lockfile/NFT and Node warnings remain. This supersedes the earlier 64/64 completion count above. Independent controller review is still required; no provider, push or merge.
+
+## Independent review correction — P1 paths and P2 effective currentness
+
+Review base: `6e216b7`. Read the receiving-code-review skill, reproduced the findings individually, and fixed only preview/input/tests plus this report. No interface, dependency contract, auth, shared DTO, 009 or frontend edits.
+
+### P1 — trailing path separators
+
+POSIX normalize preserves a final slash, so the old schema accepted `.../negocio/`; appending another slash in overlap detection could miss `.../negocio/producto`. Watched `trailing_separator_cannot_hide_remote_root_overlap_in_either_orientation` fail READY rather than BLOCKED. Schema now rejects final-separator representations in addition to its existing canonical-POSIX checks. No persisted target/path/hash is normalized or rewritten. The matrix passes parent/child in both orientations and equal paths, for same and different owners; a `negocio` vs `negocio-extra` control remains READY because it is not a path-boundary overlap. Existing unambiguous sibling paths remain supported. A trailing-slash inventory record now requires separate reconciliation rather than being silently accepted.
+
+### P2 — all effective generation fields, including poster
+
+The previous predicate compared only identity/contact number/tracking/embed URL. Watched RED for font/palette, favicon, phone, defaultMessage and five VSL metadata updates even though reviewRevision/input changed. It now compares complete semantic output from the existing pure `normalizeProductPageGenerationConfiguration`, with the Business master hero/VSL/theme inheritance that the generator uses. This covers site metadata/favicon, all distributor/contact/copy fields, derived WhatsApp CTA copy/URLs, hero, all VSL fields, theme, effective tracking and media base URL. GA4 aliases/duplicate containers and empty optional integration containers collapse to their effective values; it is not raw saved-JSON equality. Missing/invalid normalized source cannot be CURRENT.
+
+Preserved authorized source mediaBaseUrl, root-vs-site favicon aliases and the generator's optional appName default in the assembler. These avoid replacing valid existing source settings or declaring equivalent metadata stale. Positive tests preserve CURRENT for default site metadata, default contact display, inherited theme/VSL, favicon alias and GA4 alias; equivalent restorations stay CURRENT. No new wire or internal snapshot fields were added.
+
+Poster is **not excluded** from the comparison. The internal snapshot derives its optional Product poster from the already-read validated inventory, following the existing resolver policy: unique same-owner Product target first, or the authoritative legacy ownerSiteId/domain fallback; ambiguous/missing Product remains the existing favicon fallback. It uses the existing `extractProductHero` and `resolveBusinessVslThumbnail`, never a guessed slug, arbitrary custom poster or Product purchase/entitlement requirement. The unchanged generator still recomputes the poster before saving.
+
+The existing Product source routes call `businessProductHeroPropagationService.afterProductSourceChange`; propagation generates the Business source and calls `publicationEventEnqueueService.afterSourceChange`. Those source bytes change the job's sourceHash pin (or active jobs are visible). A failed/not-yet-run propagation might leave source bytes unchanged, so this preview also compares the freshly derived Product poster and includes it in effective input/reviewRevision. Tests for both inventory and legacy Product routes prove changed hero -> READY even before propagation, matching verified correlated poster -> CURRENT, and regenerated source hash -> old job no longer CURRENT. This supersedes the earlier report's fallback-only input description. No automatic behavior was changed.
+
+### Final evidence for re-review
+
+- New preview/input suites: **37/37**, including 20 named semantic matrix subtests. Initial field matrix RED had ten missing-field failures plus its parent; alias/default checks separately exposed two false-stale cases and were fixed RED -> GREEN. Poster derivation and authorized media preservation were also observed RED before their fixes.
+- Full relevant command from Verification #5 plus `server/services/businessProductHeroPropagationCore.test.ts` and `server/services/businessProductHeroPropagationExecutionCore.test.ts`: **94/94**, exit 0, after formatting/final changes.
+- Exact four-file ESLint exit 0, no errors/warnings.
+- Fresh `npm.cmd run build` exit 0: TypeScript finished, 39/39 static pages, existing multiple-lockfile/NFT warning only. Node module/loader warnings remain as before.
+- Review delta changes only `masterSitesBusinessPreviewService.ts`, its test, `masterSitesBusinessInput.ts`, and this durable report; local task-2 report also updated. No data writes/provider calls/push/merge. Independent scoped re-review and 010/011 gates remain pending.

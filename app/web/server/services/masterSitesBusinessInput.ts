@@ -60,11 +60,12 @@ export function assembleMasterSitesBusinessInput(material: {
       id: siteId,
       domain: publicHost,
       title,
-      appName: source?.site.appName ?? siteId,
+      appName: source?.site.appName ?? siteId.replaceAll('-', '_'),
       ogTitle: source?.site.ogTitle ?? title,
       ogDescription: source?.site.ogDescription || description,
       metaDescription: description,
-      faviconUrl: data.faviconUrl ?? source?.site.faviconUrl
+      faviconUrl:
+        data.faviconUrl ?? source?.site.faviconUrl ?? source?.faviconUrl
     },
     distributor: {
       brandName: lead.brandName,
@@ -95,7 +96,9 @@ export function assembleMasterSitesBusinessInput(material: {
       ...(conversionId ? { googleAds: { conversionId } } : {})
     },
     theme,
-    mediaBaseUrl: 'https://media.partnerhub.club/comunes/business/v1/'
+    mediaBaseUrl:
+      source?.mediaBaseUrl ??
+      'https://media.partnerhub.club/comunes/business/v1/'
   });
 }
 

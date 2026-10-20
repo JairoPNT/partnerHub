@@ -22,6 +22,7 @@ import {
 } from '@/server/services/publicationJobService';
 import {
   productPageGenerationInputSchema,
+  normalizeProductPageGenerationConfiguration,
   type ProductPageGenerationInput
 } from '@/server/services/productPageGenerationService';
 import { loadBusinessMasterContent } from '@/server/services/businessMasterContent';
@@ -29,6 +30,10 @@ import { resolveCanonicalTemplateDirectory } from '@/server/services/ecosystemTe
 import { isMasterSiteId } from '@/server/services/ecosystemService';
 import { assembleMasterSitesBusinessInput } from '@/server/services/masterSitesBusinessInput';
 import { resolvePartnerWhatsappIdentity } from '@/shared/partner-whatsapp-identity.mjs';
+import {
+  extractProductHero,
+  resolveBusinessVslThumbnail
+} from '@/shared/business-vsl-poster-contract.mjs';
 
 const hashSchema = z.string().regex(/^[a-f0-9]{64}$/);
 const siteIdSchema = z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/);
@@ -64,6 +69,7 @@ const targetSchema = z
       .refine(
         (value) =>
           posix.normalize(value) === value &&
+          !value.endsWith('/') &&
           !value.includes('\\') &&
           [...value].every((character) => character.charCodeAt(0) >= 32)
       )
@@ -334,23 +340,89 @@ type ReadContext = {
 
 function sameSourceAuthority(
   source: ProductPageGenerationInput,
-  input: ProductPageGenerationInput
+  input: ProductPageGenerationInput,
+  master: MasterSitesBusinessMaster
 ) {
-  const tracking = (configuration: ProductPageGenerationInput) => ({
-    measurementId:
-      configuration.analytics?.measurementId ??
-      configuration.integrations?.analytics?.measurementId ??
-      null,
-    pixelId: configuration.integrations?.meta?.pixelId ?? null,
-    conversionId: configuration.integrations?.googleAds?.conversionId ?? null
-  });
-  return (
-    source.distributor.fullName === input.distributor.fullName &&
-    source.distributor.brandName === input.distributor.brandName &&
-    source.distributor.whatsappNumber.replace(/\D/g, '') ===
-      input.distributor.whatsappNumber &&
-    canonical(tracking(source)) === canonical(tracking(input)) &&
-    source.vsl?.embedUrl === input.vsl?.embedUrl
+  const effective = (configuration: ProductPageGenerationInput) => {
+    const normalized =
+      normalizeProductPageGenerationConfiguration(configuration);
+    return {
+      ...normalized,
+      hero: { ...master.content.hero, ...normalized.hero },
+      vsl: {
+        ...master.content.vsl,
+        ...normalized.vsl,
+        thumbnailUrl:
+          normalized.vsl?.thumbnailUrl ?? resolveBusinessVslThumbnail({})
+      },
+      theme: normalized.theme ??
+        master.content.theme ?? {
+          fontPreset: 'executive',
+          palettePreset: 'cobalt-cyan'
+        },
+      // GA4 aliases/redundant copies are one effective setting. Empty optional
+      // integration containers do not change rendered tracking behavior.
+      analytics: normalized.analytics ?? null,
+      integrations: {
+        pixelId: normalized.integrations?.meta?.pixelId ?? null,
+        conversionId: normalized.integrations?.googleAds?.conversionId ?? null
+      }
+    };
+  };
+  try {
+    return canonical(effective(source)) === canonical(effective(input));
+  } catch {
+    return false;
+  }
+}
+
+function derivedBusinessPoster(
+  lead: MasterSitesBusinessLead,
+  target: z.infer<typeof targetSchema> | null,
+  targets: z.infer<typeof targetSchema>[],
+  sources: MasterSitesBusinessInventoryEntry[]
+) {
+  const fallback = resolveBusinessVslThumbnail({});
+  if (!target) return fallback;
+  const products = targets.filter(
+    (entry) => entry.ownerKey === lead.id && entry.ecosystemType === 'PRODUCT'
+  );
+  if (products.length > 1) return fallback;
+  if (products.length === 1) {
+    const matches = sources.filter(
+      (entry) => entry.siteId === products[0].siteId
+    );
+    return matches.length === 1
+      ? resolveBusinessVslThumbnail(
+          extractProductHero(
+            matches[0].value as Parameters<typeof extractProductHero>[0]
+          )
+        )
+      : fallback;
+  }
+  // Mirror the existing resolver's authoritative legacy fallback; never guess a
+  // Product slug or inherit another partner's hero. Product remains optional.
+  if (
+    targets.some(
+      (entry) => entry.siteId === lead.siteId && entry.ownerKey !== lead.id
+    )
+  )
+    return fallback;
+  const matches = sources.filter((entry) => entry.siteId === lead.siteId);
+  if (matches.length !== 1) return fallback;
+  const parsed = sourceIdentitySchema.safeParse(matches[0].value);
+  if (
+    !parsed.success ||
+    parsed.data.ecosystemType !== 'PRODUCT' ||
+    ![target.baseDomain, `producto.${target.baseDomain}`].includes(
+      parsed.data.site.domain ?? ''
+    )
+  )
+    return fallback;
+  return resolveBusinessVslThumbnail(
+    extractProductHero(
+      matches[0].value as Parameters<typeof extractProductHero>[0]
+    )
   );
 }
 
@@ -367,7 +439,7 @@ function isCurrent(
     !master ||
     target.publicationState !== 'READY' ||
     job.status !== 'SUCCEEDED' ||
-    !sameSourceAuthority(source, input)
+    !sameSourceAuthority(source, input, master)
   )
     return false;
   const intent = job.intent;
@@ -670,6 +742,15 @@ export function createMasterSitesBusinessPreviewService(
           master: context.master,
           source
         });
+        input.vsl = {
+          ...input.vsl,
+          thumbnailUrl: derivedBusinessPoster(
+            lead,
+            target,
+            targets.map((entry) => entry.target),
+            context.sources
+          )
+        };
       } catch {
         reject('BUSINESS_INPUT_INVALID');
       }

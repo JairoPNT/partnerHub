@@ -300,14 +300,23 @@ test('ready_target_is_not_current_without_matching_verified_journal', async () =
   ];
   assert.equal((await service.getPartner(id)).partner.status, 'READY');
 });
-test('matching_success_and_journal_preserve_current_after_final_target_hash_changes', async () => {
+test('matching_success_and_journal_preserve_current_after_final_target_hash_changes', async (t) => {
   const { state, service, target } = fixture();
   target.publicationState = 'READY';
   state.targets = [
     { siteId: target.siteId, value: target, hash: hash('final-target') }
   ];
   state.leads[0].onboardingData.analyticsMeasurementId = 'G-ANA123';
+  Object.assign(state.master.content.vsl, {
+    caption: 'Original approved caption',
+    videoTitle: 'Original approved title',
+    aspectRatio: '16:9',
+    autoPlay: false,
+    durationText: 'Original duration'
+  });
   const input = buildMasterSitesBusinessInput(await service.getPartner(id));
+  input.mediaBaseUrl = 'https://media.partnerhub.club/ana/business/';
+  input.site.faviconUrl = 'https://images.example/ana-current-favicon.webp';
   // Production sources may store GA4 only in analytics, not duplicate it in integrations.
   delete input.integrations?.analytics;
   state.sources = [
@@ -374,11 +383,173 @@ test('matching_success_and_journal_preserve_current_after_final_target_hash_chan
   ];
   let snapshot = await service.getPartner(id);
   assert.equal(snapshot.partner.status, 'CURRENT');
+  assert.equal(
+    snapshot.input?.mediaBaseUrl,
+    'https://media.partnerhub.club/ana/business/',
+    'preserve authorized source media settings rather than silently replacing them'
+  );
   assert.equal(snapshot.partner.canPublish, true); // command still requires updateExisting
   assert.equal(
     JSON.stringify(snapshot.partner).includes('requestedBySubjectHash'),
     false
   );
+  const equivalentChanges: Array<
+    [string, (configuration: typeof input) => void]
+  > = [
+    [
+      'site metadata defaults',
+      (configuration) => {
+        delete configuration.site.appName;
+        delete configuration.site.ogTitle;
+        delete configuration.site.ogDescription;
+      }
+    ],
+    [
+      'contact display defaults',
+      (configuration) => {
+        delete configuration.distributor.phoneNumber;
+        delete configuration.distributor.displayPhone;
+      }
+    ],
+    [
+      'inherited theme and VSL defaults',
+      (configuration) => {
+        delete configuration.theme;
+        delete configuration.vsl?.caption;
+      }
+    ],
+    [
+      'root favicon alias',
+      (configuration) => {
+        configuration.faviconUrl = configuration.site.faviconUrl;
+        delete configuration.site.faviconUrl;
+      }
+    ],
+    [
+      'GA4 integrations alias',
+      (configuration) => {
+        configuration.integrations = {
+          ...configuration.integrations,
+          analytics: { provider: 'GA4', measurementId: 'G-ANA123' }
+        };
+        delete configuration.analytics;
+      }
+    ]
+  ];
+  for (const [name, change] of equivalentChanges) {
+    await t.test(`equivalent normalized ${name} remains CURRENT`, async () => {
+      const equivalent = structuredClone(input);
+      change(equivalent);
+      state.sources[0].value = equivalent;
+      assert.equal(
+        (await service.getPartner(id)).partner.status,
+        'CURRENT',
+        name
+      );
+    });
+    state.sources[0].value = input;
+  }
+  const originalRevision = snapshot.reviewRevision;
+  const originalOnboarding = { ...state.leads[0].onboardingData };
+  for (const [field, value] of Object.entries({
+    fontPreset: 'modern',
+    palettePreset: 'emerald-slate',
+    faviconUrl: 'https://images.example/ana-new-favicon.webp',
+    phone: '573109998888',
+    defaultMessage: 'Quiero conocer el nuevo plan de negocio.',
+    analyticsMeasurementId: 'G-CHANGED',
+    metaPixelId: '987654321',
+    googleAdsConversionId: 'AW-CHANGED'
+  })) {
+    await t.test(`fresh effective ${field} invalidates CURRENT`, async () => {
+      Object.assign(state.leads[0].onboardingData, { [field]: value });
+      const changed = await service.getPartner(id);
+      assert.notEqual(changed.reviewRevision, originalRevision);
+      assert.equal(changed.partner.status, 'READY', field);
+    });
+    state.leads[0].onboardingData = { ...originalOnboarding };
+  }
+  const originalVsl = { ...state.master.content.vsl };
+  for (const [field, value] of Object.entries({
+    caption: 'New approved caption',
+    videoTitle: 'New approved title',
+    aspectRatio: '4:3',
+    autoPlay: true,
+    durationText: 'New approved duration'
+  })) {
+    await t.test(
+      `effective approved VSL ${field} invalidates CURRENT`,
+      async () => {
+        Object.assign(state.master.content.vsl, { [field]: value });
+        const changed = await service.getPartner(id);
+        assert.notEqual(changed.reviewRevision, originalRevision);
+        assert.equal(changed.partner.status, 'READY', field);
+      }
+    );
+    state.master.content.vsl = { ...originalVsl };
+  }
+  assert.equal(
+    (await service.getPartner(id)).partner.status,
+    'CURRENT',
+    'restoring effective material preserves currentness'
+  );
+  for (const legacy of [false, true]) {
+    await t.test(
+      `changed optional ${legacy ? 'legacy' : 'inventory'} same-owner Product poster invalidates CURRENT`,
+      async () => {
+        const productSiteId = legacy ? 'ana' : 'ana-product';
+        const poster = 'https://images.example/ana-product-current.webp';
+        state.sources.push({
+          siteId: productSiteId,
+          hash: hash('product-source'),
+          value: {
+            ecosystemType: 'PRODUCT',
+            site: {
+              id: productSiteId,
+              domain: legacy ? 'ana.pro' : 'producto.ana.pro'
+            },
+            hero: { desktop: poster }
+          }
+        });
+        if (!legacy)
+          state.targets.push({
+            siteId: productSiteId,
+            hash: hash('product-target'),
+            value: {
+              ...target,
+              siteId: productSiteId,
+              ecosystemType: 'PRODUCT',
+              publicHost: 'producto.ana.pro',
+              remoteRoot: '/domains/ana.pro/public_html/producto'
+            }
+          });
+        const changed = await service.getPartner(id);
+        assert.equal(changed.input?.vsl?.thumbnailUrl, poster);
+        assert.equal(
+          changed.partner.status,
+          'READY',
+          'a failed or not-yet-run propagation cannot hide poster drift'
+        );
+        const originalPoster = input.vsl!.thumbnailUrl;
+        input.vsl!.thumbnailUrl = poster;
+        assert.equal(
+          (await service.getPartner(id)).partner.status,
+          'CURRENT',
+          'matching verified correlated poster stays current'
+        );
+        state.sources[0].hash = hash('after-propagation-source');
+        assert.equal(
+          (await service.getPartner(id)).partner.status,
+          'READY',
+          'persisted regeneration invalidates the old job source pin'
+        );
+        state.sources[0].hash = hash('source');
+        input.vsl!.thumbnailUrl = originalPoster;
+        state.sources.pop();
+        if (!legacy) state.targets.pop();
+      }
+    );
+  }
   state.journals.push({ ...state.journals[0] });
   assert.equal(
     (await service.getPartner(id)).partner.status,
@@ -481,6 +652,72 @@ test('prior_hosting_conflict_is_blocked_rather_than_offered_for_automatic_resume
   const snapshot = await service.getPartner(id);
   assert.equal(snapshot.partner.status, 'BLOCKED');
   assert.equal(snapshot.partner.canPrepareTarget, false);
+});
+test('trailing_separator_cannot_hide_remote_root_overlap_in_either_orientation', async () => {
+  const parent = '/domains/ana.pro/public_html/negocio';
+  for (const ownerKey of [id, other]) {
+    for (const [businessRoot, productRoot] of [
+      [`${parent}/`, `${parent}/producto`],
+      [`${parent}/producto`, `${parent}/`],
+      [`${parent}/`, parent],
+      [parent, `${parent}/`]
+    ]) {
+      const { state, service, target } = fixture();
+      state.targets = [
+        {
+          siteId: target.siteId,
+          hash: hash('business-target'),
+          value: { ...target, remoteRoot: businessRoot }
+        },
+        {
+          siteId: 'other-product',
+          hash: hash('product-target'),
+          value: {
+            ...target,
+            siteId: 'other-product',
+            ownerKey,
+            ecosystemType: 'PRODUCT',
+            baseDomain: ownerKey === id ? 'ana.pro' : 'other.pro',
+            publicHost:
+              ownerKey === id ? 'producto.ana.pro' : 'producto.other.pro',
+            remoteRoot: productRoot
+          }
+        }
+      ];
+      const snapshot = await service.getPartner(id);
+      assert.equal(
+        snapshot.partner.status,
+        'BLOCKED',
+        `${businessRoot} vs ${productRoot}, ${ownerKey}`
+      );
+      assert.equal(snapshot.partner.canPublish, false);
+      assert.throws(() => buildMasterSitesBusinessInput(snapshot));
+    }
+  }
+  const { state, service, target } = fixture();
+  state.targets = [
+    {
+      siteId: target.siteId,
+      hash: hash('business-target'),
+      value: { ...target, remoteRoot: parent }
+    },
+    {
+      siteId: 'other-product',
+      hash: hash('product-target'),
+      value: {
+        ...target,
+        siteId: 'other-product',
+        ecosystemType: 'PRODUCT',
+        publicHost: 'producto.ana.pro',
+        remoteRoot: `${parent}-extra`
+      }
+    }
+  ];
+  assert.equal(
+    (await service.getPartner(id)).partner.status,
+    'READY',
+    'a shared string prefix without a path boundary is not overlap'
+  );
 });
 test('active_job_blocks_publish_even_when_its_source_is_stale', async () => {
   const { state, service, target } = fixture();
