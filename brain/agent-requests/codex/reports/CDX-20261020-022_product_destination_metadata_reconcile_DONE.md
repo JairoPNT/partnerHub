@@ -2,11 +2,22 @@
 
 Date: 2026-10-20. Owner: Codex Backend Lead. Status: **implementation frozen, independent review / integration pending**. No production reconciliation, provider action, publication, push, merge or deployment was performed.
 
+## Round 2 — independent review corrections
+
+Current source freeze: `c62e1eda097e4faccdac33b343e98ba75b702d01`. This supersedes the initial `3079985` implementation checkpoint below. Both Important findings from `.superpowers/sdd/2026-10-20-product-destination-reconcile/review-022-round1.md` were reproduced before fixes and are ready for independent re-review:
+
+1. Raw source and target DNS identity comparisons now normalize case, trailing root dots and legacy URL wrappers. A canonical Product hostname collision blocks across every source ecosystem; a Product source's apex/owner collision still blocks. Target publicHost and baseDomain are normalized before uniqueness checks. Null/nonstring, port-bearing and invalid normalized hostname identities fail closed rather than comparing as unrelated values. The scope is only DNS identity validation, not a generalized inventory schema rewrite. A real-filesystem regression preserves Jairo's legitimate Brand apex source and same-owner Business target; no source data is normalized or rewritten by inventory reads.
+2. APPLY fsyncs the output parent immediately after creating the audit root, before tenant audit directories, backups, intent or source/target installation. This establishes durability of the new audit root directory entry instead of relying only on child/file fsync. A child-process model exercises the Linux branch with real filesystem mutations and the real coordinator, modeling only directory handles/POSIX permission bits on Windows. It verifies ordering and that parent-fsync failure leaves source/target unchanged and audit root empty. These are call-order/fault regressions, **not actual Linux/power-loss verification**.
+
+Final round-2 verification: **71/71** focused integration tests; **52/52** real Node20.20.2 production-shaped packaging tests; forced scoped ESLint and diff check clean; Next build passed with the same root/NFT warnings. Full **72** test-script sweep rerun after the corrections: **69 passed / 3 failed**, the same 9 baseline Business tests enumerated below. No baseline files were edited.
+
+Round-2 tests consume the stable real 023 module from final source freeze `8a76cc5c8f15a4c643916a2f4b1afcf2124a9362` via its read-only worktree path. Canonical Git/LF SHA256: `3B6A52DEB6136393756BF90A8137006088459CBCADA04128D4A354081019E7AE`; current Windows CRLF bytes SHA256: `E7544D6CA0E1947FBE2D4DC8AB94EAFA5ECD4CF52B26D686897760B8E1E3FCA8`. Its change from the initial coordinator-only freeze was a trusted-namespace threat-model comment; API/version remained unchanged. No 023 files or package mapping were modified in this correction. 023's independent review/merge, 022 rebase and merged production packaging remain controller-owned prerequisites.
+
 ## Branch and source freeze
 
 - Branch: `codex/CDX-20261020-022-product-destination-reconcile`.
 - Base: `17c5fab25bff3b9a34dd94e4f60be6f17a057d8a`.
-- Source freeze: `3079985623c7968259c40a0ce20c3466a5c1a396`.
+- Current source freeze: `c62e1eda097e4faccdac33b343e98ba75b702d01`; initial source freeze: `3079985623c7968259c40a0ce20c3466a5c1a396`.
 - Separate runtime import mapping commit: `a5f3a2d9c15b11c39bf626e0ffe888e1680ca7ac`. This exact mapping was also applied by the 022 package owner, with controller authorization, in the 023 checkout as a borrowed dependency. Controller owns its integration.
 - No PR created by this implementer. Final release requires controller review and integration of 021 + 023.
 
@@ -23,9 +34,9 @@ Source changes only `site.domain`; unknown fields and the absence of `ecosystemT
 ## Files changed
 
 - `app/web/scripts/product-destination-reconcile.mjs`: strict raw inventory, plan, CLI, gate loading and durable transaction.
-- `app/web/scripts/product-destination-reconcile.test.mjs`: 35 core filesystem/CLI cases and fixture factory.
-- `app/web/scripts/product-destination-reconcile.integration.test.mjs`: real coordinator transaction cases; imports the core tests, 53 total.
-- `app/web/scripts/product-destination-reconcile.packaging.test.mjs`: stages a production-shaped runtime, bundles real coordinator and invokes a real Node 20 executable; imports the core tests, 36 total.
+- `app/web/scripts/product-destination-reconcile.test.mjs`: 51 core filesystem/CLI cases and fixture factory after review corrections.
+- `app/web/scripts/product-destination-reconcile.integration.test.mjs`: real coordinator transaction cases and modeled Linux durability ordering; imports the core tests, 71 total.
+- `app/web/scripts/product-destination-reconcile.packaging.test.mjs`: stages a production-shaped runtime, bundles real coordinator and invokes a real Node 20 executable; imports the core tests, 52 total.
 - `app/web/package.json`: isolated coordinator imports mapping, maintenance command and two focused test commands. No versions/dependencies changed.
 - Root `Dockerfile`: bundle the actual 023 coordinator for Node 20, import/version smoke check, copy coordinator asset and CLI into runner. No other infrastructure edits.
 - This request and report. Local implementation handoff is `.superpowers/sdd/2026-10-20-product-destination-reconcile/task-2-report.md`.
@@ -77,7 +88,7 @@ Exact completed receipts verify original manifest, plan hash, durable intent/che
 
 TDD: missing entrypoint first failed the zero-write PREVIEW assertion; APPLY tests failed with APPLY_UNAVAILABLE against the real frozen coordinator before implementation. Normalized-domain collision, absent-target-directory planning, expired-receipt replay and altered-intent regressions were observed RED before fixes.
 
-Final focused commands (2026-10-20):
+Initial focused commands (2026-10-20; superseded by the round-2 counts above):
 
 - `node --experimental-strip-types --test scripts/product-destination-reconcile.integration.test.mjs`: **53/53 passed**, using the frozen real 023 source path.
 - `npm run test:product-destination-reconcile-packaging`: **36/36 passed**, including real Node **v20.20.2**, real bundled coordinator import, default PREVIEW, absent runtime asset block, APPLY, receipt replay and a separate Node 20 CLI process blocked by a held writer claim.
