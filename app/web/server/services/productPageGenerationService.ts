@@ -21,6 +21,7 @@ import { partnerEcosystemEntitlementService } from "@/server/services/partnerEco
 import { assertPartnerEcosystemGenerationAllowed } from "@/server/services/partnerEcosystemGenerationGuard";
 import { buildBusinessWhatsappCta } from "@/server/services/businessWhatsappCta";
 import { composeBusinessMasterContent, loadBusinessMasterContent } from "@/server/services/businessMasterContent";
+import { assertBusinessPublicationSiteIdentity, isBusinessPublicationSiteId, withBusinessPublicationSite } from "@/server/services/businessPublicationSiteCoordinator";
 
 const siteIdSchema = z
   .string()
@@ -359,96 +360,104 @@ export const productPageGenerationService = {
     input: ProductPageGenerationInput,
     options?: ProductPageGenerationOptions
   ): Promise<ProductPageGenerationResult> {
-    const baseConfiguration = normalizeProductPageGenerationConfiguration(input);
-    const masterSite = isMasterSiteId(input.site.id);
-    const entitlement = masterSite
-      ? null
-      : await partnerEcosystemEntitlementService.get({ siteId: input.site.id });
-    assertPartnerEcosystemGenerationAllowed({
-      siteId: input.site.id,
-      ecosystemType: input.ecosystemType,
-      masterSite,
-      entitlement
-    });
-    const isPartnerBusiness = input.ecosystemType === "BUSINESS" && !masterSite;
-    const productHero = isPartnerBusiness
-      ? await businessProductHeroCorrelationService.resolveForBusinessSite(input.site.id)
-      : {};
-    const templateDirectory = await resolveTemplateDirectory(
-      baseConfiguration.site.id,
-      baseConfiguration.ecosystemType,
-      options
-    );
-    const presentation = input.ecosystemType === "BUSINESS"
-      ? await loadBusinessMasterContent(templateDirectory)
-      : undefined;
-    const composed = presentation ? composeBusinessMasterContent(baseConfiguration, presentation) : baseConfiguration;
-    const configuration = applyBusinessVslPoster(composed, isPartnerBusiness, productHero);
-    const outputDirectory = resolveInsideDirectory(getOutputRoot(), configuration.site.id);
-
-    await rm(outputDirectory, { recursive: true, force: true });
-    await mkdir(outputDirectory, { recursive: true });
-
-    for (const entry of templateEntries) {
-      await cp(resolve(templateDirectory, entry), resolve(outputDirectory, entry), {
-        recursive: true,
-        errorOnExist: false
+    assertBusinessPublicationSiteIdentity(input.site.id, input.ecosystemType);
+    const action = async () => {
+      const baseConfiguration = normalizeProductPageGenerationConfiguration(input);
+      const masterSite = isMasterSiteId(input.site.id);
+      const entitlement = masterSite
+        ? null
+        : await partnerEcosystemEntitlementService.get({ siteId: input.site.id });
+      assertPartnerEcosystemGenerationAllowed({
+        siteId: input.site.id,
+        ecosystemType: input.ecosystemType,
+        masterSite,
+        entitlement
       });
-    }
+      const isPartnerBusiness = input.ecosystemType === "BUSINESS" && !masterSite;
+      const productHero = isPartnerBusiness
+        ? await businessProductHeroCorrelationService.resolveForBusinessSite(input.site.id)
+        : {};
+      const templateDirectory = await resolveTemplateDirectory(
+        baseConfiguration.site.id,
+        baseConfiguration.ecosystemType,
+        options
+      );
+      const presentation = input.ecosystemType === "BUSINESS"
+        ? await loadBusinessMasterContent(templateDirectory)
+        : undefined;
+      const composed = presentation ? composeBusinessMasterContent(baseConfiguration, presentation) : baseConfiguration;
+      const configuration = applyBusinessVslPoster(composed, isPartnerBusiness, productHero);
+      const outputDirectory = resolveInsideDirectory(getOutputRoot(), configuration.site.id);
 
-    if (!configuration.site.faviconUrl) {
-      const initial = getFaviconInitial(configuration.distributor.brandName, configuration.distributor.fullName);
-      const svgContent = generateFaviconSvg(initial);
-      await writeFile(resolve(outputDirectory, "favicon.svg"), svgContent, "utf8");
-    }
+      await rm(outputDirectory, { recursive: true, force: true });
+      await mkdir(outputDirectory, { recursive: true });
 
-    const generatedAt = new Date().toISOString();
-    const assetVersion = Date.parse(generatedAt).toString(36);
-    const files = [...templateEntries.filter((entry) => entry !== "tipografia"), ".htaccess", "config.js", "tipografia/"];
+      for (const entry of templateEntries) {
+        await cp(resolve(templateDirectory, entry), resolve(outputDirectory, entry), {
+          recursive: true,
+          errorOnExist: false
+        });
+      }
 
-    await writeFile(resolve(outputDirectory, "config.js"), buildConfigSource(configuration), "utf8");
-    await writeFile(resolve(outputDirectory, ".htaccess"), noCacheHtaccessSource, "utf8");
-    await applyConfiguredIntegrations(outputDirectory, configuration);
-    await applyAssetVersion(outputDirectory, assetVersion);
-    await writeFile(
-      resolve(outputDirectory, "manifest.json"),
-      `${JSON.stringify({ siteId: configuration.site.id, generatedAt, assetVersion, files }, null, 2)}\n`,
-      "utf8"
-    );
+      if (!configuration.site.faviconUrl) {
+        const initial = getFaviconInitial(configuration.distributor.brandName, configuration.distributor.fullName);
+        const svgContent = generateFaviconSvg(initial);
+        await writeFile(resolve(outputDirectory, "favicon.svg"), svgContent, "utf8");
+      }
 
-    await productPageSourceService.save(configuration.site.id, configuration);
-    const heroSync = await syncProductPageHeroesToLead(
-      configuration.site.id,
-      configuration.hero,
-      activationLeadService
-    );
-    await productPageSourceService.clearLastVerification(configuration.site.id);
-    await activationLeadService.updatePublicationStateBySiteId(configuration.site.id, "GENERATED");
-    await productPageHistoryService.append({
-      siteId: configuration.site.id,
-      type: "GENERATED",
-      occurredAt: generatedAt,
-      domain: configuration.site.domain,
-      outputDirectory,
-      fileCount: files.length + 1,
-      message: "Product page package generated."
-    });
+      const generatedAt = new Date().toISOString();
+      const assetVersion = Date.parse(generatedAt).toString(36);
+      const files = [...templateEntries.filter((entry) => entry !== "tipografia"), ".htaccess", "config.js", "tipografia/"];
 
-    return {
-      siteId: configuration.site.id,
-      generatedAt,
-      outputDirectory,
-      previewUrl: `/api/internal/product-pages/preview/${configuration.site.id}/index.html`,
-      files: [...files, "manifest.json"],
-      ...(heroSync.warning ? { warnings: [heroSync.warning] } : {})
+      await writeFile(resolve(outputDirectory, "config.js"), buildConfigSource(configuration), "utf8");
+      await writeFile(resolve(outputDirectory, ".htaccess"), noCacheHtaccessSource, "utf8");
+      await applyConfiguredIntegrations(outputDirectory, configuration);
+      await applyAssetVersion(outputDirectory, assetVersion);
+      await writeFile(
+        resolve(outputDirectory, "manifest.json"),
+        `${JSON.stringify({ siteId: configuration.site.id, generatedAt, assetVersion, files }, null, 2)}\n`,
+        "utf8"
+      );
+
+      await productPageSourceService.save(configuration.site.id, configuration);
+      const heroSync = await syncProductPageHeroesToLead(
+        configuration.site.id,
+        configuration.hero,
+        activationLeadService
+      );
+      await productPageSourceService.clearLastVerification(configuration.site.id);
+      await activationLeadService.updatePublicationStateBySiteId(configuration.site.id, "GENERATED");
+      await productPageHistoryService.append({
+        siteId: configuration.site.id,
+        type: "GENERATED",
+        occurredAt: generatedAt,
+        domain: configuration.site.domain,
+        outputDirectory,
+        fileCount: files.length + 1,
+        message: "Product page package generated."
+      });
+
+      return {
+        siteId: configuration.site.id,
+        generatedAt,
+        outputDirectory,
+        previewUrl: `/api/internal/product-pages/preview/${configuration.site.id}/index.html`,
+        files: [...files, "manifest.json"],
+        ...(heroSync.warning ? { warnings: [heroSync.warning] } : {})
+      };
     };
+    return isBusinessPublicationSiteId(input.site.id) ? withBusinessPublicationSite(input.site.id, action) : action();
   },
 
   async regenerateFromSavedSource(
     siteId: string,
     options?: ProductPageGenerationOptions
   ): Promise<ProductPageGenerationResult> {
-    const input = await parseSavedSource(siteId);
-    return this.generate(input, options);
+    const action = async () => {
+      const input = await parseSavedSource(siteId);
+      assertBusinessPublicationSiteIdentity(siteId, input.ecosystemType);
+      return this.generate(input, options);
+    };
+    return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action) : action();
   }
 };

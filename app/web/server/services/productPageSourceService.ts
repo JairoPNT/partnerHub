@@ -4,6 +4,7 @@ import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promise
 import { resolve, sep } from "node:path";
 
 import { z } from "zod";
+import { assertBusinessPublicationSiteIdentity, isBusinessPublicationSiteId, withBusinessPublicationSite } from "@/server/services/businessPublicationSiteCoordinator";
 
 const siteIdSchema = z
   .string()
@@ -38,13 +39,18 @@ function verificationPath(siteId: string) {
 }
 
 async function save(siteId: string, configuration: unknown) {
-  const target = sourcePath(siteId);
-  const directory = resolve(getSourceDirectory());
-  const temporary = `${target}.tmp-${process.pid}-${Date.now()}`;
+  const ecosystemType = (configuration as { ecosystemType?: unknown } | null)?.ecosystemType;
+  assertBusinessPublicationSiteIdentity(siteId, ecosystemType);
+  const action = async () => {
+    const target = sourcePath(siteId);
+    const directory = resolve(getSourceDirectory());
+    const temporary = `${target}.tmp-${process.pid}-${Date.now()}`;
 
-  await mkdir(directory, { recursive: true });
-  await writeFile(temporary, `${JSON.stringify(configuration, null, 2)}\n`, "utf8");
-  await rename(temporary, target);
+    await mkdir(directory, { recursive: true });
+    await writeFile(temporary, `${JSON.stringify(configuration, null, 2)}\n`, "utf8");
+    await rename(temporary, target);
+  };
+  return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action) : action();
 }
 
 async function clearLastVerification(siteId: string) {
