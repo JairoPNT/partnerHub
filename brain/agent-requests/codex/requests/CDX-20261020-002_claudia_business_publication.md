@@ -24,4 +24,4 @@ The authorized container operator invoked the packaged supported provisioning se
 
 EasyPanel's environment editor was updated through an exact named-line replacement of `PARTNERHUB_PROVISIONING_IPV4=82.29.157.103` with `PARTNERHUB_PROVISIONING_IPV4=109.106.251.170`; other environment values were not edited or recorded. The new setting requires deployment to become the running container's environment.
 
-Status: In progress. Target registration is complete; source generation, publication, and public verification remain pending deployment of the reviewed generation corrections.
+Status: COMPLETE on 2026-10-20. PR #210 was merged/deployed; final source generation automatically enqueued a successful guarded publication. Target publication is READY, worker SUCCEEDED/COMPLETE, and public page/poster/WhatsApp links/video playback were verified. See `brain/agent-requests/codex/reports/CDX-20261020-002_claudia_business_publication_DONE.md` for the actual sequence and the two safely blocked intermediate attempts.

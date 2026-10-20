@@ -2,7 +2,16 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
-## Latest completed ticket
+## Live checkpoint — 2026-10-20
+
+- Completed: CDX-20261020-002, Claudia Business automatic publication.
+- URL: https://negocio.claudiacalero.pro/ ; worker SUCCEEDED/COMPLETE, publication READY, DNS RESOLVED, SSL READY.
+- PR #210 merged/deployed; migrated publishing runtime verified, full Business content and Product-derived poster preserved.
+- Public page, all five WhatsApp CTAs, video playback and the MP4 audio stream verified. No ads launched; Product/apex and other partners untouched.
+- Report: `brain/agent-requests/codex/reports/CDX-20261020-002_claudia_business_publication_DONE.md`.
+- Next: campaign measurement/content review; separate Antigravity caption correction. Historical Jairo state below must not be presented as fresh hosting-migration verification.
+
+## Historical completed ticket
 
 `CDX-20260910-003 - Personal Brand apex package preview` (completed;
 read-only verification recorded in the ticket report)
