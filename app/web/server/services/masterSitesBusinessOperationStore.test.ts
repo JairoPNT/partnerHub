@@ -247,6 +247,60 @@ test("readers observe complete old or new records during replacement, never temp
   });
 });
 
+test("checkpoint rename between reader lstat and open returns retryable BUSY, not false corruption", async (t) => {
+  await fixture(async (directory, store) => {
+    await store.create(binding);
+    const writer = createMasterSitesBusinessOperationStore({ directory });
+    const path = resolve(directory, `${requestId}.json`);
+    const open = fs.open.bind(fs);
+    let checkpointBeforeOpen = true;
+    const replacement = t.mock.method(fs, "open", async (...args: Parameters<typeof fs.open>) => {
+      if (String(args[0]) === path && checkpointBeforeOpen) {
+        checkpointBeforeOpen = false;
+        // Real writer creates/fsyncs/renames a complete version 1 after reader lstat(version 0).
+        assert.equal((await writer.checkpoint(requestId, 0, { phase: "GENERATED" })).version, 1);
+      }
+      return open(...args);
+    });
+    await assert.rejects(store.get(requestId), (error: unknown) => {
+      safeError("MASTER_SITES_OPERATION_BUSY")(error);
+      assert.equal((error as { retryable: boolean }).retryable, true);
+      return true;
+    });
+    replacement.mock.restore();
+    assert.equal(checkpointBeforeOpen, false);
+    assert.equal((await store.get(requestId))!.version, 1);
+  });
+});
+
+test("owner marker inode replacement between lstat and open remains fail-closed OWNERSHIP_LOST", async (t) => {
+  await fixture(async (directory, store) => {
+    await store.create(binding);
+    const ownerPath = resolve(directory, `${requestId}.lock`, "owner.json");
+    const foreignPath = resolve(directory, `${requestId}.lock`, "foreign.json");
+    const open = fs.open.bind(fs);
+    let replaceBeforeOpen = true;
+    const replacement = t.mock.method(fs, "open", async (...args: Parameters<typeof fs.open>) => {
+      if (String(args[0]) === ownerPath && typeof args[1] === "number" && replaceBeforeOpen) {
+        replaceBeforeOpen = false;
+        await writeFile(foreignPath, await readFile(ownerPath, "utf8"));
+        await fs.rename(foreignPath, ownerPath);
+      }
+      return open(...args);
+    });
+    await assert.rejects(store.checkpoint(requestId, 0, { phase: "GENERATED" }), (error: unknown) => {
+      safeError("MASTER_SITES_OPERATION_OWNERSHIP_LOST")(error);
+      assert.equal((error as { retryable: boolean }).retryable, false);
+      return true;
+    });
+    replacement.mock.restore();
+    assert.equal(replaceBeforeOpen, false);
+    assert.equal((await store.get(requestId))!.version, 0);
+    assert.ok((await readdir(resolve(directory, `${requestId}.lock`))).includes("owner.json"));
+    await assert.rejects(store.checkpoint(requestId, 0, { phase: "COMPLETE" }), safeError("MASTER_SITES_OPERATION_BUSY"));
+  });
+});
+
 test("replaced or malformed owned markers fail closed and are never removed by the former owner", async (t) => {
   await fixture(async (directory, store) => {
     await store.create(binding);

@@ -134,7 +134,11 @@ export function createMasterSitesBusinessOperationStore(options: { directory?: s
     const file = await fs.open(path, constants.O_RDONLY | (constants.O_NOFOLLOW ?? 0));
     try {
       const stat = await file.stat();
-      if (!sameFile(before, stat) || !stat.isFile() || stat.nlink !== 1 || stat.size > limit) return fail(code);
+      if (!stat.isFile() || stat.nlink !== 1 || stat.size > limit) return fail(code);
+      // Record writers atomically rename: lstat can observe the old file while open sees
+      // the new one. Accept neither snapshot on mismatch; callers may explicitly re-read.
+      // Ownership markers are never legitimately replaced and must remain fail-closed.
+      if (!sameFile(before, stat)) return fail(code === "MASTER_SITES_OPERATION_CORRUPT" ? "MASTER_SITES_OPERATION_BUSY" : code);
       const bytes = Buffer.alloc(limit + 1);
       let length = 0;
       while (length < bytes.length) {
