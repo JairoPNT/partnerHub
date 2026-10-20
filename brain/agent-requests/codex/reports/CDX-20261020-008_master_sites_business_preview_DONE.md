@@ -75,3 +75,11 @@ Exploratory direct `npx.cmd tsc --noEmit --pretty false` was **not** green: repo
 - Any explicit update of CURRENT must remain operator-confirmed. Opening this overview grants no production mutation authority. No unresolved source overlap or shared-contract change.
 
 Follow-up: reviewed handoff to CDX-20261020-010 and final CDX-20261020-011 regression/production gate; no extra feature added here.
+
+## Controller review correction — reserved masters
+
+The controller identified a valid tenant-boundary gap: `lead.siteId=ganomaster` derived `ganomaster-business`, entering the existing generator's reserved-master path without an independent preview rejection. Existing inventory did not protect the absent-source/target case. Added the existing `isMasterSiteId` predicate against both the owner and derived Business site ID, before input assembly, returning safe `PARTNER_MASTER_IDENTITY_RESERVED`. No shared predicate or generator behavior was changed.
+
+Regression `reserved_master_partner_identity_cannot_build_or_publish_business_input` was observed RED (`TARGET_REQUIRED !== BLOCKED` for ganomaster without target), then GREEN. It covers all three reserved master owner IDs, absent and falsely matching READY targets, null input, denied prepare/publish and builder rejection. Readonly template remains available; legitimate `ganomaster-client` is not rejected by prefix.
+
+After this correction the same final combined command passes **65/65** (16 new tests), exact four-file ESLint exits 0 and a fresh `npm.cmd run build` exits 0 with TypeScript complete / 39 static pages. Existing lockfile/NFT and Node warnings remain. This supersedes the earlier 64/64 completion count above. Independent controller review is still required; no provider, push or merge.

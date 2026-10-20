@@ -26,6 +26,7 @@ import {
 } from '@/server/services/productPageGenerationService';
 import { loadBusinessMasterContent } from '@/server/services/businessMasterContent';
 import { resolveCanonicalTemplateDirectory } from '@/server/services/ecosystemTemplateResolver';
+import { isMasterSiteId } from '@/server/services/ecosystemService';
 import { assembleMasterSitesBusinessInput } from '@/server/services/masterSitesBusinessInput';
 import { resolvePartnerWhatsappIdentity } from '@/shared/partner-whatsapp-identity.mjs';
 
@@ -516,6 +517,13 @@ export function createMasterSitesBusinessPreviewService(
       ? lead.siteId!
       : null;
     const siteId = ownerSiteId ? `${ownerSiteId}-business` : null;
+    // Partner delivery must never enter the generator's reserved-master path.
+    // Check without relying on any existing source/target inventory records.
+    if (
+      (ownerSiteId && isMasterSiteId(ownerSiteId)) ||
+      (siteId && isMasterSiteId(siteId))
+    )
+      reject('PARTNER_MASTER_IDENTITY_RESERVED');
     const domain = lead.onboardingData?.domain;
     const baseDomain = hostnameSchema.safeParse(domain).success
       ? domain!

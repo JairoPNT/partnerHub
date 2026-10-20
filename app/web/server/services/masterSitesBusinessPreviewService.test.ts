@@ -113,6 +113,58 @@ test('includes_business_only_partner_without_any_saved_source', async () => {
   assert.equal(JSON.stringify(overview).includes('573101234567'), false);
   assert.equal(JSON.stringify(overview).includes('onboardingData'), false);
 });
+test('reserved_master_partner_identity_cannot_build_or_publish_business_input', async () => {
+  for (const reservedOwnerSiteId of [
+    'ganomaster',
+    'ganomaster-business',
+    'ganomaster-personal-brand'
+  ]) {
+    const { service, lead, state, target } = fixture();
+    lead.siteId = reservedOwnerSiteId;
+    for (const withTarget of [false, true]) {
+      state.targets = withTarget
+        ? [
+            {
+              siteId: `${reservedOwnerSiteId}-business`,
+              hash: hash('reserved-target'),
+              value: { ...target, siteId: `${reservedOwnerSiteId}-business` }
+            }
+          ]
+        : [];
+      const snapshot = await service.getPartner(id);
+      assert.equal(
+        snapshot.partner.status,
+        'BLOCKED',
+        `${reservedOwnerSiteId}, target=${withTarget}`
+      );
+      assert.ok(
+        snapshot.partner.blockedReasons.includes(
+          'PARTNER_MASTER_IDENTITY_RESERVED'
+        )
+      );
+      assert.equal(snapshot.partner.canPrepareTarget, false);
+      assert.equal(snapshot.partner.canPublish, false);
+      assert.equal(snapshot.input, null);
+      assert.throws(() => buildMasterSitesBusinessInput(snapshot), {
+        message: 'MASTER_SITES_BUSINESS_INPUT_BLOCKED'
+      });
+      const overview = await service.get();
+      assert.equal(
+        overview.template.available,
+        true,
+        'partner collision must not disable the readonly template'
+      );
+      assert.equal(overview.partners[0].status, 'BLOCKED');
+    }
+  }
+  const { service, lead } = fixture();
+  lead.siteId = 'ganomaster-client';
+  assert.equal(
+    (await service.getPartner(id)).partner.status,
+    'TARGET_REQUIRED',
+    'nonreserved prefix remains legitimate'
+  );
+});
 test('revoked_grant_or_archived_partner_is_blocked', async () => {
   const { state, service, lead } = fixture();
   state.entitlement.includedEcosystems = [];
