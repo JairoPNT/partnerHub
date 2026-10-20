@@ -273,6 +273,85 @@ test("checkpoint rename between reader lstat and open returns retryable BUSY, no
   });
 });
 
+test("modeled POSIX post-open detach returns BUSY before consuming any record bytes", async (t) => {
+  await fixture(async (directory, store) => {
+    await store.create(binding);
+    const path = resolve(directory, `${requestId}.json`);
+    const open = fs.open.bind(fs);
+    let reads = 0;
+    const replacement = t.mock.method(fs, "open", async (...args: Parameters<typeof fs.open>) => {
+      const file = await open(...args);
+      if (String(args[0]) === path) {
+        const stat = file.stat.bind(file);
+        // Model POSIX rename unlinking an already opened old inode before fstat.
+        // This is an injected nlink observation, not an actual Linux execution/rename.
+        t.mock.method(file, "stat", async () => Object.assign(await stat(), { nlink: 0 }));
+        t.mock.method(file, "read", async () => { reads++; throw new Error("detached descriptor consumed"); });
+      }
+      return file;
+    });
+    await assert.rejects(store.get(requestId), (error: unknown) => {
+      safeError("MASTER_SITES_OPERATION_BUSY")(error);
+      assert.equal((error as { retryable: boolean }).retryable, true);
+      return true;
+    });
+    replacement.mock.restore();
+    assert.equal(reads, 0);
+    assert.equal((await store.get(requestId))!.version, 0);
+  });
+});
+
+test("post-open stat still rejects hardlinks, non-files and oversized detached records", async (t) => {
+  await fixture(async (directory, store) => {
+    await store.create(binding);
+    const path = resolve(directory, `${requestId}.json`);
+    const open = fs.open.bind(fs);
+    for (const change of [{ nlink: 2 }, { nlink: 0, size: 16_385 }, { nlink: 0, isFile: () => false }]) {
+      let reads = 0;
+      const replacement = t.mock.method(fs, "open", async (...args: Parameters<typeof fs.open>) => {
+        const file = await open(...args);
+        if (String(args[0]) === path) {
+          const stat = file.stat.bind(file);
+          t.mock.method(file, "stat", async () => Object.assign(await stat(), change));
+          t.mock.method(file, "read", async () => { reads++; throw new Error("unsafe descriptor consumed"); });
+        }
+        return file;
+      });
+      await assert.rejects(store.get(requestId), safeError("MASTER_SITES_OPERATION_CORRUPT"));
+      replacement.mock.restore();
+      assert.equal(reads, 0);
+    }
+  });
+});
+
+test("modeled POSIX detached owner descriptor stays OWNERSHIP_LOST and retains its claim", async (t) => {
+  await fixture(async (directory, store) => {
+    await store.create(binding);
+    const ownerPath = resolve(directory, `${requestId}.lock`, "owner.json");
+    const open = fs.open.bind(fs);
+    let reads = 0;
+    const replacement = t.mock.method(fs, "open", async (...args: Parameters<typeof fs.open>) => {
+      const file = await open(...args);
+      if (String(args[0]) === ownerPath && typeof args[1] === "number") {
+        const stat = file.stat.bind(file);
+        t.mock.method(file, "stat", async () => Object.assign(await stat(), { nlink: 0 }));
+        t.mock.method(file, "read", async () => { reads++; throw new Error("detached owner consumed"); });
+      }
+      return file;
+    });
+    await assert.rejects(store.checkpoint(requestId, 0, { phase: "GENERATED" }), (error: unknown) => {
+      safeError("MASTER_SITES_OPERATION_OWNERSHIP_LOST")(error);
+      assert.equal((error as { retryable: boolean }).retryable, false);
+      return true;
+    });
+    replacement.mock.restore();
+    assert.equal(reads, 0);
+    assert.equal((await store.get(requestId))!.version, 0);
+    assert.ok((await readdir(resolve(directory, `${requestId}.lock`))).includes("owner.json"));
+    await assert.rejects(store.checkpoint(requestId, 0, { phase: "COMPLETE" }), safeError("MASTER_SITES_OPERATION_BUSY"));
+  });
+});
+
 test("owner marker inode replacement between lstat and open remains fail-closed OWNERSHIP_LOST", async (t) => {
   await fixture(async (directory, store) => {
     await store.create(binding);
