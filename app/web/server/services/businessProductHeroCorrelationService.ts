@@ -16,7 +16,8 @@ const targetIdentitySchema = z.object({
   ownerKey: z.string().uuid(),
   siteId: siteIdSchema,
   ecosystemType: z.enum(["PRODUCT", "BUSINESS", "PERSONAL_BRAND"]),
-  baseDomain: hostnameSchema.optional()
+  // Keep minimal identities visible to conflict checks even when optional metadata is corrupt.
+  baseDomain: z.unknown().optional()
 }).passthrough();
 
 const legacyLeadSchema = z.object({
@@ -70,16 +71,18 @@ async function resolveForBusinessSite(businessSiteId: string) {
   }
 
   // Legacy sources use the activation lead's assigned site ID, never a guessed slug.
-  if (!business.baseDomain) return {};
+  const parsedDomain = hostnameSchema.safeParse(business.baseDomain);
+  if (!parsedDomain.success) return {};
+  const baseDomain = parsedDomain.data;
   const parsedLead = legacyLeadSchema.safeParse(await activationLeadService.getById(business.ownerKey));
   if (!parsedLead.success) return {};
   const lead = parsedLead.data;
-  if (lead.id !== business.ownerKey || lead.onboardingData.domain !== business.baseDomain) return {};
+  if (lead.id !== business.ownerKey || lead.onboardingData.domain !== baseDomain) return {};
   if (targets.some((target) => target.siteId === lead.siteId && target.ownerKey !== business.ownerKey)) return {};
   const source = await productPageSourceService.get(lead.siteId);
   const parsedSource = legacyProductSourceSchema.safeParse(source);
   if (!parsedSource.success || parsedSource.data.site.id !== lead.siteId) return {};
-  if (![business.baseDomain, `producto.${business.baseDomain}`].includes(parsedSource.data.site.domain)) return {};
+  if (![baseDomain, `producto.${baseDomain}`].includes(parsedSource.data.site.domain)) return {};
   return extractProductHero(source as Parameters<typeof extractProductHero>[0]);
 }
 

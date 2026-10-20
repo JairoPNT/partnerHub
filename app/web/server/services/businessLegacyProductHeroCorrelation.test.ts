@@ -79,6 +79,19 @@ test("conflicting inventory ownership prevents legacy source access", async (t) 
   assert.deepEqual(await fx.resolve(), {});
 });
 
+test("malformed-domain foreign inventory identity cannot disappear from the ownership exclusion", async (t) => {
+  const fx = await fixture(t);
+  await fx.saveTarget({ ...fx.business, siteId: "claudia-calero", ecosystemType: "PRODUCT", ownerKey: foreign,
+    baseDomain: "https://foreign.pro" });
+  assert.deepEqual(await fx.resolve(), {});
+});
+
+test("a malformed-domain duplicate Business identity cannot disappear and unlock fallback", async (t) => {
+  const fx = await fixture(t);
+  await fx.saveTarget({ ...fx.business, ownerKey: foreign, baseDomain: "https://foreign.pro" }, "duplicate-business");
+  assert.deepEqual(await fx.resolve(), {});
+});
+
 test("ambiguous same-owner Product targets do not pick a source or fall back", async (t) => {
   const fx = await fixture(t);
   await fx.saveSource({ ...fx.source, site: { id: "claudia-product", domain: "producto.claudiacalero.pro" } }, "claudia-product");
@@ -119,6 +132,9 @@ test("foreign Product inventory cannot replace the authoritative legacy source",
 
 test("missing lead, missing Business inventory and mismatched assigned domain fail closed", async (t) => {
   const fx = await fixture(t);
+  await fx.saveTarget({ ...fx.business, baseDomain: "https://claudiacalero.pro" });
+  assert.deepEqual(await fx.resolve(), {});
+  await fx.saveTarget(fx.business);
   await fx.saveLead({ ...fx.lead, onboardingData: { domain: "foreign.pro" } });
   assert.deepEqual(await fx.resolve(), {});
   await fx.saveLead({ ...fx.lead, siteId: null });
