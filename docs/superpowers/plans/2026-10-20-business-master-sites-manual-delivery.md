@@ -132,4 +132,4 @@ Owner: Codex integrador y reviewer independiente; branch `codex/CDX-20261020-011
 
 007 contrato -> 008 preview y 009 coordinación en paralelo -> 010 comandos; AGR-001 puede preparar UI en paralelo desde contrato 007 -> 011 integración. Un subagente por tarea Codex y revisión entre entregas, como pidió Jairo; Antigravity mantiene propiedad de UI mediante su request. Seguridad/tenant/locks requieren revisión de riesgo apropiada, no solo build.
 
-Plan escrito, pendiente revisión de Jairo antes de implementación conforme a `writing-plans`. No se han creado endpoints, modificado UI ni publicado otro sitio con este plan.
+Plan aprobado explícitamente por Jairo el 2026-10-20. Ejecución con subagentes por tarea Codex y revisión entre entregas; frontend por Antigravity. La aprobación no implica que los controles ya estén implementados ni autoriza publicaciones de partners no seleccionados.
