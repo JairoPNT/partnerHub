@@ -16,6 +16,10 @@ const ECOSYSTEM_TYPE = "BUSINESS";
 const PUBLIC_HOST = "business.ganomaster.pro";
 const REQUIRED_TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "styles.css"];
 const PACKAGE_FILES = [".htaccess", ...REQUIRED_TEMPLATE_FILES, "manifest.json"];
+const LEGACY_PACKAGE_HASH = "e9a2f7339f80110ceb13f01499298a6e9caff2fb4ab2dffa7b35fb9f76f26a76";
+const LEGACY_TEMPLATE_HASH = "5aabc5e2a4402efd97ba8a6e33700e25ad338417143e6a84e97d5187d85a7e31";
+const LEGACY_MANIFEST_FILES = [...REQUIRED_TEMPLATE_FILES, ".htaccess", "tipografia/"];
+const LEGACY_ARCHIVE_FILES = [...PACKAGE_FILES].sort((left, right) => left.localeCompare(right));
 const NO_CACHE_HTACCESS = `DirectoryIndex index.html
 
 <IfModule mod_headers.c>
@@ -88,6 +92,24 @@ async function inventory(directory) {
   await visit(directory);
   files.sort((left, right) => left.path.localeCompare(right.path));
   return { exists: true, files, hash: inventoryHash(files) };
+}
+
+async function directoryPaths(directory) {
+  const directories = [];
+  async function visit(current) {
+    for (const entry of await readdir(current, { withFileTypes: true })) {
+      const path = resolve(current, entry.name);
+      if (entry.isDirectory()) {
+        directories.push(relative(directory, path).split(sep).join("/"));
+        await visit(path);
+      } else if (!entry.isFile()) {
+        throw new Error("BUSINESS_MASTER_PACKAGE_SPECIAL_FILE_FORBIDDEN");
+      }
+    }
+  }
+  await visit(directory);
+  directories.sort((left, right) => left.localeCompare(right));
+  return directories;
 }
 
 function validateCanonicalConfig(bytes) {
@@ -205,7 +227,7 @@ function validateHistoricalJournal(journal) {
     && isIsoTimestamp(journal?.appliedAt);
 }
 
-function validateManifestIdentity(manifest, { requireCurrentTemplateHash, currentTemplateHash } = {}) {
+function validateManifestIdentity(manifest, { requireCurrentTemplateHash, currentTemplateHash, expectedFiles } = {}) {
   return manifest?.schemaVersion === 1
     && manifest?.siteId === SITE_ID
     && manifest?.ecosystemType === ECOSYSTEM_TYPE
@@ -213,7 +235,8 @@ function validateManifestIdentity(manifest, { requireCurrentTemplateHash, curren
     && manifest?.source === "CANONICAL_BUSINESS_TEMPLATE"
     && isSha256(manifest?.canonicalTemplateHash)
     && (!requireCurrentTemplateHash || manifest.canonicalTemplateHash === currentTemplateHash)
-    && Array.isArray(manifest?.files);
+    && Array.isArray(manifest?.files)
+    && (!expectedFiles || JSON.stringify(manifest.files) === JSON.stringify(expectedFiles));
 }
 
 async function readManifest(directory, reasons, reason, root) {
@@ -248,16 +271,17 @@ function refreshJournalIsConsistent(refresh, paths, legacy, legacyHash, archive,
     && refresh?.ecosystemType === ECOSYSTEM_TYPE
     && refresh?.publicHost === PUBLIC_HOST
     && isSha256(refresh?.planHash)
-    && isSha256(refresh?.previousPackageHash)
+    && refresh?.previousPackageHash === LEGACY_PACKAGE_HASH
     && refresh?.refreshedPackageHash === expectedPackageHash
     && refresh?.canonicalTemplateHash === templateHash
     && refresh?.previousJournalPath === paths.journalPath
     && refresh?.previousJournalHash === legacyHash
     && refresh?.archivePath === paths.archiveDirectory
-    && refresh?.archivedPackageHash === archive.hash
-    && refresh?.previousPackageHash === archive.hash
-    && legacy?.expectedPackageHash === refresh.previousPackageHash
-    && legacy?.canonicalTemplateHash === archiveManifest?.canonicalTemplateHash
+    && refresh?.archivedPackageHash === LEGACY_PACKAGE_HASH
+    && archive.hash === LEGACY_PACKAGE_HASH
+    && legacy?.expectedPackageHash === LEGACY_PACKAGE_HASH
+    && legacy?.canonicalTemplateHash === LEGACY_TEMPLATE_HASH
+    && archiveManifest?.canonicalTemplateHash === LEGACY_TEMPLATE_HASH
     && legacy?.requestId === REQUEST_ID
     && validateHistoricalJournal(legacy)
     && isIsoTimestamp(refresh?.appliedAt);
@@ -278,7 +302,23 @@ export async function planBusinessMasterPackage(options = {}) {
   }
   const destination = await safeInventory(paths.destinationDirectory, reasons, "BUSINESS_MASTER_PACKAGE_DESTINATION_INVALID", paths.outputRoot);
   const archive = await safeInventory(paths.archiveDirectory, reasons, "BUSINESS_MASTER_PACKAGE_ARCHIVE_INVALID", paths.outputRoot);
+  let archiveDirectories = [];
+  if (archive.exists && archive.hash !== "INVALID") {
+    try {
+      archiveDirectories = await directoryPaths(paths.archiveDirectory);
+    } catch {
+      archiveDirectories = ["INVALID"];
+    }
+  }
   const typographyPresent = await isDirectory(resolve(paths.destinationDirectory, "tipografia"), paths.outputRoot);
+  const archiveTypographyPresent = await isDirectory(resolve(paths.archiveDirectory, "tipografia"), paths.outputRoot);
+  const archiveInventoryMatchesLegacy = archive.exists
+    && archive.hash === LEGACY_PACKAGE_HASH
+    && JSON.stringify(archive.files.map(({ path }) => path)) === JSON.stringify(LEGACY_ARCHIVE_FILES)
+    && JSON.stringify(archiveDirectories) === JSON.stringify(["tipografia"]);
+  if (archive.exists && archive.hash !== "INVALID" && (!archiveInventoryMatchesLegacy || !archiveTypographyPresent)) {
+    reasons.push("BUSINESS_MASTER_PACKAGE_ARCHIVE_DRIFT");
+  }
   let destinationManifest = null;
   let destinationIdentityValid = false;
   if (destination.exists && destination.hash !== "INVALID") {
@@ -327,7 +367,9 @@ export async function planBusinessMasterPackage(options = {}) {
     archiveManifest = archiveManifestFile?.value ?? null;
     const archiveManifestEntry = archive.files.find(({ path }) => path === "manifest.json");
     archiveIdentityValid = archiveManifestEntry?.hash === archiveManifestFile?.hash
-      && validateManifestIdentity(archiveManifest);
+      && archiveInventoryMatchesLegacy
+      && validateManifestIdentity(archiveManifest, { expectedFiles: LEGACY_MANIFEST_FILES })
+      && archiveManifest?.canonicalTemplateHash === LEGACY_TEMPLATE_HASH;
     if (!archiveIdentityValid) reasons.push("BUSINESS_MASTER_PACKAGE_ARCHIVE_IDENTITY_INVALID");
   }
 
@@ -391,6 +433,8 @@ export async function planBusinessMasterPackage(options = {}) {
       archivePath: paths.archiveDirectory,
       archiveHash: archive.hash,
       archiveFiles: archive.files,
+      archiveDirectories,
+      archiveTypographyDirectoryPresent: archiveTypographyPresent,
       archiveIdentity: archiveManifest ? {
         siteId: archiveManifest.siteId,
         ecosystemType: archiveManifest.ecosystemType,

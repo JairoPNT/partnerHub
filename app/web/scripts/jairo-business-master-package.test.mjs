@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
+import { Buffer } from "node:buffer";
+import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { lstat, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { dirname, resolve } from "node:path";
 import test from "node:test";
+import { fileURLToPath } from "node:url";
 
 import {
   APPLY_CONFIRMATION,
@@ -25,6 +28,25 @@ const canonicalConfig = `const CONFIG = {
   cta: { primaryUrl: "", secondaryUrl: "", directRegisterUrl: "" }
 };
 `;
+
+const LEGACY_SNAPSHOT_COMMIT = "16afb035f971b4495adb07983222f3461f87312c";
+const LEGACY_PACKAGE_HASH = "e9a2f7339f80110ceb13f01499298a6e9caff2fb4ab2dffa7b35fb9f76f26a76";
+const LEGACY_TEMPLATE_HASH = "5aabc5e2a4402efd97ba8a6e33700e25ad338417143e6a84e97d5187d85a7e31";
+const LEGACY_TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "styles.css"];
+const LEGACY_MANIFEST_FILES = [...LEGACY_TEMPLATE_FILES, ".htaccess", "tipografia/"];
+const LEGACY_ARCHIVE_FILE_PATHS = [".htaccess", ...LEGACY_TEMPLATE_FILES, "manifest.json"]
+  .sort((left, right) => left.localeCompare(right));
+const LEGACY_HTACCESS = `DirectoryIndex index.html
+
+<IfModule mod_headers.c>
+  <FilesMatch "^(index\\.html|config\\.js|app\\.js|styles\\.css|manifest\\.json)$">
+    Header set Cache-Control "no-cache, must-revalidate"
+    Header set Pragma "no-cache"
+    Header set Expires "0"
+  </FilesMatch>
+</IfModule>
+`;
+const REPOSITORY_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 
 async function fixture() {
   const root = await mkdtemp(resolve(os.tmpdir(), "partnerhub-business-master-"));
@@ -49,6 +71,84 @@ const sha256 = (value) => createHash("sha256").update(value).digest("hex");
 const inventoryHash = (entries) => sha256(JSON.stringify(entries.map(({ path, hash }) => ({ path, hash }))));
 const writeJson = (path, value) => writeFile(path, `${JSON.stringify(value, null, 2)}\n`);
 
+function createHistoricalPackage() {
+  const packageFiles = new Map(LEGACY_TEMPLATE_FILES.map((name) => [
+    name,
+    execFileSync("git", ["show", `${LEGACY_SNAPSHOT_COMMIT}:plantillas-de-pagina/business/${name}`], {
+      cwd: REPOSITORY_ROOT,
+      maxBuffer: 2 * 1024 * 1024
+    })
+  ]));
+  const canonicalFiles = [...packageFiles.entries()]
+    .map(([path, bytes]) => ({ path, hash: sha256(bytes) }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+  const canonicalTemplateHash = inventoryHash(canonicalFiles);
+  assert.equal(canonicalTemplateHash, LEGACY_TEMPLATE_HASH, "historical template snapshot must match its recorded inventory hash");
+  packageFiles.set(".htaccess", Buffer.from(LEGACY_HTACCESS, "utf8"));
+  const manifest = {
+    schemaVersion: 1,
+    siteId: "ganomaster-business",
+    ecosystemType: "BUSINESS",
+    publicHost: "business.ganomaster.pro",
+    source: "CANONICAL_BUSINESS_TEMPLATE",
+    canonicalTemplateHash,
+    files: LEGACY_MANIFEST_FILES
+  };
+  packageFiles.set("manifest.json", Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, "utf8"));
+  const packageInventory = [...packageFiles.entries()]
+    .map(([path, bytes]) => ({ path, hash: sha256(bytes) }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+  const packageHash = inventoryHash(packageInventory);
+  assert.equal(packageHash, LEGACY_PACKAGE_HASH, "historical package fixture must match its recorded package hash");
+  return { packageFiles, manifest, packageInventory, packageHash };
+}
+
+async function writeHistoricalArchive(directory, historicalPackage = createHistoricalPackage()) {
+  await mkdir(directory, { recursive: true });
+  for (const [path, bytes] of historicalPackage.packageFiles) {
+    await writeFile(resolve(directory, path), bytes);
+  }
+  await mkdir(resolve(directory, "tipografia"), { recursive: true });
+  return historicalPackage;
+}
+
+async function inventoryDirectory(directory) {
+  const files = [];
+  async function visit(current) {
+    for (const entry of await readdir(current, { withFileTypes: true })) {
+      const path = resolve(current, entry.name);
+      if (entry.isDirectory()) await visit(path);
+      else if (entry.isFile()) {
+        files.push({ path: path.slice(directory.length + 1).split(/[\\/]/).join("/"), hash: sha256(await readFile(path)) });
+      } else throw new Error("TEST_FIXTURE_SPECIAL_FILE_FORBIDDEN");
+    }
+  }
+  await visit(directory);
+  files.sort((left, right) => left.path.localeCompare(right.path));
+  return { files, hash: inventoryHash(files) };
+}
+
+async function bindLineageToArchive(item, { canonicalTemplateHash } = {}) {
+  const archive = await inventoryDirectory(item.archiveDirectory);
+  const originalJournal = {
+    ...item.originalJournal,
+    canonicalTemplateHash: canonicalTemplateHash ?? item.originalJournal.canonicalTemplateHash,
+    expectedPackageHash: archive.hash
+  };
+  await writeJson(item.legacyJournalPath, originalJournal);
+  const originalJournalBytes = await readFile(item.legacyJournalPath);
+  const refreshJournal = {
+    ...item.refreshJournal,
+    previousPackageHash: archive.hash,
+    archivedPackageHash: archive.hash,
+    previousJournalHash: sha256(originalJournalBytes)
+  };
+  await writeJson(item.refreshJournalPath, refreshJournal);
+  item.originalJournal = originalJournal;
+  item.refreshJournal = refreshJournal;
+  return archive;
+}
+
 async function refreshedFixture() {
   const item = await fixture();
   const outputRoot = item.options.outputRoot;
@@ -63,23 +163,8 @@ async function refreshedFixture() {
     expectedPlanHash: firstPreview.planHash
   });
 
-  const oldPackageFile = Buffer.from("preserved legacy package\n", "utf8");
-  const oldManifest = Buffer.from(`${JSON.stringify({
-    schemaVersion: 1,
-    siteId: "ganomaster-business",
-    ecosystemType: "BUSINESS",
-    publicHost: "business.ganomaster.pro",
-    source: "CANONICAL_BUSINESS_TEMPLATE",
-    canonicalTemplateHash: "a".repeat(64),
-    files: ["legacy.txt"]
-  }, null, 2)}\n`, "utf8");
-  const previousPackageHash = inventoryHash([
-    { path: "legacy.txt", hash: sha256(oldPackageFile) },
-    { path: "manifest.json", hash: sha256(oldManifest) }
-  ]);
-  await mkdir(archiveDirectory, { recursive: true });
-  await writeFile(resolve(archiveDirectory, "legacy.txt"), oldPackageFile);
-  await writeFile(resolve(archiveDirectory, "manifest.json"), oldManifest);
+  const historicalPackage = await writeHistoricalArchive(archiveDirectory);
+  const previousPackageHash = historicalPackage.packageHash;
 
   const originalJournal = {
     requestId: "CDX-20260827-002",
@@ -87,7 +172,7 @@ async function refreshedFixture() {
     outcome: "APPLIED",
     siteId: "ganomaster-business",
     planHash: "b".repeat(64),
-    canonicalTemplateHash: "a".repeat(64),
+    canonicalTemplateHash: LEGACY_TEMPLATE_HASH,
     expectedPackageHash: previousPackageHash,
     appliedAt: "2026-08-27T12:00:00.000Z"
   };
@@ -119,8 +204,7 @@ async function refreshedFixture() {
     legacyJournalPath,
     refreshJournalPath,
     archiveDirectory,
-    oldPackageFile,
-    oldManifest,
+    historicalPackage,
     originalJournal,
     refreshJournal
   };
@@ -128,7 +212,7 @@ async function refreshedFixture() {
 
 async function snapshotLineage(item) {
   const readHash = async (path) => sha256(await readFile(path));
-  const archiveFilePath = resolve(item.archiveDirectory, "legacy.txt");
+  const archiveFilePath = resolve(item.archiveDirectory, ".htaccess");
   const destinationDirectory = resolve(item.options.outputRoot, "ganomaster-business");
   return {
     destinationHash: await readHash(resolve(destinationDirectory, "manifest.json")),
@@ -273,6 +357,7 @@ test("PREVIEW accepts a refreshed package only when the complete fixed lineage v
   const item = await refreshedFixture();
   try {
     const before = await snapshotLineage(item);
+    const historicalArchive = await inventoryDirectory(item.archiveDirectory);
     const first = await planBusinessMasterPackage(item.options);
     const second = await planBusinessMasterPackage(item.options);
     assert.equal(first.blocked, false);
@@ -289,6 +374,12 @@ test("PREVIEW accepts a refreshed package only when the complete fixed lineage v
     assert.equal(first.planMaterial.lineage.refreshJournalHash, before.refreshJournalHash);
     assert.equal(first.planMaterial.lineage.legacyJournalHash, before.legacyJournalHash);
     assert.equal(first.planMaterial.lineage.archiveHash, item.refreshJournal.previousPackageHash);
+    assert.equal(first.planMaterial.lineage.archiveHash, LEGACY_PACKAGE_HASH);
+    assert.deepEqual(first.planMaterial.lineage.archiveDirectories, ["tipografia"]);
+    assert.equal(historicalArchive.hash, LEGACY_PACKAGE_HASH);
+    assert.deepEqual(historicalArchive.files.map(({ path }) => path), LEGACY_ARCHIVE_FILE_PATHS);
+    assert.deepEqual(item.historicalPackage.manifest.files, LEGACY_MANIFEST_FILES);
+    assert.equal(item.historicalPackage.manifest.canonicalTemplateHash, LEGACY_TEMPLATE_HASH);
     assert.deepEqual(await snapshotLineage(item), before);
 
     const applied = await applyBusinessMasterPackage({
@@ -329,22 +420,10 @@ test("PREVIEW blocks an archive with foreign identity even when its hashes are s
       publicHost: "business.ganomaster.pro",
       source: "CANONICAL_BUSINESS_TEMPLATE",
       canonicalTemplateHash: item.originalJournal.canonicalTemplateHash,
-      files: ["legacy.txt"]
+      files: LEGACY_MANIFEST_FILES
     }, null, 2)}\n`, "utf8");
-    const archiveHash = inventoryHash([
-      { path: "legacy.txt", hash: sha256(item.oldPackageFile) },
-      { path: "manifest.json", hash: sha256(foreignManifest) }
-    ]);
     await writeFile(resolve(item.archiveDirectory, "manifest.json"), foreignManifest);
-    const originalJournal = { ...item.originalJournal, expectedPackageHash: archiveHash };
-    const originalJournalBytes = Buffer.from(`${JSON.stringify(originalJournal, null, 2)}\n`, "utf8");
-    await writeFile(item.legacyJournalPath, originalJournalBytes);
-    await writeJson(item.refreshJournalPath, {
-      ...item.refreshJournal,
-      previousPackageHash: archiveHash,
-      archivedPackageHash: archiveHash,
-      previousJournalHash: sha256(originalJournalBytes)
-    });
+    await bindLineageToArchive(item);
 
     const preview = await planBusinessMasterPackage(item.options);
     assert.equal(preview.blocked, true);
@@ -365,22 +444,10 @@ test("PREVIEW blocks archived template lineage that disagrees with the preserved
       publicHost: "business.ganomaster.pro",
       source: "CANONICAL_BUSINESS_TEMPLATE",
       canonicalTemplateHash: "d".repeat(64),
-      files: ["legacy.txt"]
+      files: LEGACY_MANIFEST_FILES
     }, null, 2)}\n`, "utf8");
-    const archiveHash = inventoryHash([
-      { path: "legacy.txt", hash: sha256(item.oldPackageFile) },
-      { path: "manifest.json", hash: sha256(changedManifest) }
-    ]);
     await writeFile(resolve(item.archiveDirectory, "manifest.json"), changedManifest);
-    const originalJournal = { ...item.originalJournal, expectedPackageHash: archiveHash };
-    const originalJournalBytes = Buffer.from(`${JSON.stringify(originalJournal, null, 2)}\n`, "utf8");
-    await writeFile(item.legacyJournalPath, originalJournalBytes);
-    await writeJson(item.refreshJournalPath, {
-      ...item.refreshJournal,
-      previousPackageHash: archiveHash,
-      archivedPackageHash: archiveHash,
-      previousJournalHash: sha256(originalJournalBytes)
-    });
+    await bindLineageToArchive(item);
 
     const preview = await planBusinessMasterPackage(item.options);
     assert.equal(preview.blocked, true);
@@ -394,7 +461,7 @@ test("PREVIEW blocks archived template lineage that disagrees with the preserved
 test("PREVIEW blocks a missing or tampered archive and a changed original journal", async () => {
   const item = await refreshedFixture();
   try {
-    const archiveFile = resolve(item.archiveDirectory, "legacy.txt");
+    const archiveFile = resolve(item.archiveDirectory, ".htaccess");
     await writeFile(archiveFile, "tampered legacy package\n");
     let preview = await planBusinessMasterPackage(item.options);
     assert.equal(preview.blocked, true);
@@ -407,14 +474,65 @@ test("PREVIEW blocks a missing or tampered archive and a changed original journa
     assert.notEqual(preview.disposition, "ALREADY_APPLIED");
     assert.ok(preview.blockedReasons.includes("BUSINESS_MASTER_PACKAGE_ARCHIVE_MISSING"));
 
-    await mkdir(item.archiveDirectory, { recursive: true });
-    await writeFile(archiveFile, item.oldPackageFile);
-    await writeFile(resolve(item.archiveDirectory, "manifest.json"), item.oldManifest);
+    await writeHistoricalArchive(item.archiveDirectory, item.historicalPackage);
     await writeFile(item.legacyJournalPath, `${JSON.stringify(item.originalJournal, null, 2)}\nchanged`);
     preview = await planBusinessMasterPackage(item.options);
     assert.equal(preview.blocked, true);
     assert.notEqual(preview.disposition, "ALREADY_APPLIED");
     assert.ok(preview.blockedReasons.includes("BUSINESS_MASTER_PACKAGE_LEGACY_JOURNAL_HASH_DRIFT"));
+  } finally {
+    await item.cleanup();
+  }
+});
+
+test("PREVIEW rejects a synthetic but internally coherent archive with an unrecognized package hash", async () => {
+  const item = await refreshedFixture();
+  try {
+    await writeFile(resolve(item.archiveDirectory, "app.js"), "synthetic archive bytes\n");
+    const syntheticArchive = await bindLineageToArchive(item);
+    assert.notEqual(syntheticArchive.hash, LEGACY_PACKAGE_HASH);
+    assert.deepEqual(syntheticArchive.files.map(({ path }) => path), LEGACY_ARCHIVE_FILE_PATHS);
+    assert.deepEqual(JSON.parse(await readFile(resolve(item.archiveDirectory, "manifest.json"), "utf8")).files, LEGACY_MANIFEST_FILES);
+    const legacyJournalBytes = await readFile(item.legacyJournalPath);
+    assert.equal(item.originalJournal.expectedPackageHash, syntheticArchive.hash);
+    assert.equal(item.refreshJournal.previousPackageHash, syntheticArchive.hash);
+    assert.equal(item.refreshJournal.archivedPackageHash, syntheticArchive.hash);
+    assert.equal(item.refreshJournal.previousJournalHash, sha256(legacyJournalBytes));
+
+    const preview = await planBusinessMasterPackage(item.options);
+    assert.equal(preview.blocked, true);
+    assert.notEqual(preview.disposition, "ALREADY_APPLIED");
+  } finally {
+    await item.cleanup();
+  }
+});
+
+test("PREVIEW rejects a self-consistent historical archive with an altered manifest files list", async () => {
+  const item = await refreshedFixture();
+  try {
+    const manifestPath = resolve(item.archiveDirectory, "manifest.json");
+    const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+    manifest.files = manifest.files.filter((path) => path !== ".htaccess");
+    await writeJson(manifestPath, manifest);
+    const alteredArchive = await bindLineageToArchive(item);
+    assert.notEqual(alteredArchive.hash, LEGACY_PACKAGE_HASH);
+
+    const preview = await planBusinessMasterPackage(item.options);
+    assert.equal(preview.blocked, true);
+    assert.notEqual(preview.disposition, "ALREADY_APPLIED");
+  } finally {
+    await item.cleanup();
+  }
+});
+
+test("PREVIEW rejects unlisted empty directories in the historical archive", async () => {
+  const item = await refreshedFixture();
+  try {
+    await mkdir(resolve(item.archiveDirectory, "unlisted"));
+    const preview = await planBusinessMasterPackage(item.options);
+    assert.equal(preview.blocked, true);
+    assert.notEqual(preview.disposition, "ALREADY_APPLIED");
+    assert.ok(preview.blockedReasons.includes("BUSINESS_MASTER_PACKAGE_ARCHIVE_DRIFT"));
   } finally {
     await item.cleanup();
   }
