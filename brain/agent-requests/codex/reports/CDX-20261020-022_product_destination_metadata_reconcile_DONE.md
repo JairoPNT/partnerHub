@@ -2,6 +2,12 @@
 
 Date: 2026-10-20. Owner: Codex Backend Lead. Status: **implementation frozen, independent review / integration pending**. No production reconciliation, provider action, publication, push, merge or deployment was performed.
 
+## Round 3 — bounded source classification guard
+
+Current source freeze: `62d42b02965eb7cb26616547a28be5a43268149d`. Scoped re-review confirmed the two previous fixes but reproduced an invalid source ecosystem (`TYPO`) bypassing the Product apex collision check; the runtime normally defaults invalid values to Product. A single raw-inventory guard now permits only absent `ecosystemType` or exact PRODUCT/BUSINESS/PERSONAL_BRAND and blocks all explicit invalid enums/types as ambiguous. This does not introduce a generalized DTO validation or alter runtime classification.
+
+Six filesystem regressions (`TYPO`, lowercase `product`, null, number, object, array) were RED then GREEN. Legacy undefined Product and legitimate Jairo Brand apex coverage remains green. Focused integration **77/77**, actual Node20 packaging **58/58**, forced scoped lint and diff check passed. The last full 72-script sweep/build is the round-2 run documented below; final merged-root verification is still pending. This freeze was not rebased during review. Controller reported 023 merged as PR220 / main `21aba6e13e44bcfb66ed202d73272135454a57dd`; rebase/deduplication and final real-merged-gate packaging wait for the review verdict.
+
 ## Round 2 — independent review corrections
 
 Current source freeze: `c62e1eda097e4faccdac33b343e98ba75b702d01`. This supersedes the initial `3079985` implementation checkpoint below. Both Important findings from `.superpowers/sdd/2026-10-20-product-destination-reconcile/review-022-round1.md` were reproduced before fixes and are ready for independent re-review:
@@ -17,7 +23,7 @@ Round-2 tests consume the stable real 023 module from final source freeze `8a76c
 
 - Branch: `codex/CDX-20261020-022-product-destination-reconcile`.
 - Base: `17c5fab25bff3b9a34dd94e4f60be6f17a057d8a`.
-- Current source freeze: `c62e1eda097e4faccdac33b343e98ba75b702d01`; initial source freeze: `3079985623c7968259c40a0ce20c3466a5c1a396`.
+- Current source freeze: `62d42b02965eb7cb26616547a28be5a43268149d`; previous review freeze: `c62e1eda097e4faccdac33b343e98ba75b702d01`; initial source freeze: `3079985623c7968259c40a0ce20c3466a5c1a396`.
 - Separate runtime import mapping commit: `a5f3a2d9c15b11c39bf626e0ffe888e1680ca7ac`. This exact mapping was also applied by the 022 package owner, with controller authorization, in the 023 checkout as a borrowed dependency. Controller owns its integration.
 - No PR created by this implementer. Final release requires controller review and integration of 021 + 023.
 
@@ -34,9 +40,9 @@ Source changes only `site.domain`; unknown fields and the absence of `ecosystemT
 ## Files changed
 
 - `app/web/scripts/product-destination-reconcile.mjs`: strict raw inventory, plan, CLI, gate loading and durable transaction.
-- `app/web/scripts/product-destination-reconcile.test.mjs`: 51 core filesystem/CLI cases and fixture factory after review corrections.
-- `app/web/scripts/product-destination-reconcile.integration.test.mjs`: real coordinator transaction cases and modeled Linux durability ordering; imports the core tests, 71 total.
-- `app/web/scripts/product-destination-reconcile.packaging.test.mjs`: stages a production-shaped runtime, bundles real coordinator and invokes a real Node 20 executable; imports the core tests, 52 total.
+- `app/web/scripts/product-destination-reconcile.test.mjs`: 57 core filesystem/CLI cases and fixture factory after review corrections.
+- `app/web/scripts/product-destination-reconcile.integration.test.mjs`: real coordinator transaction cases and modeled Linux durability ordering; imports the core tests, 77 total.
+- `app/web/scripts/product-destination-reconcile.packaging.test.mjs`: stages a production-shaped runtime, bundles real coordinator and invokes a real Node 20 executable; imports the core tests, 58 total.
 - `app/web/package.json`: isolated coordinator imports mapping, maintenance command and two focused test commands. No versions/dependencies changed.
 - Root `Dockerfile`: bundle the actual 023 coordinator for Node 20, import/version smoke check, copy coordinator asset and CLI into runner. No other infrastructure edits.
 - This request and report. Local implementation handoff is `.superpowers/sdd/2026-10-20-product-destination-reconcile/task-2-report.md`.

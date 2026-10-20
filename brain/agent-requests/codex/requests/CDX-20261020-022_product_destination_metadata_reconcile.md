@@ -2,7 +2,7 @@
 
 Owner: Codex backend/operations. Status: APPROVED by Jairo; implementation and independent review authorized. Production APPLY gated by reviewed/deployed prevention and writer exclusion.
 
-Implementation checkpoint 2026-10-20: source frozen at `c62e1eda097e4faccdac33b343e98ba75b702d01` after fixing the two round-1 review findings, ready for independent re-review; not deployed and no production APPLY performed. See matching DONE report. Controller narrowed actual migration to ABSENT targets only; all existing targets block except an exact completed receipt. Final production integration depends on reviewed/deployed CDX-20261020-021 and CDX-20261020-023.
+Implementation checkpoint 2026-10-20: source frozen at `62d42b02965eb7cb26616547a28be5a43268149d` after the two round-1 fixes and bounded source-classification follow-up, ready for independent re-review; not deployed and no production APPLY performed. See matching DONE report. Controller narrowed actual migration to ABSENT targets only; all existing targets block except an exact completed receipt. Final production integration depends on reviewed/deployed CDX-20261020-021 and CDX-20261020-023.
 
 Goal: reconcile the six sources observed in020 with provider-confirmed Producto destinations, without generating or publishing content. This is not provisioning and must not delete/recreate identity safeguards.
 
