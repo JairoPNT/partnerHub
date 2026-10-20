@@ -3,7 +3,7 @@
 - **Request ID:** CDX-20261019-005
 - **Status:** Complete; PR prepared for review, not merged.
 - **Branch:** `codex/CDX-20261019-005-business-master-refresh-integration`
-- **Commit:** `947912a` (`fix: tighten Business master refresh guards`)
+- **Commits:** `947912a` (final code fix), `29d925b` (request and report), `096dc0b` (PR link in report; current PR head).
 - **PR:** [#209](https://github.com/JairoPNT/partnerHub/pull/209), abierto contra `main`, sin merge.
 
 ## Result
