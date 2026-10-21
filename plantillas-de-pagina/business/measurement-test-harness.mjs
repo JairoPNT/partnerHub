@@ -163,8 +163,8 @@ export function createBusinessMeasurementHarness({
   return {
     window, document, clock, storage, requests, sdkCalls, channels,
     anchor(id = 'main-vsl-cta', href = 'https://wa.me/573001112233?text=PRIVATE_MESSAGE_SEED') {
-      const anchor = element('a'); anchor.id = id === 'header' ? '' : id; anchor.href = href;
-      const parent = element(id === 'header' ? 'header' : 'div'); parent.appendChild(anchor);
+      const anchor = element('a'); anchor.id = id; anchor.href = href;
+      const parent = element(id === 'btnNavContact' ? 'header' : 'div'); parent.appendChild(anchor);
       return anchor;
     },
     storageEvent(newValue, options = {}) {
