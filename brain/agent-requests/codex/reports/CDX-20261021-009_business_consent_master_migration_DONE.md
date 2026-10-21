@@ -1,6 +1,6 @@
 # CDX-20261021-009 — Offline consent master migration tooling
 
-Status: implementation/testing delivered; final-review findings F1–F3 fixed in one bounded wave, scoped re-review pending. Production APPLY remains intentionally BLOCKED. No deployment, production mutation, publication, provider calls, push, PR or merge.
+Status: implementation/testing and independent task/final reviews complete for offline code handoff. Final-review findings F1–F3 fixed in 3690aa669fdeb280b7d665f9c4edfc2fb029ba3d; scoped re-review PASS, no findings open. Production APPLY remains intentionally BLOCKED. No deployment, production mutation, publication, provider calls, push, PR or merge.
 
 ## Delivery and fixed authority
 
@@ -39,7 +39,7 @@ Detailed commands, RED/GREEN evidence, rulings and logs retained ignored at .loc
 
 ## Remaining gates and limitations
 
-Independent spec/quality and premium integrity/concurrency reviews remain pending. Before any productive migration: separately reviewed all-Business-writer barrier/maintenance integration and actual current-profile execution wiring, fresh actual lineage/plan authorization, Linux rehearsal, exact reviewed staged candidate and coordinated code/master cutover. No productive permission is inferred.
+Independent task spec/quality reviews passed. Premium final integrity/concurrency review initially identified F1–F3; all were corrected in one fix wave and independently verified by scoped final re-review, with no introduced findings. Before any productive migration: separately reviewed all-Business-writer barrier/maintenance integration and actual current-profile execution wiring, fresh actual lineage/plan authorization, Linux rehearsal, exact reviewed staged candidate and coordinated code/master cutover. No productive permission is inferred.
 
 The two directory renames are NOT crash-atomic or zero-downtime. Pre-install rollback requires owned proven paths; post-install/journal/cleanup uncertainty retains claim/evidence. No automatic public-site downgrade exists. Current filesystem audit validation is not a signed attestation, nor an abrupt-crash durability guarantee.
 
@@ -54,3 +54,7 @@ Branch: codex/CDX-20261021-009-business-consent-master-migration. Base: 06ec38f9
 - Fresh final command: Node20 --test scripts/business-consent-master-package-migration.test.mjs scripts/jairo-business-master-package-drift-recovery.test.mjs scripts/jairo-business-master-package.test.mjs scripts/business-master-runtime-packaging.test.mjs (from app/web; equivalent repository-root-prefixed invocation used): **183 pass, 0 fail/skip, exit0**. Existing TS integration Node24: **1 pass, 0 fail/skip, exit0**, same experimental-loader/module-type warnings.
 - No Next app/TS/dependency/packaging-config changes in this fix wave. Global lint ignores scripts and application build does not consume these standalone modules, so app lint/build were not repeated; prior successful app build remains historical evidence. The affected runtime bundle was freshly rebuilt and executed in the passing packaging suite. git diff --check passes.
 - Fix changes are limited to shared lifecycle, fixed readback schema, new/legacy regression tests and own reports. Linux and productive exclusion/current-profile APPLY integration remain unverified/BLOCKED. The fix commit is the commit updating this section; exact hash is recorded in ignored task report/ledger after commit.
+
+## Urgent Claudia publication checkpoint
+
+Direct read-only HTTPS of https://negocio.claudiacalero.pro/ returned HTTP200 but still contains `Quiero Participar y Registrarme` and `10 minutos`, and no `measurement-runtime.js` reference. This is served-HTML evidence only, not browser/video/event validation. Approved changes are not publicly delivered. Read-only route discovery found that supported Business command/worker generation remains coupled to the persisted master; no existing isolated Claudia release path avoids its compatibility gate. Disabling only the worker does not exclude direct generation/replication or explicit wakes. A proven exclusive maintenance execution/cutover mechanism is still required; no raw SFTP patch, audit deletion, arbitrary source override or claim of campaign readiness is authorized by this report.
