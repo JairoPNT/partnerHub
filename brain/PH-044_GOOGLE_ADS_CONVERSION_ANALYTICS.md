@@ -6,13 +6,32 @@ Alcance de producto aprobado por Jairo el 2026-10-20. Integración, contrato de
 datos e implementación pendientes; este documento no autoriza cambios en
 cuentas externas ni en páginas de producción.
 
+Aclaración explícita aprobada por Jairo el 2026-10-21: `Analítica y Métricas`
+solo da seguimiento de lectura a campañas ya activas en las plataformas y sus
+resultados. Nunca crea, edita, activa, pausa ni lanza campañas o anuncios;
+tampoco cambia presupuestos ni pujas. La operación publicitaria permanece en
+las plataformas, fuera del alcance de este módulo, no solo de la primera fase.
+
+El descubrimiento documental `CDX-20261021-003` está completado y enlaza evidencia,
+contrato futuro de lectura, bindings pendientes y follow-ups acotados:
+[reporte de seguimiento de campañas activas](agent-requests/codex/reports/CDX-20261021-003_analytics_active_campaign_monitoring_spec_DONE.md).
+Su revisión documental fue aprobada sin hallazgos; no implementa ni acredita una
+conexión de reporting, datos de conversiones o cuentas externas disponibles.
+
 ## Resultado buscado
 
 Extender el módulo interno `Analítica y Métricas` para que el operador pueda
-configurar y verificar el seguimiento de conversiones de Google Ads por
-partner, sitio y ecosistema, y consultar métricas respaldadas por datos reales.
+consultar campañas ya activas y sus resultados, incluidas conversiones de Google
+Ads cuando exista una fuente verificable por partner, sitio y ecosistema.
 La vista de clientes/partners permanece fuera del alcance inicial, de acuerdo
 con `PH-024`.
+
+La configuración actual de IDs GA4/Meta y su verificación manual pertenecen al
+tracking de páginas y se conservan sin cambios. No administran campañas ni
+demuestran reporting externo. Conectar reporting de Google Ads, resolver su
+autorización/binding y mostrar resultados requiere contratos y tickets futuros
+aprobados. Instalar o modificar tags/eventos es un flujo separado; no es requisito
+implícito ni autorización derivada del monitoreo de campañas existentes.
 
 ## Estado técnico observado
 
@@ -50,13 +69,18 @@ guardado no debe mostrarse como integración publicada o verificada.
    de campaña.
 5. No se calculan ni muestran ROI o ROAS hasta disponer de inversión publicitaria
    real, autorizada y atribuida a la misma cuenta, período y alcance de datos.
-6. La primera fase no crea ni modifica conversiones, campañas, presupuestos,
-   pujas, audiencias o configuración de cuentas en Google Ads.
+6. El módulo nunca crea, edita, activa ni pausa campañas/anuncios ni modifica
+   presupuestos o pujas. Tampoco se autoriza aquí crear/modificar conversiones,
+   audiencias o configuración de cuentas en Google Ads.
 
 ## Requisitos funcionales
 
 - Separar la configuración de seguimiento de la lectura de métricas: “tag
   instalado” y “conversiones consultables” son estados distintos.
+- Listar solo campañas calificadas como activas por una observación verificable
+  del proveedor. El estado interno `TrafficCampaign.ENABLED` no acredita esa
+  condición. Mostrar cuándo se observó el estado y distinguirlo del periodo de
+  resultados; una caché obsoleta no prueba actividad actual.
 - Mostrar por partner, sitio/ecosistema y rango de fechas solo datos que tengan
   fuente identificada. Incluir la acción de conversión, fuente, período y
   frescura/última sincronización cuando estén disponibles.
@@ -137,18 +161,23 @@ guardado no debe mostrarse como integración publicada o verificada.
    cuentas, mapeo tenant/sitio/ecosistema, credenciales, evento y deduplicación.
    Requiere revisión arquitectónica y de seguridad antes de tocar secretos o
    datos reales.
-2. **Eventos de páginas — Codex:** solo después de aprobar el contrato, añadir
-   medición determinista y respetuosa del consentimiento. Probar con fixtures;
-   no publicar sitios de clientes.
-3. **Consulta read-only — Codex:** endpoint interno con autorización, aislamiento
-   por partner/sitio y respuesta con fuente/período/frescura; sin escritura a
-   Google Ads.
-4. **Dashboard — Antigravity:** crear request AGR separado después de congelar
-   el contrato; mostrar configuración, estados y métricas reales sin inventar
-   cifras ni confundir clics con ventas.
-5. **Revisión e integración:** Claude revisa seguridad, privacidad, duplicados y
+2. **Consulta read-only — Codex:** adapter/reporting y endpoint interno con
+   autorización, aislamiento por partner/sitio/ecosistema y respuesta con
+   fuente/período/frescura; sin escritura a Google Ads. Probar primero con
+   fixtures; conexión/piloto real requiere autorización independiente.
+3. **Dashboard — Antigravity:** crear request AGR separado después de congelar
+   el contrato; mostrar campañas activas, estados y métricas reales sin inventar
+   cifras ni confundir clics con ventas. Puede avanzar con fixtures en paralelo
+   al adapter sobre el contrato congelado, con archivos no solapados. No añadir
+   controles operativos de campañas ni alterar la configuración GA4/Meta actual.
+4. **Revisión e integración:** Claude revisa seguridad, privacidad, duplicados y
    semántica; una validación piloto con Ads real requiere autorización
    independiente de Jairo y una cuenta de prueba/alcance explícito.
+
+**Tracking de páginas — flujo independiente:** cualquier tag/evento nuevo exige
+ticket y contrato de consentimiento propios; no bloquea por defecto la lectura
+de campañas existentes ni queda autorizado por esta secuencia. No publicar
+sitios de clientes ni crear acciones de conversión como parte del reporting.
 
 ## Aceptación del diseño
 
@@ -159,8 +188,8 @@ guardado no debe mostrarse como integración publicada o verificada.
 - El tablero puede explicar de qué cuenta/acción, fuente, período y ecosistema
   proviene cada dato.
 - No se presenta ROI/ROAS sin inversión autorizada ni eventos con PII.
-- La lectura queda restringida y aislada; ninguna fase escribe en Google Ads
-  por defecto.
+- La lectura queda restringida y aislada; el monitoreo no escribe en Google Ads
+  ni ofrece controles de campañas, presupuestos o pujas.
 - Las fases backend, dashboard y validación externa quedan separadas en tickets
   con archivos y dependencias no solapados.
 
