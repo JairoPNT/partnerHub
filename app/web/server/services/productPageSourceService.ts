@@ -44,13 +44,22 @@ function verificationPath(siteId: string) {
 async function save(siteId: string, configuration: unknown) {
   const ecosystemType = (configuration as { ecosystemType?: unknown } | null)?.ecosystemType;
   assertBusinessPublicationSiteIdentity(siteId, ecosystemType);
+  if (isBusinessPublicationSiteId(siteId) && ecosystemType !== 'BUSINESS')
+    throw new Error('BUSINESS_CONTENT_SOURCE_IDENTITY_INVALID');
   const action = async () => {
     const target = sourcePath(siteId);
+    // Only updateBusinessLandingContent may change the profile. Generic writers
+    // (generation, replication, lead sync) may hold old or omitted snapshots.
+    const authoritativeProfile = isBusinessPublicationSiteId(siteId)
+      ? await getBusinessLandingContent(siteId) : undefined;
+    const next = isBusinessPublicationSiteId(siteId)
+      ? { ...(configuration as Record<string, unknown>), businessLandingContent: authoritativeProfile }
+      : configuration;
     const directory = resolve(getSourceDirectory());
     const temporary = `${target}.tmp-${process.pid}-${Date.now()}`;
 
     await mkdir(directory, { recursive: true });
-    await writeFile(temporary, `${JSON.stringify(configuration, null, 2)}\n`, "utf8");
+    await writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, "utf8");
     await rename(temporary, target);
   };
   return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action)
@@ -111,6 +120,21 @@ async function assertContentPath(target: string) {
   }
 }
 
+async function getBusinessLandingContent(siteId: string): Promise<BusinessLandingContent | undefined> {
+  assertBusinessPublicationSiteIdentity(siteId, 'BUSINESS');
+  return withBusinessPublicationSite(siteId, async () => {
+    await assertContentPath(sourcePath(siteId));
+    const source = await get(siteId);
+    if (source === null) return undefined;
+    const parsed = z.object({ ecosystemType: z.literal('BUSINESS'),
+      site: z.object({ id: z.literal(siteId) }),
+      businessLandingContent: businessLandingContentSchema.optional()
+    }).safeParse(source);
+    if (!parsed.success) throw new Error('BUSINESS_CONTENT_SOURCE_IDENTITY_INVALID');
+    return parsed.data.businessLandingContent;
+  });
+}
+
 async function updateBusinessLandingContent(input: {
   siteId: string; expectedSourceHash: string | null; sourceConfiguration: unknown; profile: BusinessLandingContent;
 }) {
@@ -145,4 +169,4 @@ async function updateBusinessLandingContent(input: {
   });
 }
 
-export const productPageSourceService = { clearLastVerification, get, list, save, updateBusinessLandingContent };
+export const productPageSourceService = { clearLastVerification, get, list, save, getBusinessLandingContent, updateBusinessLandingContent };

@@ -2,6 +2,16 @@
 
 Estado: implementación backend completada; pendiente revisión independiente e integración del controlador. No desplegado ni publicado.
 
+## Follow-up de revisión independiente P1/P2
+
+- La revisión encontró que POST `/product-pages/generate` y PATCH `/product-pages/[siteId]` aceptaban el perfil mediante el schema compartido. Ambos ingress ahora rechazan la propiedad de perfil explícita antes de generar, incluso sin JWT o con Origin ajeno; no se rediseñó la autorización legacy.
+- Generación relee el perfil autoritativo de la fuente dentro del lock Business antes de componer `config.js`; no usa perfiles de snapshots anteriores de propagación/replicación. La omisión tampoco elimina un perfil aprobado.
+- `productPageSourceService.save` conserva el perfil autoritativo bajo el mismo lock para todos los escritores genéricos y rechaza cambiar un site Business a otro ecosistema. Solo el método CAS del editor puede insertar/reemplazar el perfil.
+- TDD follow-up: 6 fallos observados (ambos ingress explícitos, ambas omisiones, snapshot obsoleto y save genérico), luego 6 pass; un séptimo test de cambio de ecosistema falló y quedó GREEN con rechazo sin modificar bytes.
+- Verificación final afectada: 230 tests, 229 pass, 0 fail, 1 skip por symlink Windows. Build de producción y `npm run lint` global: PASS. No se repitió suite completa; comparación baseline previa sigue registrada abajo.
+- Archivos adicionales autorizados: los dos ingress legacy y `app/web/server/services/businessLandingContentLegacyIngress.test.mjs`. Request ampliado únicamente para este hallazgo.
+- Evidencia: `followup-red.log`, `followup-ecosystem-red.log`, `followup-green.log`, `followup-affected.log`, `followup-build.log`, `followup-lint.log` en el scratch del ticket. Revisión original: `final-review.md`.
+
 ## Resultado
 
 - Contrato estricto `BusinessLandingContent`: límites aprobados, presets oficiales, texto sin HTML, rechazo de claims conocidos y URLs canónicas bajo `https://media.partnerhub.club/comunes/business/`.

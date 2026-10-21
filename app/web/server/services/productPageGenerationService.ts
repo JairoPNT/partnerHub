@@ -372,7 +372,12 @@ export const productPageGenerationService = {
   ): Promise<ProductPageGenerationResult> {
     assertBusinessPublicationSiteIdentity(input.site.id, input.ecosystemType);
     const action = async () => {
-      const baseConfiguration = normalizeProductPageGenerationConfiguration(input);
+      // Input may be an old server snapshot or an HTTP body without the profile.
+      // Re-read only this field under the same lock before composing config.js;
+      // generic generation must never insert, erase or restore editor content.
+      const baseConfiguration = normalizeProductPageGenerationConfiguration(input.ecosystemType === 'BUSINESS'
+        ? { ...input, businessLandingContent: await productPageSourceService.getBusinessLandingContent(input.site.id) }
+        : input);
       const masterSite = isMasterSiteId(input.site.id);
       const entitlement = masterSite
         ? null
