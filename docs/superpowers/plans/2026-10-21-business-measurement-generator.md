@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Ticket CDX-20261021-005, owner Codex. Pendiente aprobación de plan. Rama/worktree propio; sin cambios de frontend, IDs, credenciales, cuentas o datos reales. Regresiones byte-a-byte Product/Brand; no alterar metaPixelHtml.ts globalmente.
+- Ticket CDX-20261021-005, owner Codex. Plan PR #229 aprobado por Jairo el 2026-10-21. Rama/worktree propio; sin cambios de frontend, IDs, credenciales, cuentas o datos reales. Regresiones byte-a-byte Product/Brand; no alterar metaPixelHtml.ts globalmente.
 - Contrato runtime/API/storage/eventos exacto del plan coordinador. Default deny, 180 días, sin noscript ni SDK en preview; no afirmación de cumplimiento legal.
 - No nueva dependencia, bypass de aprobación por ENV/payload HTTP ni cambio de hashes/journals históricos. El registry real se llena solo en integración después de revisión de frontend.
 

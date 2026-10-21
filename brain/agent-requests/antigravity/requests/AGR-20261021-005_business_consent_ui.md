@@ -1,6 +1,6 @@
 # AGR-20261021-005 — Aviso y preferencias de consentimiento Business
 
-Estado: contrato aprobado el 2026-10-21; plan técnico preparado, pendiente revisión. Esperar aprobación y resolver dependencias de archivos antes de implementar.
+Estado: contrato y plan técnico PR #229 aprobados por Jairo el 2026-10-21. Implementación autorizada; esperar AGR-001/003 terminados y revisados para resolver dependencias de archivos.
 
 - Owner: Antigravity. Outcome: elegir/rechazar categorías y reabrir/retirar sin bloquear contacto o contenido.
 - Plan: `docs/superpowers/plans/2026-10-21-business-consent-ui.md`; contrato común: `2026-10-21-business-consent-delivery.md` en la misma carpeta; spec de consentimiento aprobado.
