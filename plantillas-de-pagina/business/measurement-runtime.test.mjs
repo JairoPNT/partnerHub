@@ -345,7 +345,7 @@ test('nested_target_keyboard_and_two_distinct_clicks', async () => {
   h.click(icon, { isTrusted: false });
   assert.equal(events(h, 'click_cta').length, 2); assert.equal(events(h, 'WhatsAppClick').length, 2);
   assert.equal(first.defaultPrevented, false);
-  for (const [id, placement] of [['header', 'header'], ['main-vsl-cta', 'hero_primary'],
+  for (const [id, placement] of [['btnNavContact', 'header'], ['main-vsl-cta', 'hero_primary'],
     ['secondary-vsl-cta', 'hero_secondary'], ['btnRegisterFinal', 'final_primary'],
     ['btnContactNegocioWa', 'final_secondary']]) {
     h.click(h.anchor(id));
@@ -356,6 +356,45 @@ test('nested_target_keyboard_and_two_distinct_clicks', async () => {
     ['main-vsl-cta', 'https://wa.me/573009999999'], ['main-vsl-cta', 'https://wa.me.evil.test/573001112233'],
     ['main-vsl-cta', 'https://example.test/register']]) h.click(h.anchor(id, href));
   assert.equal(events(h, 'click_cta').length, count);
+});
+
+// Break caught: the canonical header's nonempty ID drops clicks, bypasses a guard, or replays them.
+test('canonical_header_id_emits_once_per_trusted_click_only_to_consented_ready_providers', async () => {
+  const index = readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  const header = index.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0];
+  const markup = header?.match(/<a\b[^>]*\bclass="[^"]*\bbind-cta-primary\b[^"]*"[^>]*>/)?.[0];
+  const id = markup?.match(/\bid="([^"]+)"/)?.[1];
+  assert.ok(id, 'consume the canonical primary header anchor identity, not an empty-ID substitute');
+  for (const [choice, gaCount, metaCount] of [
+    [{ analytics: true, marketing: true }, 1, 1],
+    [{ analytics: true, marketing: false }, 1, 0],
+    [{ analytics: false, marketing: true }, 0, 1],
+    [{ analytics: false, marketing: false }, 0, 0],
+  ]) {
+    const h = harness({ config: readyConfig() });
+    const anchor = h.anchor(id); const icon = h.document.createElement('svg'); anchor.appendChild(icon);
+    assert.equal(h.click(icon).defaultPrevented, false);
+    accept(h, choice); h.click(icon);
+    assert.equal(events(h, 'click_cta').length, 0, 'never queue pre-consent or loading clicks');
+    assert.equal(events(h, 'WhatsAppClick').length, 0);
+    if (choice.analytics) await h.loadSdk('ga4');
+    if (choice.marketing) await h.loadSdk('meta');
+    assert.equal(events(h, 'click_cta').length, 0, 'readiness must not replay earlier clicks');
+    assert.equal(events(h, 'WhatsAppClick').length, 0);
+    const click = h.click(icon, { detail: 0 }); h.document.dispatchEvent(click);
+    h.click(icon, { isTrusted: false });
+    h.click(h.anchor(id, 'https://wa.me/573009999999'));
+    assert.equal(click.defaultPrevented, false, 'measurement must not delay navigation');
+    assert.equal(events(h, 'click_cta').length, gaCount);
+    assert.equal(events(h, 'WhatsAppClick').length, metaCount);
+    for (const event of [...events(h, 'click_cta'), ...events(h, 'WhatsAppClick')]) {
+      assert.deepEqual(plain(event.args[2]), { placement: 'header', destination: 'whatsapp' });
+    }
+    h.click(icon);
+    assert.equal(events(h, 'click_cta').length, gaCount * 2, 'distinct trusted clicks remain measurable');
+    assert.equal(events(h, 'WhatsAppClick').length, metaCount * 2);
+    h.dispose();
+  }
 });
 
 // Break caught: own payload leaks CONFIG, DOM labels, href/message, identity, or unknown events.

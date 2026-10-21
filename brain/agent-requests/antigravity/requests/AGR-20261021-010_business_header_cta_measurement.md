@@ -1,6 +1,6 @@
 # AGR-20261021-010 — Medición del CTA real del encabezado
 
-Estado: pendiente. Owner: frontend runtime/Antigravity delegado, tier balanced. Follow-up AGR007 de revisión final dentro de AGR005/CDX006 aprobado.
+Estado: implementación completada; revisión e integración del controlador pendientes. Owner: frontend runtime/Antigravity delegado, tier balanced. Follow-up AGR007 de revisión final dentro de AGR005/CDX006 aprobado. Reporte: `brain/agent-requests/antigravity/reports/AGR-20261021-010_business_header_cta_measurement_DONE.md`.
 
 - Outcome: el CTA real aprobado #btnNavContact se reconoce como placement=header con las mismas guardas de destino y consentimiento, sin cambiar navegación ni payload.
 - Evidencia: final review CDX006 P2; index.html:39 tiene id=btnNavContact, runtime:235 solo reconoce header sin id. Tests anteriores simulaban id vacío.

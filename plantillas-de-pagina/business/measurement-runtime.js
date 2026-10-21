@@ -225,6 +225,7 @@
     if (!anchor || !/^\d{8,15}$/.test(whatsappPhone)) return;
     let placement;
     switch (anchor.id) {
+      case 'btnNavContact': placement = 'header'; break;
       case 'main-vsl-cta': placement = 'hero_primary'; break;
       case 'secondary-vsl-cta': placement = 'hero_secondary'; break;
       case 'btnRegisterFinal': placement = 'final_primary'; break;
