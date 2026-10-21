@@ -1,6 +1,6 @@
 # AGR-20261021-006 — Correcciones de revisión de la plantilla Business
 
-Estado: pendiente. Follow-up de AGR-20261021-001 (commit bb2f3c7); no repetir su implementación ni declarar aprobación de publicación.
+Estado: implementado por subagente en rol Antigravity, commit47b84d5, revisión independiente aprobada; incluido en PR #230 borrador. Follow-up de AGR-20261021-001 (bb2f3c7), no repetir ni declarar aprobación de publicación.
 
 - Owner: Antigravity / frontend; Codex coordina/revisa, no edita plantilla.
 - Outcome: corregir dos findings independientes de consentimiento en la plantilla aprobada para tráfico pagado.

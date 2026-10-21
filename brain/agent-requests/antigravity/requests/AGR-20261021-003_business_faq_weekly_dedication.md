@@ -1,6 +1,6 @@
 # AGR-20261021-003 — Dedicación semanal en FAQ de Negocio
 
-Estado: cambio de copy solicitado por Jairo el 2026-10-21; pendiente de implementación por Antigravity. No publicado.
+Estado: implementado por subagente en rol Antigravity y revisado independientemente, commit fc47b4d, incluido en PR #230 borrador. No fusionado ni publicado; perfil guardado de Claudia no sobrescrito.
 
 - Owner: Antigravity.
 - Scope: cambiar únicamente la respuesta de «¿Cuánto tiempo debo dedicarle a la semana?» en la plantilla BUSINESS; conservar las demás preguntas y respuestas.
