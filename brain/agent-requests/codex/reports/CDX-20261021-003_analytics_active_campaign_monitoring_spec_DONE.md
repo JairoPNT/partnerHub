@@ -145,3 +145,16 @@ Riesgos pendientes: ausencia de bindings/proveedores, autorización de Analytics
 - `git diff --check` y comprobación de archivos staged ejecutadas antes de commit; revisión documental propia contra las seis etapas del brief y límites de la especificación. Revisión independiente por orquestador pendiente.
 - Build: **no ejecutado / no aplica a entrega documental**. No se afirma build o tests de producto verdes; no cambia código y no se generó output compartido.
 - Follow-up requerido: sí, separado y sujeto a aprobación. Ningún cambio de producto incluido.
+
+## Seguimiento documental autorizado — 2026-10-21
+
+El orquestador aprobó la revisión documental sin hallazgos y autorizó ampliar el
+request para actualizar `brain/PH-044_GOOGLE_ADS_CONVERSION_ANALYTICS.md`. Se leyó
+completo y se reconcilió con la aclaración aprobada: solo monitoreo de campañas
+activas/resultados, nunca operación de campañas/anuncios/presupuestos/pujas. Se
+enlazó este discovery y se separó tracking/configuración actual de reporting
+externo futuro; tags/eventos nuevos no son paso implícito del monitoreo.
+
+Ámbito del seguimiento: PH-044, este reporte y su request. Sin código ni llamadas
+externas. Verificación: revisión del diff y `git diff --check` antes de commit.
+Build no ejecutado (documentación). La implementación y conexión siguen pendientes.
