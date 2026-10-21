@@ -5,6 +5,7 @@ Estado: aprobado para implementación por Jairo el 2026-10-21; respeta docs/supe
 - Owner: Antigravity, Lead Product Designer.
 - Scope: actualizar exclusivamente la plantilla canónica Business para representar de forma segura el perfil de contenido de landing configurado por partner y tener fallbacks neutrales listos para tráfico pagado.
 - Allowed: plantillas-de-pagina/business/** y tests de plantilla correspondientes.
+- Reserva de no solapamiento del plan de consentimiento: excluir measurement-runtime.js, measurement-runtime.test.mjs y measurement-test-harness.mjs (AGR-20261021-004). AGR-005 tocará app/index/styles después de este request y AGR-003; no ejecutar esos cambios de consentimiento en paralelo aquí.
 - Excluded: backend, Prisma, APIs, autorización, Master Sites UI, Product, Personal Brand, cuenta de Ads/Analytics, hosting, publicación externa.
 - Dependencies: diseño aprobado el 2026-10-21; consume `window.CONFIG.businessLandingContent` with the exact schema there (hero headline/subheadline, optional approved hero media, 1–4 benefits, official theme presets, dedicationText). Do not change identity, domains, WhatsApp number or partner identity from the template.
 - Parallel-safe with: CDX-20261021-001 y CDX-20261021-002, porque trabajan en módulos backend/auditoría; coordinar el nombre final del objeto de configuración mediante el contrato del spec, sin inventar campos. Esta tarea no crea ni administra campañas publicitarias.
