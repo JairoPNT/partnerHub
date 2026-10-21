@@ -31,14 +31,14 @@ export function createBusinessMeasurementHarness({
     ? [[`ph:business-consent:v1:${config?.site?.id}`, stored]]
     : Object.entries(stored ?? {}));
   const storage = {
-    values, writes: [],
-    getItem(key) { if (storageError) throw new Error('Storage blocked'); return values.get(key) ?? null; },
+    values, writes: [], failures: { read: storageError, write: storageError, remove: storageError },
+    getItem(key) { if (this.failures.read) throw new Error('Storage read blocked'); return values.get(key) ?? null; },
     setItem(key, value) {
-      if (storageError) throw new Error('Storage blocked');
+      if (this.failures.write) throw new Error('Storage write blocked');
       values.set(key, String(value)); this.writes.push([key, String(value)]);
     },
-    removeItem(key) { if (storageError) throw new Error('Storage blocked'); values.delete(key); },
-    clear() { if (storageError) throw new Error('Storage blocked'); values.clear(); },
+    removeItem(key) { if (this.failures.remove) throw new Error('Storage remove blocked'); values.delete(key); },
+    clear() { if (this.failures.remove) throw new Error('Storage remove blocked'); values.clear(); },
   };
   function eventTarget(name) {
     return {

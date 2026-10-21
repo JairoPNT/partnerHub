@@ -198,3 +198,36 @@ test('malformed_recognized_ids_deny_but_unconfigured_categories_keep_api', () =>
   assert.equal(api(harness({ config: canonical })).getState().runtimeEnabled, true,
     'accept IDs already supported by the existing generation schemas without normalization');
 });
+
+// Break caught: failed denial replacement leaving an earlier durable grant on reload.
+test('withdraw_after_write_failure_removes_only_owned_stale_grant', () => {
+  const otherKey = 'ph:business-consent:v1:other-business';
+  const h = harness({ stored: { [otherKey]: saved() } });
+  const consent = api(h);
+  consent.setConsent({ analytics: true, marketing: true });
+  assert.equal(api(harness({ stored: Object.fromEntries(h.storage.values) })).getState().marketing, true);
+  h.storage.failures.write = true;
+  const denied = consent.withdraw();
+  assert.equal(denied.analytics, false);
+  assert.equal(denied.marketing, false);
+  assert.equal(denied.persistence, 'session');
+  const restored = api(harness({ stored: Object.fromEntries(h.storage.values) })).getState();
+  assert.equal(restored.analytics, false, 'reload must not restore stale analytics grant');
+  assert.equal(restored.marketing, false, 'reload must not restore stale marketing grant');
+  assert.equal(h.storage.getItem(otherKey), saved(), 'other site preference must remain intact');
+  assert.equal(h.requests.length, 0);
+});
+
+// Break caught: claiming local durability or throwing when neither mutation is possible.
+test('all_storage_mutations_blocked_keep_withdrawal_session_only', () => {
+  const h = harness(); const consent = api(h);
+  consent.setConsent({ analytics: true, marketing: true });
+  h.storage.failures.write = true; h.storage.failures.remove = true;
+  const denied = consent.withdraw();
+  assert.equal(denied.analytics, false); assert.equal(denied.marketing, false);
+  assert.equal(denied.persistence, 'session');
+  assert.equal(consent.getState().analytics, false);
+  assert.equal(JSON.parse(h.storage.getItem(KEY)).analytics, true,
+    'browser prevented both persistent mutations; in-memory denial is not durable');
+  assert.equal(h.requests.length, 0);
+});

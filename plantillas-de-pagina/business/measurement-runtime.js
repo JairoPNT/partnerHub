@@ -120,7 +120,11 @@
       window.localStorage.setItem(storageKey, JSON.stringify(preference));
       persistence = 'local';
     } catch (_) {
-      // No success claim for blocked persistence; next document starts denied.
+      // A failed replacement must not leave a readable older grant when removal
+      // still works (e.g. quota-limited storage). Never remove another site's key.
+      try { window.localStorage.removeItem(storageKey); } catch (_) {
+        // Both mutations failed: denial is only in memory, not durably guaranteed.
+      }
     }
     notify();
     return stateCopy();
