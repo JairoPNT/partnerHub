@@ -4,6 +4,8 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Work checkpoint — 2026-10-21
 
+- Gate235 descubierto con diagnóstico: el refresh histórico no es reutilizable para9760->consent. Assessment identifica además que el claim global cubre jobs pero no toda generación directa. Contrato propuesto CDX-20261021-009 para herramienta versionada, validación estricta de lineage y preservación de auditoría; pendiente aprobación técnica. Ninguna implementación/APPLY ni nueva promesa de exclusión inferida de activeJobs=[].235 sigue DRAFT/no desplegado; no borrar registros ni usar generación canónica destructiva como atajo.
+
 - Continuación235: main236 integrado localmente en `9ffccbc`, validación fresca39+6+17 sin fallos/omisiones, lint/build correctos. Diagnóstico sh real aportado por Jairo identifica master persistente `9760e017...`, igual al paquete esperado por la migración antigua; esta solo acepta originale9a2 y usa audit/archive ya ocupados. No forzar APPLY ni borrar registros. Aún falta validar cadena de auditoría y transición versionada al release nuevo; la vista previa antigua no acredita Linux del código235. PR235 sigue DRAFT/no fusionado; master/Claudia/proveedores no modificados. Ver addendum CDX006 para hashes/evidencia y límites.
 
 - Handoff técnico actual: PR integrado **#235** `https://github.com/JairoPNT/partnerHub/pull/235`, OPEN/DRAFT contra main; rama `codex/CDX-20261021-006-business-consent-integration`. No fusionado ni desplegado. Conserva juntos los componentes de #230/#231/#232/#234; no fusionarlos parcialmente. Main continúa en `dd5d958` en el último fetch de este corte.
