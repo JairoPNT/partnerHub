@@ -1,6 +1,6 @@
 # AGR-20261021-005 — Business consent UI
 
-Estado: implementación local terminada, pendiente de revisión independiente. No publicado.
+Estado: implementación local y revisión independiente terminadas: spec/calidad Approved, visual ship. Integración CDX006 y revisión final/scoped aprobadas sobre `88c003d`; follow-up AGR009 corrige la confirmación de retirada en cuarentena. No publicado, proveedores desactivados; gates productivos separados.
 Owner: Antigravity (rol frontend delegado expresamente). Fecha: 2026-10-21.
 
 ## Cambios
