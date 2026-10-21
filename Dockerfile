@@ -28,6 +28,7 @@ RUN npm run build
 RUN npx esbuild server/runtime/jairoBusinessInProcessProvisioner.ts --bundle --platform=node --format=esm --target=node20 --outfile=/repo/runtime-assets/jairo-business-in-process-provisioner.mjs
 RUN npx esbuild server/runtime/jairoBusinessPackageGenerator.ts --bundle --platform=node --format=esm --target=node20 --alias:server-only=./server/runtime/serverOnlyRuntimeShim.mjs --outfile=/repo/runtime-assets/jairo-business-package-generator.mjs
 RUN npx esbuild server/services/productMutationCoordinator.ts --bundle --platform=node --format=esm --target=node20 --alias:server-only=./server/runtime/serverOnlyRuntimeShim.mjs --outfile=/repo/runtime-assets/product-mutation-coordinator.mjs
+RUN npx esbuild scripts/business-consent-master-package-migration.mjs --bundle --platform=node --format=esm --target=node20 --outfile=/repo/runtime-assets/business-consent-master-package-migration.mjs
 RUN node --input-type=module -e "import('/repo/runtime-assets/product-mutation-coordinator.mjs').then(m => { if (m.PRODUCT_MUTATION_COORDINATION_VERSION !== 'product-mutation-v1' || typeof m.createProductMutationCoordinator !== 'function') process.exit(1); })"
 
 FROM node:20-alpine AS runner
@@ -65,6 +66,8 @@ COPY --from=builder /repo/app/web/scripts/prepare-jairo-business-publication-pre
 COPY --from=builder /repo/app/web/scripts/prepare-jairo-personal-brand-publication-preview.mjs ./scripts/prepare-jairo-personal-brand-publication-preview.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-master-package.mjs ./scripts/jairo-business-master-package.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-master-package-drift-recovery.mjs ./scripts/jairo-business-master-package-drift-recovery.mjs
+COPY --from=builder /repo/app/web/scripts/business-master-transition-lifecycle.mjs ./scripts/business-master-transition-lifecycle.mjs
+COPY --from=builder /repo/runtime-assets/business-consent-master-package-migration.mjs ./scripts/business-consent-master-package-migration.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-personal-brand-master-package.mjs ./scripts/jairo-personal-brand-master-package.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-sftp-capability-renewal.mjs ./scripts/jairo-business-sftp-capability-renewal.mjs
 COPY --from=builder /repo/app/web/scripts/jairo-business-guarded-provisioning.mjs ./scripts/jairo-business-guarded-provisioning.mjs
