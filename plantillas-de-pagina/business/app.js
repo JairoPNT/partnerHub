@@ -1,19 +1,54 @@
 /**
  * app.js - PartnerHub Business / VSL Template Controller
- * Resuelve placeholders, inyecta configuración, maneja interacciones 3D del VSL,
- * acordeones FAQ y modales legales según PH-025 y PH-033.
+ * Renderiza configuración y el perfil validado window.CONFIG.businessLandingContent
+ * mediante creación de nodos DOM y textContent, manteniendo aviso fijo, CTAs de WhatsApp
+ * y VSL visible sin duración no verificada.
  */
 
 (function () {
   'use strict';
 
-  // 1. Mapeo de Presets de Paleta (PH-025)
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+  const DEFAULT_HERO_DESKTOP = 'https://media.partnerhub.club/comunes/business/v1/hero-desktop.webp';
+  const DEFAULT_HERO_MOBILE = 'https://media.partnerhub.club/comunes/business/v1/hero-mobile.webp';
+  const DEFAULT_VSL_TITLE = 'Ver presentación de negocio';
+  const DEFAULT_VSL_CAPTION = 'Presentación informativa · Activa el sonido para una mejor experiencia';
+  const DEFAULT_DEDICATION_TEXT =
+    'Puedes empezar desde 2 horas semanales, con acompañamiento desde el inicio. La dedicación para desarrollar la actividad depende de tus objetivos y tareas; no garantiza resultados.';
+  const ALLOWED_CTA_LABELS = new Set(['Hablar por WhatsApp', 'Conocer la oportunidad']);
+
+  const PROHIBITED_COPY_RE = new RegExp(
+    [
+      ['libertad', 'financiera'].join('\\s+'),
+      ['ingresos', 'residuales', 'sostenibles'].join('\\s+'),
+      ['ganas', 'cada', 'vez', 'que', 'alguien', 'toma', 'cafe'].join('\\s+'),
+      ['resultados', 'desde', 'las', 'primeras', 'semanas'].join('\\s+'),
+      ['cero', 'inventarios'].join('\\s+'),
+      ['logistica', '100%', 'cubierta'].join('\\s+'),
+      '(?:formacion|capacitacion)[\\s\\S]*sin\\s+costo',
+      ['presencia', 'internacional'].join('\\s+'),
+      'registros?\\s+sanitarios?',
+      ['respaldo', 'financiero'].join('\\s+'),
+      ['cupos', 'limitados'].join('\\s+'),
+      ['asegura', 'tu', 'posicion'].join('\\s+'),
+      ['8', 'a', '12', 'horas'].join('\\s+')
+    ].join('|')
+  );
+
+  const MANDATORY_DISCLOSURE_TITLE = 'Aviso Importante sobre la Actividad';
+  const MANDATORY_DISCLOSURE_POINTS = [
+    'Es una actividad independiente de venta directa; no es una oferta de empleo ni constituye relación laboral o salario fijo.',
+    'Requiere inversión para compra inicial de producto y trabajo comercial constante.',
+    'Incluye acompañamiento formativo desde el inicio; los resultados dependen del esfuerzo individual y no están garantizados.'
+  ];
+
+  // 1. Mapeo de Presets Oficiales de Paleta (PH-025)
   const PALETTE_MAP = {
     'cobalt-cyan': { base: '#0F172A', accent: '#06B6D4', hover: '#0891B2', bgSecondary: '#111827', textOnAccent: '#0F172A' },
     'emerald-slate': { base: '#022C22', accent: '#10B981', hover: '#059669', bgSecondary: '#064E3B', textOnAccent: '#022C22' },
     'coffee-gold': { base: '#271C19', accent: '#D97706', hover: '#B45309', bgSecondary: '#3C2A21', textOnAccent: '#FFFFFF' },
     'rose-graphite': { base: '#18181B', accent: '#F43F5E', hover: '#E11D48', bgSecondary: '#27272A', textOnAccent: '#FFFFFF' },
-    'indigo-lime': { base: '#1E1B4B', accent: '#84CC16', hover: '#65A30D', bgSecondary: '#2E1065', textOnAccent: '#1E1B4B' },
+    'indigo-lime': { base: '#0F2942', accent: '#84CC16', hover: '#65A30D', bgSecondary: '#163A5F', textOnAccent: '#0F2942' },
     'teal-navy': { base: '#0A192F', accent: '#14B8A6', hover: '#0D9488', bgSecondary: '#112240', textOnAccent: '#0A192F' },
     'wine-blush': { base: '#2A0813', accent: '#FB7185', hover: '#F43F5E', bgSecondary: '#4C0519', textOnAccent: '#2A0813' },
     'forest-mint': { base: '#052E16', accent: '#34D399', hover: '#10B981', bgSecondary: '#064E3B', textOnAccent: '#052E16' },
@@ -21,7 +56,7 @@
     'sky-stone': { base: '#0C4A6E', accent: '#38BDF8', hover: '#0284C7', bgSecondary: '#075985', textOnAccent: '#0C4A6E' }
   };
 
-  // 2. Mapeo de Presets de Fuentes (PH-025)
+  // 2. Mapeo de Presets Oficiales de Fuentes (PH-025)
   const FONT_MAP = {
     'executive': { title: "'Montserrat', sans-serif", body: "'Space Grotesk', sans-serif" },
     'modern': { title: "'Outfit', sans-serif", body: "'Inter', sans-serif" },
@@ -34,150 +69,424 @@
     'luxury-serif': { title: "'Bodoni Moda', serif", body: "'Montserrat', sans-serif" }
   };
 
-  function applyTheme(theme) {
-    if (!theme) return;
-    const root = document.documentElement;
+  function normalizeCopy(value) {
+    return String(value || '')
+      .normalize('NFKD')
+      .replace(/\p{M}/gu, '')
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
+  }
 
-    // Aplicar Paleta
-    const palette = PALETTE_MAP[theme.palettePreset] || PALETTE_MAP['cobalt-cyan'];
+  function hasControlChars(value) {
+    for (let i = 0; i < value.length; i += 1) {
+      const code = value.charCodeAt(i);
+      if ((code < 32 && code !== 9 && code !== 10 && code !== 13) || code === 127) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function validateSafeText(value, maxLength) {
+    if (typeof value !== 'string') return null;
+    const trimmed = value.trim();
+    if (trimmed.length < 1 || trimmed.length > maxLength) return null;
+    if (hasControlChars(trimmed)) return null;
+    if (PROHIBITED_COPY_RE.test(normalizeCopy(trimmed))) return null;
+    return trimmed;
+  }
+
+  function isApprovedBusinessMediaUrl(value) {
+    if (typeof value !== 'string') return false;
+    if (!/^https:\/\/media\.partnerhub\.club\/comunes\/business\/[a-zA-Z0-9_./-]+$/.test(value)) {
+      return false;
+    }
+    const path = value.slice('https://media.partnerhub.club'.length);
+    if (path.endsWith('/')) return false;
+    return !path.split('/').some((segment) => segment === '.' || segment === '..');
+  }
+
+  function resolveValidatedProfile(rawProfile) {
+    if (!rawProfile || typeof rawProfile !== 'object' || Array.isArray(rawProfile)) {
+      return null;
+    }
+
+    const heroObj = rawProfile.hero && typeof rawProfile.hero === 'object' ? rawProfile.hero : {};
+    const headline = validateSafeText(heroObj.headline, 160);
+    const subheadline = validateSafeText(heroObj.subheadline, 400);
+    const desktopImageUrl = isApprovedBusinessMediaUrl(heroObj.desktopImageUrl)
+      ? heroObj.desktopImageUrl
+      : null;
+    const mobileImageUrl = isApprovedBusinessMediaUrl(heroObj.mobileImageUrl)
+      ? heroObj.mobileImageUrl
+      : null;
+
+    let benefits = null;
+    if (Array.isArray(rawProfile.benefits) && rawProfile.benefits.length >= 1 && rawProfile.benefits.length <= 4) {
+      const parsedBenefits = [];
+      for (const item of rawProfile.benefits) {
+        if (!item || typeof item !== 'object') {
+          parsedBenefits.length = 0;
+          break;
+        }
+        const title = validateSafeText(item.title, 80);
+        const description = validateSafeText(item.description, 240);
+        if (!title || !description) {
+          parsedBenefits.length = 0;
+          break;
+        }
+        parsedBenefits.push({ title, description });
+      }
+      if (parsedBenefits.length > 0) {
+        benefits = parsedBenefits;
+      }
+    }
+
+    const themeObj = rawProfile.theme && typeof rawProfile.theme === 'object' ? rawProfile.theme : {};
+    const fontPreset = typeof themeObj.fontPreset === 'string' && Object.prototype.hasOwnProperty.call(FONT_MAP, themeObj.fontPreset)
+      ? themeObj.fontPreset
+      : null;
+    const palettePreset = typeof themeObj.palettePreset === 'string' && Object.prototype.hasOwnProperty.call(PALETTE_MAP, themeObj.palettePreset)
+      ? themeObj.palettePreset
+      : null;
+
+    const dedicationText = validateSafeText(rawProfile.dedicationText, 300);
+
+    return {
+      hero: { headline, subheadline, desktopImageUrl, mobileImageUrl },
+      benefits,
+      theme: { fontPreset, palettePreset },
+      dedicationText
+    };
+  }
+
+  function applyTheme(baseTheme, profileTheme) {
+    const root = document.documentElement;
+    const paletteKey =
+      (profileTheme && profileTheme.palettePreset) ||
+      (baseTheme && Object.prototype.hasOwnProperty.call(PALETTE_MAP, baseTheme.palettePreset) ? baseTheme.palettePreset : 'cobalt-cyan');
+    const fontKey =
+      (profileTheme && profileTheme.fontPreset) ||
+      (baseTheme && Object.prototype.hasOwnProperty.call(FONT_MAP, baseTheme.fontPreset) ? baseTheme.fontPreset : 'executive');
+
+    const palette = PALETTE_MAP[paletteKey] || PALETTE_MAP['cobalt-cyan'];
+    root.setAttribute('data-palette', paletteKey);
+    root.setAttribute('data-font', fontKey);
     root.style.setProperty('--accent-base', palette.base);
     root.style.setProperty('--accent-color', palette.accent);
     root.style.setProperty('--accent-hover', palette.hover);
+    root.style.setProperty('--bg-secondary', palette.bgSecondary);
+    root.style.setProperty('--text-on-accent', palette.textOnAccent);
     root.style.setProperty('--accent-glow', palette.accent + '40');
     root.style.setProperty('--accent-subtle', palette.accent + '1A');
     root.style.setProperty('--border-focus', palette.accent + '80');
 
-    // Aplicar Tipografía
-    const font = FONT_MAP[theme.fontPreset] || FONT_MAP['executive'];
+    const font = FONT_MAP[fontKey] || FONT_MAP['executive'];
     root.style.setProperty('--font-title', font.title);
     root.style.setProperty('--font-body', font.body);
   }
 
-  function getBenefitIconSvg(index, title) {
-    const t = (title || '').toLowerCase();
-    if (t.includes('socio') || t.includes('compañía') || t.includes('multinacional') || index === 0) {
-      return `<svg class="icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`;
+  function createSvgElement(tag, attrs) {
+    const el = document.createElementNS(SVG_NS, tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      el.setAttribute(k, String(v));
+    }
+    return el;
+  }
+
+  function createBenefitIconNode(index, title) {
+    const t = String(title || '').toLowerCase();
+    const svg = createSvgElement('svg', {
+      class: 'icon-svg',
+      width: '24',
+      height: '24',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': '2',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round'
+    });
+
+    if (t.includes('socio') || t.includes('autonom') || index === 0) {
+      svg.appendChild(createSvgElement('path', { d: 'M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z' }));
+      return svg;
     }
     if (t.includes('consumo') || t.includes('producto') || t.includes('hábito') || t.includes('café') || index === 1) {
-      return `<svg class="icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>`;
+      svg.appendChild(createSvgElement('path', { d: 'M18 8h1a4 4 0 0 1 0 8h-1' }));
+      svg.appendChild(createSvgElement('path', { d: 'M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z' }));
+      svg.appendChild(createSvgElement('line', { x1: '6', y1: '1', x2: '6', y2: '4' }));
+      svg.appendChild(createSvgElement('line', { x1: '10', y1: '1', x2: '10', y2: '4' }));
+      svg.appendChild(createSvgElement('line', { x1: '14', y1: '1', x2: '14', y2: '4' }));
+      return svg;
     }
-    if (t.includes('logística') || t.includes('operación') || t.includes('infraestructura') || index === 2) {
-      return `<svg class="icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>`;
+    if (t.includes('horario') || t.includes('acompaña') || t.includes('logística') || index === 2) {
+      svg.appendChild(createSvgElement('rect', { width: '20', height: '14', x: '2', y: '5', rx: '2' }));
+      svg.appendChild(createSvgElement('line', { x1: '2', x2: '22', y1: '10', y2: '10' }));
+      return svg;
     }
-    return `<svg class="icon-svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`;
+    svg.appendChild(createSvgElement('path', { d: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2' }));
+    svg.appendChild(createSvgElement('circle', { cx: '9', cy: '7', r: '4' }));
+    svg.appendChild(createSvgElement('path', { d: 'M22 21v-2a4 4 0 0 0-3-3.87' }));
+    svg.appendChild(createSvgElement('path', { d: 'M16 3.13a4 4 0 0 1 0 7.75' }));
+    return svg;
   }
 
-  function escapeHtml(text) {
-    if (!text) return '';
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
+  function createComparisonIconNode(type) {
+    const svg = createSvgElement('svg', {
+      class: 'icon-svg comparison-item-icon',
+      width: '18',
+      height: '18',
+      viewBox: '0 0 24 24',
+      fill: 'none',
+      stroke: 'currentColor',
+      'stroke-width': type === 'success' ? '2.5' : '2',
+      'stroke-linecap': 'round',
+      'stroke-linejoin': 'round'
+    });
+    if (type === 'success') {
+      svg.appendChild(createSvgElement('path', { d: 'M20 6 9 17l-5-5' }));
+    } else {
+      svg.appendChild(createSvgElement('circle', { cx: '12', cy: '12', r: '10' }));
+      svg.appendChild(createSvgElement('line', { x1: '15', y1: '9', x2: '9', y2: '15' }));
+      svg.appendChild(createSvgElement('line', { x1: '9', y1: '9', x2: '15', y2: '15' }));
+    }
+    return svg;
   }
 
-  function renderDynamicContent(cfg) {
+  function clearNode(node) {
+    if (!node) return;
+    node.textContent = '';
+  }
+
+  function renderComparisonList(listEl, items, type) {
+    if (!listEl || !Array.isArray(items)) return;
+    clearNode(listEl);
+    items.forEach((item) => {
+      const safeItem = validateSafeText(item, 300);
+      if (!safeItem) return;
+      const li = document.createElement('li');
+      li.className = `comparison-list-item ${type}`;
+      li.appendChild(createComparisonIconNode(type));
+      const span = document.createElement('span');
+      span.textContent = safeItem;
+      li.appendChild(span);
+      listEl.appendChild(li);
+    });
+  }
+
+  function resolveFallbackBenefits(cfgBenefits) {
+    if (!Array.isArray(cfgBenefits) || cfgBenefits.length === 0) return [];
+    const safeItems = [];
+    for (const item of cfgBenefits.slice(0, 4)) {
+      if (!item || typeof item !== 'object') continue;
+      const title = validateSafeText(item.title, 120);
+      const description = validateSafeText(item.description, 320);
+      if (title && description) {
+        safeItems.push({ title, description });
+      }
+    }
+    return safeItems;
+  }
+
+  function resolveEffectiveDedicationText(profile, cfgFaq) {
+    if (profile && profile.dedicationText) {
+      return profile.dedicationText;
+    }
+    if (cfgFaq && Array.isArray(cfgFaq.items)) {
+      const dedicationItem = cfgFaq.items.find(
+        (item) =>
+          item &&
+          (item.id === 'f2' ||
+            normalizeCopy(item.question).includes('cuanto tiempo debo dedicarle a la semana'))
+      );
+      const safeAnswer = dedicationItem ? validateSafeText(dedicationItem.answer, 300) : null;
+      if (safeAnswer) return safeAnswer;
+    }
+    return DEFAULT_DEDICATION_TEXT;
+  }
+
+  function renderDynamicContent(cfg, profile) {
     if (!cfg) return;
 
     // 1. Meta / SEO
     if (cfg.site) {
-      if (cfg.site.title) document.title = cfg.site.title;
+      const safeTitle = validateSafeText(cfg.site.title, 180);
+      if (safeTitle) document.title = safeTitle;
+
       const metaDesc = document.querySelector('meta[name="description"]');
-      if (metaDesc && cfg.site.metaDescription) metaDesc.setAttribute('content', cfg.site.metaDescription);
-      
+      const safeMetaDesc = validateSafeText(cfg.site.metaDescription, 320);
+      if (metaDesc && safeMetaDesc) metaDesc.setAttribute('content', safeMetaDesc);
+
       const ogTitle = document.querySelector('meta[property="og:title"]');
-      if (ogTitle && cfg.site.ogTitle) ogTitle.setAttribute('content', cfg.site.ogTitle);
+      const safeOgTitle = validateSafeText(cfg.site.ogTitle, 180);
+      if (ogTitle && safeOgTitle) ogTitle.setAttribute('content', safeOgTitle);
 
       const ogDesc = document.querySelector('meta[property="og:description"]');
-      if (ogDesc && cfg.site.ogDescription) ogDesc.setAttribute('content', cfg.site.ogDescription);
+      const safeOgDesc = validateSafeText(cfg.site.ogDescription, 320);
+      if (ogDesc && safeOgDesc) ogDesc.setAttribute('content', safeOgDesc);
     }
 
-    // 2. Brand & Header Bindings
-    const brandName = cfg.distributor?.brandName || '';
-    const brandRole = cfg.distributor?.role || '';
-    const fullName = cfg.distributor?.fullName || '';
+    // 2. Brand & Header Bindings (Derivados del partner o vacíos en master)
+    const brandName = typeof cfg.distributor?.brandName === 'string' ? cfg.distributor.brandName.trim() : '';
+    const brandRole = typeof cfg.distributor?.role === 'string' ? cfg.distributor.role.trim() : '';
+    const fullName = typeof cfg.distributor?.fullName === 'string' ? cfg.distributor.fullName.trim() : '';
 
-    document.querySelectorAll('[data-bind="distributor.brandName"]').forEach(el => {
+    document.querySelectorAll('[data-bind="distributor.brandName"]').forEach((el) => {
       el.textContent = brandName;
     });
-    document.querySelectorAll('[data-bind="distributor.role"]').forEach(el => {
+    document.querySelectorAll('[data-bind="distributor.role"]').forEach((el) => {
       el.textContent = brandRole;
     });
-    document.querySelectorAll('[data-bind="distributor.fullName"]').forEach(el => {
+    document.querySelectorAll('[data-bind="distributor.fullName"]').forEach((el) => {
       el.textContent = fullName;
+    });
+    document.querySelectorAll('[data-bind="distributor.legalIdentity"]').forEach((el) => {
+      el.textContent = fullName ? `${fullName} como distribuidor independiente` : 'un distribuidor independiente';
     });
 
     const brandBadge = document.querySelector('.brand-badge');
     if (brandBadge) {
-      if (!brandName && !brandRole && !fullName) {
-        brandBadge.style.visibility = 'hidden';
-      } else {
-        brandBadge.style.visibility = 'visible';
-      }
+      brandBadge.style.visibility = !brandName && !brandRole && !fullName ? 'hidden' : 'visible';
     }
 
     const contactProfileInfo = document.querySelector('.contact-profile-info');
     if (contactProfileInfo) {
-      if (!fullName && !brandRole) {
-        contactProfileInfo.style.display = 'none';
-      } else {
-        contactProfileInfo.style.display = '';
-      }
+      contactProfileInfo.style.display = !fullName && !brandRole ? 'none' : '';
     }
 
     const footerBrand = document.querySelector('.footer-brand');
     if (footerBrand) {
-      if (!fullName && !brandName) {
-        footerBrand.style.display = 'none';
-      } else {
-        footerBrand.style.display = '';
-      }
+      footerBrand.style.display = !fullName && !brandName ? 'none' : '';
     }
 
-    // 3. Hero Bindings
+    // 3. Hero Bindings (Precedencia: businessLandingContent validado > config seguro > fallback)
     const heroBadgeEl = document.querySelector('[data-bind="hero.badge"]');
-    if (heroBadgeEl && cfg.hero?.badge) heroBadgeEl.textContent = cfg.hero.badge;
+    const safeHeroBadge = validateSafeText(cfg.hero?.badge, 120);
+    if (heroBadgeEl && safeHeroBadge) heroBadgeEl.textContent = safeHeroBadge;
 
     const heroHeadlineEl = document.querySelector('[data-bind="hero.headline"]');
-    if (heroHeadlineEl && cfg.hero?.headline) heroHeadlineEl.textContent = cfg.hero.headline;
+    const effectiveHeadline =
+      (profile && profile.hero.headline) ||
+      validateSafeText(cfg.hero?.headline, 160) ||
+      'Desarrolla una Actividad de Venta Directa con Acompañamiento';
+    if (heroHeadlineEl) heroHeadlineEl.textContent = effectiveHeadline;
 
     const heroSubheadlineEl = document.querySelector('[data-bind="hero.subheadline"]');
-    if (heroSubheadlineEl && cfg.hero?.subheadline) heroSubheadlineEl.textContent = cfg.hero.subheadline;
+    const effectiveSubheadline =
+      (profile && profile.hero.subheadline) ||
+      validateSafeText(cfg.hero?.subheadline, 400) ||
+      'Conoce una propuesta de distribución independiente enfocada en autonomía, aprendizaje práctico y desarrollo de habilidades comerciales a tu propio ritmo.';
+    if (heroSubheadlineEl) heroSubheadlineEl.textContent = effectiveSubheadline;
 
-    // 4. Social Proof Bar
+    const desktopHeroUrl =
+      (profile && profile.hero.desktopImageUrl) ||
+      (isApprovedBusinessMediaUrl(cfg.hero?.desktop) ? cfg.hero.desktop : null) ||
+      (isApprovedBusinessMediaUrl(cfg.hero?.desktopBgUrl) ? cfg.hero.desktopBgUrl : null) ||
+      DEFAULT_HERO_DESKTOP;
+    const mobileHeroUrl =
+      (profile && profile.hero.mobileImageUrl) ||
+      (isApprovedBusinessMediaUrl(cfg.hero?.mobile) ? cfg.hero.mobile : null) ||
+      (isApprovedBusinessMediaUrl(cfg.hero?.mobileBgUrl) ? cfg.hero.mobileBgUrl : null) ||
+      DEFAULT_HERO_MOBILE;
+
+    const heroSection = document.getElementById('hero-vsl');
+    if (heroSection) {
+      heroSection.setAttribute('data-hero-desktop-image', desktopHeroUrl);
+      heroSection.setAttribute('data-hero-mobile-image', mobileHeroUrl);
+      heroSection.style.setProperty('--hero-desktop-bg', `url("${desktopHeroUrl}")`);
+      heroSection.style.setProperty('--hero-mobile-bg', `url("${mobileHeroUrl}")`);
+    }
+
+    // 4. Optional Claims & Social Proof (Desactivados por defecto hasta verificación)
+    const trustRow = document.getElementById('trustHighlightsRow');
+    if (trustRow) {
+      trustRow.hidden = true;
+      trustRow.style.display = 'none';
+    }
+
     const proofContainer = document.getElementById('hero-social-proof');
     if (proofContainer) {
-      if (cfg.socialProof?.enabled === false || !Array.isArray(cfg.socialProof?.avatars) || cfg.socialProof.avatars.length === 0) {
-        proofContainer.style.display = 'none';
-      } else {
-        proofContainer.style.display = '';
-        const proofAvatarsContainer = document.getElementById('proof-avatars');
-        if (proofAvatarsContainer) {
-          proofAvatarsContainer.innerHTML = cfg.socialProof.avatars.map((url, i) =>
-            `<img src="${url}" alt="Miembro ${i + 1}" class="proof-avatar-img">`
-          ).join('');
-        }
-        const proofHeadlineEl = document.querySelector('[data-bind="socialProof.headline"]');
-        if (proofHeadlineEl && cfg.socialProof?.headline) proofHeadlineEl.textContent = cfg.socialProof.headline;
+      proofContainer.hidden = true;
+      proofContainer.style.display = 'none';
+    }
 
-        const proofSubheadlineEl = document.querySelector('[data-bind="socialProof.subheadline"]');
-        if (proofSubheadlineEl && cfg.socialProof?.subheadline) proofSubheadlineEl.textContent = cfg.socialProof.subheadline;
+    // 5. VSL Player Setup (Visible con título genérico y sin duración no verificada)
+    setupVslPlayer(cfg.vsl);
+
+    // 6. Aviso obligatorio cerca al CTA principal (Fijo y no removible)
+    const effectiveDedicationText = resolveEffectiveDedicationText(profile, cfg.faq);
+    const modelNoticeBox = document.getElementById('heroModelNotice');
+    if (modelNoticeBox) {
+      modelNoticeBox.hidden = false;
+      modelNoticeBox.style.display = '';
+
+      const noticeTitleEl = document.getElementById('modelNoticeTitle');
+      if (noticeTitleEl) {
+        noticeTitleEl.textContent = MANDATORY_DISCLOSURE_TITLE;
+      }
+
+      const noticeListEl = document.getElementById('modelNoticeList');
+      if (noticeListEl) {
+        clearNode(noticeListEl);
+        MANDATORY_DISCLOSURE_POINTS.forEach((pointText) => {
+          const li = document.createElement('li');
+          const checkSvg = createSvgElement('svg', {
+            class: 'icon-svg check-icon',
+            width: '14',
+            height: '14',
+            viewBox: '0 0 24 24',
+            fill: 'none',
+            stroke: 'currentColor',
+            'stroke-width': '2.5',
+            'stroke-linecap': 'round',
+            'stroke-linejoin': 'round'
+          });
+          checkSvg.appendChild(createSvgElement('polyline', { points: '20 6 9 17 4 12' }));
+          const span = document.createElement('span');
+          span.textContent = pointText;
+          li.appendChild(checkSvg);
+          li.appendChild(span);
+          noticeListEl.appendChild(li);
+        });
       }
     }
 
-    // 5. VSL Player Setup & 3D Tilt
-    setupVslPlayer(cfg.vsl);
+    const heroDedicationEl = document.getElementById('heroDedicationText');
+    if (heroDedicationEl) {
+      heroDedicationEl.textContent = effectiveDedicationText;
+    }
 
-    // 6. WhatsApp & CTA Links
-    const rawNumber = (cfg.distributor?.whatsappNumber || '').replace(/\D/g, '');
-    const defaultMsg = cfg.distributor?.defaultMessage || 'Hola, vi la presentación del modelo de negocio en tu página web y quiero conocer cómo iniciar.';
-    const customWaUrl = cfg.cta?.secondaryUrl || cfg.distributor?.ctaUrl || '';
-    const waUrl = rawNumber ? `https://wa.me/${rawNumber}?text=${encodeURIComponent(defaultMsg)}` : (customWaUrl.startsWith('http') ? customWaUrl : '#contacto');
-    const directRegisterUrl = cfg.cta?.directRegisterUrl || cfg.cta?.primaryUrl || (waUrl !== '#contacto' ? waUrl : '#contacto');
+    // 7. WhatsApp & CTA Links (Solo etiquetas de intención de WhatsApp y destino WhatsApp)
+    const rawNumber = String(cfg.distributor?.whatsappNumber || '').replace(/\D/g, '');
+    const defaultMsg =
+      (typeof cfg.distributor?.defaultMessage === 'string' && cfg.distributor.defaultMessage.trim()) ||
+      'Hola, vi la presentación de negocio en tu página web y quiero conocer la oportunidad.';
 
-    // CTAs Primarios (Registro Directo o WhatsApp)
-    const ctaPrimaryLinks = document.querySelectorAll('.bind-cta-primary');
-    ctaPrimaryLinks.forEach(link => {
-      link.setAttribute('href', directRegisterUrl);
-      if (directRegisterUrl.startsWith('#')) {
+    const isSafeWaUrl = (url) =>
+      typeof url === 'string' && /^https:\/\/(?:wa\.me\/|api\.whatsapp\.com\/)/i.test(url.trim());
+
+    const serverPrimaryWaUrl = isSafeWaUrl(cfg.cta?.primaryUrl) ? cfg.cta.primaryUrl.trim() : '';
+    const serverSecondaryWaUrl = isSafeWaUrl(cfg.cta?.secondaryUrl) ? cfg.cta.secondaryUrl.trim() : '';
+    const derivedWaUrl =
+      rawNumber.length >= 10 && rawNumber.length <= 15
+        ? `https://wa.me/${rawNumber}?text=${encodeURIComponent(defaultMsg)}`
+        : '';
+
+    const primaryWaUrl = serverPrimaryWaUrl || derivedWaUrl || '#contacto';
+    const secondaryWaUrl = serverSecondaryWaUrl || primaryWaUrl;
+
+    const rawPrimaryLabel = typeof cfg.cta?.primaryText === 'string' ? cfg.cta.primaryText.trim() : '';
+    const rawSecondaryLabel = typeof cfg.cta?.secondaryText === 'string' ? cfg.cta.secondaryText.trim() : '';
+    const rawHeaderLabel = typeof cfg.cta?.headerBtnText === 'string' ? cfg.cta.headerBtnText.trim() : '';
+
+    const primaryLabel = ALLOWED_CTA_LABELS.has(rawPrimaryLabel) ? rawPrimaryLabel : 'Hablar por WhatsApp';
+    const secondaryLabel = ALLOWED_CTA_LABELS.has(rawSecondaryLabel) ? rawSecondaryLabel : 'Conocer la oportunidad';
+    const headerLabel = ALLOWED_CTA_LABELS.has(rawHeaderLabel) ? rawHeaderLabel : primaryLabel;
+
+    document.querySelectorAll('.bind-cta-primary').forEach((link) => {
+      link.setAttribute('href', primaryWaUrl);
+      if (primaryWaUrl.startsWith('#')) {
         link.removeAttribute('target');
         link.removeAttribute('rel');
       } else {
@@ -186,16 +495,17 @@
       }
     });
 
-    const ctaPrimaryTextEls = document.querySelectorAll('[data-bind="cta.primaryText"]');
-    ctaPrimaryTextEls.forEach(el => {
-      if (cfg.cta?.primaryText) el.textContent = cfg.cta.primaryText;
+    document.querySelectorAll('[data-bind="cta.primaryText"]').forEach((el) => {
+      el.textContent = primaryLabel;
     });
 
-    // CTAs Secundarios (WhatsApp)
-    const ctaSecondaryLinks = document.querySelectorAll('.bind-cta-secondary');
-    ctaSecondaryLinks.forEach(link => {
-      link.setAttribute('href', waUrl);
-      if (waUrl.startsWith('#')) {
+    document.querySelectorAll('[data-bind="cta.headerBtnText"]').forEach((el) => {
+      el.textContent = headerLabel;
+    });
+
+    document.querySelectorAll('.bind-cta-secondary').forEach((link) => {
+      link.setAttribute('href', secondaryWaUrl);
+      if (secondaryWaUrl.startsWith('#')) {
         link.removeAttribute('target');
         link.removeAttribute('rel');
       } else {
@@ -204,198 +514,230 @@
       }
     });
 
-    const ctaSecondaryTextEls = document.querySelectorAll('[data-bind="cta.secondaryText"]');
-    ctaSecondaryTextEls.forEach(el => {
-      if (cfg.cta?.secondaryText) el.textContent = cfg.cta.secondaryText;
+    document.querySelectorAll('[data-bind="cta.secondaryText"]').forEach((el) => {
+      el.textContent = secondaryLabel;
     });
 
     const guaranteeTextEl = document.querySelector('[data-bind="cta.guaranteeText"]');
-    if (guaranteeTextEl && cfg.cta?.guaranteeText) guaranteeTextEl.textContent = cfg.cta.guaranteeText;
-
-    // 7. Comparison Section
-    if (cfg.comparison?.enabled !== false) {
-      const compBadge = document.querySelector('[data-bind="comparison.badge"]');
-      if (compBadge && cfg.comparison?.badge) compBadge.textContent = cfg.comparison.badge;
-
-      const compTitle = document.querySelector('[data-bind="comparison.title"]');
-      if (compTitle && cfg.comparison?.title) compTitle.textContent = cfg.comparison.title;
-
-      const compSubtitle = document.querySelector('[data-bind="comparison.subtitle"]');
-      if (compSubtitle && cfg.comparison?.subtitle) compSubtitle.textContent = cfg.comparison.subtitle;
-
-      const tradTitle = document.querySelector('[data-bind="comparison.traditionalTitle"]');
-      if (tradTitle && cfg.comparison?.traditionalTitle) tradTitle.textContent = cfg.comparison.traditionalTitle;
-
-      const oppTitle = document.querySelector('[data-bind="comparison.opportunityTitle"]');
-      if (oppTitle && cfg.comparison?.opportunityTitle) oppTitle.textContent = cfg.comparison.opportunityTitle;
-
-      const tradList = document.getElementById('traditional-list');
-      if (tradList && Array.isArray(cfg.comparison?.traditionalItems)) {
-        tradList.innerHTML = cfg.comparison.traditionalItems.map(item => `
-          <li class="comparison-list-item warning">
-            <svg class="icon-svg comparison-item-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <line x1="15" y1="9" x2="9" y2="15"/>
-              <line x1="9" y1="9" x2="15" y2="15"/>
-            </svg>
-            <span>${escapeHtml(item)}</span>
-          </li>
-        `).join('');
-      }
-
-      const oppList = document.getElementById('opportunity-list');
-      if (oppList && Array.isArray(cfg.comparison?.opportunityItems)) {
-        oppList.innerHTML = cfg.comparison.opportunityItems.map(item => `
-          <li class="comparison-list-item success">
-            <svg class="icon-svg comparison-item-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 6 9 17l-5-5"/>
-            </svg>
-            <span>${escapeHtml(item)}</span>
-          </li>
-        `).join('');
-      }
+    if (guaranteeTextEl) {
+      const safeGuarantee = validateSafeText(cfg.cta?.guaranteeText, 180);
+      guaranteeTextEl.textContent =
+        safeGuarantee ||
+        (fullName
+          ? `Orientación informativa directa por WhatsApp con ${fullName} · Sin compromiso`
+          : 'Orientación informativa directa por WhatsApp · Sin compromiso');
     }
 
-    // 8. Benefits List (4 Pilares)
+    // 8. Comparison Section
+    if (cfg.comparison?.enabled !== false) {
+      const compBadge = document.querySelector('[data-bind="comparison.badge"]');
+      const safeCompBadge = validateSafeText(cfg.comparison?.badge, 120);
+      if (compBadge && safeCompBadge) compBadge.textContent = safeCompBadge;
+
+      const compTitle = document.querySelector('[data-bind="comparison.title"]');
+      const safeCompTitle = validateSafeText(cfg.comparison?.title, 180);
+      if (compTitle && safeCompTitle) compTitle.textContent = safeCompTitle;
+
+      const compSubtitle = document.querySelector('[data-bind="comparison.subtitle"]');
+      const safeCompSubtitle = validateSafeText(cfg.comparison?.subtitle, 320);
+      if (compSubtitle && safeCompSubtitle) compSubtitle.textContent = safeCompSubtitle;
+
+      const tradTitle = document.querySelector('[data-bind="comparison.traditionalTitle"]');
+      const safeTradTitle = validateSafeText(cfg.comparison?.traditionalTitle, 140);
+      if (tradTitle && safeTradTitle) tradTitle.textContent = safeTradTitle;
+
+      const oppTitle = document.querySelector('[data-bind="comparison.opportunityTitle"]');
+      const safeOppTitle = validateSafeText(cfg.comparison?.opportunityTitle, 140);
+      if (oppTitle && safeOppTitle) oppTitle.textContent = safeOppTitle;
+
+      renderComparisonList(document.getElementById('traditional-list'), cfg.comparison?.traditionalItems, 'warning');
+      renderComparisonList(document.getElementById('opportunity-list'), cfg.comparison?.opportunityItems, 'success');
+    }
+
+    // 9. Benefits List (1–4 Pilares desde businessLandingContent o fallback seguro)
     const benefitsGrid = document.getElementById('benefits-grid');
-    if (benefitsGrid && Array.isArray(cfg.benefits) && cfg.benefits.length > 0) {
-      benefitsGrid.innerHTML = '';
-      const items = cfg.benefits.slice(0, 4);
-      items.forEach((benefit, idx) => {
+    const effectiveBenefits =
+      (profile && profile.benefits) ||
+      resolveFallbackBenefits(cfg.benefits);
+
+    if (benefitsGrid && effectiveBenefits.length > 0) {
+      clearNode(benefitsGrid);
+      const colors = [
+        { hex: '#38BDF8', rgb: '56, 189, 248' },
+        { hex: '#84CC16', rgb: '132, 204, 22' },
+        { hex: '#10B981', rgb: '16, 185, 129' },
+        { hex: '#60A5FA', rgb: '96, 165, 250' }
+      ];
+
+      effectiveBenefits.slice(0, 4).forEach((benefit, idx) => {
         const card = document.createElement('div');
         card.className = 'feature-dashed-card';
-        const iconSvg = getBenefitIconSvg(idx, benefit.title);
-
-        // Asignar colores según índice
-        const colors = [
-          { hex: '#FFAA00', rgb: '255, 170, 0' },
-          { hex: '#10B981', rgb: '16, 185, 129' },
-          { hex: '#00D2FF', rgb: '0, 210, 255' },
-          { hex: '#9B5DE5', rgb: '155, 93, 229' }
-        ];
         const color = colors[idx % colors.length];
         card.style.setProperty('--benefit-color', color.hex);
         card.style.setProperty('--benefit-color-rgb', color.rgb);
 
-        // Patrones diferentes por tarjeta
-        const rx = 100 + (idx * 20);
-        const ry = 40 + (idx * 20);
+        const content = document.createElement('div');
+        content.className = 'feature-card-content';
 
-        card.innerHTML = `
-          <div class="grid-pattern-overlay">
-            <svg class="grid-pattern-svg" aria-hidden="true">
-              <defs>
-                <pattern id="grid-pat-b${idx}" width="20" height="20" patternUnits="userSpaceOnUse" x="-12" y="4">
-                  <path d="M.5 20V.5H20" fill="none" stroke="rgba(255, 255, 255, 0.05)" stroke-width="1" />
-                </pattern>
-              </defs>
-              <rect width="100%" height="100%" fill="url(#grid-pat-b${idx})" />
-              <svg x="-12" y="4" class="overflow-visible" fill="rgba(255, 255, 255, 0.06)">
-                <rect width="21" height="21" x="${rx}" y="${ry}" />
-              </svg>
-            </svg>
-          </div>
-          <div class="feature-card-content">
-            <div class="feature-card-header">
-              <div class="feature-icon">${iconSvg}</div>
-              <span class="feature-card-num">0${idx + 1}</span>
-            </div>
-            <h3 class="feature-title text-primary font-serif">${escapeHtml(benefit.title)}</h3>
-            <p class="feature-desc text-secondary">${escapeHtml(benefit.description)}</p>
-          </div>
-        `;
+        const header = document.createElement('div');
+        header.className = 'feature-card-header';
+
+        const iconWrap = document.createElement('div');
+        iconWrap.className = 'feature-icon';
+        iconWrap.appendChild(createBenefitIconNode(idx, benefit.title));
+
+        const numSpan = document.createElement('span');
+        numSpan.className = 'feature-card-num';
+        numSpan.textContent = `0${idx + 1}`;
+
+        header.appendChild(iconWrap);
+        header.appendChild(numSpan);
+
+        const titleEl = document.createElement('h3');
+        titleEl.className = 'feature-title text-primary font-serif';
+        titleEl.textContent = benefit.title;
+
+        const descEl = document.createElement('p');
+        descEl.className = 'feature-desc text-secondary';
+        descEl.textContent = benefit.description;
+
+        content.appendChild(header);
+        content.appendChild(titleEl);
+        content.appendChild(descEl);
+        card.appendChild(content);
         benefitsGrid.appendChild(card);
       });
     }
 
-    // 9. Methodology Section (3 Pasos)
+    // 10. Methodology Section (3 Pasos)
     const methodologyGrid = document.getElementById('methodology-grid');
-    if (methodologyGrid && cfg.methodology?.steps && Array.isArray(cfg.methodology.steps)) {
-      methodologyGrid.innerHTML = cfg.methodology.steps.slice(0, 3).map((step, idx) => `
-        <div class="step-card">
-          <div class="step-number">${escapeHtml(step.number || `0${idx + 1}`)}</div>
-          <h3>${escapeHtml(step.title)}</h3>
-          <p>${escapeHtml(step.description)}</p>
-        </div>
-      `).join('');
-    }
+    if (methodologyGrid && Array.isArray(cfg.methodology?.steps)) {
+      clearNode(methodologyGrid);
+      cfg.methodology.steps.slice(0, 3).forEach((step, idx) => {
+        const safeStepTitle = validateSafeText(step?.title, 120);
+        const safeStepDesc = validateSafeText(step?.description, 320);
+        if (!safeStepTitle || !safeStepDesc) return;
 
-    // 10. Testimonials
-    const testimonialsSection = document.getElementById('testimonios');
-    if (testimonialsSection) {
-      if (cfg.testimonials?.enabled === false || !Array.isArray(cfg.testimonials?.items) || cfg.testimonials.items.length === 0) {
-        testimonialsSection.style.display = 'none';
-      } else {
-        testimonialsSection.style.display = '';
-        const testimonialsGrid = document.getElementById('testimonials-grid');
-        if (testimonialsGrid) {
-          testimonialsGrid.innerHTML = cfg.testimonials.items.slice(0, 4).map(testi => `
-            <div class="testimonial-card">
-              <p class="testimonial-quote">${escapeHtml(testi.quote)}</p>
-              <div class="testimonial-user">
-                ${testi.avatarUrl ? `<img src="${testi.avatarUrl}" alt="${escapeHtml(testi.name)}" class="testimonial-avatar">` : ''}
-                <div class="testimonial-meta">
-                  <span class="testimonial-name">${escapeHtml(testi.name)}</span>
-                  <span class="testimonial-role">${escapeHtml(testi.role)}</span>
-                </div>
-              </div>
-            </div>
-          `).join('');
-        }
-      }
-    }
+        const card = document.createElement('div');
+        card.className = 'step-card';
 
-    // 11. FAQ Accordion
-    const faqContainer = document.getElementById('faq-accordion');
-    if (faqContainer && cfg.faq?.items && Array.isArray(cfg.faq.items)) {
-      faqContainer.innerHTML = cfg.faq.items.map((item, idx) => `
-        <div class="faq-item ${idx === 0 ? 'active' : ''}">
-          <button class="faq-question-btn" type="button" aria-expanded="${idx === 0 ? 'true' : 'false'}">
-            <span>${escapeHtml(item.question)}</span>
-            <svg class="icon-svg faq-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <polyline points="6 9 12 15 18 9"></polyline>
-            </svg>
-          </button>
-          <div class="faq-answer">
-            <p>${escapeHtml(item.answer)}</p>
-          </div>
-        </div>
-      `).join('');
+        const num = document.createElement('div');
+        num.className = 'step-number';
+        num.textContent = validateSafeText(step?.number, 10) || `0${idx + 1}`;
 
-      // Event listener acordeón
-      faqContainer.querySelectorAll('.faq-question-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const item = btn.closest('.faq-item');
-          const isOpen = item.classList.contains('active');
-          
-          // Cerrar otros
-          faqContainer.querySelectorAll('.faq-item').forEach(other => {
-            other.classList.remove('active');
-            other.querySelector('.faq-question-btn').setAttribute('aria-expanded', 'false');
-          });
+        const h3 = document.createElement('h3');
+        h3.textContent = safeStepTitle;
 
-          // Alternar actual
-          if (!isOpen) {
-            item.classList.add('active');
-            btn.setAttribute('aria-expanded', 'true');
-          }
-        });
+        const p = document.createElement('p');
+        p.textContent = safeStepDesc;
+
+        card.appendChild(num);
+        card.appendChild(h3);
+        card.appendChild(p);
+        methodologyGrid.appendChild(card);
       });
     }
 
-    // 12. Disclaimer Legal
-    const disclaimerEl = document.querySelector('[data-bind="legal.disclaimer"]');
-    if (disclaimerEl && cfg.legal?.disclaimer) {
-      disclaimerEl.innerHTML = `<strong>Descargo de Responsabilidad:</strong> ${escapeHtml(cfg.legal.disclaimer)}`;
+    // 11. Testimonials & Success Navigation (Desactivados por defecto hasta verificación)
+    const testimonialsSection = document.getElementById('testimonios');
+    const testimonialsNavLink = document.querySelector('a.header-link[href="#testimonios"]');
+    if (testimonialsSection) {
+      testimonialsSection.hidden = true;
+      testimonialsSection.style.display = 'none';
+    }
+    if (testimonialsNavLink) {
+      testimonialsNavLink.hidden = true;
+      testimonialsNavLink.style.display = 'none';
     }
 
-    // 13. Footer Año
+    // 12. FAQ Accordion (Respeta businessLandingContent.dedicationText en la pregunta de dedicación semanal)
+    const faqContainer = document.getElementById('faq-accordion');
+    if (faqContainer && Array.isArray(cfg.faq?.items)) {
+      clearNode(faqContainer);
+      cfg.faq.items.forEach((item, idx) => {
+        const safeQuestion = validateSafeText(item?.question, 200);
+        if (!safeQuestion) return;
+
+        const isDedicationFaq =
+          item.id === 'f2' ||
+          normalizeCopy(safeQuestion).includes('cuanto tiempo debo dedicarle a la semana');
+        const safeAnswer = isDedicationFaq
+          ? effectiveDedicationText
+          : validateSafeText(item?.answer, 400);
+        if (!safeAnswer) return;
+
+        const faqItem = document.createElement('div');
+        faqItem.className = idx === 0 ? 'faq-item active' : 'faq-item';
+
+        const btn = document.createElement('button');
+        btn.className = 'faq-question-btn';
+        btn.type = 'button';
+        btn.setAttribute('aria-expanded', idx === 0 ? 'true' : 'false');
+
+        const qSpan = document.createElement('span');
+        qSpan.textContent = safeQuestion;
+
+        const chevron = createSvgElement('svg', {
+          class: 'icon-svg faq-icon',
+          width: '18',
+          height: '18',
+          viewBox: '0 0 24 24',
+          fill: 'none',
+          stroke: 'currentColor',
+          'stroke-width': '2',
+          'stroke-linecap': 'round',
+          'stroke-linejoin': 'round'
+        });
+        chevron.appendChild(createSvgElement('polyline', { points: '6 9 12 15 18 9' }));
+
+        btn.appendChild(qSpan);
+        btn.appendChild(chevron);
+
+        const ansDiv = document.createElement('div');
+        ansDiv.className = 'faq-answer';
+        const ansP = document.createElement('p');
+        ansP.textContent = safeAnswer;
+        ansDiv.appendChild(ansP);
+
+        btn.addEventListener('click', () => {
+          const isOpen = faqItem.classList.contains('active');
+          faqContainer.querySelectorAll('.faq-item').forEach((other) => {
+            other.classList.remove('active');
+            const otherBtn = other.querySelector('.faq-question-btn');
+            if (otherBtn) otherBtn.setAttribute('aria-expanded', 'false');
+          });
+          if (!isOpen) {
+            faqItem.classList.add('active');
+            btn.setAttribute('aria-expanded', 'true');
+          }
+        });
+
+        faqItem.appendChild(btn);
+        faqItem.appendChild(ansDiv);
+        faqContainer.appendChild(faqItem);
+      });
+    }
+
+    // 13. Disclaimer Legal (Sin innerHTML)
+    const disclaimerEl = document.querySelector('[data-bind="legal.disclaimer"]');
+    const safeDisclaimer = validateSafeText(cfg.legal?.disclaimer, 900);
+    if (disclaimerEl && safeDisclaimer) {
+      clearNode(disclaimerEl);
+      const strong = document.createElement('strong');
+      strong.textContent = 'Descargo de Responsabilidad: ';
+      const textSpan = document.createElement('span');
+      textSpan.textContent = safeDisclaimer.replace(/^Descargo de Responsabilidad:\s*/i, '');
+      disclaimerEl.appendChild(strong);
+      disclaimerEl.appendChild(textSpan);
+    }
+
+    // 14. Footer Año
     const footerYear = document.getElementById('footer-year');
     if (footerYear) {
       footerYear.textContent = new Date().getFullYear().toString();
     }
 
-    // 14. Modals Setup
+    // 15. Modals Setup
     setupModals();
   }
 
@@ -405,62 +747,79 @@
     return /\.(mp4|webm|ogg|m4v)($|\?)/i.test(url);
   }
 
+  function isSafeHttpsUrl(value) {
+    if (typeof value !== 'string') return false;
+    return /^https:\/\/[^\s"'<>]+$/i.test(value.trim());
+  }
+
   function setupVslPlayer(vslCfg) {
     const container = document.getElementById('vsl-video-container');
     if (!container) return;
 
     const provider = vslCfg?.provider || 'custom';
-    const embedUrl = vslCfg?.embedUrl || '';
-    const videoTitle = vslCfg?.videoTitle || 'Presentación de Negocio';
+    const embedUrl = isSafeHttpsUrl(vslCfg?.embedUrl) ? vslCfg.embedUrl.trim() : '';
+    const videoTitle = validateSafeText(vslCfg?.videoTitle, 120) || DEFAULT_VSL_TITLE;
 
     if (vslCfg?.aspectRatio === '4:3') {
       container.classList.add('ratio-4-3');
     }
 
-    if (vslCfg?.thumbnailUrl) {
+    if (isSafeHttpsUrl(vslCfg?.thumbnailUrl)) {
       const thumb = document.getElementById('vsl-thumbnail');
-      if (thumb) thumb.src = vslCfg.thumbnailUrl;
+      if (thumb) thumb.setAttribute('src', vslCfg.thumbnailUrl.trim());
     }
 
-    if (vslCfg?.durationText) {
-      const durEl = document.querySelector('[data-bind="vsl.durationText"]');
-      if (durEl) durEl.textContent = vslCfg.durationText;
+    // Mostrar duración solo si está verificada contra el medio cargado; de lo contrario título genérico
+    const durEl = document.querySelector('[data-bind="vsl.durationText"]');
+    if (durEl) {
+      const verifiedDuration =
+        vslCfg?.durationVerified === true ? validateSafeText(vslCfg?.durationText, 80) : null;
+      durEl.textContent = verifiedDuration || DEFAULT_VSL_TITLE;
     }
 
-    // Reproducción al hacer click
+    const captionEl = document.querySelector('[data-bind="vsl.caption"]');
+    if (captionEl) {
+      const rawCaption = validateSafeText(vslCfg?.caption, 180);
+      const hasUnverifiedMinutes = rawCaption && /\b\d+\s*min/i.test(rawCaption) && vslCfg?.durationVerified !== true;
+      const hasOfficialClaim = rawCaption && /oficial/i.test(rawCaption);
+      captionEl.textContent =
+        rawCaption && !hasUnverifiedMinutes && !hasOfficialClaim ? rawCaption : DEFAULT_VSL_CAPTION;
+    }
+
     function playVideo() {
       if (container.classList.contains('playing')) return;
       if (!embedUrl) return;
 
+      clearNode(container);
+
       if (isDirectVideoUrl(provider, embedUrl)) {
-        container.innerHTML = `
-          <video
-            src="${embedUrl}"
-            ${vslCfg?.thumbnailUrl ? `poster="${vslCfg.thumbnailUrl}"` : ''}
-            controls
-            autoplay
-            playsinline
-            style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit: contain; background: #000; z-index: 20; border-radius: inherit;">
-          </video>
-        `;
-        const videoEl = container.querySelector('video');
-        if (videoEl) {
-          videoEl.play().catch(() => {});
+        const videoEl = document.createElement('video');
+        videoEl.setAttribute('src', embedUrl);
+        if (isSafeHttpsUrl(vslCfg?.thumbnailUrl)) {
+          videoEl.setAttribute('poster', vslCfg.thumbnailUrl.trim());
+        }
+        videoEl.setAttribute('controls', '');
+        videoEl.setAttribute('autoplay', '');
+        videoEl.setAttribute('playsinline', '');
+        videoEl.className = 'vsl-active-player';
+        container.appendChild(videoEl);
+        if (typeof videoEl.play === 'function') {
+          Promise.resolve(videoEl.play()).catch(() => {});
         }
       } else {
         const separator = embedUrl.includes('?') ? '&' : '?';
         const autoPlayUrl = `${embedUrl}${separator}autoplay=1&rel=0&modestbranding=1`;
-
-        container.innerHTML = `
-          <iframe
-            src="${autoPlayUrl}"
-            title="${escapeHtml(videoTitle)}"
-            frameborder="0"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-            allowfullscreen
-            style="position: absolute; top:0; left:0; width:100%; height:100%; border:none; z-index: 20;">
-          </iframe>
-        `;
+        const iframeEl = document.createElement('iframe');
+        iframeEl.setAttribute('src', autoPlayUrl);
+        iframeEl.setAttribute('title', videoTitle);
+        iframeEl.setAttribute('frameborder', '0');
+        iframeEl.setAttribute(
+          'allow',
+          'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'
+        );
+        iframeEl.setAttribute('allowfullscreen', '');
+        iframeEl.className = 'vsl-active-player';
+        container.appendChild(iframeEl);
       }
 
       container.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) scale(1)';
@@ -470,20 +829,15 @@
 
     container.addEventListener('click', playVideo);
 
-    // Efecto 3D Tilt interactivo
     container.addEventListener('mousemove', (e) => {
       if (container.classList.contains('playing')) return;
-
       const rect = container.getBoundingClientRect();
       const x = e.clientX - rect.left;
       const y = e.clientY - rect.top;
-
       const xc = rect.width / 2;
       const yc = rect.height / 2;
-
       const angleX = -(y - yc) / 22;
       const angleY = (x - xc) / 22;
-
       container.style.transform = `perspective(1000px) rotateX(${angleX}deg) rotateY(${angleY}deg) scale(1.015)`;
     });
 
@@ -535,15 +889,13 @@
       btnCloseTerms.addEventListener('click', () => closeModal(modalTerms));
     }
 
-    // Cerrar al hacer click fuera del contenedor
-    [modalPrivacy, modalTerms].forEach(modal => {
+    [modalPrivacy, modalTerms].forEach((modal) => {
       if (!modal) return;
       modal.addEventListener('click', (e) => {
         if (e.target === modal) closeModal(modal);
       });
     });
 
-    // Cerrar con tecla Escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         closeModal(modalPrivacy);
@@ -552,10 +904,10 @@
     });
   }
 
-  // Inicialización
   document.addEventListener('DOMContentLoaded', function () {
-    const config = window.CONFIG || {};
-    applyTheme(config.theme);
-    renderDynamicContent(config);
+    const config = window.CONFIG && typeof window.CONFIG === 'object' ? window.CONFIG : {};
+    const profile = resolveValidatedProfile(config.businessLandingContent);
+    applyTheme(config.theme, profile ? profile.theme : null);
+    renderDynamicContent(config, profile);
   });
 })();
