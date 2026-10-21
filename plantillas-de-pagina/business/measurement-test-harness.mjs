@@ -21,6 +21,7 @@ export function businessConfig() {
 export function createBusinessMeasurementHarness({
   config = businessConfig(), origin = 'https://negocio.example.test', stored,
   now = 1792540800000, storageError = false, referrer = '', existing = {},
+  storageFailures = {}, sharedValues, broadcastHub, channelError = null,
 } = {}) {
   const requests = [];
   const sdkCalls = [];
@@ -28,17 +29,19 @@ export function createBusinessMeasurementHarness({
   const listeners = new Map();
   const timers = new Map();
   let nextTimer = 0;
-  const values = new Map(typeof stored === 'string'
+  const values = sharedValues ?? new Map(typeof stored === 'string'
     ? [[`ph:business-consent:v1:${config?.site?.id}`, stored]]
     : Object.entries(stored ?? {}));
   const storage = {
-    values, writes: [], failures: { read: storageError, write: storageError, remove: storageError },
-    getItem(key) { if (this.failures.read) throw new Error('Storage read blocked'); return values.get(key) ?? null; },
+    values, writes: [], operations: [],
+    failures: { read: storageError, write: storageError, remove: storageError, ...storageFailures },
+    getItem(key) { this.operations.push('read'); if (this.failures.read) throw new Error('Storage read blocked'); return values.get(key) ?? null; },
     setItem(key, value) {
+      this.operations.push('write');
       if (this.failures.write) throw new Error('Storage write blocked');
       values.set(key, String(value)); this.writes.push([key, String(value)]);
     },
-    removeItem(key) { if (this.failures.remove) throw new Error('Storage remove blocked'); values.delete(key); },
+    removeItem(key) { this.operations.push('remove'); if (this.failures.remove) throw new Error('Storage remove blocked'); values.delete(key); },
     clear() { if (this.failures.remove) throw new Error('Storage remove blocked'); values.clear(); },
   };
   function eventTarget(name) {
@@ -96,10 +99,23 @@ export function createBusinessMeasurementHarness({
     },
     head: element('head'), body: element('body'),
   });
+  // Exercise the same failed/recovered boundary for every persistent browser store.
+  // Any accidental switch from localStorage to sessionStorage/cookies is observable.
+  Object.defineProperty(document, 'cookie', {
+    get() {
+      storage.operations.push('cookie-read');
+      if (storage.failures.read) throw new Error('Cookie read blocked');
+      return '';
+    },
+    set() {
+      storage.operations.push('cookie-write');
+      if (storage.failures.write) throw new Error('Cookie write blocked');
+    },
+  });
   const location = new URL(origin);
   location.reload = () => requests.push({ kind: 'reload' });
   const window = Object.assign(eventTarget('window'), {
-    document, location, localStorage: storage,
+    document, location, localStorage: storage, sessionStorage: storage,
     navigator: { sendBeacon(url, data) { requests.push({ kind: 'beacon', url, data }); return true; } },
     fetch(url, options) { requests.push({ kind: 'fetch', url, options }); return Promise.reject(new Error('Offline fixture')); },
     Image: class { set src(url) { requests.push({ kind: 'image', url }); } },
@@ -111,6 +127,28 @@ export function createBusinessMeasurementHarness({
     clearTimeout(id) { timers.delete(id); },
     CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } },
   });
+  const channels = [];
+  if (broadcastHub || channelError) {
+    window.BroadcastChannel = class {
+      constructor(name) {
+        if (channelError === 'construct') throw new Error('Channel blocked');
+        this.name = name; this.origin = location.origin; this.messages = [];
+        channels.push(this); broadcastHub?.add(this);
+      }
+      postMessage(data) {
+        if (channelError === 'post') throw new Error('Channel send blocked');
+        this.messages.push(data);
+        // Browser delivery is asynchronous, isolated by channel name AND origin.
+        for (const peer of broadcastHub ?? []) {
+          if (peer !== this && peer.name === this.name && peer.origin === this.origin) {
+            const copy = structuredClone(data);
+            queueMicrotask(() => peer.onmessage?.({ data: copy }));
+          }
+        }
+      }
+      close() { broadcastHub?.delete(this); }
+    };
+  }
   Object.assign(window, existing);
   window.window = window;
   class FixtureDate extends Date { static now() { return clock.now; } }
@@ -123,7 +161,7 @@ export function createBusinessMeasurementHarness({
   // Missing asset during RED means API absent, not a filesystem/harness failure.
   if (existsSync(runtimePath)) vm.runInContext(readFileSync(runtimePath, 'utf8'), context, { filename: 'measurement-runtime.js' });
   return {
-    window, document, clock, storage, requests, sdkCalls,
+    window, document, clock, storage, requests, sdkCalls, channels,
     anchor(id = 'main-vsl-cta', href = 'https://wa.me/573001112233?text=PRIVATE_MESSAGE_SEED') {
       const anchor = element('a'); anchor.id = id === 'header' ? '' : id; anchor.href = href;
       const parent = element(id === 'header' ? 'header' : 'div'); parent.appendChild(anchor);
@@ -160,6 +198,6 @@ export function createBusinessMeasurementHarness({
       document.dispatchEvent(event); return event;
     },
     async flush() { for (const [id, callback] of [...timers]) { timers.delete(id); callback(); } await Promise.resolve(); },
-    dispose() { timers.clear(); listeners.clear(); },
+    dispose() { timers.clear(); listeners.clear(); for (const channel of channels) channel.close(); },
   };
 }

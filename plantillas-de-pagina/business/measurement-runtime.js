@@ -5,7 +5,6 @@
   if (Object.prototype.hasOwnProperty.call(window, 'PartnerHubBusinessConsent')) return;
 
   const POLICY_VERSION = '2026-10-21';
-  const TTL = 180 * 24 * 60 * 60 * 1000;
   const CHANGE_EVENT = 'partnerhub:business-consent-change';
 
   function exactRecord(value, keys) {
@@ -51,14 +50,14 @@
     config = typeof CONFIG === 'undefined' ? null : CONFIG;
     runtimeEnabled = validIdentity(config);
   } catch (_) {
-    // Malformed configuration cannot grant consent or touch another site's storage.
+    // Malformed configuration cannot grant consent or open another site's channel.
   }
-  const storageKey = runtimeEnabled ? 'ph:business-consent:v1:' + config.site.id : null;
   let preference = null;
   let persistence = 'none';
   let epoch = 0;
   let reloadRequired = false;
-  let expiryTimer;
+  let reloadRequested = false;
+  let channel = null;
   const seenClicks = new WeakSet();
   // Snapshot only approved fields: neither UI nor later CONFIG mutations select a provider.
   const primaryId = runtimeEnabled && config.analytics && config.analytics.measurementId;
@@ -74,20 +73,12 @@
   const ga4 = { started: false, ready: false, failed: false, pageview: false, send: null };
   const meta = { started: false, ready: false, failed: false, pageview: false, send: null };
 
-  function validPreference(value) {
-    const now = Date.now();
-    return exactRecord(value, ['policyVersion', 'analytics', 'marketing', 'expiresAt']) &&
-      value.policyVersion === POLICY_VERSION && typeof value.analytics === 'boolean' &&
-      typeof value.marketing === 'boolean' && Number.isSafeInteger(value.expiresAt) &&
-      Number.isSafeInteger(now) && value.expiresAt > now && value.expiresAt <= now + TTL;
-  }
-
   function stateCopy() {
     return Object.freeze({
       policyVersion: POLICY_VERSION,
       analytics: preference ? preference.analytics : false,
       marketing: preference ? preference.marketing : false,
-      expiresAt: preference ? preference.expiresAt : null,
+      expiresAt: null,
       persistence: persistence,
       runtimeEnabled: runtimeEnabled,
       reloadRequired: reloadRequired,
@@ -98,22 +89,24 @@
     window.dispatchEvent(new window.CustomEvent(CHANGE_EVENT, { detail: stateCopy() }));
   }
 
-  function expirePreference() {
-    if (preference && !validPreference(preference)) {
-      preference = null;
-      persistence = 'none';
-      stopProviders();
-      notify();
+  function requestCleanReload() {
+    if (!reloadRequired || reloadRequested) return;
+    reloadRequested = true;
+    try { window.location.reload(); } catch (_) { /* Denied even if navigation is blocked. */ }
+  }
+
+  function broadcastWithdrawal() {
+    try { if (channel) channel.postMessage({ version: 1, action: 'withdraw' }); } catch (_) {
+      // Best-effort negative signal only; local denial never depends on the channel.
     }
   }
 
-  function scheduleExpiry() {
-    window.clearTimeout(expiryTimer);
-    if (!preference) return;
-    // Browser timers are signed 32-bit; a 180-day timeout would otherwise fire immediately.
-    expiryTimer = window.setTimeout(function () {
-      expirePreference(); scheduleExpiry();
-    }, Math.min(2147483647, Math.max(1, preference.expiresAt - Date.now())));
+  function resetChoice() {
+    preference = null;
+    persistence = 'none';
+    stopProviders();
+    notify();
+    requestCleanReload();
   }
 
   function safeContext() {
@@ -128,22 +121,23 @@
     epoch += 1;
     ga4.ready = false; meta.ready = false;
     if (ga4.started || meta.started) reloadRequired = true;
+    if (reloadRequired) preference = { analytics: false, marketing: false };
+    // Empty all owned queues before any SDK revocation can run callbacks.
+    if (ga4.started && window.dataLayer) window.dataLayer.length = 0;
+    if (meta.started && meta.send) meta.send.queue.length = 0;
     if (ga4.started) {
       window['ga-disable-' + ga4Id] = true;
-      if (window.dataLayer) window.dataLayer.length = 0;
       // ga-disable is the supported hard stop; do not send cookieless denial pings.
     }
     if (meta.started && meta.send) {
-      meta.send.queue.length = 0;
       try { meta.send('consent', 'revoke'); } catch (_) { /* Denial remains authoritative. */ }
     }
   }
 
   function permitted(provider, capturedEpoch) {
-    expirePreference();
     if (capturedEpoch !== epoch || reloadRequired || !preference) return false;
     if (!safeContext()) {
-      stopProviders(); notify(); return false;
+      stopProviders(); notify(); requestCleanReload(); return false;
     }
     return provider === 'ga4' ? preference.analytics && providers.ga4 && !!ga4Id :
       preference.marketing && providers.meta && !!metaId;
@@ -226,7 +220,6 @@
   function trackWhatsappClick(event) {
     if (event.isTrusted !== true || seenClicks.has(event)) return;
     seenClicks.add(event);
-    expirePreference();
     const target = event.target && (event.target.nodeType === 3 ? event.target.parentElement : event.target);
     const anchor = target && typeof target.closest === 'function' ? target.closest('a') : null;
     if (!anchor || !/^\d{8,15}$/.test(whatsappPhone)) return;
@@ -253,54 +246,30 @@
     try { if (meta.ready && permitted('meta', epoch)) meta.send('trackCustom', 'WhatsAppClick', payload); } catch (_) { /* Navigation is independent. */ }
   }
 
-  if (runtimeEnabled) {
-    try {
-      const stored = JSON.parse(window.localStorage.getItem(storageKey));
-      if (validPreference(stored)) {
-        preference = stored;
-        persistence = 'local';
-      }
-    } catch (_) {
-      // Unavailable/corrupt storage starts denied. Explicit choices may be session-only.
-    }
-  }
-
   function setConsent(choice) {
     if (!exactRecord(choice, ['analytics', 'marketing']) ||
         typeof choice.analytics !== 'boolean' || typeof choice.marketing !== 'boolean') {
       throw new TypeError('Consent requires exactly analytics and marketing booleans');
     }
-    if (!runtimeEnabled) return stateCopy();
-    const now = Date.now();
-    if (!Number.isSafeInteger(now) || !Number.isSafeInteger(now + TTL)) return stateCopy();
+    if (!runtimeEnabled || reloadRequired) return stateCopy();
     const reduced = preference && ((preference.analytics && !choice.analytics) || (preference.marketing && !choice.marketing));
     preference = {
-      policyVersion: POLICY_VERSION,
       analytics: choice.analytics,
       marketing: choice.marketing,
-      expiresAt: now + TTL,
     };
+    // Compatibility label: session means this document's memory, NOT sessionStorage.
     persistence = 'session';
     if (reduced) stopProviders();
-    try {
-      window.localStorage.setItem(storageKey, JSON.stringify(preference));
-      persistence = 'local';
-    } catch (_) {
-      // A failed replacement must not leave a readable older grant when removal
-      // still works (e.g. quota-limited storage). Never remove another site's key.
-      try { window.localStorage.removeItem(storageKey); } catch (_) {
-        // Both mutations failed: denial is only in memory, not durably guaranteed.
-      }
-    }
-    scheduleExpiry();
+    if (reduced || (!choice.analytics && !choice.marketing)) broadcastWithdrawal();
     syncProviders(epoch);
     notify();
+    requestCleanReload();
     return stateCopy();
   }
 
   Object.defineProperty(window, 'PartnerHubBusinessConsent', {
     value: Object.freeze({
-      getState: function () { expirePreference(); return stateCopy(); },
+      getState: stateCopy,
       setConsent: setConsent,
       withdraw: function () { return setConsent({ analytics: false, marketing: false }); },
     }),
@@ -310,34 +279,28 @@
   });
   if (runtimeEnabled) {
     document.addEventListener('click', trackWhatsappClick);
-    window.addEventListener('storage', function (event) {
-      if (event.storageArea !== window.localStorage || (event.key !== storageKey && event.key !== null)) return;
-      expirePreference();
-      if (!preference) return; // Another tab can revoke, never grant.
-      let incoming;
-      try { incoming = JSON.parse(event.newValue); } catch (_) { /* Invalid means denied. */ }
-      const valid = validPreference(incoming);
-      if (!valid) {
-        preference = null; persistence = 'none';
-        stopProviders(); scheduleExpiry(); notify(); return;
+    try {
+      if (typeof window.BroadcastChannel === 'function') {
+        channel = new window.BroadcastChannel('ph:business-consent:v1:' + config.site.id);
+        channel.onmessage = function (event) {
+          const data = event.data;
+          if (exactRecord(data, ['version', 'action']) && data.version === 1 && data.action === 'withdraw') {
+            resetChoice(); // Never echo received messages or import positive permissions.
+          }
+        };
       }
-      const analytics = !!(valid && incoming.analytics && preference.analytics);
-      const marketing = !!(valid && incoming.marketing && preference.marketing);
-      if (analytics === preference.analytics && marketing === preference.marketing) return;
-      preference = {
-        policyVersion: POLICY_VERSION, analytics: analytics, marketing: marketing,
-        expiresAt: valid ? Math.min(incoming.expiresAt, preference.expiresAt) : preference.expiresAt,
-      };
-      stopProviders(); scheduleExpiry(); notify();
-    });
+    } catch (_) { channel = null; }
     function checkContext() {
-      expirePreference();
-      if ((ga4.started || meta.started) && !reloadRequired && !safeContext()) { stopProviders(); notify(); }
+      if ((ga4.started || meta.started) && !reloadRequired && !safeContext()) {
+        stopProviders(); notify(); requestCleanReload();
+      }
     }
     window.addEventListener('hashchange', checkContext);
     window.addEventListener('popstate', checkContext);
-    window.addEventListener('pageshow', checkContext);
+    window.addEventListener('pageshow', function (event) {
+      if (event.persisted === true) resetChoice();
+      else checkContext();
+    });
     document.addEventListener('visibilitychange', checkContext);
-    scheduleExpiry(); syncProviders(epoch);
   }
 }());

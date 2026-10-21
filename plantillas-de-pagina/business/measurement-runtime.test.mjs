@@ -15,6 +15,21 @@ function api(h) {
   return h.window.PartnerHubBusinessConsent;
 }
 
+// Break caught: a readable old grant is restored even though mutations cannot remove it.
+test('new_document_ignores_readable_old_grant_when_all_mutations_fail', () => {
+  const values = new Map([[KEY, saved({ marketing: true })]]);
+  const h = harness({ config: readyConfig(), sharedValues: values,
+    storageFailures: { write: true, remove: true } });
+  assert.equal(api(h).getState().analytics, false, 'old analytics grant must never restore');
+  assert.equal(api(h).getState().marketing, false);
+  assert.equal(h.requests.length, 0);
+  accept(h); api(h).withdraw();
+  assert.equal(values.get(KEY), saved({ marketing: true }), 'old grant still physically present');
+  const next = harness({ config: readyConfig(), sharedValues: values });
+  assert.equal(api(next).getState().analytics, false, 'genuinely reconstructed document starts denied');
+  assert.equal(next.requests.length, 0);
+});
+
 // Break caught: a default grant or leaked config in the public state.
 test('initial_state_denies_both', () => {
   const h = harness();
@@ -62,20 +77,16 @@ test('acceptance_is_strict_and_categories_independent', () => {
   assert.equal(events.length, 3); assert.equal(h.requests.length, 0);
 });
 
-// Break caught: wrong TTL, overbroad persisted payload or consent surviving expiry/clock rollback.
-test('ttl_is_180_days', () => {
+// Break caught: choice writes persistent preferences or expires within the same document.
+test('choice_lives_only_in_document_memory_without_expiry', async () => {
   const h = harness({ now: NOW }); const consent = api(h);
   const state = consent.setConsent({ analytics: true, marketing: false });
-  assert.equal(state.expiresAt, NOW + 180 * 24 * 60 * 60 * 1000);
-  assert.equal(state.persistence, 'local');
-  assert.deepEqual(JSON.parse(h.storage.getItem(KEY)), {
-    policyVersion: '2026-10-21', analytics: true, marketing: false, expiresAt: NOW + TTL,
-  });
+  assert.equal(state.expiresAt, null);
+  assert.equal(state.persistence, 'session');
+  assert.deepEqual(h.storage.operations, []);
   h.clock.now = NOW + TTL;
-  assert.equal(consent.getState().analytics, false);
-  const rollback = harness({ stored: saved() });
-  rollback.clock.now = NOW - 1;
-  assert.equal(api(rollback).getState().analytics, false);
+  await h.flush();
+  assert.equal(consent.getState().analytics, true);
   assert.equal(h.requests.length, 0);
 });
 
@@ -99,7 +110,7 @@ test('blocked_storage_is_session_only', () => {
   assert.equal(consent.getState().analytics, false);
   const accepted = consent.setConsent({ analytics: true, marketing: false });
   assert.equal(accepted.analytics, true); assert.equal(accepted.persistence, 'session');
-  assert.equal(accepted.expiresAt, NOW + TTL);
+  assert.equal(accepted.expiresAt, null);
   assert.equal(h.storage.writes.length, 0);
   assert.equal(api(harness({ storageError: true })).getState().analytics, false);
   assert.equal(consent.withdraw().analytics, false);
@@ -137,11 +148,12 @@ test('preview_wrong_origin_master_or_bad_config_never_loads', () => {
   }
 });
 
-// Break caught: wrong site key, readiness interpreted as consent, or reload forgetting choice.
-test('reload_restores_only_same_site_and_origin_choice', () => {
+// Break caught: a new document inherits any same-origin or same-site grant.
+test('new_document_requires_fresh_choice_even_for_same_site', () => {
   const h = harness(); api(h).setConsent({ analytics: true, marketing: false });
   const stored = Object.fromEntries(h.storage.values);
-  assert.equal(api(harness({ stored })).getState().analytics, true);
+  assert.equal(api(harness({ stored })).getState().analytics, false);
+  assert.deepEqual(h.storage.operations, []);
   const config = businessConfig(); config.site.id = 'other-business';
   assert.equal(api(harness({ config, stored })).getState().analytics, false);
   assert.equal(api(harness({ origin: 'https://other.example.test', stored })).getState().analytics, false);
@@ -161,7 +173,7 @@ test('duplicate_execution_preserves_singleton_and_choice', () => {
   script.textContent = readFileSync(new URL('./measurement-runtime.js', import.meta.url), 'utf8');
   h.document.head.appendChild(script);
   assert.equal(api(h), consent); assert.equal(consent.getState().analytics, true);
-  assert.equal(events.length, 0); assert.equal(h.storage.writes.length, 1);
+  assert.equal(events.length, 0); assert.equal(h.storage.writes.length, 0);
   assert.equal(h.requests.length, 0);
 });
 
@@ -198,13 +210,13 @@ test('malformed_recognized_ids_deny_but_unconfigured_categories_keep_api', () =>
     'accept IDs already supported by the existing generation schemas without normalization');
 });
 
-// Break caught: failed denial replacement leaving an earlier durable grant on reload.
-test('withdraw_after_write_failure_removes_only_owned_stale_grant', () => {
+// Break caught: reading/writing old grants or disturbing another site's persistent preference.
+test('withdraw_never_touches_existing_persistent_grants', () => {
   const otherKey = 'ph:business-consent:v1:other-business';
-  const h = harness({ stored: { [otherKey]: saved() } });
+  const h = harness({ stored: { [otherKey]: saved(), [KEY]: saved() } });
   const consent = api(h);
   consent.setConsent({ analytics: true, marketing: true });
-  assert.equal(api(harness({ stored: Object.fromEntries(h.storage.values) })).getState().marketing, true);
+  assert.equal(api(harness({ stored: Object.fromEntries(h.storage.values) })).getState().marketing, false);
   h.storage.failures.write = true;
   const denied = consent.withdraw();
   assert.equal(denied.analytics, false);
@@ -213,6 +225,7 @@ test('withdraw_after_write_failure_removes_only_owned_stale_grant', () => {
   const restored = api(harness({ stored: Object.fromEntries(h.storage.values) })).getState();
   assert.equal(restored.analytics, false, 'reload must not restore stale analytics grant');
   assert.equal(restored.marketing, false, 'reload must not restore stale marketing grant');
+  assert.deepEqual(h.storage.operations, []);
   assert.equal(h.storage.getItem(otherKey), saved(), 'other site preference must remain intact');
   assert.equal(h.requests.length, 0);
 });
@@ -220,6 +233,7 @@ test('withdraw_after_write_failure_removes_only_owned_stale_grant', () => {
 // Break caught: claiming local durability or throwing when neither mutation is possible.
 test('all_storage_mutations_blocked_keep_withdrawal_session_only', () => {
   const h = harness(); const consent = api(h);
+  h.storage.values.set(KEY, saved({ marketing: true }));
   consent.setConsent({ analytics: true, marketing: true });
   h.storage.failures.write = true; h.storage.failures.remove = true;
   const denied = consent.withdraw();
@@ -227,7 +241,7 @@ test('all_storage_mutations_blocked_keep_withdrawal_session_only', () => {
   assert.equal(denied.persistence, 'session');
   assert.equal(consent.getState().analytics, false);
   assert.equal(JSON.parse(h.storage.getItem(KEY)).analytics, true,
-    'browser prevented both persistent mutations; in-memory denial is not durable');
+    'legacy preference is ignored, not mutated');
   assert.equal(h.requests.length, 0);
 });
 
@@ -301,28 +315,26 @@ test('preconsent_click_is_not_replayed', async () => {
 test('withdraw_during_load_drops_callbacks', async () => {
   const h = harness({ config: readyConfig() }); accept(h);
   const denied = api(h).withdraw(); assert.equal(denied.reloadRequired, true);
-  assert.equal(JSON.parse(h.storage.getItem(KEY)).analytics, false);
+  assert.equal(denied.analytics, false); assert.equal(denied.marketing, false);
   await h.loadSdk('ga4'); await h.loadSdk('meta'); h.click(h.anchor()); accept(h);
   assert.equal(events(h, 'page_view').length, 0); assert.equal(events(h, 'PageView').length, 0);
   assert.equal(events(h, 'click_cta').length, 0); assert.equal(events(h, 'WhatsAppClick').length, 0);
   assert.equal(h.sdkCalls.some((c) => c.args[0] === 'init' || c.args[0] === 'config'), false);
   assert.equal(h.window['ga-disable-G-TEST12345'], true);
-  assert.equal(h.requests.length, 2, 'reloadRequired requests a clean navigation via UI; no auto reload');
+  assert.equal(h.requests.filter((r) => r.kind === 'script').length, 2);
+  assert.equal(h.requests.filter((r) => r.kind === 'reload').length, 1);
 });
 
-// Break caught: another tab grants consent implicitly, or denial does not revoke adapters.
-test('storage_event_revokes_without_regrant', async () => {
+// Break caught: persistent browser events mutate this document's memory-only choice.
+test('storage_event_neither_grants_nor_revokes_document_choice', async () => {
   const h = harness({ config: readyConfig() });
   h.storageEvent(saved({ marketing: true })); assert.equal(api(h).getState().analytics, false);
   accept(h); await h.loadSdk('ga4'); await h.loadSdk('meta');
   h.storageEvent(saved({ analytics: false, marketing: true }));
-  assert.equal(api(h).getState().analytics, false); assert.equal(api(h).getState().marketing, true);
-  const count = h.sdkCalls.length; h.click(h.anchor());
-  assert.equal(h.sdkCalls.length, count, 'document quarantined until clean reload');
-  h.storageEvent(saved()); assert.equal(api(h).getState().analytics, false);
-  assert.equal(api(h).getState().marketing, false, 'a later denial may remove another category');
-  assert.equal(api(h).getState().reloadRequired, true);
-  assert.ok(h.sdkCalls.some((c) => c.provider === 'meta' && c.args[0] === 'consent' && c.args[1] === 'revoke'));
+  assert.equal(api(h).getState().analytics, true); assert.equal(api(h).getState().marketing, true);
+  h.storageEvent(null); h.storageEvent('bad-json'); h.click(h.anchor());
+  assert.equal(events(h, 'click_cta').length, 1);
+  assert.equal(api(h).getState().reloadRequired, false);
 });
 
 // Break caught: duplicate same event, synthetic event, missing nested/keyboard click or lost subsequent click.
@@ -390,13 +402,17 @@ test('unsafe_context_blocks_both_providers_including_changes_during_load', async
   assert.equal(api(h).getState().reloadRequired, true);
 });
 
-// Break caught: storage cannot persist a denial but runtime automatically restores a stale grant.
-test('storage_failure_never_automatically_reloads_stale_grant', async () => {
+// Break caught: withdrawal reload skipped/repeated or stale preferences regrant after reload.
+test('storage_failure_still_reloads_once_and_new_document_starts_denied', async () => {
   const h = harness({ config: readyConfig() }); accept(h); await h.loadSdk('ga4');
   h.storage.failures.write = true; h.storage.failures.remove = true;
   const denied = api(h).withdraw(); assert.equal(denied.persistence, 'session');
   assert.equal(denied.reloadRequired, true); assert.equal(denied.analytics, false);
-  await h.flush(); assert.equal(h.requests.some((r) => r.kind === 'reload'), false);
+  api(h).withdraw(); accept(h); await h.flush();
+  assert.equal(h.requests.filter((r) => r.kind === 'reload').length, 1);
+  assert.equal(api(h).getState().analytics, false, 'quarantined document cannot regrant');
+  const next = harness({ config: readyConfig(), sharedValues: h.storage.values });
+  assert.equal(api(next).getState().analytics, false); assert.equal(next.requests.length, 0);
   h.click(h.anchor()); assert.equal(events(h, 'click_cta').length, 0);
 });
 
@@ -410,30 +426,154 @@ test('failed_sdk_keeps_whatsapp_navigable_and_does_not_retry', async () => {
   assert.equal(events(h, 'page_view').length, 0); assert.equal(events(h, 'PageView').length, 0);
 });
 
-// Break caught: a cleared/corrupt preference still claims durable consent or keeps active SDKs.
-test('cross_tab_clear_or_corruption_removes_persistence_claim', async () => {
-  for (const newValue of [null, 'bad-json', saved({ extra: 'PRIVATE_STORAGE_SEED' }), saved({ expiresAt: NOW })]) {
-    const h = harness({ config: readyConfig() }); accept(h); await h.loadSdk('ga4'); await h.loadSdk('meta');
-    h.storageEvent(newValue);
-    const state = api(h).getState();
-    assert.equal(state.analytics, false); assert.equal(state.marketing, false);
-    assert.equal(state.persistence, 'none'); assert.equal(state.expiresAt, null);
-    assert.equal(state.reloadRequired, true);
-    h.click(h.anchor()); assert.equal(events(h, 'click_cta').length, 0);
-  }
-});
-
-// Break caught: expiry only disables the public API but leaves the own emitter/loaded SDK enabled.
-test('expiry_revokes_loaded_providers_and_duplicate_execution_does_not_double_click', async () => {
+// Break caught: duplicate execution duplicates click delivery or adds an old TTL expiration.
+test('document_choice_has_no_ttl_and_duplicate_execution_does_not_double_click', async () => {
   const h = harness({ config: readyConfig() }); accept(h); await h.loadSdk('ga4'); await h.loadSdk('meta');
   const script = h.document.createElement('script');
   script.textContent = readFileSync(new URL('./measurement-runtime.js', import.meta.url), 'utf8');
   h.document.head.appendChild(script); h.click(h.anchor());
   assert.equal(events(h, 'click_cta').length, 1); assert.equal(events(h, 'WhatsAppClick').length, 1);
   h.clock.now = NOW + TTL; await h.flush();
-  assert.equal(api(h).getState().analytics, false); assert.equal(api(h).getState().reloadRequired, true);
-  assert.equal(h.window['ga-disable-G-TEST12345'], true);
+  assert.equal(api(h).getState().analytics, true); assert.equal(api(h).getState().reloadRequired, false);
+  assert.equal(h.window['ga-disable-G-TEST12345'], false);
   h.click(h.anchor()); accept(h);
-  assert.equal(events(h, 'click_cta').length, 1); assert.equal(events(h, 'page_view').length, 1);
+  assert.equal(events(h, 'click_cta').length, 2); assert.equal(events(h, 'page_view').length, 1);
   assert.equal(events(h, 'PageView').length, 1); assert.equal(h.requests.length, 2);
+});
+
+// Break caught: inaccessible storage later recovers and is consulted to restore an old grant.
+test('failed_and_recovered_stores_never_restore_preferences', () => {
+  const values = new Map([[KEY, saved({ marketing: true })]]);
+  const blocked = harness({ config: readyConfig(), sharedValues: values, storageError: true });
+  assert.equal(api(blocked).getState().analytics, false);
+  accept(blocked); api(blocked).withdraw();
+  blocked.storage.failures = { read: false, write: false, remove: false };
+  assert.equal(api(blocked).getState().analytics, false);
+  const next = harness({ config: readyConfig(), sharedValues: values });
+  assert.deepEqual(plain(api(next).getState()), {
+    policyVersion: '2026-10-21', analytics: false, marketing: false, expiresAt: null,
+    persistence: 'none', runtimeEnabled: true, reloadRequired: false,
+  });
+  assert.equal(values.get(KEY), saved({ marketing: true }));
+  assert.deepEqual(blocked.storage.operations, []); assert.deepEqual(next.storage.operations, []);
+  assert.equal(next.requests.length, 0);
+});
+
+// Break caught: loaded emitters send after denial, reload before notification, or reload twice.
+test('loaded_withdrawal_denies_and_notifies_before_one_clean_reload', async () => {
+  const h = harness({ config: readyConfig() }); accept(h);
+  await h.loadSdk('ga4'); await h.loadSdk('meta');
+  h.click(h.anchor());
+  let notices = 0;
+  h.window.addEventListener('partnerhub:business-consent-change', ({ detail }) => {
+    if (!detail.reloadRequired) return;
+    assert.equal(detail.analytics, false); assert.equal(detail.marketing, false);
+    if (notices++ === 0) assert.equal(h.requests.filter((r) => r.kind === 'reload').length, 0);
+    h.click(h.anchor());
+  });
+  api(h).withdraw(); api(h).withdraw(); accept(h);
+  h.window.dispatchEvent({ type: 'pageshow', persisted: true });
+  assert.equal(h.requests.filter((r) => r.kind === 'reload').length, 1);
+  assert.equal(events(h, 'click_cta').length, 1); assert.equal(events(h, 'WhatsAppClick').length, 1);
+  assert.equal(h.window['ga-disable-G-TEST12345'], true);
+  assert.deepEqual(plain(h.sdkCalls.at(-1).args), ['consent', 'revoke']);
+});
+
+// Break caught: category reduction retains a live adapter or delays invalidating its pending onload.
+test('category_reduction_quarantines_both_providers_and_broadcasts_only_denial', async () => {
+  for (const loaded of [false, true]) {
+    const h = harness({ config: readyConfig(), broadcastHub: new Set() }); accept(h);
+    if (loaded) { await h.loadSdk('ga4'); await h.loadSdk('meta'); }
+    const state = accept(h, { analytics: true, marketing: false });
+    assert.equal(state.analytics, false); assert.equal(state.marketing, false);
+    assert.equal(state.reloadRequired, true);
+    await h.loadSdk('ga4'); await h.loadSdk('meta'); h.click(h.anchor());
+    assert.equal(events(h, 'click_cta').length, 0);
+    assert.equal(events(h, 'page_view').length, loaded ? 1 : 0);
+    assert.equal(h.requests.filter((r) => r.kind === 'reload').length, 1);
+    assert.deepEqual(plain(h.channels[0].messages), [{ version: 1, action: 'withdraw' }]);
+  }
+});
+
+// Break caught: initial pageshow erases a choice or BFCache restore reuses a prior grant.
+test('bfcache_restore_resets_choice_but_normal_pageshow_does_not', async () => {
+  for (const ready of [false, true]) {
+    const h = harness({ config: ready ? readyConfig() : businessConfig() }); accept(h);
+    h.window.dispatchEvent({ type: 'pageshow', persisted: false });
+    assert.equal(api(h).getState().analytics, true);
+    h.window.dispatchEvent({ type: 'pageshow', persisted: true });
+    const state = api(h).getState();
+    assert.equal(state.analytics, false); assert.equal(state.marketing, false);
+    assert.equal(state.expiresAt, null); assert.equal(state.persistence, 'none');
+    assert.equal(state.reloadRequired, ready);
+    assert.equal(h.requests.filter((r) => r.kind === 'reload').length, ready ? 1 : 0);
+    if (ready) {
+      await h.loadSdk('ga4'); await h.loadSdk('meta');
+      assert.equal(events(h, 'page_view').length, 0); assert.equal(events(h, 'PageView').length, 0);
+    } else {
+      accept(h); assert.equal(api(h).getState().analytics, true, 'fresh choice after restore is allowed');
+    }
+  }
+});
+
+// Break caught: acceptance is broadcast, received denial echoes, or peers remain authorized.
+test('broadcast_withdrawal_revokes_other_tab_without_echo_or_grant', async () => {
+  const hub = new Set();
+  const source = harness({ config: readyConfig(), broadcastHub: hub });
+  const peer = harness({ config: readyConfig(), broadcastHub: hub });
+  accept(source); await source.flush();
+  assert.equal(api(peer).getState().analytics, false); assert.equal(peer.requests.length, 0);
+  assert.deepEqual(source.channels[0].messages, []);
+  accept(peer); await peer.loadSdk('ga4'); await peer.loadSdk('meta');
+  api(source).withdraw(); await source.flush();
+  assert.equal(api(peer).getState().analytics, false); assert.equal(api(peer).getState().marketing, false);
+  assert.equal(api(peer).getState().reloadRequired, true);
+  assert.equal(peer.requests.filter((r) => r.kind === 'reload').length, 1);
+  assert.deepEqual(peer.channels[0].messages, [], 'received denial must never echo');
+  assert.equal(source.channels[0].name, 'ph:business-consent:v1:fixture-business');
+  assert.deepEqual(plain(source.channels[0].messages), [{ version: 1, action: 'withdraw' }]);
+  peer.click(peer.anchor()); assert.equal(events(peer, 'click_cta').length, 0);
+});
+
+// Break caught: malformed/grant/extra/accessor messages reset state or grant a denied document.
+test('broadcast_requires_exact_revoke_message_and_never_grants', () => {
+  const h = harness({ broadcastHub: new Set() }); accept(h);
+  const invalid = [null, [], true, {}, { version: '1', action: 'withdraw' },
+    { version: 2, action: 'withdraw' }, { version: 1, action: 'grant' },
+    { version: 1, action: 'withdraw', analytics: true },
+    Object.assign(Object.create({ version: 1 }), { action: 'withdraw' }),
+    { version: 1, get action() { throw new Error('must not evaluate accessor'); } },
+    { version: 1, action: 'withdraw', [Symbol('extra')]: true }];
+  assert.equal(h.channels.length, 1);
+  for (const data of invalid) {
+    h.channels[0].onmessage({ data });
+    assert.equal(api(h).getState().analytics, true);
+  }
+  h.channels[0].onmessage({ data: { version: 1, action: 'withdraw' } });
+  assert.equal(api(h).getState().analytics, false); assert.equal(api(h).getState().marketing, false);
+  assert.equal(h.requests.length, 0); assert.deepEqual(h.channels[0].messages, []);
+  h.channels[0].onmessage({ data: { version: 1, action: 'grant', analytics: true, marketing: true } });
+  assert.equal(api(h).getState().analytics, false);
+});
+
+// Break caught: cross-site channel contamination or channel failures preventing local denial.
+test('channel_is_site_and_origin_scoped_and_failures_are_safe', async () => {
+  const hub = new Set();
+  const source = harness({ broadcastHub: hub });
+  const otherConfig = businessConfig(); otherConfig.site.id = 'other-business';
+  const other = harness({ config: otherConfig, broadcastHub: hub }); accept(other);
+  const otherOriginConfig = businessConfig();
+  otherOriginConfig.site.domain = 'elsewhere.example.test';
+  otherOriginConfig.businessMeasurement.expectedOrigin = 'https://elsewhere.example.test';
+  const otherOrigin = harness({ config: otherOriginConfig, origin: 'https://elsewhere.example.test', broadcastHub: hub });
+  accept(otherOrigin); api(source).withdraw(); await source.flush();
+  assert.equal(api(other).getState().analytics, true); assert.equal(api(otherOrigin).getState().analytics, true);
+  for (const channelError of [null, 'construct', 'post']) {
+    const h = harness({ config: readyConfig(), channelError });
+    assert.equal(api(h).getState().analytics, false); assert.equal(h.requests.length, 0);
+    accept(h); assert.equal(api(h).withdraw().analytics, false);
+    await h.loadSdk('ga4'); await h.loadSdk('meta');
+    assert.equal(events(h, 'page_view').length, 0);
+    assert.equal(h.requests.filter((r) => r.kind === 'reload').length, 1);
+  }
 });
