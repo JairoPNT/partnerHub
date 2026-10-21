@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import process from 'node:process';
@@ -11,7 +11,8 @@ import { createBusinessMeasurementPreparer, businessMeasurementPreparer } from '
 import { productPageGenerationService, productPageGenerationInputSchema } from './productPageGenerationService.ts';
 import { productPageSourceService } from './productPageSourceService.ts';
 import { partnerEcosystemEntitlementService } from './partnerEcosystemEntitlementService.ts';
-import { masterSitesBusinessPreviewService } from './masterSitesBusinessPreviewService.ts';
+import { createMasterSitesBusinessPreviewService, masterSitesBusinessPreviewService } from './masterSitesBusinessPreviewService.ts';
+import { resolveBusinessMeasurementAuthority } from './businessMeasurementAuthority.ts';
 import { activationLeadService } from './activationLeadService.ts';
 import { productPageHistoryService } from './productPageHistoryService.ts';
 import { businessProductHeroCorrelationService } from './businessProductHeroCorrelationService.ts';
@@ -24,7 +25,17 @@ const html = '<html><head><link href="styles.css" rel="stylesheet"></head><body>
 const app = 'window.fixtureApp = 1;'; const runtime = 'window.fixtureRuntime = 1;'; const css = 'body{color:black}';
 const sha = value => createHash('sha256').update(value).digest('hex');
 const artifact = { version: 1, indexHtmlSha256: sha(html), appJsSha256: sha(app), runtimeSha256: sha(runtime), stylesSha256: sha(css), providers: { ga4: true, meta: false } };
-function replace(t, object, key, value) { const previous = object[key]; object[key] = value; t.after(() => { object[key] = previous; }); }
+const originalMethods = new WeakMap();
+function replace(t, object, key, value) {
+  if (!originalMethods.has(t)) originalMethods.set(t, new Map());
+  const originals = originalMethods.get(t);
+  if (!originals.has(object)) originals.set(object, new Map());
+  if (!originals.get(object).has(key)) {
+    const previous = object[key]; originals.get(object).set(key, previous);
+    t.after(() => { object[key] = previous; });
+  }
+  object[key] = value;
+}
 const input = () => productPageGenerationInputSchema.parse({ ecosystemType: 'BUSINESS', site: { id: 'ana-business', domain: 'wrong.example', title: 'Fixture', metaDescription: 'Fixture description' }, distributor: { brandName: 'Fixture', firstName: 'Ana', fullName: 'Ana Fixture', whatsappNumber: '573100000001' }, hero: {}, analytics: { measurementId: 'G-ATTACKER' }, integrations: { meta: { pixelId: '9999999999' } } });
 const masterConfig = { ecosystemType: 'BUSINESS', site: { id: 'ganomaster-business' }, hero: { headline: 'Fixture', subheadline: 'Fixture' }, benefits: [{ title: 'Fixture', description: 'Fixture' }], comparison: { traditionalItems: ['A'], opportunityItems: ['B'] }, methodology: { steps: [{ title: 'Fixture', description: 'Fixture' }] }, faq: { items: [{ question: 'Fixture?', answer: 'Fixture' }] }, vsl: { provider: 'custom', embedUrl: 'https://media.example/video.mp4' }, analytics: { measurementId: 'G-MASTER' }, integrations: { meta: { pixelId: '8888888888' } }, businessMeasurement: { version: 1, expectedOrigin: 'https://forged.example', providers: { ga4: true, meta: true } } };
 
@@ -45,6 +56,7 @@ async function fixture(t, approved = true) {
   const authoritativeInput = input(); authoritativeInput.site.domain = 'negocio.ana.example'; authoritativeInput.analytics = { measurementId: 'G-ANAFIXTURE' }; authoritativeInput.integrations = { analytics: { provider: 'GA4', measurementId: 'G-ANAFIXTURE' }, meta: { pixelId: '1234500000' } };
   const snapshot = { activationLeadId: leadId, ownerKey: leadId, siteId: 'ana-business', publicHost: 'negocio.ana.example', lead: { id: leadId }, partner: { activationLeadId: leadId, siteId: 'ana-business', publicHost: 'negocio.ana.example', status: 'READY' }, entitlement: { activationLeadId: leadId, commercialState: 'KNOWN', includedEcosystems: ['BUSINESS'] }, input: authoritativeInput };
   replace(t, masterSitesBusinessPreviewService, 'getPartner', async id => { assert.equal(id, leadId); return snapshot; });
+  replace(t, masterSitesBusinessPreviewService, 'getMeasurementAuthoritySnapshot', async id => { assert.equal(id, leadId); return snapshot; });
   const config = async (siteId = 'ana-business') => JSON.parse(runInNewContext(`${await readFile(resolve(root, siteId, 'config.js'), 'utf8')}\nJSON.stringify(CONFIG)`));
   return { root, sources, master, snapshot, config, effects };
 }
@@ -123,6 +135,7 @@ test('source_master_and_http_cannot_override_release_policy', async t => {
 
 test('Business_master_never_resolves_partner_authority_and_disables_both_providers', async t => {
   const f = await fixture(t); replace(t, masterSitesBusinessPreviewService, 'getPartner', async () => { throw new Error('master must not resolve a partner'); });
+  replace(t, masterSitesBusinessPreviewService, 'getMeasurementAuthoritySnapshot', async () => { throw new Error('master must not resolve a partner'); });
   const canonical = resolve(f.root, 'templates', 'business'); await cp(f.master, canonical, { recursive: true });
   process.env.PRODUCT_PAGE_TEMPLATE_DIR = resolve(f.root, 'templates', 'producto');
   const value = input(); value.site = { ...value.site, id: 'ganomaster-business', domain: 'master.example' };
@@ -154,4 +167,63 @@ test('approved_generation_preserves_fresh_PR226_profile_and_contact_identity', a
   const config = await f.config(); const saved = await productPageSourceService.get('ana-business');
   assert.deepEqual(config.businessLandingContent, profile); assert.deepEqual(saved.businessLandingContent, profile);
   assert.equal(config.distributor.whatsappNumber, '573100000001'); assert.match(config.cta.primaryUrl, /^https:\/\/wa.me\/573100000001\?/);
+});
+
+async function runningAuthorityFixture(t) {
+  const f = await fixture(t);
+  const timestamp = '2026-10-21T12:00:00.000Z';
+  const state = { entitled: true, jobs: [] };
+  const job = {
+    schemaVersion: 1, id: sha('running-job'), intentHash: sha('running-job'),
+    intent: { schemaVersion: 1, operation: 'PUBLISH_PARTNER_ECOSYSTEM', ownerKey: leadId, ownerSiteId: 'ana', siteId: 'ana-business', ecosystemType: 'BUSINESS',
+      baseDomain: 'ana.example', publicHost: 'negocio.ana.example', sourceHash: sha('source'), targetHash: sha('target'), masterPackageHash: sha('master') },
+    status: 'RUNNING', phase: 'PREPARING_PACKAGE', revision: 2, attemptCount: 1,
+    requestedBySubjectHash: sha('operator'), createdAt: timestamp, updatedAt: timestamp, evidence: [],
+    lease: { tokenHash: sha('token'), workerHash: sha('worker'), acquiredAt: timestamp, expiresAt: '2026-10-21T12:05:00.000Z' }
+  };
+  state.jobs = [job];
+  const lead = { id: leadId, siteId: 'ana', status: 'PAID', recordState: 'ACTIVE', fullName: 'Ana Fixture', brandName: 'Fixture', whatsapp: '573100000001',
+    onboardingData: { domain: 'ana.example', analyticsMeasurementId: 'G-RUNNINGFIXTURE', metaPixelId: '1234500000' } };
+  const preview = createMasterSitesBusinessPreviewService({
+    listLeads: async () => [lead],
+    getEntitlement: async () => ({ activationLeadId: leadId, commercialState: 'KNOWN', includedEcosystems: state.entitled ? ['BUSINESS'] : [], existingTargets: [] }),
+    readTargets: async () => [], readJournals: async () => [], listJobs: async () => state.jobs,
+    readSources: async () => Promise.all((await readdir(f.sources)).filter(name => name.endsWith('.json')).map(async name => {
+      const bytes = await readFile(resolve(f.sources, name)); return { siteId: name.slice(0, -5), hash: sha(bytes), value: JSON.parse(bytes.toString()) };
+    })),
+    readMaster: async () => ({ revision: sha('master-revision'), packageHash: sha('master'), previewUrl: null, content: { hero: {}, vsl: { provider: 'custom', embedUrl: 'https://media.partnerhub.club/comunes/business/v1/vsl/business-vsl-fixture-v1.mp4' } } })
+  });
+  replace(t, masterSitesBusinessPreviewService, 'getMeasurementAuthoritySnapshot', preview.getMeasurementAuthoritySnapshot);
+  const saved = input(); saved.site.domain = 'negocio.ana.example'; saved.integrations.googleAds = { conversionId: 'AW-FIXTURE' }; await productPageSourceService.save(saved.site.id, saved);
+  return { ...f, preview, state, job, lead };
+}
+
+test('RUNNING_real_preview_snapshot_resolves_fresh_authority_and_regenerates_without_unlocking_UI', async t => {
+  const f = await runningAuthorityFixture(t);
+  const ui = await f.preview.getPartner(leadId); assert.equal(ui.partner.status, 'RUNNING'); assert.equal(ui.input, null);
+  assert.equal(ui.partner.canPublish, false); assert.equal(ui.partner.canPrepareTarget, false);
+  assert.deepEqual(await resolveBusinessMeasurementAuthority({ siteId: 'ana-business', activationLeadId: leadId }, { getPartner: f.preview.getMeasurementAuthoritySnapshot }), {
+    expectedOrigin: 'https://negocio.ana.example', ga4MeasurementId: 'G-RUNNINGFIXTURE', metaPixelId: '1234500000'
+  });
+  await productPageGenerationService.regenerateFromSavedSource('ana-business');
+  const config = await f.config(); assert.equal(config.analytics.measurementId, 'G-RUNNINGFIXTURE'); assert.equal(config.integrations.meta.pixelId, '1234500000');
+  assert.deepEqual(config.integrations.googleAds, { conversionId: 'AW-FIXTURE' });
+  const pinnedSource = await readFile(resolve(f.sources, 'ana-business.json'));
+  await productPageGenerationService.regenerateFromSavedSource('ana-business');
+  assert.deepEqual(await readFile(resolve(f.sources, 'ana-business.json')), pinnedSource, 'stable authority regeneration preserves source hash pins');
+  f.lead.onboardingData.analyticsMeasurementId = ''; f.lead.onboardingData.metaPixelId = '';
+  await productPageGenerationService.regenerateFromSavedSource('ana-business');
+  const disabled = await f.config(); assert.equal(disabled.analytics, undefined); assert.equal(disabled.integrations.meta, undefined);
+  assert.equal((await f.preview.getPartner(leadId)).input, null);
+});
+
+for (const reason of ['blocked', 'mismatched', 'ambiguous']) test(`RUNNING_real_preview_${reason}_rejects_before_source_package_or_history_mutation`, async t => {
+  const f = await runningAuthorityFixture(t);
+  if (reason === 'blocked') f.state.entitled = false;
+  if (reason === 'mismatched') f.state.jobs = [{ ...f.job, intent: { ...f.job.intent, ownerKey: '22222222-2222-4222-8222-222222222222' } }];
+  if (reason === 'ambiguous') f.state.jobs = [f.job, { ...f.job, id: sha('second-job'), intentHash: sha('second-job') }];
+  const directory = resolve(f.root, 'ana-business'); await mkdir(directory); const sentinel = resolve(directory, 'keep.txt'); await writeFile(sentinel, 'approved package');
+  const before = await readFile(resolve(f.sources, 'ana-business.json')); let history = 0; replace(t, productPageHistoryService, 'append', async () => { history++; });
+  await assert.rejects(productPageGenerationService.regenerateFromSavedSource('ana-business'), /BUSINESS_MEASUREMENT_AUTHORITY_INVALID/);
+  assert.deepEqual(await readFile(resolve(f.sources, 'ana-business.json')), before); assert.equal(await readFile(sentinel, 'utf8'), 'approved package'); assert.equal(history, 0);
 });

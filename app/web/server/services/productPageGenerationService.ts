@@ -407,7 +407,7 @@ export const productPageGenerationService = {
         ? await businessMeasurementPreparer.prepare(templateDirectory) : undefined;
       const authority = isPartnerBusiness
         ? await resolveBusinessMeasurementAuthority({ siteId: input.site.id, activationLeadId: entitlement!.activationLeadId },
-          { getPartner: (await import('@/server/services/masterSitesBusinessPreviewService')).masterSitesBusinessPreviewService.getPartner })
+          { getPartner: (await import('@/server/services/masterSitesBusinessPreviewService')).masterSitesBusinessPreviewService.getMeasurementAuthoritySnapshot })
         : undefined;
       const presentation = input.ecosystemType === "BUSINESS"
         ? await loadBusinessMasterContent(templateDirectory)
@@ -418,9 +418,11 @@ export const productPageGenerationService = {
         site: { ...composed.site, domain: new URL(authority.expectedOrigin).hostname },
         analytics: authority.ga4MeasurementId ? { measurementId: authority.ga4MeasurementId } : undefined,
         integrations: {
-          ...composed.integrations,
+          // Match the input schema's stable key order, including when a legacy
+          // source originally contained only Meta. Worker source pins are bytes.
           analytics: authority.ga4MeasurementId ? { provider: 'GA4' as const, measurementId: authority.ga4MeasurementId } : undefined,
-          meta: authority.metaPixelId ? { pixelId: authority.metaPixelId } : undefined
+          meta: authority.metaPixelId ? { pixelId: authority.metaPixelId } : undefined,
+          googleAds: composed.integrations?.googleAds
         }
       } : prepared ? {
         ...composed, analytics: undefined,
