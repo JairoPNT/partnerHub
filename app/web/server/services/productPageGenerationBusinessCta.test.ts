@@ -57,3 +57,25 @@ test("Product generation does not receive the Business CTA contract", () => {
 
   assert.equal("cta" in configuration, false);
 });
+
+const profile = { hero: { headline: 'Actividad independiente', subheadline: 'Decide con información.' }, benefits: [{ title: 'Apoyo', description: 'Resuelve tus dudas.' }], theme: { fontPreset: 'modern', palettePreset: 'indigo-lime' }, dedicationText: 'Requiere trabajo comercial.' };
+
+test('Business normalization preserves the validated landing profile without changing derived contact identity', () => {
+  const parsed = productPageGenerationInputSchema.parse({ ...source(), businessLandingContent: profile });
+  const configuration = normalizeProductPageGenerationConfiguration(parsed);
+  assert.deepEqual(configuration.businessLandingContent, profile);
+  assert.equal(configuration.distributor.whatsappNumber, '573188430283');
+  assert.match(configuration.cta!.primaryUrl, /^https:\/\/wa.me\/573188430283/);
+});
+
+test('Product and Personal Brand reject Business profiles and retain existing normalized output without one', () => {
+  for (const ecosystemType of ['PRODUCT', 'PERSONAL_BRAND']) {
+    const value = { ...source('PRODUCT'), ecosystemType };
+    assert.equal(productPageGenerationInputSchema.safeParse({ ...value, businessLandingContent: profile }).success, false);
+    const configuration = normalizeProductPageGenerationConfiguration(productPageGenerationInputSchema.parse(value));
+    assert.equal('businessLandingContent' in configuration, false);
+    assert.equal(configuration.hero.desktop, 'https://media.partnerhub.club/comunes/producto/v1/hero-desktop.webp');
+    assert.equal(configuration.hero.mobile, 'https://media.partnerhub.club/comunes/producto/v1/hero-mobile.webp');
+  }
+  assert.throws(() => normalizeProductPageGenerationConfiguration({ ...productPageGenerationInputSchema.parse(source('PRODUCT')), businessLandingContent: profile } as never));
+});

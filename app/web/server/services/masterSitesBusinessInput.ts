@@ -82,6 +82,7 @@ export function assembleMasterSitesBusinessInput(material: {
     },
     hero: source?.hero ?? {},
     cta: source?.cta,
+    ...(source?.businessLandingContent ? { businessLandingContent: source.businessLandingContent } : {}),
     // Only approved Business presentation, never master contacts, checkout, or tracking.
     vsl: {
       ...master.content.vsl,

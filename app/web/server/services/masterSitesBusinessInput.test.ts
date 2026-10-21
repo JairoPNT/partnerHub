@@ -55,6 +55,7 @@ test('builds_business_input_without_purchase_url_or_master_tracking', async () =
     await service.getPartner(lead.id)
   );
   assert.equal(input.ecosystemType, 'BUSINESS');
+  assert.equal(input.businessLandingContent, undefined);
   assert.equal(input.site.id, 'ana-business');
   assert.equal(input.site.domain, 'negocio.ana.pro');
   assert.equal(input.distributor.fullName, 'Ana Perez');
