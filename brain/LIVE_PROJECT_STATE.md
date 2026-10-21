@@ -4,6 +4,8 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Work checkpoint — 2026-10-21
 
+- Jairo approved consent contract PR #228 and requested technical planning. Plans/requests split generator (CDX-005), browser runtime (AGR-004), consent UI (AGR-005) and offline integration (CDX-006), with per-task independent review. Execution awaits plan review; no consent/measurement code or production publication is completed by these documents. The deleted periodic monitor remains deleted.
+
 - Jairo approved the Business landing-content contract and implementation plans. Backend `CDX-20261021-001` is implemented and independently reviewed (PR #226): guarded content GET/PUT, authoritative profile preservation and legacy bypass fixes. Final focused tests: 34 pass/1 Windows skip; build/global lint pass. Do not confuse backend integration with deploy verification or a public landing update.
 - `CDX-20261021-002` consent/measurement audit merged in PR #224. Main's Business generator injects Meta PageView without an identified consent gate; canonical GA4/CTA handlers are not proven installed. Runtime master/public event receipt was not inspected by this audit. Consent enforcement and tracking restoration need separately scoped work before claiming paid-traffic readiness.
 - `CDX-20261021-003` discovery and PH-044 clarification merged in PR #225: Analytics only monitors already-active campaigns/results; it never creates, edits, activates or pauses campaigns, budgets or bids. Reporting adapters and tenant/account bindings are not implemented by these documentation changes.
