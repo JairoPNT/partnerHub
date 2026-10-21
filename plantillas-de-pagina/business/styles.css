@@ -196,7 +196,17 @@ a {
   padding-bottom: 60px;
   text-align: center;
   position: relative;
-  background: linear-gradient(180deg, #070B12 0%, var(--bg-primary) 100%);
+  background-color: var(--bg-primary);
+  background-image: linear-gradient(180deg, rgba(7, 11, 18, 0.86) 0%, rgba(10, 14, 23, 0.94) 100%), var(--hero-desktop-bg, none);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    background-image: linear-gradient(180deg, rgba(7, 11, 18, 0.86) 0%, rgba(10, 14, 23, 0.94) 100%), var(--hero-mobile-bg, var(--hero-desktop-bg, none));
+  }
 }
 
 .hero-glow-bg {
@@ -1328,4 +1338,142 @@ a {
 
 .modal-body strong {
   color: var(--text-primary);
+}
+
+
+/* 15. Aviso Fijo de Transparencia de la Actividad Comercial */
+.model-transparency-box {
+  width: 100%;
+  background: rgba(15, 23, 42, 0.78);
+  border: 1px solid var(--border-focus);
+  border-radius: var(--radius-lg);
+  padding: 18px 22px;
+  margin-bottom: 18px;
+  text-align: left;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.28);
+}
+
+.transparency-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-title);
+  font-size: 12.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--accent-color);
+  margin-bottom: 12px;
+}
+
+.transparency-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.transparency-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.transparency-list li span {
+  flex: 1;
+}
+
+.transparency-list .check-icon {
+  flex-shrink: 0;
+  color: var(--accent-color);
+  margin-top: 3px;
+}
+
+.transparency-dedication {
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border-color);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.vsl-active-player {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  background: #000;
+  border: none;
+  z-index: 20;
+  border-radius: inherit;
+}
+
+/* 16. Dirección Visual Juvenil Azul, Lima y Blanco (Preset Oficial indigo-lime) */
+html[data-palette="indigo-lime"] {
+  --bg-primary: #07192B;
+  --bg-secondary: #0F2942;
+  --bg-surface: #163A5F;
+  --bg-surface-elevated: #1E4976;
+  --bg-card: rgba(15, 41, 66, 0.88);
+  --bg-glass: rgba(7, 25, 43, 0.88);
+  --text-primary: #FFFFFF;
+  --text-secondary: #E2E8F0;
+  --text-muted: #CBD5E1;
+  --accent-base: #0F2942;
+  --accent-color: #84CC16;
+  --accent-hover: #A3E635;
+  --border-color: rgba(255, 255, 255, 0.14);
+  --border-focus: rgba(132, 204, 22, 0.65);
+}
+
+html[data-palette="indigo-lime"] .model-transparency-box {
+  background: rgba(15, 41, 66, 0.88);
+  border-color: rgba(132, 204, 22, 0.6);
+}
+
+html[data-palette="indigo-lime"] .btn-primary-vsl {
+  background: linear-gradient(135deg, #84CC16 0%, #A3E635 100%);
+  color: #07192B;
+  font-weight: 700;
+}
+
+html[data-palette="indigo-lime"] .btn-secondary-vsl {
+  background: rgba(255, 255, 255, 0.08);
+  color: #FFFFFF;
+  border-color: rgba(255, 255, 255, 0.28);
+}
+
+@media (max-width: 640px) {
+  .model-transparency-box {
+    padding: 14px 16px;
+    margin-bottom: 14px;
+  }
+
+  .transparency-list li {
+    font-size: 13px;
+  }
+
+  .transparency-dedication {
+    font-size: 12.5px;
+  }
+}
+
+
+html,
+body,
+.hero-section {
+  overflow-x: hidden;
+}
+
+.hero-glow-bg {
+  max-width: 100vw;
 }

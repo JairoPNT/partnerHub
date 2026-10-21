@@ -54,7 +54,7 @@ test("Business generation and saved-source regeneration retain master content wi
     assert.equal(configuration.benefits?.[0]?.title, "Socio Comercial Sólido");
     assert.equal(configuration.methodology?.steps?.[0]?.title, "Consume y Conecta");
     assert.equal(configuration.faq?.items?.length, 4);
-    assert.equal(configuration.hero.headline, "Construye Libertad Financiera con un Hábito Diario");
+    assert.equal(configuration.hero.headline, "Desarrolla una Actividad de Venta Directa con Acompañamiento");
     assert.equal(configuration.vsl.embedUrl, "https://media.partnerhub.club/comunes/business/v2/vsl/business-vsl-pilot-v2.mp4");
     assert.equal(configuration.vsl.thumbnailUrl, "https://images.example/claudia-product.webp");
     assert.equal(configuration.site.id, "claudia-calero-business");
