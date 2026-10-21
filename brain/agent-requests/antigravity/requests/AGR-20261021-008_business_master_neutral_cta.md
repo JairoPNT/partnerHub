@@ -1,6 +1,6 @@
 # AGR-20261021-008 — Campo CTA neutro requerido por master Business
 
-Estado: PENDING, corrección de integración dentro de la entrega aprobada AGR005/CDX006. Owner: subagente Antigravity/frontend, tier balanced, revisión independiente.
+Estado: DONE (implementación local; pendiente revisión e integración por CDX006), corrección de integración dentro de la entrega aprobada AGR005/CDX006. Owner: subagente Antigravity/frontend, tier balanced, revisión independiente.
 
 - Outcome: canonical config compatible con el contrato existente del empaquetador, sin URL ni navegación de registro ficticia.
 - Evidence: CDX006 con bytes Git reales falla create `BUSINESS_CANONICAL_MASTER_CTA_NOT_EMPTY:directRegisterUrl` y refresh `BUSINESS_MASTER_PACKAGE_REFRESH_CANONICAL_CTA_NOT_EMPTY`. El campo NO existe en config actual; los guardas exigen exactamente cadena vacía, `undefined !== ''`. No hay URL real a sustituir.
