@@ -6,7 +6,7 @@ Date: 2026-10-21. Owner: Codex Backend Lead. Status: repository audit complete; 
 
 Audited source baseline `d74b2fb9872adf1a53dc2c2f2402d3cd1f92538b` (assigned origin/main baseline) in isolated branch `codex/CDX-20261021-002-business-consent-audit`. Read configuration, generation, canonical Business HTML/JS/CSS, managed Meta injection and relevant local tests. No source/runtime changes, generated sites, live account inspection, publication, provider calls, secrets or partner data were used. Fixture IDs only; no actual tracking IDs are reproduced.
 
-The approved design's statement that Business fires `click_cta` and `WhatsAppClick` is **not corroborated by this baseline's canonical template**. Historical reports are not runtime evidence. Analytics and Metrics remains monitoring-only for already-active campaigns; this audit does not operate campaigns.
+This audit checked a historical claim, present in the design version read at audit start, that Business fires `click_cta` and `WhatsAppClick`; it is **not corroborated by this baseline's canonical template**. The specification has since been corrected; this finding does not describe an error in its current version. Historical reports are not runtime evidence. Analytics and Metrics remains monitoring-only for already-active campaigns; this audit does not operate campaigns.
 
 ## Configuration → generated HTML → browser
 
