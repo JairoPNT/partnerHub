@@ -177,6 +177,7 @@ const CONFIG = {
     primaryUrl: '',
     secondaryText: 'Conocer la oportunidad',
     secondaryUrl: '',
+    directRegisterUrl: '',
     guaranteeText: 'Orientación informativa directa por WhatsApp · Sin compromiso',
     headerBtnText: 'Hablar por WhatsApp'
   },
