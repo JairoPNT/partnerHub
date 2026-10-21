@@ -196,7 +196,17 @@ a {
   padding-bottom: 60px;
   text-align: center;
   position: relative;
-  background: linear-gradient(180deg, #070B12 0%, var(--bg-primary) 100%);
+  background-color: var(--bg-primary);
+  background-image: linear-gradient(180deg, rgba(7, 11, 18, 0.86) 0%, rgba(10, 14, 23, 0.94) 100%), var(--hero-desktop-bg, none);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+
+@media (max-width: 768px) {
+  .hero-section {
+    background-image: linear-gradient(180deg, rgba(7, 11, 18, 0.86) 0%, rgba(10, 14, 23, 0.94) 100%), var(--hero-mobile-bg, var(--hero-desktop-bg, none));
+  }
 }
 
 .hero-glow-bg {

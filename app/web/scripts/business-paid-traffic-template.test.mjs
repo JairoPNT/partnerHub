@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import { runInNewContext } from "node:vm";
 import test from "node:test";
 
@@ -371,6 +372,13 @@ test("template renders safe generic defaults, fixed disclosure, WhatsApp CTAs, a
   runInNewContext(appJs, env.window, { timeout: 1000 });
   env.triggerDOMContentLoaded();
 
+  assert.doesNotMatch(
+    env.document.getElementById("heroDedicationText").textContent,
+    /\b\d+\s*horas/i,
+    "shared hero must not inherit a partner-specific weekly dedication from the FAQ"
+  );
+  assert.match(env.document.getElementById("faq-accordion").textContent, /Puedes empezar desde 2 horas semanales/);
+
   // 1. Mandatory near-CTA disclosure must remain visible and contain required elements
   const noticeBox = env.document.getElementById("heroModelNotice");
   assert.ok(noticeBox, "heroModelNotice must exist in DOM");
@@ -471,6 +479,7 @@ test("template renders Claudia's approved businessLandingContent profile (autono
 
   assert.equal(env.document.getElementById("heroHeadline").textContent, claudiaProfile.hero.headline);
   assert.equal(env.document.getElementById("heroSubheadline").textContent, claudiaProfile.hero.subheadline);
+  assert.equal(env.document.getElementById("heroDedicationText").textContent, claudiaProfile.dedicationText);
 
   const benefitsGrid = env.document.getElementById("benefits-grid");
   assert.equal(benefitsGrid.children.length, 3);
@@ -488,6 +497,100 @@ test("template renders Claudia's approved businessLandingContent profile (autono
     heroSection.getAttribute("data-hero-desktop-image"),
     "https://media.partnerhub.club/comunes/business/v1/hero-desktop.webp"
   );
+});
+
+// Catches the actual CSS-consumption bug, not merely the data attributes written by app.js.
+// Supply a local Playwright module path when it is not installed in this workspace.
+test("hero paints distinct approved profile images at desktop/mobile widths and retains readable fallback", async (t) => {
+  let chromium;
+  try {
+    ({ chromium } = await import(process.env.BUSINESS_TEMPLATE_PLAYWRIGHT_MODULE
+      ? pathToFileURL(process.env.BUSINESS_TEMPLATE_PLAYWRIGHT_MODULE).href
+      : "playwright"));
+  } catch (error) {
+    if (error.code !== "ERR_MODULE_NOT_FOUND") throw error;
+    t.skip("Set BUSINESS_TEMPLATE_PLAYWRIGHT_MODULE to run the computed-style browser regression");
+    return;
+  }
+  const { configJs, appJs, indexHtml, stylesCss } = await readTemplateFiles();
+  const desktop = "https://media.partnerhub.club/comunes/business/agr006/approved-desktop.webp";
+  const mobile = "https://media.partnerhub.club/comunes/business/agr006/approved-mobile.webp";
+  const cfg = {
+    ...loadMasterConfig(configJs),
+    businessLandingContent: { hero: { desktopImageUrl: desktop, mobileImageUrl: mobile } }
+  };
+  const browser = await chromium.launch({ headless: true, channel: process.env.BUSINESS_TEMPLATE_BROWSER_CHANNEL });
+  try {
+    await t.test("static hero is neutral before JavaScript runs", async () => {
+      const page = await browser.newPage({ javaScriptEnabled: false });
+      await page.route("**/*", (route) => route.request().url() === "https://business-template.test/"
+        ? route.fulfill({ contentType: "text/html", body: indexHtml })
+        : route.abort());
+      await page.goto("https://business-template.test/");
+      assert.doesNotMatch(await page.locator("#heroDedicationText").textContent(), /\b\d+\s*horas/i);
+      await page.close();
+    });
+    for (const [name, width, height, expected, other] of [
+      ["desktop", 1280, 900, desktop, mobile],
+      ["mobile", 390, 844, mobile, desktop]
+    ]) {
+      const page = await browser.newPage({ viewport: { width, height } });
+      const servedImages = [];
+      await page.route("**/*", async (route) => {
+        const url = route.request().url();
+        const files = {
+          "https://business-template.test/": ["text/html", indexHtml],
+          "https://business-template.test/styles.css": ["text/css", stylesCss],
+          "https://business-template.test/config.js": ["text/javascript", `window.CONFIG = ${JSON.stringify(cfg)};`],
+          "https://business-template.test/app.js": ["text/javascript", appJs]
+        };
+        if (files[url]) {
+          await route.fulfill({ contentType: files[url][0], body: files[url][1] });
+        } else if (url === desktop || url === mobile) {
+          servedImages.push(url);
+          await route.fulfill({ contentType: "image/svg+xml", body: `<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="1600"><rect width="100%" height="100%" fill="${url === desktop ? "#087f8c" : "#9b3049"}"/></svg>` });
+        } else {
+          await route.abort(); // Includes fonts, video, analytics: no external request can escape.
+        }
+      });
+      await page.goto("https://business-template.test/", { waitUntil: "networkidle" });
+      const painted = await page.locator("#hero-vsl").evaluate((hero) => {
+        const css = getComputedStyle(hero);
+        const notice = document.getElementById("heroModelNotice");
+        const vsl = document.getElementById("vsl-video-container");
+        return {
+          image: css.backgroundImage, size: css.backgroundSize, color: css.backgroundColor,
+          dedication: document.getElementById("heroDedicationText").textContent,
+          noticeVisible: notice.getBoundingClientRect().height > 0 && getComputedStyle(notice).display !== "none",
+          vslVisible: vsl.getBoundingClientRect().height > 0,
+          noOverflow: document.documentElement.scrollWidth <= innerWidth
+        };
+      });
+      assert.ok(painted.image.includes(expected), `${name}: actual background must consume selected profile URL; got ${painted.image}`);
+      assert.ok(!painted.image.includes(other), `${name}: must not paint the other crop`);
+      assert.ok(painted.image.includes("linear-gradient"), "foreground needs a persistent contrast overlay");
+      assert.ok(painted.size.includes("cover"));
+      assert.ok(servedImages.includes(expected), "the selected image must actually be requested and fulfilled");
+      assert.ok(painted.noticeVisible && painted.vslVisible && painted.noOverflow);
+      assert.doesNotMatch(painted.dedication, /\b\d+\s*horas/i);
+      if (process.env.BUSINESS_TEMPLATE_SCREENSHOT_DIR) {
+        await page.locator("#hero-vsl").screenshot({ path: resolve(process.env.BUSINESS_TEMPLATE_SCREENSHOT_DIR, `agr006-${name}.png`) });
+      }
+      // Failed media still leaves an opaque, readable surface; no real asset request is made.
+      await page.route("https://media.partnerhub.club/**", (route) => route.abort());
+      await page.reload({ waitUntil: "networkidle" });
+      const fallback = await page.locator("#hero-vsl").evaluate((hero) => ({
+        color: getComputedStyle(hero).backgroundColor,
+        image: getComputedStyle(hero).backgroundImage
+      }));
+      assert.notEqual(fallback.color, "rgba(0, 0, 0, 0)");
+      assert.match(fallback.image, /linear-gradient/);
+      t.diagnostic(`${name}: ${JSON.stringify(painted)}; failed-image fallback=${fallback.color}`);
+      await page.close();
+    }
+  } finally {
+    await browser.close();
+  }
 });
 
 test("template escapes HTML-like profile strings as literal text, rejects foreign media hosts, and falls back safely on malformed profile", async () => {

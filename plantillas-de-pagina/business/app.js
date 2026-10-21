@@ -14,7 +14,7 @@
   const DEFAULT_VSL_TITLE = 'Ver presentación de negocio';
   const DEFAULT_VSL_CAPTION = 'Presentación informativa · Activa el sonido para una mejor experiencia';
   const DEFAULT_DEDICATION_TEXT =
-    'Puedes empezar desde 2 horas semanales, con acompañamiento desde el inicio. La dedicación para desarrollar la actividad depende de tus objetivos y tareas; no garantiza resultados.';
+    'La dedicación para desarrollar la actividad depende de tus objetivos y tareas; no garantiza resultados.';
   const ALLOWED_CTA_LABELS = new Set(['Hablar por WhatsApp', 'Conocer la oportunidad']);
 
   const PROHIBITED_COPY_RE = new RegExp(
@@ -454,7 +454,8 @@
 
     const heroDedicationEl = document.getElementById('heroDedicationText');
     if (heroDedicationEl) {
-      heroDedicationEl.textContent = effectiveDedicationText;
+      // The shared hero must not inherit a partner-specific FAQ dedication.
+      heroDedicationEl.textContent = (profile && profile.dedicationText) || DEFAULT_DEDICATION_TEXT;
     }
 
     // 7. WhatsApp & CTA Links (Solo etiquetas de intención de WhatsApp y destino WhatsApp)
