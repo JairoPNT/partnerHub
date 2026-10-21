@@ -9,6 +9,7 @@ export function businessConfig() {
     site: { id: 'fixture-business', domain: 'negocio.example.test' },
     analytics: { measurementId: 'G-TEST12345' },
     integrations: { meta: { pixelId: '123456789012345' } },
+    distributor: { whatsappNumber: '573001112233', defaultMessage: 'PRIVATE_MESSAGE_SEED' },
     businessMeasurement: {
       version: 1, expectedOrigin: 'https://negocio.example.test',
       providers: { ga4: false, meta: false },
@@ -19,7 +20,7 @@ export function businessConfig() {
 // Only browser boundaries are faked: the consent code is always the real asset.
 export function createBusinessMeasurementHarness({
   config = businessConfig(), origin = 'https://negocio.example.test', stored,
-  now = 1792540800000, storageError = false, referrer = '',
+  now = 1792540800000, storageError = false, referrer = '', existing = {},
 } = {}) {
   const requests = [];
   const sdkCalls = [];
@@ -56,21 +57,43 @@ export function createBusinessMeasurementHarness({
   }
   let context;
   function element(tagName) {
-    return Object.assign(eventTarget(`element:${nextTimer++}`), {
-      tagName: tagName.toUpperCase(), children: [], textContent: '',
+    const node = Object.assign(eventTarget(`element:${nextTimer++}`), {
+      tagName: tagName.toUpperCase(), children: [], textContent: '', parentElement: null,
       setAttribute(name, value) { this[name] = String(value); },
       getAttribute(name) { return this[name] ?? null; },
       appendChild(child) {
+        child.parentElement = this;
         this.children.push(child);
-        if (child.src) requests.push({ kind: 'script', url: child.src, element: child });
+        if (child.src && child.tagName !== 'IMG') requests.push({
+          kind: child.tagName === 'SCRIPT' ? 'script' : 'element', url: child.src, element: child,
+        });
         else if (child.tagName === 'SCRIPT' && child.textContent) vm.runInContext(child.textContent, context);
         return child;
       },
+      closest(selector) {
+        let current = this;
+        while (current) {
+          if (selector === 'a' && current.tagName === 'A') return current;
+          if (selector === 'header' && current.tagName === 'HEADER') return current;
+          current = current.parentElement;
+        }
+        return null;
+      },
+      classList: { contains(name) { return name === 'bind-cta-primary'; } },
     });
+    if (node.tagName === 'IMG') {
+      let imageSource = '';
+      Object.defineProperty(node, 'src', { get() { return imageSource; }, set(url) {
+        imageSource = String(url); requests.push({ kind: 'image', url: imageSource, element: node });
+      } });
+    }
+    return node;
   }
   const document = Object.assign(eventTarget('document'), {
     referrer, readyState: 'complete', createElement: element,
-    querySelector() { return null; }, querySelectorAll() { return []; },
+    querySelector() { return null; }, querySelectorAll(selector) {
+      return selector === 'script[src]' ? document.head.children.filter((node) => node.src) : [];
+    },
     head: element('head'), body: element('body'),
   });
   const location = new URL(origin);
@@ -88,6 +111,7 @@ export function createBusinessMeasurementHarness({
     clearTimeout(id) { timers.delete(id); },
     CustomEvent: class { constructor(type, options = {}) { this.type = type; this.detail = options.detail; } },
   });
+  Object.assign(window, existing);
   window.window = window;
   class FixtureDate extends Date { static now() { return clock.now; } }
   context = vm.createContext({ ...window, window, document, URL, Date: FixtureDate });
@@ -100,6 +124,36 @@ export function createBusinessMeasurementHarness({
   if (existsSync(runtimePath)) vm.runInContext(readFileSync(runtimePath, 'utf8'), context, { filename: 'measurement-runtime.js' });
   return {
     window, document, clock, storage, requests, sdkCalls,
+    anchor(id = 'main-vsl-cta', href = 'https://wa.me/573001112233?text=PRIVATE_MESSAGE_SEED') {
+      const anchor = element('a'); anchor.id = id === 'header' ? '' : id; anchor.href = href;
+      const parent = element(id === 'header' ? 'header' : 'div'); parent.appendChild(anchor);
+      return anchor;
+    },
+    storageEvent(newValue, options = {}) {
+      if (newValue === null) values.delete(`ph:business-consent:v1:${config?.site?.id}`);
+      else values.set(`ph:business-consent:v1:${config?.site?.id}`, newValue);
+      window.dispatchEvent({ type: 'storage', key: `ph:business-consent:v1:${config?.site?.id}`,
+        newValue, storageArea: storage, ...options });
+    },
+    async loadSdk(provider, { error = false } = {}) {
+      const request = requests.find((item) => item.kind === 'script' && item.url.includes(
+        provider === 'ga4' ? 'googletagmanager.com' : 'connect.facebook.net'));
+      if (!request) throw new Error(`No ${provider} loader`);
+      await Promise.resolve();
+      if (error) { request.element.onerror?.(); return; }
+      // Fake only the remote transport: record arguments consumed by the real stubs.
+      if (provider === 'ga4' && window.dataLayer) {
+        for (const args of window.dataLayer) sdkCalls.push({ provider, args: Array.from(args) });
+        window.dataLayer.push = (args) => { sdkCalls.push({ provider, args: Array.from(args) }); return 1; };
+      }
+      if (provider === 'meta' && window.fbq) {
+        const queue = window.fbq.queue;
+        for (const args of queue) sdkCalls.push({ provider, args: Array.from(args) });
+        window.fbq.callMethod = (...args) => sdkCalls.push({ provider, args });
+        queue.length = 0;
+      }
+      request.element.onload?.();
+    },
     click(target, options = {}) {
       const event = { type: 'click', target, isTrusted: true, defaultPrevented: false,
         preventDefault() { this.defaultPrevented = true; }, ...options };
