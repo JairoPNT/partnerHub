@@ -905,7 +905,129 @@
     });
   }
 
+  function initBusinessConsentUI() {
+    const control = (name) => document.getElementById('business-consent-' + name);
+    const banner = control('banner');
+    const dialog = control('dialog');
+    if (!banner || !dialog || banner.getAttribute('data-consent-initialized') === 'true') return;
+    const accept = control('accept');
+    const reject = control('reject');
+    const configure = control('configure');
+    const reopen = control('reopen');
+    const analytics = control('analytics');
+    const marketing = control('marketing');
+    const save = control('save');
+    const cancel = control('cancel');
+    const withdraw = control('withdraw');
+    const status = control('status');
+    const bannerStatus = control('banner-status');
+    if (![accept, reject, configure, reopen, analytics, marketing, save, cancel, withdraw, status, bannerStatus].every(Boolean)) return;
+    banner.setAttribute('data-consent-initialized', 'true');
+    const unavailable = 'Las preferencias de medición no están disponibles. Puedes continuar navegando.';
+    let returnFocus = null;
+
+    function api() {
+      const value = window.PartnerHubBusinessConsent;
+      // Without change events this UI cannot safely discard externally revoked drafts.
+      if (typeof window.addEventListener !== 'function' || !value || typeof value.getState !== 'function' ||
+          typeof value.setConsent !== 'function' || typeof value.withdraw !== 'function') throw new Error('Consent unavailable');
+      return value;
+    }
+
+    function validState(value) {
+      if (!value || typeof value.analytics !== 'boolean' || typeof value.marketing !== 'boolean' ||
+          typeof value.runtimeEnabled !== 'boolean' || typeof value.reloadRequired !== 'boolean' ||
+          (value.persistence !== 'none' && value.persistence !== 'session') || value.expiresAt !== null ||
+          typeof value.policyVersion !== 'string') throw new Error('Invalid consent state');
+      return value;
+    }
+
+    function display(value, message) {
+      const available = !!value && value.runtimeEnabled;
+      const quarantined = available && value.reloadRequired;
+      analytics.checked = available && !quarantined ? value.analytics : false;
+      marketing.checked = available && !quarantined ? value.marketing : false;
+      [accept, reject, analytics, marketing, save].forEach((node) => { node.disabled = !available || quarantined; });
+      withdraw.disabled = !available;
+      banner.hidden = available && !quarantined && value.persistence === 'session';
+      const text = !available ? unavailable : quarantined
+        ? 'La medición está denegada. Se requiere una recarga limpia antes de elegir de nuevo.'
+        : message || '';
+      status.textContent = text;
+      bannerStatus.textContent = text;
+    }
+
+    function refresh() {
+      try {
+        const value = validState(api().getState());
+        display(value);
+        return value;
+      } catch (_) { display(null); return null; }
+    }
+
+    function close() {
+      if (dialog.open) dialog.close();
+    }
+
+    function open(invoker) {
+      returnFocus = invoker;
+      refresh();
+      try {
+        if (!dialog.open) dialog.showModal();
+        (analytics.disabled ? cancel : analytics).focus();
+      } catch (_) { display(null); }
+    }
+
+    function commit(choice) {
+      try {
+        const value = validState(api().setConsent(choice));
+        if (!value.runtimeEnabled || (!value.reloadRequired &&
+            (value.persistence !== 'session' || value.analytics !== choice.analytics || value.marketing !== choice.marketing))) {
+          throw new Error('Consent not confirmed');
+        }
+        display(value);
+        if (!value.reloadRequired) close();
+      } catch (_) { display(null); }
+    }
+
+    accept.addEventListener('click', () => commit({ analytics: true, marketing: true }));
+    reject.addEventListener('click', () => commit({ analytics: false, marketing: false }));
+    configure.addEventListener('click', () => open(configure));
+    reopen.addEventListener('click', () => open(reopen));
+    save.addEventListener('click', () => commit({ analytics: analytics.checked === true, marketing: marketing.checked === true }));
+    withdraw.addEventListener('click', () => {
+      try {
+        const value = validState(api().withdraw());
+        if (!value.runtimeEnabled || value.analytics || value.marketing || value.persistence !== 'session') throw new Error('Withdrawal not confirmed');
+        display(value, 'Consentimiento retirado para esta carga de la página.');
+      } catch (_) { display(null); }
+    });
+    cancel.addEventListener('click', close);
+    dialog.addEventListener('cancel', (event) => { event.preventDefault(); close(); });
+    dialog.addEventListener('click', (event) => { if (event.target === dialog) close(); });
+    dialog.addEventListener('close', () => {
+      refresh();
+      // A confirmed banner action may hide its invoker while preferences are open.
+      (returnFocus && !returnFocus.hidden && !banner.hidden ? returnFocus : reopen).focus();
+    });
+    dialog.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape') { event.preventDefault(); close(); }
+      if (event.key !== 'Tab') return;
+      const focusable = [analytics, marketing, save, cancel, withdraw].filter((node) => !node.disabled);
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
+    });
+    // Re-read the authority, not event.detail; external revocation also discards an open draft.
+    if (typeof window.addEventListener === 'function') {
+      window.addEventListener('partnerhub:business-consent-change', refresh);
+    }
+    refresh();
+  }
+
   document.addEventListener('DOMContentLoaded', function () {
+    initBusinessConsentUI();
     const config = window.CONFIG && typeof window.CONFIG === 'object' ? window.CONFIG : {};
     const profile = resolveValidatedProfile(config.businessLandingContent);
     applyTheme(config.theme, profile ? profile.theme : null);
