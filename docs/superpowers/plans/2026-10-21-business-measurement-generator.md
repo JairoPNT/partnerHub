@@ -30,6 +30,8 @@
 
 **Files:** Create `app/web/server/services/businessMeasurementHtml.ts`, `businessMeasurementHtml.test.ts`, `businessMeasurementArtifacts.ts`, `businessMeasurementAuthority.ts`, `businessMeasurementAuthority.test.ts`, `businessMeasurementGeneration.integration.test.mjs`. Modify `app/web/server/services/productPageGenerationService.ts`. No archivos de plantilla.
 
+**Corrección de interfaz durante revisión Task1 — 2026-10-21:** se permite modificar también `masterSitesBusinessPreviewService.ts` y su test acotado. El getPartner público oculta input con jobs activos, mientras el worker regenera en RUNNING. Añadir una lectura server-only de autoridad fresca que reutilice el ensamblador y mantenga rechazos BLOCKED/ownership; conservar getPartner público y sus gates sin cambios. Autoridad no puede usar fallback de body ni fuente sin validación. Revisión independiente de la corrección antes de Task2.
+
 **Interfaces:**
 - `BusinessMeasurementArtifact = {version:1,indexHtmlSha256:string,appJsSha256:string,runtimeSha256:string,stylesSha256:string,providers:{ga4:boolean,meta:boolean}}`; hashes hex64. Registry `APPROVED_BUSINESS_MEASUREMENT_ARTIFACTS: readonly BusinessMeasurementArtifact[]` vacío hasta integración; sin valores inventados ni canonical actual automáticamente confiado. Los flags solo se promueven con evidencia de controles del SDK, no por tener ID.
 - `createBusinessMeasurementPreparer({approvedArtifacts}): {prepare(templateDirectory:string):Promise<PreparedBusinessMeasurement>}`. `PreparedBusinessMeasurement = {artifactVersion:1,indexHtml:string,appJs:Buffer,runtimeJs:Buffer,stylesCss:Buffer,providers:{ga4:boolean,meta:boolean}}`. Tests inyectan registry fixture; producción usa solo el registry interno, nunca el request del cliente.
