@@ -1,5 +1,13 @@
 # CDX-20261021-004 — Checkpoint de ejecución del consentimiento Business
 
+## Actualización posterior — consentimiento por carga aprobado y runtime revisado
+
+Jairo aprobó sustituir el recuerdo de180 días por consentimiento nuevo en cada carga. Enmienda `docs/superpowers/specs/2026-10-21-business-fresh-consent-amendment.md`; el HOLD por decisión humana que figura abajo queda resuelto, conservado como historial.
+
+AGR007: código3382bc2, reporte6048acb y corrección finalda6a873. Revisión de tarea aprobada; revisión premium encontró retirada explícita sin broadcast durante cuarentena/recarga pendiente. La corrección y su regresión RED/GREEN fueron revisadas: hallazgo cerrado, sin nuevos Critical/Important. Controlador verificó33/33 runtime, cero skips, diff limpio. Componente listo para integrar; no release ni página lista para Ads.
+
+Siguiente: AGR005 UI con elección por carga, después CDX006 integración/browser interceptado y binding de artefactos. Mantener gates de proveedores/registry y autorización de cutover. No se publicaron fuentes/master/Claudia ni se habilitaron proveedores o eventos reales. Los resultados previos de lint/CTA/template/VSL pertenecen a la primera ola y no se presentan como browser/build del fix final. Warnings de loader/módulos quedan declarados como mantenimiento separado.
+
 Fecha: 2026-10-21. Estado global: PARCIAL / HOLD DE PRIVACIDAD. No equivale a DONE del release ni a página lista para Ads.
 
 ## Autoridad y aislamiento
