@@ -117,6 +117,64 @@ for (const operation of ['create', 'refresh']) test(`old_${operation}_authorizat
   assert.deepEqual(await snapshot(f.outputRoot), before);
 });
 
+// Changing the final read's bytes then restoring the template defeats a later
+// preview unless the captured template/package hashes are pinned to authorization.
+for (const operation of ['create', 'refresh']) test(`${operation}_rejects_final_capture_mutate_read_revert_before_staging`, async t => {
+  const f = await fixture(t, operation === 'refresh');
+  await mkdir(resolve(f.outputRoot, '.master-package-claims'));
+  const unrelated = resolve(f.outputRoot, 'unrelated-business');
+  await mkdir(unrelated); await writeFile(resolve(unrelated, 'index.html'), 'unrelated approved package');
+  const unrelatedJournal = resolve(f.outputRoot, '.master-package-audits/unrelated');
+  await mkdir(unrelatedJournal, { recursive: true });
+  await writeFile(resolve(unrelatedJournal, 'apply.json'), 'original journal bytes\n');
+  const before = await snapshot(f.outputRoot);
+  const script = operation === 'create' ? 'jairo-business-master-package.mjs' : 'jairo-business-master-package-drift-recovery.mjs';
+  const output = execFileSync(process.execPath, ['--input-type=module', '-e', `
+    import fs from 'node:fs/promises';
+    import { syncBuiltinESMExports } from 'node:module';
+    import { resolve } from 'node:path';
+    const cli = await import(${JSON.stringify(pathToFileURL(resolve(root, 'app/web/scripts', script)).href)});
+    const options = ${JSON.stringify(f.options)};
+    const runtimePath = resolve(options.templateDirectory, 'measurement-runtime.js');
+    const readFile = fs.readFile;
+    const mkdir = fs.mkdir;
+    const approved = await readFile(runtimePath);
+    const plan = await cli.${operation === 'create' ? 'planBusinessMasterPackage' : 'planBusinessMasterPackageRefresh'}(options);
+    if (plan.blocked) throw new Error(plan.blockedReasons.join(','));
+    let reads = 0; let injected = false; let stagingCreated = false; let result;
+    fs.mkdir = async (path, ...args) => {
+      if (String(path).includes('.staging')) stagingCreated = true;
+      return mkdir(path, ...args);
+    };
+    fs.readFile = async (path, ...args) => {
+      if (resolve(path) === runtimePath && ++reads === 3) {
+        await fs.writeFile(runtimePath, 'window.unreviewedCapturedRuntime = true;');
+        try {
+          const captured = await readFile(path, ...args);
+          injected = true;
+          return captured;
+        } finally { await fs.writeFile(runtimePath, approved); }
+      }
+      return readFile(path, ...args);
+    };
+    syncBuiltinESMExports();
+    try {
+      const applied = await cli.${operation === 'create' ? 'applyBusinessMasterPackage' : 'applyBusinessMasterPackageRefresh'}({ ...options, mode: cli.APPLY_MODE, confirmation: cli.APPLY_CONFIRMATION, expectedPlanHash: plan.planHash });
+      result = { outcome: applied.outcome };
+    } catch (error) { result = { outcome: 'REJECTED', error: error.message }; }
+    finally { fs.readFile = readFile; fs.mkdir = mkdir; syncBuiltinESMExports(); }
+    process.stdout.write(JSON.stringify({ ...result, injected, reads, stagingCreated, runtimeRestored: (await readFile(runtimePath)).equals(approved) }));
+  `], { encoding: 'utf8' });
+  const result = JSON.parse(output);
+  assert.equal(result.injected, true, 'probe must capture unreviewed bytes on the final (third) runtime read');
+  assert.equal(result.runtimeRestored, true, 'later previews would see only the reviewed template');
+  assert.equal(result.outcome, 'REJECTED', 'old authorization must not install the changed capture');
+  assert.equal(result.error, operation === 'create' ? 'BUSINESS_MASTER_PACKAGE_DRIFT_BEFORE_INSTALL' : 'BUSINESS_MASTER_PACKAGE_REFRESH_DRIFT_BEFORE_STAGE');
+  assert.equal(result.reads, 3, 'rejection must use the captured bytes, without another filesystem preview');
+  assert.equal(result.stagingCreated, false, 'unreviewed captured bytes must be rejected before staging');
+  assert.deepEqual(await snapshot(f.outputRoot), before, 'original packages, journals and output shape must survive rejection');
+});
+
 // Missing or non-regular runtime must reject before touching the old master or journals.
 for (const kind of ['missing', 'directory']) test(`missing_runtime_rejects_without_replacing_master_${kind}`, async t => {
   const f = await fixture(t, true); const preview = await planBusinessMasterPackageRefresh(f.options); const before = await snapshot(f.outputRoot);

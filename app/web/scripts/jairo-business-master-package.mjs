@@ -529,6 +529,10 @@ export async function applyBusinessMasterPackage(options = {}) {
     }
     const template = await loadCanonicalTemplate(paths.templateDirectory);
     const expected = buildExpectedPackage(template);
+    // Pin the buffers we will write, not just the earlier filesystem preview.
+    if (template.hash !== preview.planMaterial.canonicalTemplateHash || expected.hash !== preview.planMaterial.expectedPackageHash) {
+      throw new Error("BUSINESS_MASTER_PACKAGE_DRIFT_BEFORE_INSTALL");
+    }
     await assertOwner(paths.claimDirectory, owner);
     await mkdir(stageDirectory, { mode: 0o700 });
     stageCreated = true;

@@ -657,6 +657,10 @@ export async function applyBusinessMasterPackageRefresh(options = {}) {
     if (locked.blocked || locked.planHash !== preview.planHash) throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_DRIFT_AFTER_CLAIM");
     const template = await loadCanonicalTemplate(paths.templateDirectory);
     const expected = buildExpectedPackage(template);
+    // A mutate/capture/revert race can pass a later preview; pin captured bytes.
+    if (template.hash !== preview.planMaterial.canonicalTemplateHash || expected.hash !== preview.planMaterial.refreshedPackageHash) {
+      throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_DRIFT_BEFORE_STAGE");
+    }
     await assertClaimOwner(paths.claimDirectory, owner);
     await mkdir(stageDirectory, { mode: 0o700 });
     stageCreated = true;
