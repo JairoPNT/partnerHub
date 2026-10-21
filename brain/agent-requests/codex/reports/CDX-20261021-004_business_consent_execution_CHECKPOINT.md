@@ -27,7 +27,7 @@ Los reportes propios de CDX005 y AGR004/001/006/003 permanecen en sus ramas y de
 
 Se preguntó mediante consulta asíncrona si aprueba consentimiento nuevo por cada carga, sin restaurar aceptaciones guardadas, para el piloto. Esto sustituiría el recuerdo de aceptación de180d. Alternativa: conservar180d y mantener medición bloqueada mientras se rediseña. No se ha asumido respuesta.
 
-Una preferencia negativa por pestaña podría mejorar casos parciales, pero no resuelve todos los fallos de almacenamiento/reaparición en otras pestañas. No se implementó ese fallback como si cumpliera la promesa original. Sin la decisión, AGR004 Task2 sigue NO APROBADA, AGR005 UI e integración CDX006 detenidas; flags reales de proveedores false.
+Una preferencia negativa por pestaña podría mejorar casos parciales, pero no resuelve todos los fallos de almacenamiento/reaparición en otras pestañas. No se implementó ese fallback como si cumpliera la promesa original. Sin la decisión, AGR004 Task2 sigue NO APROBADA, AGR005 UI e integración CDX006 detenidas; no iniciar AGR005 UI ni siquiera con fixtures. Solo permanecen false los flags propuestos del release aún no activado; la verificación pública está NOT_RUN y el etiquetado Meta heredado de la página pública no fue inspeccionado ni desactivado en esta ejecución.
 
 ## Gates que faltan
 

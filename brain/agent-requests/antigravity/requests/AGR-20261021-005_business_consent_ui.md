@@ -1,12 +1,12 @@
 # AGR-20261021-005 — Aviso y preferencias de consentimiento Business
 
-Estado: contrato y plan técnico PR #229 aprobados por Jairo el 2026-10-21. Implementación autorizada; esperar AGR-001/003 terminados y revisados para resolver dependencias de archivos.
+Estado: contrato y plan técnico PR #229 aprobados por Jairo el 2026-10-21. EJECUCIÓN EN HOLD: no iniciar implementación UI, ni siquiera con fixtures, hasta que Jairo resuelva la enmienda de privacidad pendiente y se completen/revisen las dependencias indicadas. La aprobación previa del contrato/plan no aprueba esa enmienda.
 
 - Owner: Antigravity. Outcome: elegir/rechazar categorías y reabrir/retirar sin bloquear contacto o contenido.
 - Plan: `docs/superpowers/plans/2026-10-21-business-consent-ui.md`; contrato común: `2026-10-21-business-consent-delivery.md` en la misma carpeta; spec de consentimiento aprobado.
 - Allowed: `plantillas-de-pagina/business/index.html`, `app.js`, `styles.css`, nuevo `consent-ui.test.mjs`; request/reporte propios.
 - Excluded: measurement-runtime.js y su harness/tests, config.js/FAQ/copy de campaña fuera de privacidad, backend/API/auth, fuentes de partner, proveedores, publicación y otros ecosistemas.
-- Dependencies: AGR-001 y AGR-003 terminados/revisados antes de tocar sus archivos. API AGR-004 congelada; UI puede avanzar con fixture de esa API mientras AGR-004 trabaja sus archivos propios.
+- Dependencies: AGR-001 y AGR-003 terminados/revisados antes de tocar sus archivos. Además, mantener toda implementación UI en HOLD hasta que Jairo decida la enmienda de privacidad pendiente; no avanzar con fixtures de API ni de otro tipo mientras esté pendiente. La API AGR-004 congelada no levanta este hold.
 - Parallel-safe with: CDX-005, AGR-004 y AGR-002; NO con AGR-001/003 ni otro owner de app/index/styles.
 - Gate de revisión actualizado: AGR-001 bb2f3c7 requiere follow-up AGR-006 antes de AGR-003 y este request. Esperar sus correcciones/revisiones; no mezclar fixes de contenido en consentimiento.
 - Contract: solo getState/setConsent/withdraw y evento local; no localStorage/SDK/emisor propios. Aceptar/rechazar/configurar con peso equivalente; toggles inicialmente off. Cerrar/cancelar no acepta. No sugerir que aceptar es condición para WhatsApp o video.
