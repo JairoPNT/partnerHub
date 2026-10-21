@@ -17,7 +17,7 @@ export const DEFAULT_ECOSYSTEM_TYPE: EcosystemType = "PRODUCT";
 
 export const MASTER_SITE_DOMAINS: Record<EcosystemType, string> = {
   PRODUCT: "product.ganomaster.pro",
-  BUSINESS: "business.ganomaster.pro",
+  BUSINESS: "negocio.ganomaster.pro",
   PERSONAL_BRAND: "brand.ganomaster.pro"
 };
 

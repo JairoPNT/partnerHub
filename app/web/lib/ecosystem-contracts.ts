@@ -29,13 +29,13 @@ export const SHOWCASE_DOMAIN = "ganomaster.pro";
 
 export const MASTER_SITE_DOMAINS: Record<EcosystemType, string> = {
   PRODUCT: "product.ganomaster.pro",
-  BUSINESS: "business.ganomaster.pro",
+  BUSINESS: "negocio.ganomaster.pro",
   PERSONAL_BRAND: "brand.ganomaster.pro"
 };
 
 export const CANONICAL_URLS: Record<EcosystemType | "SHOWCASE", string> = {
   PRODUCT: "https://product.ganomaster.pro",
-  BUSINESS: "https://business.ganomaster.pro",
+  BUSINESS: "https://negocio.ganomaster.pro",
   PERSONAL_BRAND: "https://brand.ganomaster.pro",
   SHOWCASE: "https://ganomaster.pro"
 };
