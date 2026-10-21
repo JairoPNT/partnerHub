@@ -1,6 +1,6 @@
 # CDX-20261021-001 — Perfil de contenido Business por partner
 
-Estado: aprobado para implementación por Jairo el 2026-10-21; respeta docs/superpowers/specs/2026-10-21-business-paid-traffic-readiness-design.md.
+Estado: backend implementado y revisión independiente aprobada el 2026-10-21. PR #226 y reporte `brain/agent-requests/codex/reports/CDX-20261021-001_business_campaign_config_contract_DONE.md`. Sin publicación de sitios; plantilla/editor y consentimiento/medición permanecen separados. Diseño aprobado: docs/superpowers/specs/2026-10-21-business-paid-traffic-readiness-design.md.
 
 - Owner: Codex Backend Lead.
 - Scope: resolver un único flujo backend: perfil `businessLandingContent` de landing Business site-scoped, editable solo por Super Admin, validado y propagado a la generación de ese mismo partner.

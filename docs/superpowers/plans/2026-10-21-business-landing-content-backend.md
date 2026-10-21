@@ -71,4 +71,3 @@
 - [ ] **Step 15: Add integration assertions** that generated Business configuration contains only that partner’s profile, the server-derived WhatsApp CTA remains intact, an absent profile uses the master fallback, and Product/Personal Brand inputs are unchanged.
 - [ ] **Step 16: Run the focused suite:** `node --experimental-strip-types --test shared/business-landing-content-contract.test.ts server/services/masterSitesBusinessContentService.test.ts server/services/masterSitesBusinessInput.test.ts server/services/masterSitesBusinessRoutes.test.ts server/services/productPageGenerationBusinessCta.test.ts` from `app/web`.
 - [ ] **Step 17: Run `npm run lint` and `npm run build` from `app/web`; inspect `git diff --check`; open a PR and report the exact files, tests, identity/security findings, and explicit no-publication status.**
-

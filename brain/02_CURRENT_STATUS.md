@@ -4,7 +4,7 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Work checkpoint — 2026-10-21
 
-Business landing-content implementation and review are in progress under `CDX-20261021-001`; this does not certify the updated Claudia landing as public. Antigravity template/editor requests `AGR-20261021-001` and `AGR-20261021-002` remain separate deliverables.
+Business landing-content backend `CDX-20261021-001` is implemented and independently reviewed (PR #226), including legacy ingress/preservation and fail-fast identity fixes. Final focused tests: 34 pass/1 Windows skip; build/global lint pass. This does not verify deployment or certify the updated Claudia landing as public. Antigravity template/editor requests `AGR-20261021-001` and `AGR-20261021-002` remain separate deliverables.
 
 Documentation audits merged: PR #224 records consent/measurement gaps in source without asserting live runtime behavior; PR #225 updates PH-044 to read-only monitoring of active campaigns and results, never campaign operations. Tracking consent/receipt and reporting-provider bindings are not yet established by these audits. No site publication, DNS/SFTP or advertising-account mutations were performed.
 

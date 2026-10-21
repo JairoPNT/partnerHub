@@ -1,6 +1,6 @@
 # CDX-20261021-001 — Perfil de contenido Business por partner
 
-Estado: implementación backend completada; pendiente revisión independiente e integración del controlador. No desplegado ni publicado.
+Estado: implementación backend completada y revisión independiente de seguridad aprobada el 2026-10-21. PR #226: https://github.com/JairoPNT/partnerHub/pull/226 (estado de integración en GitHub). Sin publicación de sitios ni verificación de deploy productivo en esta entrega.
 
 ## Follow-up de revisión independiente P1/P2
 
@@ -53,7 +53,7 @@ Estado: implementación backend completada; pendiente revisión independiente e 
 
 - Rama: `codex/CDX-20261021-001-business-paid-traffic-followups`.
 - Commit: el commit que incorpora este reporte; consultar `git log -1 -- brain/agent-requests/codex/reports/CDX-20261021-001_business_campaign_config_contract_DONE.md`.
-- PR: el controlador lo abrirá después de la revisión independiente. Este agente no hizo push ni abrió PR.
+- PR del controlador: #226. El implementador no hizo push ni abrió PR; el controlador integra después de la revisión independiente.
 - Evidencia local: `.local-secrets/sdd/CDX-20261021-001/task-1-report.md`, `focused-final.log`, `full-tests.log`, `baseline-failures.log`, `build-final.log` y `typecheck.log`.
 
 ## Riesgos y follow-up
@@ -63,4 +63,5 @@ Estado: implementación backend completada; pendiente revisión independiente e 
 - `npm ci --ignore-scripts` reportó 22 vulnerabilidades del lock existente (3 moderate, 18 high, 1 critical). No se actualizaron dependencias fuera de alcance.
 - Build mantiene avisos existentes de raíz con múltiples lockfiles y tracing dinámico de Next; Node test runner emite avisos experimentales/module type existentes.
 - El fallback neutro/renderizado del perfil, UI de edición, consentimiento y verificación pública pertenecen a sus tickets separados. Este backend no declara la landing lista para Ads.
-- Follow-up requerido: revisión independiente de seguridad/contrato y posterior integración con plantilla/UI; ninguna operación productiva autorizada aquí.
+- Revisión independiente final: Ready to merge Yes en `b5243f5`, tras cerrar P1/P2 y el guard de identidad antes de tocar paquetes. Verificación final: 35 tests, 34 pass, 0 fail, 1 skip Windows; build y lint global PASS. Las diez fallas amplias baseline no se presentan como suite verde.
+- Follow-up requerido: integración con plantilla/UI, consentimiento/medición y gates de runtime/publicación; ninguna publicación productiva autorizada aquí.

@@ -54,4 +54,3 @@
 - [ ] **Step 7: Run the template test** and `node --test scripts/business-master-runtime-packaging.test.mjs` from `app/web`; ensure checks pass without changing generated-site outputs.
 - [ ] **Step 8: Verify desktop/mobile in local preview** at 1280px and 390px widths; record VSL, disclosure, CTA, navigation, contrast, and overflow observations.
 - [ ] **Step 9: Run `npm run lint` and `npm run build` from `app/web`; inspect `git diff --check`; open a PR with no generation/publication/deploy action.**
-

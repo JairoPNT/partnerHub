@@ -49,4 +49,3 @@
 - [ ] **Step 3: Verify consent behavior by static trace**. If no consent gate exists, explicitly state that it is unverified/absent rather than inferring compliance from a privacy notice.
 - [ ] **Step 4: Write the DONE report** with exact evidence and a separate remediation request proposal if needed; change no source code.
 - [ ] **Step 5: Run `git diff --check` and verify the diff contains only the report and its completion metadata.**
-

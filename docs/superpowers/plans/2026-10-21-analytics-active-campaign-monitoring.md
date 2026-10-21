@@ -50,4 +50,3 @@
 - [ ] **Step 4: Draft the read-only requirements**: active campaigns only, source/platform, partner/site association, reporting window, last sync, provider-attributed conversion counts, and explicit no-write controls. Mark unavailable values and provider mapping as unknown.
 - [ ] **Step 5: Write the DONE report** with exact paths/lines, evidence limits, open decisions, and a separate follow-up proposal for read-only integration and UI; no code change.
 - [ ] **Step 6: Run `git diff --check` and verify only the request/report changed.**
-

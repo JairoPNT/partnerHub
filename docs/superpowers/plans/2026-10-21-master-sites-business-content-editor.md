@@ -52,4 +52,3 @@
 - [ ] **Step 6: Integrate the component into the Business Master Sites management surface**. Do not add a campaign creation/action panel and do not conflate “guardar” with the separate existing prepare/publish actions.
 - [ ] **Step 7: Run helper tests, `npm run lint`, and `npm run build` from `app/web`; manually verify partner selection, saved revision, 409 conflict, 403 state, and 390px layout against a local mocked API.**
 - [ ] **Step 8: Inspect `git diff --check` and open the frontend-only PR, listing backend contract dependency and confirming no API, template, or external campaign files changed.**
-
