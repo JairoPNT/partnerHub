@@ -371,6 +371,8 @@ export const productPageGenerationService = {
     options?: ProductPageGenerationOptions
   ): Promise<ProductPageGenerationResult> {
     assertBusinessPublicationSiteIdentity(input.site.id, input.ecosystemType);
+    if (isBusinessPublicationSiteId(input.site.id) && input.ecosystemType !== 'BUSINESS')
+      throw new Error('BUSINESS_CONTENT_SOURCE_IDENTITY_INVALID');
     const action = async () => {
       // Input may be an old server snapshot or an HTTP body without the profile.
       // Re-read only this field under the same lock before composing config.js;

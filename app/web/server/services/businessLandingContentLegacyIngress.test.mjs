@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { cp, mkdir, readFile } from 'node:fs/promises';
+import { cp, mkdir, readFile, readdir, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { runInNewContext } from 'node:vm';
 import { test } from 'node:test';
@@ -93,4 +93,33 @@ test('a generic save cannot bypass Business profile authority by switching its e
   const before = await readFile(resolve(f.directory, 'ana-business.json'), 'utf8');
   await assert.rejects(f.sources.save('ana-business', { ...input, ecosystemType: 'PRODUCT' }), /BUSINESS_CONTENT_SOURCE_IDENTITY_INVALID/);
   assert.equal(await readFile(resolve(f.directory, 'ana-business.json'), 'utf8'), before);
+});
+
+test('generator rejects a non-Business ecosystem at a Business site before touching source or package bytes', async (t) => {
+  const f = await localGeneration(t);
+  await f.content.put({ activationLeadId: anaId, expectedRevision: (await f.content.get(anaId)).revision, profile });
+  // A usable Product master ensures the old code reaches destructive package
+  // replacement instead of failing earlier for an unrelated missing template.
+  await cp(resolve(f.root, 'ganomaster-business'), resolve(f.root, 'ganomaster'), { recursive: true });
+  const directory = resolve(f.root, 'ana-business'); await mkdir(directory);
+  await writeFile(resolve(directory, 'config.js'), 'const CONFIG = { existing: true };\n');
+  await writeFile(resolve(directory, 'keep.txt'), 'Existing approved package bytes.\n');
+  async function packageBytes(path) {
+    const files = {};
+    for (const entry of await readdir(path, { withFileTypes: true })) {
+      if (entry.isDirectory()) for (const [name, bytes] of Object.entries(await packageBytes(resolve(path, entry.name)))) files[`${entry.name}/${name}`] = bytes;
+      else files[entry.name] = await readFile(resolve(path, entry.name));
+    }
+    return files;
+  }
+  const sourceBefore = await readFile(resolve(f.directory, 'ana-business.json'));
+  const packageBefore = await packageBytes(directory);
+  let authorityReads = 0;
+  replaceForTest(t, partnerEcosystemEntitlementService, 'get', async () => { authorityReads++; return { activationLeadId: anaId, includedEcosystems: ['PRODUCT'] }; });
+  await assert.rejects(productPageGenerationService.generate({ ...f.input, ecosystemType: 'PRODUCT' }), /BUSINESS_CONTENT_SOURCE_IDENTITY_INVALID/);
+  assert.equal(authorityReads, 0);
+  assert.deepEqual(await readFile(resolve(f.directory, 'ana-business.json')), sourceBefore);
+  const packageAfter = await packageBytes(directory);
+  assert.deepEqual(Object.keys(packageAfter).sort(), Object.keys(packageBefore).sort());
+  for (const name of Object.keys(packageBefore)) assert.equal(packageAfter[name].equals(packageBefore[name]), true, name);
 });

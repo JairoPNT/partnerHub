@@ -12,6 +12,12 @@ Estado: implementación backend completada; pendiente revisión independiente e 
 - Archivos adicionales autorizados: los dos ingress legacy y `app/web/server/services/businessLandingContentLegacyIngress.test.mjs`. Request ampliado únicamente para este hallazgo.
 - Evidencia: `followup-red.log`, `followup-ecosystem-red.log`, `followup-green.log`, `followup-affected.log`, `followup-build.log`, `followup-lint.log` en el scratch del ticket. Revisión original: `final-review.md`.
 
+### Rechazo de identidad antes de modificar el paquete
+
+- La revisión focal detectó que `generate` con site Business y `ecosystemType: PRODUCT` llegaba a reemplazar el paquete antes del rechazo tardío en `save`. Se agregó el mismo rechazo de identidad al inicio de `generate`, antes de locks, colaboradores o filesystem.
+- Regresión con generador real: RED confirmó cambios del árbol del paquete y eliminación de `keep.txt`; GREEN conserva bytes de fuente y todos los archivos del paquete e invoca cero lecturas de entitlement.
+- Verificación focal final: 35 tests, 34 pass, 0 fail, 1 skip Windows. Build de producción y lint global: PASS. Evidencia `identity-entry-{red,green,build,lint}.log`. Solo dos líneas productivas, test y reportes; sin ampliación de alcance.
+
 ## Resultado
 
 - Contrato estricto `BusinessLandingContent`: límites aprobados, presets oficiales, texto sin HTML, rechazo de claims conocidos y URLs canónicas bajo `https://media.partnerhub.club/comunes/business/`.
