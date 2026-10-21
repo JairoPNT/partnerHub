@@ -1,6 +1,6 @@
 # AGR-20261021-004 — Runtime de consentimiento y medición Business
 
-Estado: contrato aprobado el 2026-10-21; plan técnico preparado, pendiente revisión de Jairo. No implementar todavía.
+Estado: contrato y plan técnico PR #229 aprobados por Jairo el 2026-10-21. Runtime asignado a subagente en rol Antigravity/frontend; revisión independiente por tarea, sin publicación.
 
 - Owner: Antigravity. Tier balanced y revisión independiente de seguridad antes de integrar.
 - Outcome: runtime único de navegador, default deny, persistencia 180 días, retirada y clic WhatsApp sin PII propia ni conversiones ficticias.

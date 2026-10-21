@@ -1,6 +1,6 @@
 # CDX-20261021-005 — Generador Business con consentimiento
 
-Estado: contrato aprobado por Jairo el 2026-10-21; plan técnico preparado y pendiente de revisión. No iniciar implementación antes de su aprobación.
+Estado: contrato y plan técnico PR #229 aprobados por Jairo el 2026-10-21. Implementación autorizada con subagentes y revisión por tarea; publicación productiva excluida.
 
 - Owner: Codex Backend Lead, subagente implementador por tarea y revisor independiente. Tier balanced para ingeniería; premium para revisión final de seguridad/integridad.
 - Outcome: paquete Business con asset aprobado, sin Meta heredado previo a consentimiento y con preflight anterior a escrituras.

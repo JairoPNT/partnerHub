@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- Este plan espera revisión de Jairo; no autoriza implementación por su mera existencia. Método previamente elegido: subagentes por tarea, revisión independiente y revisión final de seguridad. No volver a pedir elección de método.
+- Plan técnico del PR #229 aprobado explícitamente por Jairo el 2026-10-21. Implementación autorizada con subagentes por tarea, revisión independiente y revisión final de seguridad; no autoriza publicación productiva.
 - Codex no modifica plantilla/frontend; Antigravity no modifica servicios/backend. Cada ticket tiene rama/worktree, archivos propios y reporte DONE; no limpiar checkout raíz ni cambios ajenos.
 - Ambas categorías denegadas inicialmente; 180 días de preferencia local por sitio/origen. No SDK/ping/cola antes de aceptar; sin pixel noscript; preview nunca envía eventos reales.
 - GA4: page_view/click_cta. Meta: PageView/custom WhatsAppClick. Clic no es conversación, registro o venta. No Google Ads/GTM/CAPI ni cambios de cuentas/campañas/presupuesto.
@@ -53,7 +53,7 @@ Los PR de componentes no se fusionan individualmente a main si generan un estado
 
 ## Gate final y ejecución
 
-- [ ] Revisión/aprobación de estos planes por Jairo; después implementar con el método ya elegido.
+- [x] Revisión/aprobación del PR #229 por Jairo el 2026-10-21; implementar con el método ya elegido.
 - [ ] Revisión por tarea, fix/re-review de hallazgos y seguridad final antes de merge de código compatible.
 - [ ] Integración local con proveedores interceptados y evidencia por requisito; sin pruebas reales de WhatsApp/Ads/Analytics.
 - [ ] Preparar release/master cutover y solicitud de autorización productiva con hashes frescos; publicar y validar Claudia únicamente bajo ese gate. No se reactiva revisión periódica.
