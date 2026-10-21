@@ -14,16 +14,18 @@ const REFRESH_OPERATION = "REFRESH_CANONICAL_BUSINESS_MASTER_PACKAGE";
 const SITE_ID = "ganomaster-business";
 const ECOSYSTEM_TYPE = "BUSINESS";
 const PUBLIC_HOST = "business.ganomaster.pro";
-const REQUIRED_TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "styles.css"];
+const REQUIRED_TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "measurement-runtime.js", "styles.css"];
 const PACKAGE_FILES = [".htaccess", ...REQUIRED_TEMPLATE_FILES, "manifest.json"];
 const LEGACY_PACKAGE_HASH = "e9a2f7339f80110ceb13f01499298a6e9caff2fb4ab2dffa7b35fb9f76f26a76";
 const LEGACY_TEMPLATE_HASH = "5aabc5e2a4402efd97ba8a6e33700e25ad338417143e6a84e97d5187d85a7e31";
-const LEGACY_MANIFEST_FILES = [...REQUIRED_TEMPLATE_FILES, ".htaccess", "tipografia/"];
-const LEGACY_ARCHIVE_FILES = [...PACKAGE_FILES].sort((left, right) => left.localeCompare(right));
+// Historical evidence is immutable and must not follow the current inventory.
+const LEGACY_TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "styles.css"];
+const LEGACY_MANIFEST_FILES = [...LEGACY_TEMPLATE_FILES, ".htaccess", "tipografia/"];
+const LEGACY_ARCHIVE_FILES = [".htaccess", ...LEGACY_TEMPLATE_FILES, "manifest.json"].sort((left, right) => left.localeCompare(right));
 const NO_CACHE_HTACCESS = `DirectoryIndex index.html
 
 <IfModule mod_headers.c>
-  <FilesMatch "^(index\\.html|config\\.js|app\\.js|styles\\.css|manifest\\.json)$">
+  <FilesMatch "^(index\\.html|config\\.js|measurement-runtime\\.js|app\\.js|styles\\.css|manifest\\.json)$">
     Header set Cache-Control "no-cache, must-revalidate"
     Header set Pragma "no-cache"
     Header set Expires "0"
@@ -134,7 +136,11 @@ async function loadCanonicalTemplate(templateDirectory) {
   const entries = [];
   const bytesByName = new Map();
   for (const name of REQUIRED_TEMPLATE_FILES) {
-    const bytes = await readFile(inside(templateDirectory, name));
+    const sourcePath = inside(templateDirectory, name);
+    if (!(await hasNoSymlinkComponents(templateDirectory, sourcePath))) throw new Error("BUSINESS_CANONICAL_TEMPLATE_FILE_INVALID");
+    const info = await lstat(sourcePath);
+    if (!info.isFile() || info.isSymbolicLink()) throw new Error("BUSINESS_CANONICAL_TEMPLATE_FILE_INVALID");
+    const bytes = await readFile(sourcePath);
     bytesByName.set(name, bytes);
     entries.push({ path: name, hash: sha256(bytes) });
   }
@@ -523,6 +529,10 @@ export async function applyBusinessMasterPackage(options = {}) {
     }
     const template = await loadCanonicalTemplate(paths.templateDirectory);
     const expected = buildExpectedPackage(template);
+    // Pin the buffers we will write, not just the earlier filesystem preview.
+    if (template.hash !== preview.planMaterial.canonicalTemplateHash || expected.hash !== preview.planMaterial.expectedPackageHash) {
+      throw new Error("BUSINESS_MASTER_PACKAGE_DRIFT_BEFORE_INSTALL");
+    }
     await assertOwner(paths.claimDirectory, owner);
     await mkdir(stageDirectory, { mode: 0o700 });
     stageCreated = true;
