@@ -1,12 +1,13 @@
 # CDX-20261021-005 — Generador Business con consentimiento
 
-Estado: implementación de Task 1 y Task 2 disponible en rama; Task 2 pendiente de revisión independiente. Ticket NO cerrado para release/integración. El sufijo DONE es la convención del protocolo, no una aprobación de activación.
+Estado: implementación de Task 1 y Task 2 disponible en rama. Revisión independiente inicial de Task 2 FAILED por carrera Important; fix round 1 implementado y verificado, pendiente re-review independiente. Ticket NO cerrado para release/integración. El sufijo DONE es la convención del protocolo, no una aprobación de activación.
 
 ## Alcance y commits
 
 - Owner: Codex Backend Lead. Rama: `codex/CDX-20261021-005-business-measurement-generator`.
 - Task 1: `a9064d7` (preflight/ensamblado) y `a8d547c` (autoridad server-only durante jobs activos); revisión independiente previa informada por el coordinador.
 - Task 2: `9188d6d7cd913ffb072e7ba2cbfa766bf7493750`, base `a8d547c1cf9d754573bf20eb5cc154a03f9f5c60`.
+- Task 2 fix round 1: `1b7155e5bec8a7748085dff4e9c1e1f79d564c54` (pin de captura final; dos regresiones deterministas).
 - Sin push, PR, merge, datos reales, APPLY real, proveedores, DNS, SFTP ni publicación. El coordinador gestiona revisión e integración.
 
 ## Resultado Task 2
@@ -45,8 +46,18 @@ Logs completos del coordinador en `.local-secrets/sdd/CDX-20261021-004-execution
 ## Revisión propia, límites y gates pendientes
 
 - Self-review: inventarios históricos congelados, journals y allowlist sin cambios; helper importado solo desde tests; sin frontend/Docker/package/lock ni aprobaciones reales. TDD y verificación guiaron cambios y correcciones.
-- Observación elevada al coordinador para revisión independiente: los CLIs heredados releen el template tras preview/recheck. La creación no compara explícitamente el hash de esa captura final contra el preview autorizado; refresh vuelve a hacer preview antes de archivar, pero una carrera mutate/revert merece revisión. No se afirma protección completa contra esa carrera en este reporte.
+- La revisión independiente confirmó como Important la carrera de recaptura: create y refresh podían devolver APPLIED con bytes no autorizados bajo el planHash anterior. Su antigüedad no la excusa. Fix round 1 compara el hash de template capturado Y del paquete construido con el preview autorizado antes de staging/archive/reemplazo; la escritura sigue usando esos buffers capturados.
 - No se probó Linux/contenedor (engine ausente) ni symlinks Windows. Sí se probaron archivos regulares frente a directorio/runtime ausente. Node20 Windows staging no acredita Docker/Linux ni runtime de navegador real.
 - Runtime/UI finales y hashes aprobados pertenecen a AGR-004/005 + CDX-006. No se copiaron assets de sus ramas. La generación productiva sigue fail-closed con registry vacío.
 - El refresh mantiene exclusivamente el paquete histórico allowlisted y request IDs existentes. No se autorizó migrar el master persistente V2 ni reutilizar su journal/preview: requiere gate independiente y hashes frescos en integración.
 - Pendientes: revisión independiente Task 2 y resolución de hallazgos, revisión final de seguridad, integración compatible, navegador offline y autorización separada para cualquier cutover/publicación. No hay certificación legal ni recepción externa de eventos.
+
+## Fix round 1 — evidencia posterior a revisión FAILED
+
+- Scope: solo los dos CLIs owned y `scripts/business-measurement-packaging.test.mjs`, más estos reportes/request. Sin seam, ENV ni hook nuevo en producción.
+- Tests `create_rejects_final_capture_mutate_read_revert_before_staging` y `refresh_rejects_final_capture_mutate_read_revert_before_staging`: subprocess aislado Node20 intercepta la tercera lectura real del runtime, cambia bytes en el fixture, captura y restaura antes de devolver. Comprueban rechazo con tres lecturas, cero staging y árbol completo de paquetes/journals originales sin cambios.
+- RED Node20: comando `--test --test-name-pattern='final_capture_mutate_read_revert' scripts/business-measurement-packaging.test.mjs`; ambos tests fallaron con APPLIED en vez de REJECTED (2 fail; 7 casos no seleccionados, no éxito de suite).
+- GREEN Node20: mismo comando completo de cuatro archivos de packaging indicado arriba, 71/71 pass, cero skip, exit 0. Incluye runtime staging y compatibilidad histórica.
+- Integración relevante Node24: `node --conditions=react-server --experimental-strip-types --experimental-loader ./scripts/node-test-alias-loader.mjs --test scripts/business-master-package-drift-recovery.integration.test.mjs`: 1/1 pass.
+- `npm run lint` y `git diff --check`: exit 0. Build no repetido en este round exclusivamente `.mjs`; build y 155 regresiones anteriores son evidencia histórica, no una nueva ejecución después del fix.
+- Logs: `generator-task-2-fix1-{red,green,integration,lint}.log` en el scratch del coordinador. Self-review confirmó ambos pins antes de staging y conservación de buffers; re-review independiente pendiente, sin aprobación de release.
