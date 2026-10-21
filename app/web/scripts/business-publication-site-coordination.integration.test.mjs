@@ -15,6 +15,8 @@ import { partnerEcosystemEntitlementService } from "../server/services/partnerEc
 import { activationLeadService } from "../server/services/activationLeadService.ts";
 import { productPageHistoryService } from "../server/services/productPageHistoryService.ts";
 import { APPLY_MODE } from "./guarded-ecosystem-publication.mjs";
+import { prepareBusinessMeasurementFixture } from '../server/services/businessMeasurement.test-fixtures.ts';
+import { createMasterSitesBusinessPreviewService, masterSitesBusinessPreviewService } from '../server/services/masterSitesBusinessPreviewService.ts';
 
 const sha = (value) => createHash("sha256").update(value).digest("hex");
 
@@ -34,6 +36,7 @@ async function fixture(t) {
   process.env.PRODUCT_PAGE_OUTPUT_DIR = root;
   process.env.PRODUCT_PAGE_SOURCE_DIR = sourceDirectory;
   process.env.PRODUCT_PAGE_ACTIVATION_DIR = resolve(root, ".activation");
+  process.env.PRODUCT_PAGE_TEMPLATE_DIR = resolve('../../plantillas-de-pagina/producto');
   const input = productPageGenerationInputSchema.parse({
     ecosystemType: "BUSINESS",
     site: { id: siteId, domain: "negocio.clientone.pro", title: "Client Business", metaDescription: "Client Business presentation" },
@@ -43,7 +46,7 @@ async function fixture(t) {
   await writeFile(sourcePath, JSON.stringify(input));
   const target = { version: 2, ownerKey: "f403f29e-95c8-4825-9320-967376443020", siteId,
     ecosystemType: "BUSINESS", rootEcosystemType: "PERSONAL_BRAND", baseDomain: "clientone.pro",
-    publicHost: input.site.domain, remoteRoot: "/home/client/public_html/negocio", provisioningState: "READY", publicationState: "PENDING" };
+    publicHost: input.site.domain, remoteRoot: "/home/client/public_html/negocio", provisioningState: "READY", publicationState: "PENDING", dnsState: 'RESOLVED', sslState: 'READY' };
   await writeFile(resolve(sourceDirectory, ".publishing-targets", `${siteId}.json`), JSON.stringify(target));
   await mkdir(resolve(root, "ganomaster-business"));
   await writeFile(resolve(root, "ganomaster-business/index.html"), "master");
@@ -59,7 +62,16 @@ async function fixture(t) {
 async function prepareGeneration(t, fx) {
   await cp(resolve("../../plantillas-de-pagina/business"), resolve(fx.root, "ganomaster-business"), { recursive: true });
   await mkdir(resolve(fx.root, "ganomaster-business/tipografia"), { recursive: true });
+  await prepareBusinessMeasurementFixture(t, resolve(fx.root, 'ganomaster-business'));
+  const preview = createMasterSitesBusinessPreviewService({
+    listLeads: async () => [{ id: 'f403f29e-95c8-4825-9320-967376443020', siteId: 'client-one', status: 'PAID', recordState: 'ACTIVE', fullName: 'Client One', brandName: 'Client', whatsapp: '573001234567', onboardingData: { domain: 'clientone.pro' } }],
+    getEntitlement: async () => ({ activationLeadId: 'f403f29e-95c8-4825-9320-967376443020', commercialState: 'KNOWN', includedEcosystems: ['BUSINESS'], existingTargets: [] }),
+    listJobs: () => fx.jobs.list()
+  });
+  const snapshot = await preview.getMeasurementAuthoritySnapshot('f403f29e-95c8-4825-9320-967376443020');
+  assert.notEqual(snapshot.input, null, snapshot.partner.blockedReasons.join(','));
   const replacements = [
+    [masterSitesBusinessPreviewService, 'getMeasurementAuthoritySnapshot', preview.getMeasurementAuthoritySnapshot],
     [partnerEcosystemEntitlementService, "get", async () => ({ activationLeadId: "f403f29e-95c8-4825-9320-967376443020", includedEcosystems: ["BUSINESS"] })],
     [activationLeadService, "updatePublicationStateBySiteId", async () => null],
     [productPageHistoryService, "append", async () => undefined]

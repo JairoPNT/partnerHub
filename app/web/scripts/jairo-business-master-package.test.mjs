@@ -55,6 +55,7 @@ async function fixture() {
   await Promise.all([mkdir(outputRoot), mkdir(templateDirectory)]);
   await Promise.all([
     writeFile(resolve(templateDirectory, "app.js"), "app"),
+    writeFile(resolve(templateDirectory, "measurement-runtime.js"), "window.fixtureRuntime = true;"),
     writeFile(resolve(templateDirectory, "config.js"), canonicalConfig),
     writeFile(resolve(templateDirectory, "favicon.svg"), "<svg/>"),
     writeFile(resolve(templateDirectory, "index.html"), "<html></html>"),

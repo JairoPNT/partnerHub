@@ -16,6 +16,8 @@ import { businessProductHeroCorrelationService } from './businessProductHeroCorr
 import { publicationEventEnqueueService } from './publicationEventEnqueueService.ts';
 import { businessProductHeroPropagationService } from './businessProductHeroPropagationService.ts';
 import { withBusinessPublicationSite } from './businessPublicationSiteCoordinator.ts';
+import { prepareBusinessMeasurementFixture } from './businessMeasurement.test-fixtures.ts';
+import { masterSitesBusinessPreviewService } from './masterSitesBusinessPreviewService.ts';
 
 const request = (method, body) => new globalThis.Request('https://app.partnerhub.club/api/internal/product-pages/generate', { method,
   headers: { Origin: 'https://foreign.test', 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
@@ -31,6 +33,8 @@ async function localGeneration(t) {
   replaceForTest(t, businessProductHeroPropagationService, 'afterProductSourceChange', async () => ({ outcome: 'SKIPPED' }));
   const master = resolve(f.root, 'ganomaster-business');
   await cp(resolve('../../plantillas-de-pagina/business'), master, { recursive: true }); await mkdir(resolve(master, 'tipografia'), { recursive: true });
+  await prepareBusinessMeasurementFixture(t, master);
+  replaceForTest(t, masterSitesBusinessPreviewService, 'getMeasurementAuthoritySnapshot', f.preview.getMeasurementAuthoritySnapshot);
   const content = createMasterSitesBusinessContentService(f);
   const input = buildMasterSitesBusinessInput(await f.preview.getPartner(anaId));
   return { ...f, content, input, config: async () => JSON.parse(runInNewContext(`${await readFile(resolve(f.root, 'ana-business/config.js'), 'utf8')}\nJSON.stringify(CONFIG)`, {}, { timeout: 1000 })) };
