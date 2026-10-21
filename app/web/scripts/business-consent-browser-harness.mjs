@@ -24,9 +24,9 @@ export const reviewedArtifact = Object.freeze({
   indexHtmlSha256:
     '39c387e623e8bd030e504a0c38fb5b792f8b9783a1c96693a27b589dff83ccfb',
   appJsSha256:
-    'a8844b5d9daf89083adb55293bc16e7f558ccf9afd87aaa0f2926ad17375313b',
+    'fca1eb4fda4c7602ca1ab5448b81323b7b1af55ee2a3a2a537c85b2f625546de',
   runtimeSha256:
-    '497d0f954435101910ae6dee049feca65b44bd3050cb3e14b9c5640e70c07706',
+    '78db567bbd5e6ab30aa9e2402bfa421aa043a7bad11ea046d56ef79df0dccf42',
   stylesSha256:
     '302a738124f72f99973e041d8219f801ea748cdcf4380e07e5ac33612db25f59',
   providers: Object.freeze({ ga4: false, meta: false })

@@ -100,6 +100,43 @@ test('TEST FIXTURE ONLY: repeated accept/double init, trusted nested and keyboar
   assert.ok((await f.page.evaluate(() => window.__intentions)).length >= 4);
 });
 
+test('TEST FIXTURE ONLY: actual generated header CTA emits one minimal event per trusted click without replay', async (t) => {
+  const f = await openConsentFixture(t);
+  const header = f.page.locator('header #btnNavContact');
+  await header.click();
+  await assertNoTracking(f);
+  await f.page.locator('#business-consent-accept').click();
+  await f.page.waitForFunction(() =>
+    ['page_view', 'PageView'].every(name =>
+      window.__sdkLog.some(entry => entry.args.includes(name))
+    )
+  );
+  const clickEvents = async () => (await sdkEvents(f.page)).filter(entry =>
+    entry.args.includes('click_cta') || entry.args.includes('WhatsAppClick')
+  );
+  assert.deepEqual(await clickEvents(), [], 'pre-consent header click must not replay');
+  const actions = [
+    () => header.click(),
+    () => header.locator('#headerCtaText').click(),
+    async () => { await header.focus(); await f.page.keyboard.press('Enter'); }
+  ];
+  for (const [index, action] of actions.entries()) {
+    await action();
+    const events = await clickEvents();
+    for (const [provider, name] of [['ga4', 'click_cta'], ['meta', 'WhatsAppClick']]) {
+      const matching = events.filter(entry => entry.provider === provider && entry.args.includes(name));
+      assert.equal(matching.length, index + 1, `${provider}: exactly one header event per native activation`);
+      for (const event of matching) assert.deepEqual(event.args.at(-1), { placement: 'header', destination: 'whatsapp' });
+    }
+  }
+  const approvedEvents = await clickEvents();
+  await header.evaluate(anchor => anchor.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true })));
+  await header.evaluate(anchor => { anchor.href = 'https://wa.me/573100000099?text=unapproved'; });
+  await header.click();
+  assert.deepEqual(await clickEvents(), approvedEvents, 'synthetic events and wrong partner destinations must not count');
+  assert.doesNotMatch(JSON.stringify(approvedEvents), /573100000001|ana-seed|Ana Seed|SEED MESSAGE|wa\.me|@example/);
+});
+
 for (const storageFailure of [false, true])
   test(`new document/reload ignores legacy grants; storage failure=${storageFailure}`, async (t) => {
     const f = await openConsentFixture(t, {
@@ -221,6 +258,17 @@ test('persisted pageshow invalidates an open draft; real two-tab BroadcastChanne
     () => window.PartnerHubBusinessConsent.getState().reloadRequired
   );
   assert.equal((await state(peer)).analytics, false);
+  const assertQuarantineWithdrawalUI = async page => {
+    const current = await state(page);
+    assert.equal(current.persistence, 'none');
+    assert.equal(current.reloadRequired, true);
+    assert.equal(current.analytics, false);
+    assert.equal(current.marketing, false);
+    assert.match(await page.locator('#business-consent-status').textContent(), /recarga limpia/i);
+    assert.doesNotMatch(await page.locator('#business-consent-status').textContent(), /no est[aá]n disponibles/i);
+    assert.equal(await page.locator('#business-consent-withdraw').isDisabled(), false, 'valid denied quarantine must keep explicit withdrawal reachable');
+  };
+  await assertQuarantineWithdrawalUI(f.page);
   assert.deepEqual(await peer.evaluate(() => window.__channelPosts), []);
   assert.deepEqual(await f.page.evaluate(() => window.__channelPosts), [
     { version: 1, action: 'withdraw' }
@@ -232,6 +280,10 @@ test('persisted pageshow invalidates an open draft; real two-tab BroadcastChanne
     })
   );
   assert.equal((await state(peer)).analytics, false);
+  await peer.locator('#business-consent-reopen').click();
+  await assertQuarantineWithdrawalUI(peer);
+  await peer.locator('#business-consent-withdraw').click({ noWaitAfter: true });
+  await assertQuarantineWithdrawalUI(peer);
   t.diagnostic(
     'pageshow.persisted is browser-event simulation, not proof of native BFCache restoration; peer tabs/channel are native.'
   );
