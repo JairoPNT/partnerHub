@@ -2,6 +2,14 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
+## Work checkpoint — 2026-10-21
+
+- Jairo approved the Business landing-content contract and implementation plans. Backend `CDX-20261021-001` is being implemented/reviewed in its isolated worktree; do not confuse that work with a public landing deployment.
+- `CDX-20261021-002` consent/measurement audit merged in PR #224. Main's Business generator injects Meta PageView without an identified consent gate; canonical GA4/CTA handlers are not proven installed. Runtime master/public event receipt was not inspected by this audit. Consent enforcement and tracking restoration need separately scoped work before claiming paid-traffic readiness.
+- `CDX-20261021-003` discovery and PH-044 clarification merged in PR #225: Analytics only monitors already-active campaigns/results; it never creates, edits, activates or pauses campaigns, budgets or bids. Reporting adapters and tenant/account bindings are not implemented by these documentation changes.
+- Antigravity owns `AGR-20261021-001` (generic paid-traffic template) and `AGR-20261021-002` (Master Sites content editor). The first request contains verified findings on `cc73cff`: remove Claudia identity from the shared master, consume `businessLandingContent`, retain mandatory disclosure, and do not ship the Master style dock to partner pages. No new public-template verification is recorded here.
+- No DNS/SFTP, site publication, campaign/account changes or advertising spend in this checkpoint. The October 20 public check below remains historical evidence only.
+
 ## Live checkpoint — 2026-10-20
 
 - Completed: CDX-20261020-002, Claudia Business automatic publication.
