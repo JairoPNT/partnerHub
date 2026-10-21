@@ -9,7 +9,7 @@ const denied = { policyVersion: '2026-10-21', analytics: false, marketing: false
   expiresAt: null, persistence: 'none', runtimeEnabled: true, reloadRequired: false };
 
 // DOM and runtime are the boundaries; the controller is always the actual app.js.
-function fixture({ missing = false, noEvents = false, state: initial = {}, fail = '', result } = {}) {
+function fixture({ missing = false, noEvents = false, state: initial = {}, fail = '', result, withdrawResult } = {}) {
   const nodes = new Map(); const docListeners = new Map(); const winListeners = new Map();
   const calls = []; let state = { ...denied, ...initial }; let failure = fail;
   let document;
@@ -45,7 +45,7 @@ function fixture({ missing = false, noEvents = false, state: initial = {}, fail 
     },
     withdraw() {
       if (failure === 'withdraw') throw Error('unavailable');
-      calls.push({ method: 'withdraw' }); state = { ...state, analytics: false, marketing: false, persistence: 'session' };
+      calls.push({ method: 'withdraw' }); state = withdrawResult || { ...state, analytics: false, marketing: false, persistence: 'session' };
       emit(winListeners, 'partnerhub:business-consent-change'); return Object.freeze({ ...state });
     }
   });
@@ -118,6 +118,44 @@ test('reloadRequired prevents apparent regrant and preserves authoritative denie
 test('withdraw remains reachable from footer preferences', () => {
   const f = fixture(); f.get('accept').click(); f.get('reopen').click(); f.get('withdraw').click();
   assert.equal(f.calls.at(-1).method,'withdraw'); assert.equal(f.get('analytics').checked,false); assert.equal(f.get('marketing').checked,false);
+});
+
+test('quarantine withdrawal preserves clean-reload guidance and remains reachable without session persistence', () => {
+  const quarantined = { ...denied, reloadRequired: true };
+  const f = fixture({ withdrawResult: quarantined });
+  f.get('accept').click(); f.get('reopen').click();
+  f.change(quarantined);
+  const guidance = f.get('status').textContent;
+  assert.match(guidance, /recarga/i);
+  f.get('withdraw').click();
+  assert.deepEqual(f.current(), quarantined);
+  assert.equal(f.get('status').textContent, guidance);
+  assert.equal(f.get('banner-status').textContent, guidance);
+  assert.equal(f.get('withdraw').disabled, false);
+  assert.equal(f.get('banner').hidden, false);
+  assert.equal(f.get('dialog').open, true);
+  for (const name of ['analytics', 'marketing']) assert.equal(f.get(name).checked, false);
+  for (const name of ['accept', 'reject', 'analytics', 'marketing', 'save']) assert.equal(f.get(name).disabled, true);
+  f.get('withdraw').click();
+  assert.deepEqual(f.calls.slice(1), [{ method: 'withdraw' }, { method: 'withdraw' }]);
+});
+
+test('withdrawal still rejects disabled, positive, malformed and unconfirmed responses', () => {
+  for (const withdrawResult of [
+    { ...denied },
+    { ...denied, runtimeEnabled: false, reloadRequired: true },
+    { ...denied, analytics: true, reloadRequired: true },
+    { ...denied, marketing: true, reloadRequired: true },
+    { ...denied, analytics: 'false', reloadRequired: true },
+    { ...denied, reloadRequired: 'true' },
+    { ...denied, persistence: 'local', reloadRequired: true }
+  ]) {
+    const f = fixture({ withdrawResult }); f.open(); f.get('withdraw').click();
+    assert.match(f.get('status').textContent, /no están disponibles/);
+    assert.equal(f.get('withdraw').disabled, true);
+    assert.equal(f.get('analytics').checked, false); assert.equal(f.get('marketing').checked, false);
+    assert.equal(f.get('banner').hidden, false);
+  }
 });
 test('dialog focus wraps Tab, cancels Escape and returns to invoking control', () => {
   const f = fixture(); f.get('configure').focus(); f.open(); assert.equal(f.document.activeElement,f.get('analytics'));

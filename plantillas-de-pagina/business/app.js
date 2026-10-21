@@ -998,7 +998,8 @@
     withdraw.addEventListener('click', () => {
       try {
         const value = validState(api().withdraw());
-        if (!value.runtimeEnabled || value.analytics || value.marketing || value.persistence !== 'session') throw new Error('Withdrawal not confirmed');
+        if (!value.runtimeEnabled || value.analytics || value.marketing ||
+            (!value.reloadRequired && value.persistence !== 'session')) throw new Error('Withdrawal not confirmed');
         display(value, 'Consentimiento retirado para esta carga de la página.');
       } catch (_) { display(null); }
     });
