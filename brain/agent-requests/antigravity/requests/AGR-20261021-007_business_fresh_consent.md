@@ -2,6 +2,8 @@
 
 Estado: IMPLEMENTED / revisión independiente pendiente, 2026-10-21. Autorizado por Jairo; follow-up de AGR-004, no repetir su request completado/con revisión fallida. Reporte: `brain/agent-requests/antigravity/reports/AGR-20261021-007_business_fresh_consent_DONE.md`.
 
+Fix wave de revisión final: P2 de retirada explícita durante cuarentena corregido con TDD; runtime 33/33 (32 previos conservados). Pendiente única re-revisión acotada del coordinador. Sin UI/integración/publicación.
+
 - Owner: subagente dedicado en rol Antigravity, tier balanced; revisión independiente y seguridad premium al final.
 - Outcome: eliminar restauración de permisos antiguos y cerrar la carrera de retirada/recarga con consentimiento por documento.
 - Spec/plan vinculante: `docs/superpowers/specs/2026-10-21-business-fresh-consent-amendment.md` (contrato completo aprobado y criterios de verificación).

@@ -535,6 +535,45 @@ test('broadcast_withdrawal_revokes_other_tab_without_echo_or_grant', async () =>
   peer.click(peer.anchor()); assert.equal(events(peer, 'click_cta').length, 0);
 });
 
+// Break caught: reload quarantine suppresses explicit withdrawal to a reachable authorized peer.
+test('explicit_withdrawal_during_context_quarantine_still_denies_peer', async () => {
+  const hub = new Set();
+  const source = harness({ config: readyConfig(), broadcastHub: hub });
+  const peer = harness({ config: readyConfig(), broadcastHub: hub });
+  accept(source); accept(peer);
+  await source.loadSdk('ga4'); await source.loadSdk('meta');
+  await peer.loadSdk('ga4'); await peer.loadSdk('meta');
+  peer.click(peer.anchor());
+  assert.equal(events(peer, 'click_cta').length, 1);
+  assert.equal(events(peer, 'WhatsAppClick').length, 1);
+
+  source.window.location.hash = '#sensitive';
+  source.window.dispatchEvent({ type: 'hashchange' });
+  assert.equal(api(source).getState().analytics, false);
+  assert.equal(api(source).getState().reloadRequired, true);
+  assert.equal(source.requests.filter((r) => r.kind === 'reload').length, 1,
+    'reload boundary records request without destroying the document: navigation is delayed');
+  accept(source); await source.flush();
+  assert.equal(api(source).getState().marketing, false, 'quarantine must forbid positive regrant');
+  assert.equal(api(peer).getState().analytics, true, 'automatic local context stop did not broadcast');
+  assert.deepEqual(source.channels[0].messages, [], 'positive choice cannot transmit a grant');
+
+  api(source).withdraw(); await source.flush();
+  assert.equal(api(peer).getState().analytics, false, 'explicit withdrawal must reach peer during quarantine');
+  assert.equal(api(peer).getState().marketing, false);
+  assert.equal(api(peer).getState().reloadRequired, true);
+  peer.click(peer.anchor()); source.click(source.anchor());
+  assert.equal(events(peer, 'click_cta').length, 1, 'peer cannot emit further clicks');
+  assert.equal(events(peer, 'WhatsAppClick').length, 1);
+  assert.equal(events(source, 'click_cta').length, 0);
+  assert.equal(events(source, 'WhatsAppClick').length, 0);
+  assert.equal(source.requests.filter((r) => r.kind === 'reload').length, 1);
+  assert.equal(peer.requests.filter((r) => r.kind === 'reload').length, 1);
+  assert.equal(source.requests.filter((r) => r.kind === 'script').length, 2, 'no SDK restart');
+  assert.deepEqual(plain(source.channels[0].messages), [{ version: 1, action: 'withdraw' }]);
+  assert.deepEqual(peer.channels[0].messages, [], 'received denial must never echo');
+});
+
 // Break caught: malformed/grant/extra/accessor messages reset state or grant a denied document.
 test('broadcast_requires_exact_revoke_message_and_never_grants', () => {
   const h = harness({ broadcastHub: new Set() }); accept(h);

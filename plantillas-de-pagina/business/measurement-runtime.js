@@ -251,7 +251,12 @@
         typeof choice.analytics !== 'boolean' || typeof choice.marketing !== 'boolean') {
       throw new TypeError('Consent requires exactly analytics and marketing booleans');
     }
-    if (!runtimeEnabled || reloadRequired) return stateCopy();
+    if (!runtimeEnabled) return stateCopy();
+    if (reloadRequired) {
+      // Quarantine blocks grants, not an explicit withdrawal to reachable peers.
+      if (!choice.analytics && !choice.marketing) broadcastWithdrawal();
+      return stateCopy();
+    }
     const reduced = preference && ((preference.analytics && !choice.analytics) || (preference.marketing && !choice.marketing));
     preference = {
       analytics: choice.analytics,

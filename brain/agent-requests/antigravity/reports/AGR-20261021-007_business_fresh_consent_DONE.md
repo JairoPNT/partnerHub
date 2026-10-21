@@ -67,3 +67,23 @@ Build: no ejecutado / no aplicable al cambio aislado de asset clásico y tests; 
 Autorrevisión del diff y del contrato aprobados: solo rutas permitidas; ninguna decisión UI nueva; sin API/backend/registry/app/index/styles/config ni fuente/master modificados. La reducción con SDK iniciado deniega ambas categorías antes de recargar; reducción sin SDK conserva únicamente la elección explícita restante en memoria. El reset BFCache/remoto usa `persistence:'none'` y una elección local usa `'session'`.
 
 Pendiente: revisión independiente del coordinador, seguridad final e integración/browser CDX006; UI AGR005 depende de esta revisión y debe informar consentimiento por carga. BroadcastChannel es best-effort, no garantiza pestañas suspendidas. No se borran cookies ajenas ni se promete cancelar solicitudes ya emitidas. Los dobles offline no prueban controles de privacidad/configuración de cuentas SDK reales, recepción externa, cumplimiento jurídico, tags públicos heredados ni readiness pública. No se contactaron proveedores/cuentas reales ni DNS/SFTP/publicación. Follow-up: sí, los gates separados ya previstos; no se detectó otro cambio de runtime requerido durante autorrevisión.
+
+## Fix wave — P2 de revisión final, 2026-10-21
+
+La revisión final encontró un caso no cubierto en la autorrevisión anterior: el early return de `setConsent` con `reloadRequired` suprimía la señal de una retirada explícita posterior a cuarentena automática por contexto. Con recarga bloqueada/demorada, una pestaña alcanzable seguía autorizada. Se leyó completo `final-review.md` del coordinador y se reprodujo antes de corregir.
+
+Cambio acotado: separar runtime deshabilitado de cuarentena. En cuarentena, una elección explícita `{analytics:false, marketing:false}` intenta el mismo broadcast negativo y devuelve el estado local denegado existente. No modifica preferencias ni emisores, no permite grants, no reinicia SDKs, no solicita otra recarga. El receptor conserva reset/revoke sin eco. Ningún otro hallazgo requirió código; harness sin cambios en esta ola.
+
+Test nuevo: `explicit_withdrawal_during_context_quarantine_still_denies_peer`. Dos documentos reales del harness, mismo origen/site/canal, ambos con grants y SDKs; control positivo de eventos del peer; hash sensible del source con reload solicitado pero documento vivo; intento de regrant bloqueado; withdraw explícito; peer denegado, sin más `click_cta`/`WhatsAppClick`, una recarga por documento, sin SDK restart ni eco.
+
+Comando RED y GREEN focalizado:
+
+`node --test --test-name-pattern=explicit_withdrawal_during_context_quarantine_still_denies_peer plantillas-de-pagina/business/measurement-runtime.test.mjs`
+
+- RED anterior al fix: exit 1; tests 1, pass 0, fail 1, skipped 0. `AssertionError: explicit withdrawal must reach peer during quarantine`, `true !== false`, en `measurement-runtime.test.mjs:562`. Fallo semántico esperado, no error de harness.
+- GREEN posterior: exit 0; tests 1, pass 1, fail 0, skipped 0.
+- Regresión completa: `node --test plantillas-de-pagina/business/measurement-runtime.test.mjs`: exit 0; tests 33, pass 33, fail 0, cancelled 0, skipped 0, todo 0. Todos los 32 tests anteriores permanecen.
+- `node --check plantillas-de-pagina/business/measurement-runtime.js`, `node --check plantillas-de-pagina/business/measurement-runtime.test.mjs`, `git diff --check`: exit 0.
+- Sin warnings en estos comandos. Lint y suites CTA/plantilla/VSL arriba son evidencia de la ola original, no se volvieron a ejecutar por rutina. `test:ecosystem-templates` fue la suite Node de 8 tests; no fue browser. Browser integrado sigue pendiente, no verificado ni extrapolado. Build sigue no aplicable al asset aislado; no existe suite `npm test` agregada.
+
+Autorrevisión: el diff nuevo solo toca runtime/test/request/reporte; la validación estricta precede la rama de cuarentena y la rama no usa `syncProviders`, `notify` ni `requestCleanReload`. Los límites de privacidad/SDK/provider y de publicación anteriores siguen vigentes. Commit del fix: el commit que contiene este addendum en `codex/AGR-20261021-007-fresh-consent` (SHA entregado al coordinador y registrado en scratch). Pendiente: única re-revisión acotada del fix por el coordinador, sin UI/integración todavía.
