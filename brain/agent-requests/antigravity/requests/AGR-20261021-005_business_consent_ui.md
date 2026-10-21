@@ -1,5 +1,9 @@
 # AGR-20261021-005 — Aviso y preferencias de consentimiento Business
 
+> Implementación local entregada 2026-10-21 en `f5f5727`, pendiente de revisión independiente e integración CDX-006. Evidencia: `../reports/AGR-20261021-005_business_consent_ui_DONE.md`. No se publicó ni se habilitaron proveedores reales.
+
+> Ejecución autorizada expresamente por Jairo el 2026-10-21: «procede con AGR-005 ... y luego validar el conjunto antes de publicar». Dependencias de contenido AGR001/006/003 y runtime AGR007 revisadas; componente runtime incluye fixda6a873 con re-review premium. Los holds históricos inferiores están resueltos. Implementar en rama aislada, sin fuente/publicación real; contrato vigente de consentimiento por carga, no180 días.
+
 > Actualización vinculante 2026-10-21: Jairo APROBÓ consentimiento por carga. El hold por decisión humana descrito abajo queda resuelto y se conserva como historial. La implementación espera revisión de AGR007 (runtime sin restauración) y contenido AGR001/006/003 revisado. Aplicar `docs/superpowers/specs/2026-10-21-business-fresh-consent-amendment.md`; no prometer recuerdo de 180 días.
 
 Estado: contrato y plan técnico PR #229 aprobados por Jairo el 2026-10-21. EJECUCIÓN EN HOLD: no iniciar implementación UI, ni siquiera con fixtures, hasta que Jairo resuelva la enmienda de privacidad pendiente y se completen/revisen las dependencias indicadas. La aprobación previa del contrato/plan no aprueba esa enmienda.

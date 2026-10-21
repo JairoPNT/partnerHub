@@ -47,6 +47,16 @@
   </header>
 
   <main>
+    <section id="business-consent-banner" class="business-consent-banner container" aria-labelledby="business-consent-title">
+      <h2 id="business-consent-title">Tú eliges la medición opcional</h2>
+      <p>Analítica (GA4) ayuda a entender el uso de la página; Publicidad (Meta), a medir acciones publicitarias. Puedes ver el video, navegar y contactar por WhatsApp sin aceptar. Tu elección solo dura esta carga de la página: al recargar se te pedirá de nuevo.</p>
+      <p id="business-consent-banner-status" class="business-consent-status" role="status" aria-live="polite"></p>
+      <div class="business-consent-actions">
+        <button id="business-consent-accept" class="business-consent-button" type="button" disabled>Aceptar todo</button>
+        <button id="business-consent-reject" class="business-consent-button" type="button" disabled>Rechazar opcionales</button>
+        <button id="business-consent-configure" class="business-consent-button" type="button" aria-haspopup="dialog" aria-controls="business-consent-dialog">Configurar</button>
+      </div>
+    </section>
     <!-- Hero & VSL Master Section -->
     <section class="hero-section" id="hero-vsl">
       <div class="hero-glow-bg"></div>
@@ -333,6 +343,8 @@
           &copy; <span id="footer-year">2026</span> <span data-config="fullName" data-bind="distributor.fullName"></span>. Todos los derechos reservados.
         </p>
         <div class="footer-links">
+          <button type="button" class="modal-trigger-btn" id="business-consent-reopen" aria-haspopup="dialog" aria-controls="business-consent-dialog">Preferencias de privacidad</button>
+          <span class="footer-sep">·</span>
           <button type="button" class="modal-trigger-btn" id="linkFooterPrivacy">Política de Privacidad</button>
           <span class="footer-sep">·</span>
           <button type="button" class="modal-trigger-btn" id="linkFooterTerms">Términos de Servicio</button>
@@ -344,6 +356,27 @@
       </div>
     </div>
   </footer>
+
+  <dialog id="business-consent-dialog" class="business-consent-dialog" aria-modal="true" aria-labelledby="business-consent-dialog-title" aria-describedby="business-consent-description">
+    <h2 id="business-consent-dialog-title">Preferencias de privacidad</h2>
+    <p id="business-consent-description">La medición es opcional y no condiciona el contenido ni el contacto. Elige para esta carga de la página; al recargar se te pedirá de nuevo. Solo se activan herramientas si la configuración técnica y tu categoría lo permiten.</p>
+    <div class="business-consent-categories">
+      <label class="business-consent-category" for="business-consent-analytics">
+        <input id="business-consent-analytics" type="checkbox" disabled>
+        <span><strong>Analítica (GA4)</strong><span>Entender las visitas y el uso de la página con Google Analytics 4.</span></span>
+      </label>
+      <label class="business-consent-category" for="business-consent-marketing">
+        <input id="business-consent-marketing" type="checkbox" disabled>
+        <span><strong>Publicidad (Meta)</strong><span>Medir visitas y acciones publicitarias con Meta Pixel.</span></span>
+      </label>
+    </div>
+    <p id="business-consent-status" class="business-consent-status" role="status" aria-live="polite"></p>
+    <div class="business-consent-dialog-actions">
+      <button id="business-consent-save" class="business-consent-button" type="button" disabled>Guardar preferencias</button>
+      <button id="business-consent-cancel" class="business-consent-button" type="button">Cancelar</button>
+      <button id="business-consent-withdraw" class="business-consent-button" type="button" disabled>Retirar consentimiento</button>
+    </div>
+  </dialog>
 
   <!-- Modal Política de Privacidad -->
   <div id="modalPrivacy" class="modal-overlay" role="dialog" aria-modal="true" aria-hidden="true">
@@ -359,11 +392,12 @@
       </div>
       <div class="modal-body">
         <p class="modal-date"><strong>Vigente para el año 2026</strong></p>
-        <p>En cumplimiento de las normas sobre protección de datos personales (Ley 1581 de 2012 y Habeas Data), le informamos de manera clara cómo se tratan los datos asociados al uso de esta página informativa.</p>
+        <p>Esta información describe el contacto voluntario y las opciones de medición de esta página informativa.</p>
         <h4>1. Contacto Voluntario por WhatsApp</h4>
         <p>Al hacer clic en los botones de contacto e iniciar una conversación por WhatsApp con el distribuidor independiente, usted suministra de forma voluntaria los datos de perfil y mensajes que decida compartir para recibir orientación sobre la actividad comercial.</p>
         <h4>2. Medición Técnica y Publicitaria</h4>
-        <p>Cuando el sitio publicado tiene configuradas herramientas de medición (como Meta Pixel), el navegador puede enviar solicitudes técnicas automáticas de visualización de página (PageView) y metadatos estándar de conexión al proveedor tecnológico correspondiente.</p>
+        <p>La analítica con Google Analytics 4 (GA4) y la publicidad con Meta Pixel son opcionales. Cada herramienta solo puede activarse cuando su configuración técnica está habilitada y usted acepta la categoría correspondiente. Estas herramientas pueden enviar al proveedor solicitudes de visualización de página, acciones de contacto y metadatos técnicos de conexión; esto no confirma su recepción.</p>
+        <p>La elección se mantiene únicamente en la memoria de esta carga de la página, no se guarda para futuras visitas y se solicita de nuevo al recargar. Puede cambiarla o retirarla desde «Preferencias de privacidad» al pie de la página. Si una herramienta ya comenzó a cargar, retirar o reducir categorías puede requerir una recarga limpia; no deshace solicitudes ya enviadas. Puede navegar, ver el video y contactar sin aceptar.</p>
         <h4>3. Finalidad y Derechos del Titular</h4>
         <p>La información de contacto suministrada por WhatsApp se emplea para atender su consulta comercial. Usted puede solicitar conocer, actualizar, rectificar o suprimir sus datos de contacto escribiendo directamente al canal de WhatsApp habilitado en esta página.</p>
       </div>
@@ -400,6 +434,7 @@
 
   <!-- Scripts -->
   <script src="config.js"></script>
+  <script src="measurement-runtime.js"></script>
   <script src="app.js"></script>
 </body>
 </html>
