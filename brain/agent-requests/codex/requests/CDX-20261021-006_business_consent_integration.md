@@ -1,6 +1,6 @@
 # CDX-20261021-006 — Integración local de consentimiento Business
 
-Estado: plan técnico PR #229 aprobado por Jairo el 2026-10-21. Ejecución pendiente de revisiones de componentes CDX-005 y AGR-004/005; no falta nueva aprobación del plan.
+Estado: implementación offline terminada y verificada el 2026-10-21; revisión independiente de integración/seguridad pendiente con controlador. Reporte `../reports/CDX-20261021-006_business_consent_integration_DONE.md`.220 pruebas finales aprobadas sin fallos/omisiones; lint/build PASS. GA4/Meta continúan false y publicVerification NOT_RUN. No publicación autorizada por este cierre.
 
 - Owner: Codex orquestador; revisión visual por Antigravity sin ediciones simultáneas.
 - Outcome: paquete integrado revisado y evidencia local browser/packaging; no publicación ni acreditación de recepción externa.
