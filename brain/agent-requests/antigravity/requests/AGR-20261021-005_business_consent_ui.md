@@ -8,6 +8,7 @@ Estado: contrato y plan técnico PR #229 aprobados por Jairo el 2026-10-21. Impl
 - Excluded: measurement-runtime.js y su harness/tests, config.js/FAQ/copy de campaña fuera de privacidad, backend/API/auth, fuentes de partner, proveedores, publicación y otros ecosistemas.
 - Dependencies: AGR-001 y AGR-003 terminados/revisados antes de tocar sus archivos. API AGR-004 congelada; UI puede avanzar con fixture de esa API mientras AGR-004 trabaja sus archivos propios.
 - Parallel-safe with: CDX-005, AGR-004 y AGR-002; NO con AGR-001/003 ni otro owner de app/index/styles.
+- Gate de revisión actualizado: AGR-001 bb2f3c7 requiere follow-up AGR-006 antes de AGR-003 y este request. Esperar sus correcciones/revisiones; no mezclar fixes de contenido en consentimiento.
 - Contract: solo getState/setConsent/withdraw y evento local; no localStorage/SDK/emisor propios. Aceptar/rechazar/configurar con peso equivalente; toggles inicialmente off. Cerrar/cancelar no acepta. No sugerir que aceptar es condición para WhatsApp o video.
 - Required: reabrir/retirar; API ausente/tardía falla denegado; foco/teclado/aria/contraste/móvil; copy de privacidad factual, sin datos legales inventados. Mantener VSL visible, FAQ y CTA aprobados, IDs existentes y orden config/runtime/app.
 - Verify: Node/DOM fixture y regresiones de plantilla; capturas locales. Browser/network conjunto en CDX-006. Ninguna señal real ni edición de cuentas.
