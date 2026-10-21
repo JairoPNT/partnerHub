@@ -20,7 +20,8 @@ import { createPublicationJobWorker } from "../server/services/publicationJobWor
 const REPOSITORY_ROOT = resolve(import.meta.dirname, "../../..");
 const LEGACY_SOURCE_COMMIT = "16afb035f971b4495adb07983222f3461f87312c";
 const LEGACY_PACKAGE_HASH = "e9a2f7339f80110ceb13f01499298a6e9caff2fb4ab2dffa7b35fb9f76f26a76";
-const CURRENT_PACKAGE_HASH = "9760e017b284e76ff6cbae5d128265cc89fa6b8bd2f03882d4ff4b0de0e1d046";
+const PRE_CONSENT_PACKAGE_HASH = "9760e017b284e76ff6cbae5d128265cc89fa6b8bd2f03882d4ff4b0de0e1d046";
+const CURRENT_PACKAGE_HASH = "3c315bbe61729396cae8225c162367d3621f77c66b74b57560e7b29180e8f041";
 const TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "styles.css"];
 const SITE_ID = "ganomaster-business";
 const BUSINESS_SITE_ID = "client-one-business";
@@ -55,8 +56,8 @@ function gitFile(commit, path) {
   });
 }
 
-function buildPackage(templateBytes) {
-  const templateFiles = TEMPLATE_FILES.map((path) => ({ path, hash: sha256(templateBytes.get(path)) }));
+function buildPackage(templateBytes, names = TEMPLATE_FILES, htaccess = PACKAGE_NO_CACHE_HTACCESS) {
+  const templateFiles = names.map((path) => ({ path, hash: sha256(templateBytes.get(path)) }));
   const canonicalTemplateHash = inventoryHash(templateFiles);
   const manifest = {
     schemaVersion: 1,
@@ -65,10 +66,10 @@ function buildPackage(templateBytes) {
     publicHost: "business.ganomaster.pro",
     source: "CANONICAL_BUSINESS_TEMPLATE",
     canonicalTemplateHash,
-    files: [...TEMPLATE_FILES, ".htaccess", "tipografia/"]
+    files: [...names, ".htaccess", "tipografia/"]
   };
   const packageBytes = new Map(templateBytes);
-  packageBytes.set(".htaccess", Buffer.from(PACKAGE_NO_CACHE_HTACCESS, "utf8"));
+  packageBytes.set(".htaccess", Buffer.from(htaccess, "utf8"));
   packageBytes.set("manifest.json", Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, "utf8"));
   const files = [...packageBytes.entries()]
     .map(([path, bytes]) => ({ path, hash: sha256(bytes) }))
@@ -118,13 +119,17 @@ async function fixture() {
   ]));
   const currentTemplate = new Map(TEMPLATE_FILES.map((name) => [
     name,
-    gitFile("HEAD", `plantillas-de-pagina/business/${name}`)
+    gitFile("a8d547c1cf9d754573bf20eb5cc154a03f9f5c60", `plantillas-de-pagina/business/${name}`)
   ]));
   const legacyPackage = buildPackage(legacyTemplate);
-  const currentPackage = buildPackage(currentTemplate);
+  assert.equal(buildPackage(currentTemplate).packageHash, PRE_CONSENT_PACKAGE_HASH, "pre-consent canonical hash stays frozen");
+  currentTemplate.set("measurement-runtime.js", Buffer.from("window.fixtureRuntime = true;\n"));
+  const currentPackage = buildPackage(currentTemplate,
+    ["app.js", "config.js", "favicon.svg", "index.html", "measurement-runtime.js", "styles.css"],
+    PACKAGE_NO_CACHE_HTACCESS.replace("config\\.js|", "config\\.js|measurement-runtime\\.js|"));
   assert.equal(legacyPackage.templateHash, "5aabc5e2a4402efd97ba8a6e33700e25ad338417143e6a84e97d5187d85a7e31");
   assert.equal(legacyPackage.packageHash, LEGACY_PACKAGE_HASH, "fixture must reconstruct the only allowed historical package");
-  assert.equal(currentPackage.packageHash, CURRENT_PACKAGE_HASH, "fixture must match the current canonical package");
+  assert.equal(currentPackage.packageHash, CURRENT_PACKAGE_HASH, "synthetic runtime fixture, not a production release approval");
 
   await mkdir(outputRoot, { recursive: true });
   await mkdir(templateDirectory, { recursive: true });

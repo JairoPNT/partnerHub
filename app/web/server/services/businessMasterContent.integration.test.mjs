@@ -11,6 +11,8 @@ import { partnerEcosystemEntitlementService } from "./partnerEcosystemEntitlemen
 import { activationLeadService } from "./activationLeadService.ts";
 import { productPageHistoryService } from "./productPageHistoryService.ts";
 import { businessProductHeroCorrelationService } from "./businessProductHeroCorrelationService.ts";
+import { prepareBusinessMeasurementFixture } from './businessMeasurement.test-fixtures.ts';
+import { createMasterSitesBusinessPreviewService, masterSitesBusinessPreviewService } from './masterSitesBusinessPreviewService.ts';
 
 const canonical = resolve("../../plantillas-de-pagina/business");
 const input = (type = "BUSINESS") => productPageGenerationInputSchema.parse({
@@ -21,6 +23,7 @@ const input = (type = "BUSINESS") => productPageGenerationInputSchema.parse({
 const configAt = async (dir) => JSON.parse(runInNewContext(`${await readFile(resolve(dir, "config.js"), "utf8")}\nJSON.stringify(CONFIG)`, {}, { timeout: 1000 }));
 
 test("Business generation and saved-source regeneration retain master content without master tenant settings", async (t) => {
+  const leadId = '11111111-1111-4111-8111-111111111111';
   const root = await mkdtemp(resolve(tmpdir(), "ph-business-content-"));
   const oldEnv = { ...process.env };
   const restores = [];
@@ -28,14 +31,23 @@ test("Business generation and saved-source regeneration retain master content wi
   t.after(async () => { restores.reverse().forEach((restore) => restore()); process.env = oldEnv; await rm(root, { recursive: true, force: true }); });
   process.env.PRODUCT_PAGE_OUTPUT_DIR = root;
   process.env.PRODUCT_PAGE_SOURCE_DIR = resolve(root, ".sources");
-  replace(partnerEcosystemEntitlementService, "get", async () => ({ activationLeadId: "test", includedEcosystems: ["BUSINESS", "PRODUCT"] }));
+  replace(partnerEcosystemEntitlementService, "get", async () => ({ activationLeadId: leadId, includedEcosystems: ["BUSINESS", "PRODUCT"] }));
   replace(activationLeadService, "updatePublicationStateBySiteId", async () => null);
   replace(productPageHistoryService, "append", async () => undefined);
   replace(businessProductHeroCorrelationService, "resolveForBusinessSite", async () => ({ desktop: "https://images.example/claudia-product.webp" }));
   const master = resolve(root, "ganomaster-business");
   await cp(canonical, master, { recursive: true });
   await mkdir(resolve(master, "tipografia"), { recursive: true });
+  await prepareBusinessMeasurementFixture(t, master);
   const template = await configAt(master);
+  const preview = createMasterSitesBusinessPreviewService({
+    listLeads: async () => [{ id: leadId, siteId: 'claudia-calero', status: 'PAID', recordState: 'ACTIVE', fullName: 'Claudia Calero', brandName: 'Claudia', whatsapp: '573001234567', onboardingData: { domain: 'claudiacalero.pro', metaPixelId: '123456789' } }],
+    getEntitlement: async () => ({ activationLeadId: leadId, commercialState: 'KNOWN', includedEcosystems: ['BUSINESS'], existingTargets: [] }),
+    readTargets: async () => [], listJobs: async () => [], readJournals: async () => [], readSources: async () => [],
+    readMaster: async () => ({ revision: 'a'.repeat(64), packageHash: 'b'.repeat(64), previewUrl: null, content: template })
+  });
+  assert.notEqual((await preview.getMeasurementAuthoritySnapshot(leadId)).input, null);
+  replace(masterSitesBusinessPreviewService, 'getMeasurementAuthoritySnapshot', preview.getMeasurementAuthoritySnapshot);
   await writeFile(resolve(master, "config.js"), `const CONFIG = ${JSON.stringify({ ...template, distributor: { whatsappNumber: "19999999999" }, analytics: { measurementId: "G-MASTER" }, integrations: { meta: { pixelId: "99999999" } } })};`);
   const generated = await productPageGenerationService.generate(input());
   for (const configuration of [await configAt(generated.outputDirectory), await productPageSourceService.get(input().site.id)]) {

@@ -17,8 +17,9 @@ const ROOT = resolve(import.meta.dirname, "../../..");
 const LEGACY_SOURCE_COMMIT = "16afb035f971b4495adb07983222f3461f87312c";
 const LEGACY_PACKAGE_HASH = "e9a2f7339f80110ceb13f01499298a6e9caff2fb4ab2dffa7b35fb9f76f26a76";
 const CANONICAL_V2_PACKAGE_HASH = "9760e017b284e76ff6cbae5d128265cc89fa6b8bd2f03882d4ff4b0de0e1d046";
-const TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "styles.css"];
-const PACKAGE_FILES = [".htaccess", ...TEMPLATE_FILES, "manifest.json"];
+const MEASUREMENT_FIXTURE_PACKAGE_HASH = "3c315bbe61729396cae8225c162367d3621f77c66b74b57560e7b29180e8f041";
+const LEGACY_TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "styles.css"];
+const TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "measurement-runtime.js", "styles.css"];
 const REQUEST_ID = "CDX-20261019-003";
 const SITE_ID = "ganomaster-business";
 const HISTORY_JOURNAL_RELATIVE = ".master-package-audits/CDX-20260827-002/apply.json";
@@ -50,8 +51,8 @@ function gitFile(commit, path) {
   return execFileSync("git", ["show", `${commit}:${path}`], { cwd: ROOT, maxBuffer: 10 * 1024 * 1024 });
 }
 
-function buildExpectedPackage(templateBytes) {
-  const templateFiles = TEMPLATE_FILES.map((path) => ({ path, hash: sha256(templateBytes.get(path)) }));
+function buildExpectedPackage(templateBytes, names = LEGACY_TEMPLATE_FILES, htaccess = NO_CACHE_HTACCESS) {
+  const templateFiles = names.map((path) => ({ path, hash: sha256(templateBytes.get(path)) }));
   const canonicalTemplateHash = inventoryHash(templateFiles);
   const manifest = {
     schemaVersion: 1,
@@ -60,10 +61,10 @@ function buildExpectedPackage(templateBytes) {
     publicHost: "business.ganomaster.pro",
     source: "CANONICAL_BUSINESS_TEMPLATE",
     canonicalTemplateHash,
-    files: [...TEMPLATE_FILES, ".htaccess", "tipografia/"]
+    files: [...names, ".htaccess", "tipografia/"]
   };
   const packageBytes = new Map(templateBytes);
-  packageBytes.set(".htaccess", Buffer.from(NO_CACHE_HTACCESS, "utf8"));
+  packageBytes.set(".htaccess", Buffer.from(htaccess, "utf8"));
   packageBytes.set("manifest.json", Buffer.from(`${JSON.stringify(manifest, null, 2)}\n`, "utf8"));
   const files = [...packageBytes.entries()]
     .map(([path, bytes]) => ({ path, hash: sha256(bytes) }))
@@ -121,20 +122,24 @@ async function fixture() {
   const outputRoot = join(root, "generated-sites");
   const templateDirectory = join(root, "business-template");
   const businessJobsDirectory = join(outputRoot, ".publication-jobs");
-  const legacyTemplateBytes = new Map(TEMPLATE_FILES.map((name) => [
+  const legacyTemplateBytes = new Map(LEGACY_TEMPLATE_FILES.map((name) => [
     name,
     gitFile(LEGACY_SOURCE_COMMIT, `plantillas-de-pagina/business/${name}`)
   ]));
-  const currentTemplateBytes = new Map(TEMPLATE_FILES.map((name) => [
+  const currentTemplateBytes = new Map(LEGACY_TEMPLATE_FILES.map((name) => [
     name,
-    gitFile("HEAD", `plantillas-de-pagina/business/${name}`)
+    gitFile("a8d547c1cf9d754573bf20eb5cc154a03f9f5c60", `plantillas-de-pagina/business/${name}`)
   ]));
   const legacy = buildExpectedPackage(legacyTemplateBytes);
-  const canonical = buildExpectedPackage(currentTemplateBytes);
+  const previousCanonical = buildExpectedPackage(currentTemplateBytes);
   assert.equal(legacy.canonicalTemplateHash, "5aabc5e2a4402efd97ba8a6e33700e25ad338417143e6a84e97d5187d85a7e31");
   assert.equal(legacy.packageHash, LEGACY_PACKAGE_HASH, "legacy fixture must equal the only allowlisted package hash");
-  assert.equal(canonical.canonicalTemplateHash, "b3b08191d32535540b8108cbe02dca302b36c9f4ecc407023b935ac10a87fc99");
-  assert.equal(canonical.packageHash, CANONICAL_V2_PACKAGE_HASH, "current canonical fixture must produce the reviewed expected package hash");
+  assert.equal(previousCanonical.canonicalTemplateHash, "b3b08191d32535540b8108cbe02dca302b36c9f4ecc407023b935ac10a87fc99");
+  assert.equal(previousCanonical.packageHash, CANONICAL_V2_PACKAGE_HASH, "pre-consent canonical snapshot keeps its historical hash");
+  currentTemplateBytes.set("measurement-runtime.js", Buffer.from("window.fixtureRuntime = true;\n"));
+  const canonical = buildExpectedPackage(currentTemplateBytes, TEMPLATE_FILES,
+    NO_CACHE_HTACCESS.replace("config\\.js|", "config\\.js|measurement-runtime\\.js|"));
+  assert.equal(canonical.packageHash, MEASUREMENT_FIXTURE_PACKAGE_HASH, "synthetic runtime fixture is not a release approval");
   await mkdir(outputRoot, { recursive: true });
   await mkdir(templateDirectory, { recursive: true });
   await mkdir(businessJobsDirectory, { recursive: true });
@@ -233,7 +238,7 @@ test("PREVIEW is deterministic, read-only and preserves the allowlisted historic
     assert.equal(first.planMaterial.identity.ecosystemType, "BUSINESS");
     assert.equal(first.planMaterial.identity.publicHost, "business.ganomaster.pro");
     assert.equal(first.planMaterial.previousPackageHash, LEGACY_PACKAGE_HASH);
-    assert.equal(first.planMaterial.refreshedPackageHash, CANONICAL_V2_PACKAGE_HASH);
+    assert.equal(first.planMaterial.refreshedPackageHash, MEASUREMENT_FIXTURE_PACKAGE_HASH);
     assert.equal(first.planMaterial.previousJournalHash, sha256(item.historyJournalBytes));
     assert.equal(first.planMaterial.archivePresent, false);
     assert.deepEqual(first.planMaterial.activeBusinessJobs, []);
@@ -541,7 +546,7 @@ test("APPLY rejects a stale plan without changing the destination, archive, hist
   }
 });
 
-test("APPLY archives the exact prior package, installs verified canonical V2, writes lineage, preserves history bytes and releases only its own claim", async () => {
+test("APPLY archives the exact prior package, installs verified measurement fixture, writes lineage, preserves history bytes and releases only its own claim", async () => {
   const item = await fixture();
   try {
     const preview = await planBusinessMasterPackageRefresh(item.options);
@@ -553,7 +558,7 @@ test("APPLY archives the exact prior package, installs verified canonical V2, wr
     assert.equal(result.changed, true);
     assert.equal(result.blocked, false);
     assert.equal(result.planHash, preview.planHash);
-    assert.equal(installed.hash, CANONICAL_V2_PACKAGE_HASH);
+    assert.equal(installed.hash, MEASUREMENT_FIXTURE_PACKAGE_HASH);
     assert.equal(archived.hash, LEGACY_PACKAGE_HASH);
     assert.ok(await exists(join(item.destinationDirectory, "tipografia")));
     assert.deepEqual(await readFile(item.historyJournalPath), item.historyJournalBytes);
@@ -568,7 +573,7 @@ test("APPLY archives the exact prior package, installs verified canonical V2, wr
       publicHost: "business.ganomaster.pro",
       planHash: preview.planHash,
       previousPackageHash: LEGACY_PACKAGE_HASH,
-      refreshedPackageHash: CANONICAL_V2_PACKAGE_HASH,
+      refreshedPackageHash: MEASUREMENT_FIXTURE_PACKAGE_HASH,
       canonicalTemplateHash: preview.planMaterial.canonicalTemplateHash,
       previousJournalPath: pathIn(item.outputRoot, HISTORY_JOURNAL_RELATIVE),
       previousJournalHash: sha256(item.historyJournalBytes),
@@ -736,7 +741,7 @@ test("APPLY preserves claim, archive and installed package if journal commit fai
       /injected journal failure/
     );
     assert.equal((await inventory(pathIn(item.outputRoot, ARCHIVE_RELATIVE))).hash, LEGACY_PACKAGE_HASH);
-    assert.equal((await inventory(item.destinationDirectory)).hash, CANONICAL_V2_PACKAGE_HASH);
+    assert.equal((await inventory(item.destinationDirectory)).hash, MEASUREMENT_FIXTURE_PACKAGE_HASH);
     assert.equal(await exists(pathIn(item.outputRoot, REFRESH_JOURNAL_RELATIVE)), false);
     assert.equal(await exists(pathIn(item.outputRoot, `${CLAIM_RELATIVE}/owner.json`)), true);
     assert.deepEqual(await readFile(item.historyJournalPath), item.historyJournalBytes);

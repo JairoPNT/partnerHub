@@ -15,8 +15,11 @@ const PUBLIC_HOST = "business.ganomaster.pro";
 const LEGACY_PACKAGE_HASH = "e9a2f7339f80110ceb13f01499298a6e9caff2fb4ab2dffa7b35fb9f76f26a76";
 const LEGACY_TEMPLATE_HASH = "5aabc5e2a4402efd97ba8a6e33700e25ad338417143e6a84e97d5187d85a7e31";
 const HASH = /^[0-9a-f]{64}$/;
-const TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "styles.css"];
+const TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "measurement-runtime.js", "styles.css"];
 const PACKAGE_FILES = [".htaccess", ...TEMPLATE_FILES, "manifest.json"];
+// These are the fixed pre-consent inventories, independent of current assets.
+const LEGACY_TEMPLATE_FILES = ["app.js", "config.js", "favicon.svg", "index.html", "styles.css"];
+const LEGACY_PACKAGE_FILES = [".htaccess", ...LEGACY_TEMPLATE_FILES, "manifest.json"];
 const JOB_ECOSYSTEMS = new Set(["PRODUCT", "BUSINESS", "PERSONAL_BRAND"]);
 const JOB_STATUSES = new Set(["QUEUED", "RUNNING", "SUCCEEDED", "FAILED", "CANCELLED"]);
 const JOB_PHASES = new Set(["QUEUED", "PREPARING_PACKAGE", "VALIDATING_CAPABILITY", "PLANNING_PUBLICATION", "PUBLISHING", "VERIFYING", "COMPLETE"]);
@@ -27,7 +30,7 @@ const exists = async (path) => access(path).then(() => true, () => false);
 const NO_CACHE_HTACCESS = `DirectoryIndex index.html
 
 <IfModule mod_headers.c>
-  <FilesMatch "^(index\\.html|config\\.js|app\\.js|styles\\.css|manifest\\.json)$">
+  <FilesMatch "^(index\\.html|config\\.js|measurement-runtime\\.js|app\\.js|styles\\.css|manifest\\.json)$">
     Header set Cache-Control "no-cache, must-revalidate"
     Header set Pragma "no-cache"
     Header set Expires "0"
@@ -139,7 +142,7 @@ async function packageShapeValid(directory) {
   if ((await pathKind(directory)) !== "directory" || !(await visit(directory))) return false;
   files.sort((left, right) => left.localeCompare(right));
   directories.sort((left, right) => left.localeCompare(right));
-  const expectedFiles = [...PACKAGE_FILES].sort((left, right) => left.localeCompare(right));
+  const expectedFiles = [...LEGACY_PACKAGE_FILES].sort((left, right) => left.localeCompare(right));
   return JSON.stringify(files) === JSON.stringify(expectedFiles) && JSON.stringify(directories) === JSON.stringify(["tipografia"]);
 }
 
@@ -148,6 +151,7 @@ async function loadCanonicalTemplate(templateDirectory) {
   const files = [];
   for (const name of TEMPLATE_FILES) {
     const sourcePath = inside(templateDirectory, name);
+    await assertSafeAncestors(templateDirectory, sourcePath);
     if ((await pathKind(sourcePath)) !== "file") throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_CANONICAL_TEMPLATE_INVALID");
     const bytes = await readFile(sourcePath);
     bytesByName.set(name, bytes);
@@ -234,7 +238,7 @@ function validLegacyManifest(manifest) {
     manifest.source === "CANONICAL_BUSINESS_TEMPLATE" &&
     manifest.canonicalTemplateHash === LEGACY_TEMPLATE_HASH &&
     Array.isArray(manifest.files) &&
-    JSON.stringify(manifest.files) === JSON.stringify([...TEMPLATE_FILES, ".htaccess", "tipografia/"]);
+    JSON.stringify(manifest.files) === JSON.stringify([...LEGACY_TEMPLATE_FILES, ".htaccess", "tipografia/"]);
 }
 
 async function readClaimOwner(claimDirectory) {
@@ -391,13 +395,13 @@ async function buildPreview(options = {}, { claimOwner = null } = {}) {
   }
   if (destination.exists && destination.hash === LEGACY_PACKAGE_HASH) {
     try {
-      const expectedNames = [...PACKAGE_FILES].sort((left, right) => left.localeCompare(right));
+      const expectedNames = [...LEGACY_PACKAGE_FILES].sort((left, right) => left.localeCompare(right));
       if (JSON.stringify(destination.files.map((file) => file.path).sort((left, right) => left.localeCompare(right))) !== JSON.stringify(expectedNames) ||
           !(await packageShapeValid(paths.destinationDirectory))) {
         reasons.push("BUSINESS_MASTER_PACKAGE_PREVIOUS_INVENTORY_INVALID");
       }
       const manifest = JSON.parse(await readFile(inside(paths.destinationDirectory, "manifest.json"), "utf8"));
-      const installedTemplateFiles = destination.files.filter((file) => TEMPLATE_FILES.includes(file.path));
+      const installedTemplateFiles = destination.files.filter((file) => LEGACY_TEMPLATE_FILES.includes(file.path));
       const installedTemplateHash = inventoryHash(installedTemplateFiles);
       if (!validLegacyManifest(manifest) || installedTemplateHash !== LEGACY_TEMPLATE_HASH || manifest.canonicalTemplateHash !== installedTemplateHash) {
         reasons.push("BUSINESS_MASTER_PACKAGE_PREVIOUS_MANIFEST_INVALID");
