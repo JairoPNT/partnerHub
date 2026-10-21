@@ -1,5 +1,7 @@
 # Business Consent Delivery Implementation Plan
 
+> Contrato de persistencia supersedido por `../specs/2026-10-21-business-fresh-consent-amendment.md`, aprobado por Jairo 2026-10-21. Sin restauración ni TTL; `expiresAt:null`, memoria del documento. AGR007 corrige runtime antes de UI/integración. El resto del plan y los gates permanecen.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Entregar consentimiento y medición mínima Business sin etiquetas previas al permiso ni regresiones en otros ecosistemas.

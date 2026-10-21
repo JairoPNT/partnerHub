@@ -1,5 +1,7 @@
 # Business Measurement Runtime Implementation Plan
 
+> Historial AGR004; revisión Task2 fallida. Ejecutar corrección solo bajo AGR007 y `../specs/2026-10-21-business-fresh-consent-amendment.md`. Jairo aprobó consentimiento por carga, sustituyendo TTL/restauración y pruebas de recuerdo que figuran abajo. No repetir AGR004 ni declarar su revisión aprobada retroactivamente.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ejecutar consentimiento y medición Business con una sola autoridad por documento, sin SDKs antes de permiso ni datos propios sensibles.

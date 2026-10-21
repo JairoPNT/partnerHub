@@ -1,5 +1,7 @@
 # AGR-20261021-005 — Aviso y preferencias de consentimiento Business
 
+> Actualización vinculante 2026-10-21: Jairo APROBÓ consentimiento por carga. El hold por decisión humana descrito abajo queda resuelto y se conserva como historial. La implementación espera revisión de AGR007 (runtime sin restauración) y contenido AGR001/006/003 revisado. Aplicar `docs/superpowers/specs/2026-10-21-business-fresh-consent-amendment.md`; no prometer recuerdo de 180 días.
+
 Estado: contrato y plan técnico PR #229 aprobados por Jairo el 2026-10-21. EJECUCIÓN EN HOLD: no iniciar implementación UI, ni siquiera con fixtures, hasta que Jairo resuelva la enmienda de privacidad pendiente y se completen/revisen las dependencias indicadas. La aprobación previa del contrato/plan no aprueba esa enmienda.
 
 - Owner: Antigravity. Outcome: elegir/rechazar categorías y reabrir/retirar sin bloquear contacto o contenido.
