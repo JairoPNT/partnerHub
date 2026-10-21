@@ -62,6 +62,10 @@ function normalizePreviewPath(path: string) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    if (body !== null && typeof body === "object" && Object.hasOwn(body, "businessLandingContent")) {
+      return NextResponse.json({ error: "BUSINESS_LANDING_CONTENT_REQUIRES_GUARDED_EDITOR" },
+        { status: 400, headers: { "Cache-Control": "no-store" } });
+    }
     const input = productPageGenerationInputSchema.parse(body);
     const result = await productPageGenerationService.generate(input);
     const publicationAutomation = await publicationEventEnqueueService.afterSourceChange(result.siteId);

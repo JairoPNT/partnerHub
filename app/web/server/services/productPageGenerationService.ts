@@ -23,6 +23,7 @@ import { buildBusinessWhatsappCta } from "@/server/services/businessWhatsappCta"
 import { composeBusinessMasterContent, loadBusinessMasterContent } from "@/server/services/businessMasterContent";
 import { assertBusinessPublicationSiteIdentity, isBusinessPublicationSiteId, withBusinessPublicationSite } from "@/server/services/businessPublicationSiteCoordinator";
 import { needsProductMutation, withProductMutation } from "@/server/services/productMutationCoordinator";
+import { businessLandingContentSchema } from "@/shared/business-landing-content-contract";
 
 const siteIdSchema = z
   .string()
@@ -182,7 +183,11 @@ export const productPageGenerationInputSchema = z.object({
     .optional(),
   mediaBaseUrl: httpsUrlSchema.optional(),
   faviconUrl: httpsUrlSchema.optional(),
+  businessLandingContent: businessLandingContentSchema.optional(),
   ecosystemType: ecosystemTypeSchema.default(DEFAULT_ECOSYSTEM_TYPE)
+}).superRefine((input, context) => {
+  if (input.businessLandingContent !== undefined && input.ecosystemType !== 'BUSINESS')
+    context.addIssue({ code: z.ZodIssueCode.custom, path: ['businessLandingContent'], message: 'Landing content is Business-only' });
 });
 
 export type ProductPageGenerationInput = z.infer<typeof productPageGenerationInputSchema>;
@@ -265,6 +270,8 @@ function resolveInsideDirectory(rootDirectory: string, childName: string) {
 }
 
 export function normalizeProductPageGenerationConfiguration(input: ProductPageGenerationInput) {
+  if (input.businessLandingContent !== undefined && input.ecosystemType !== 'BUSINESS')
+    throw new Error('BUSINESS_CONTENT_ECOSYSTEM_INVALID');
   const whatsappNumber = input.distributor.whatsappNumber.replace(/\D/g, "");
 
   if (whatsappNumber.length < 10 || whatsappNumber.length > 15) {
@@ -307,6 +314,8 @@ export function normalizeProductPageGenerationConfiguration(input: ProductPageGe
       defaultMessage
     },
     ...(businessCta ? { cta: businessCta } : {}),
+    ...(input.businessLandingContent !== undefined
+      ? { businessLandingContent: businessLandingContentSchema.parse(input.businessLandingContent) } : {}),
     hero: input.ecosystemType === "BUSINESS"
       ? input.hero
       : {
@@ -362,8 +371,15 @@ export const productPageGenerationService = {
     options?: ProductPageGenerationOptions
   ): Promise<ProductPageGenerationResult> {
     assertBusinessPublicationSiteIdentity(input.site.id, input.ecosystemType);
+    if (isBusinessPublicationSiteId(input.site.id) && input.ecosystemType !== 'BUSINESS')
+      throw new Error('BUSINESS_CONTENT_SOURCE_IDENTITY_INVALID');
     const action = async () => {
-      const baseConfiguration = normalizeProductPageGenerationConfiguration(input);
+      // Input may be an old server snapshot or an HTTP body without the profile.
+      // Re-read only this field under the same lock before composing config.js;
+      // generic generation must never insert, erase or restore editor content.
+      const baseConfiguration = normalizeProductPageGenerationConfiguration(input.ecosystemType === 'BUSINESS'
+        ? { ...input, businessLandingContent: await productPageSourceService.getBusinessLandingContent(input.site.id) }
+        : input);
       const masterSite = isMasterSiteId(input.site.id);
       const entitlement = masterSite
         ? null

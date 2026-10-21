@@ -1,11 +1,13 @@
 import "server-only";
 
-import { mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
-import { resolve, sep } from "node:path";
+import { lstat, mkdir, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
+import { dirname, resolve, sep } from "node:path";
+import { createHash, randomUUID } from "node:crypto";
 
 import { z } from "zod";
 import { assertBusinessPublicationSiteIdentity, isBusinessPublicationSiteId, withBusinessPublicationSite } from "@/server/services/businessPublicationSiteCoordinator";
 import { needsProductMutation, withProductMutation } from "@/server/services/productMutationCoordinator";
+import { businessLandingContentSchema, type BusinessLandingContent } from "@/shared/business-landing-content-contract";
 
 const siteIdSchema = z
   .string()
@@ -42,13 +44,22 @@ function verificationPath(siteId: string) {
 async function save(siteId: string, configuration: unknown) {
   const ecosystemType = (configuration as { ecosystemType?: unknown } | null)?.ecosystemType;
   assertBusinessPublicationSiteIdentity(siteId, ecosystemType);
+  if (isBusinessPublicationSiteId(siteId) && ecosystemType !== 'BUSINESS')
+    throw new Error('BUSINESS_CONTENT_SOURCE_IDENTITY_INVALID');
   const action = async () => {
     const target = sourcePath(siteId);
+    // Only updateBusinessLandingContent may change the profile. Generic writers
+    // (generation, replication, lead sync) may hold old or omitted snapshots.
+    const authoritativeProfile = isBusinessPublicationSiteId(siteId)
+      ? await getBusinessLandingContent(siteId) : undefined;
+    const next = isBusinessPublicationSiteId(siteId)
+      ? { ...(configuration as Record<string, unknown>), businessLandingContent: authoritativeProfile }
+      : configuration;
     const directory = resolve(getSourceDirectory());
     const temporary = `${target}.tmp-${process.pid}-${Date.now()}`;
 
     await mkdir(directory, { recursive: true });
-    await writeFile(temporary, `${JSON.stringify(configuration, null, 2)}\n`, "utf8");
+    await writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, "utf8");
     await rename(temporary, target);
   };
   return isBusinessPublicationSiteId(siteId) ? withBusinessPublicationSite(siteId, action)
@@ -91,4 +102,71 @@ async function list() {
   }
 }
 
-export const productPageSourceService = { clearLastVerification, get, list, save };
+// Content updates deliberately do not pass through save/normalization: existing
+// generated presentation and extension fields must survive byte-CAS updates.
+async function assertContentPath(target: string) {
+  let current = target;
+  while (true) {
+    try {
+      const stat = await lstat(current);
+      if (stat.isSymbolicLink() || (current === target && !stat.isFile()) || (current !== target && !stat.isDirectory()))
+        throw new Error('BUSINESS_CONTENT_SOURCE_PATH_INVALID');
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error;
+    }
+    const parent = dirname(current);
+    if (parent === current) break;
+    current = parent;
+  }
+}
+
+async function getBusinessLandingContent(siteId: string): Promise<BusinessLandingContent | undefined> {
+  assertBusinessPublicationSiteIdentity(siteId, 'BUSINESS');
+  return withBusinessPublicationSite(siteId, async () => {
+    await assertContentPath(sourcePath(siteId));
+    const source = await get(siteId);
+    if (source === null) return undefined;
+    const parsed = z.object({ ecosystemType: z.literal('BUSINESS'),
+      site: z.object({ id: z.literal(siteId) }),
+      businessLandingContent: businessLandingContentSchema.optional()
+    }).safeParse(source);
+    if (!parsed.success) throw new Error('BUSINESS_CONTENT_SOURCE_IDENTITY_INVALID');
+    return parsed.data.businessLandingContent;
+  });
+}
+
+async function updateBusinessLandingContent(input: {
+  siteId: string; expectedSourceHash: string | null; sourceConfiguration: unknown; profile: BusinessLandingContent;
+}) {
+  assertBusinessPublicationSiteIdentity(input.siteId, 'BUSINESS');
+  const profile = businessLandingContentSchema.parse(input.profile);
+  const identitySchema = z.object({ ecosystemType: z.literal('BUSINESS'), site: z.object({ id: z.literal(input.siteId), domain: z.string().min(1) }) });
+  const expected = identitySchema.safeParse(input.sourceConfiguration);
+  if (!expected.success) throw new Error('BUSINESS_CONTENT_SOURCE_IDENTITY_INVALID');
+  return withBusinessPublicationSite(input.siteId, async () => {
+    const target = sourcePath(input.siteId);
+    const readCurrent = async () => {
+      await assertContentPath(target);
+      try { return await readFile(target); }
+      catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return null; throw error; }
+    };
+    const hash = (bytes: Buffer | null) => bytes === null ? null : createHash('sha256').update(bytes).digest('hex');
+    const bytes = await readCurrent();
+    if (hash(bytes) !== input.expectedSourceHash) throw new Error('BUSINESS_CONTENT_SOURCE_CONFLICT');
+    const source = bytes === null ? input.sourceConfiguration : JSON.parse(bytes.toString('utf8')) as unknown;
+    const actual = identitySchema.safeParse(source);
+    if (!actual.success || actual.data.site.domain !== expected.data.site.domain)
+      throw new Error('BUSINESS_CONTENT_SOURCE_IDENTITY_INVALID');
+    const next = { ...(source as Record<string, unknown>), businessLandingContent: profile };
+    await mkdir(dirname(target), { recursive: true });
+    await assertContentPath(target);
+    const temporary = `${target}.tmp-${randomUUID()}`;
+    try {
+      await writeFile(temporary, `${JSON.stringify(next, null, 2)}\n`, { flag: 'wx', mode: 0o600 });
+      if (hash(await readCurrent()) !== input.expectedSourceHash) throw new Error('BUSINESS_CONTENT_SOURCE_CONFLICT');
+      await rename(temporary, target);
+    } finally { await rm(temporary, { force: true }); }
+  });
+}
+
+export const productPageSourceService = { clearLastVerification, get, list, save, getBusinessLandingContent, updateBusinessLandingContent };
