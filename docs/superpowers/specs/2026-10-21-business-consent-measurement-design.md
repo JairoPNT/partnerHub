@@ -1,6 +1,6 @@
 # Business — consentimiento y medición del piloto Claudia
 
-Ticket de diseño: CDX-20261021-004. Contrato del PR #228 aprobado explícitamente por Jairo el 2026-10-21; autorizada la preparación del plan técnico. Implementación pendiente de revisión del plan. No hay cambios de runtime ni publicación en esta entrega.
+Ticket de diseño: CDX-20261021-004. Contrato PR #228 y plan técnico PR #229 aprobados explícitamente por Jairo el 2026-10-21; implementación autorizada con subagentes y revisión por tarea. La aprobación no autoriza publicación productiva.
 
 ## Objetivo y evidencia
 
@@ -61,4 +61,4 @@ AGR-001/003 (contenido/FAQ) no deben añadir loaders o emisores paralelos. AGR-0
 - Google: https://developers.google.com/tag-platform/security/guides/privacy — controles de signals/personalización.
 - Meta: https://developers.facebook.com/docs/meta-pixel/implementation/gdpr/ — revoke/grant y categorías de datos del SDK. Lector directo devolvió 429; contenido oficial recuperado mediante la ruta Jina de agent-reach. Ninguna cuenta fue consultada.
 
-Pendiente antes de implementación: revisión y aprobación del plan técnico. Se conserva la elección previa de Jairo: subagentes por tarea y revisión independiente; Antigravity mantiene sus áreas frontend. Los requests AGR-004/005 se preparan con el plan, sin activar trabajo de producto antes de su aprobación. No se reinicia el monitor periódico eliminado.
+Plan técnico PR #229 aprobado por Jairo el 2026-10-21. Se conserva el método autorizado: subagentes por tarea y revisión independiente; Antigravity mantiene sus áreas frontend. AGR-005 espera AGR-001/003 por solapamiento; backend y runtime pueden avanzar separados. No se reinicia el monitor periódico eliminado ni se autoriza publicación productiva.

@@ -1,6 +1,6 @@
 # AGR-20261021-003 — Dedicación semanal en FAQ de Negocio
 
-Estado: cambio de copy solicitado por Jairo el 2026-10-21; pendiente de implementación por Antigravity. No publicado.
+Estado: implementado por subagente en rol Antigravity y revisado independientemente, commit fc47b4d, incluido en PR #230 borrador. No fusionado ni publicado; perfil guardado de Claudia no sobrescrito.
 
 - Owner: Antigravity.
 - Scope: cambiar únicamente la respuesta de «¿Cuánto tiempo debo dedicarle a la semana?» en la plantilla BUSINESS; conservar las demás preguntas y respuestas.
@@ -9,5 +9,6 @@ Estado: cambio de copy solicitado por Jairo el 2026-10-21; pendiente de implemen
 - Excluded: otras FAQs, diseño, CTAs, video, medición, backend, APIs, fuentes guardadas de partners, publicación y proveedores. No convertir el rango recomendado en requisito fijo ni prometer velocidad o resultados.
 - Dependencies: integrar después de `AGR-20261021-001`; esta instrucción sustituye su texto anterior de dedicación para esta FAQ. No duplicar ni ejecutar en paralelo sobre los mismos archivos. Si el perfil de Claudia conserva el texto previo, registrar el ajuste pendiente mediante su flujo autorizado, sin editar fuentes productivas desde esta tarea.
 - Parallel-safe with: `AGR-20261021-002` (editor en módulos distintos); no altera esquema ni API.
+- Orden actualizado por revisión AGR-001: esperar también AGR-20261021-006 (imágenes hero/fallback neutral) antes de editar plantilla; después entregar FAQ revisada para AGR-005. No ejecutar AGR-003/006/005 en paralelo sobre app/index/styles/config.
 - Verification: comprobar mínimo de 2 horas, recomendación opcional de 8–12, disclaimer y resto de FAQs intacto; verificar fallback y precedencia del perfil sin cambiar otros campos. El texto cabe en el límite de 300 caracteres existente.
 - Delivery: rama/PR propios, diff acotado y reporte `brain/agent-requests/antigravity/reports/AGR-20261021-003_business_faq_weekly_dedication_DONE.md`, con pruebas/build aplicables. Publicar en Claudia exige el gate de integración separado.
