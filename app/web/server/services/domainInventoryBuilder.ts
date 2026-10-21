@@ -28,6 +28,7 @@ export type DomainInventoryTarget = {
 
 export type DomainVerificationSummary = {
   siteId: string;
+  domain?: string | null;
   status: string;
   verifiedAt: string;
 };
@@ -53,7 +54,7 @@ export type DomainInventoryItem = {
 
 const masters = [
   { ecosystemType: "PRODUCT", siteId: "ganomaster", hostname: "product.ganomaster.pro" },
-  { ecosystemType: "BUSINESS", siteId: "ganomaster-business", hostname: "business.ganomaster.pro" },
+  { ecosystemType: "BUSINESS", siteId: "ganomaster-business", hostname: "negocio.ganomaster.pro" },
   { ecosystemType: "PERSONAL_BRAND", siteId: "ganomaster-personal-brand", hostname: "brand.ganomaster.pro" }
 ] as const;
 
@@ -76,9 +77,9 @@ export function buildDomainInventory(input: {
   const sourceBySiteId = new Map(input.sources.map((source) => [source.siteId, sourceDetails(source.configuration)]));
   const verificationBySiteId = new Map(input.verifications.map((verification) => [verification.siteId, verification]));
 
-  const verificationFields = (siteId: string) => {
+  const verificationFields = (siteId: string, expectedHost?: string) => {
     const verification = verificationBySiteId.get(siteId);
-    return verification
+    return verification && (!expectedHost || verification.domain === expectedHost)
       ? { verificationState: verification.status, verifiedAt: verification.verifiedAt }
       : { verificationState: "NOT_CHECKED" };
   };
@@ -96,7 +97,7 @@ export function buildDomainInventory(input: {
     dnsState: "UNKNOWN",
     sslState: "UNKNOWN",
     publicationState: "UNKNOWN",
-    ...verificationFields(master.siteId)
+    ...verificationFields(master.siteId, master.ecosystemType === "BUSINESS" ? master.hostname : undefined)
   }));
 
   const legacyItems = input.leads.flatMap((lead): DomainInventoryItem[] => {
