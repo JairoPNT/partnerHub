@@ -1,6 +1,6 @@
 # CDX-20261021-006 — Integración local de consentimiento Business
 
-Estado: implementación offline terminada y verificada el 2026-10-21; revisión independiente de integración/seguridad pendiente con controlador. Reporte `../reports/CDX-20261021-006_business_consent_integration_DONE.md`.220 pruebas finales aprobadas sin fallos/omisiones; lint/build PASS. GA4/Meta continúan false y publicVerification NOT_RUN. No publicación autorizada por este cierre.
+Estado: implementación offline y ola acotada de correcciones completadas el 2026-10-21; revisión independiente scoped de AGR009/AGR010 + regresiones/rebind pendiente con controlador. Reporte `../reports/CDX-20261021-006_business_consent_integration_DONE.md`. Checkpoint original220; ola final167 pruebas frescas sin fallos/omisiones +57 servicios retenidos sin cambios (224 casos de evidencia, no224 ejecuciones frescas). Lint/build PASS. GA4/Meta continúan false y publicVerification NOT_RUN; compatibilidad/cutover/publicación/main siguen sin autorización.
 
 - Owner: Codex orquestador; revisión visual por Antigravity sin ediciones simultáneas.
 - Outcome: paquete integrado revisado y evidencia local browser/packaging; no publicación ni acreditación de recepción externa.

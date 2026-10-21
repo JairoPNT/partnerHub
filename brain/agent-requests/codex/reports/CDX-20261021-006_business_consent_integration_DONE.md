@@ -5,6 +5,25 @@
 - Status: implemented and locally verified; independent integration/security review remains controller-owned. No publication or provider activation.
 - Build: PASS, exit0. Lint and diff checks: PASS. Existing build warnings: workspace-root/multiple lockfiles and6 NFT tracing warnings; service tests show experimental-loader/MODULE_TYPELESS_PACKAGE_JSON warnings.
 
+## Final bounded fix wave (current; supersedes original binding/counts)
+
+Whole-release review returned WITH FIXES for actual header CTA measurement (P2) and valid reload-quarantine withdrawal UI (P3). Separate owners corrected app/runtime: AGR009 code `20f0bee`/report `238f8a2`; AGR010 code `0121ca0`/report `072f570`. Controller locally merged for validation at `cfb1e2e`; final scoped independent re-review of the combined corrections/regressions/rebind is **pending**, not implied by merge or tests. Own integration fix-wave code commit: `f9c810394f418e1c99c6c179628bd9db98742e9b`.
+
+Genuine actual-browser RED before merges: header first trusted click count0 instead of1; quarantine withdrawal displayed unavailable instead of clean-reload guidance (`final-fixes-browser-red.log`,2 failures/29 pattern exclusions). New header regression uses generated `#btnNavContact`, real nested span and Enter, one exact minimal header payload per provider/activation, no pre-consent replay/synthetic/wrong-destination event. Extended real-two-tab/BFCache-event case asserts authoritative denied `persistence:none` quarantine UI stays accurate and withdrawal enabled after explicit withdrawal on both documents. No app/runtime edits by integration.
+
+Current committed LF binding, independently hashed from owner-integrated Git blobs:
+
+| Asset | Current SHA256 |
+|---|---|
+| index.html (unchanged) | 39c387e623e8bd030e504a0c38fb5b792f8b9783a1c96693a27b589dff83ccfb |
+| app.js | fca1eb4fda4c7602ca1ab5448b81323b7b1af55ee2a3a2a537c85b2f625546de |
+| measurement-runtime.js | 78db567bbd5e6ab30aa9e2402bfa421aa043a7bad11ea046d56ef79df0dccf42 |
+| styles.css (unchanged) | 302a738124f72f99973e041d8219f801ea748cdcf4380e07e5ac33612db25f59 |
+
+Registry/harness hashes only rebound; version1 and GA4/Meta false unchanged. Final fresh rerun using same full command groups below, no screenshot env:39/39 browser+rehearsal (`fixwave-final-integration.log`),128/128 components including3 new owner regressions (`fixwave-final-components.log`), lint/build exit0 (`fixwave-final-lint.log`, `fixwave-final-build.log`), staged/unstaged diff checks exit0.167 fresh cases,0fail,0skip. Backend services57/57 retained from original log, not rerun because no backend service implementation changed; actual preparer/generator/binding are freshly exercised. Current evidence pool224 cases =167 fresh +57 retained, versus original220 checkpoint. No claim of224 fresh executions.
+
+Current generated fixture package readiness digest: `f0010101c3e241b659bff804a30710d715ba75a482b2c804464e76f94fff7668`; generated timestamp/package specific. Both providers BLOCKED, publicVerification NOT_RUN. Native BFCache/Linux/provider/account/paid-context/public receipt and persistent-master compatibility/cutover/main-merge gates remain open. No new screenshots/layout changes; earlier6 captures retained only for unchanged layout. Warnings remain disclosed; no external action, source/master mutation, publication or push/PR/main operation.
+
 ## Changes and evidence
 
 Created the four allowed browser/harness/rehearsal/readiness scripts; registered the exact reviewed committed LF asset digests with **GA4=false, Meta=false**. Actual server preparer and generator produce the full browser package; isolated installed Chrome uses deny-by-default interception, fake SDKs only, ephemeral profiles/native input and real two-tab BroadcastChannel. Node20 actual create/refresh CLI modules receive explicit mkdtemp template/output/jobs options; no defaults targeting real data.
@@ -30,7 +49,7 @@ Total220 final tests pass; no aggregate npm test script exists. Earlier missing-
 - BLOCKED/NOT_RUN Linux: installed Docker client cannot connect to missing dockerDesktopLinuxEngine pipe; no engine started.
 - `providers={ga4:'BLOCKED',meta:'BLOCKED'}`, `publicVerification='NOT_RUN'` in readiness API. No public fetch, SDK/account/event, DNS/SFTP, source/master or publication mutation.
 
-## Reviewed committed asset binding
+## Original reviewed committed asset binding (historical; superseded above)
 
 | Asset | SHA256 |
 |---|---|
