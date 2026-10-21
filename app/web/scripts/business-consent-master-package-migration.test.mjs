@@ -375,6 +375,102 @@ test("installed successor capture-mutate-revert cannot commit an audit or succes
   } finally { await f.cleanup(); }
 });
 
+for (const defect of ["removed", "replaced-identical", "mutated", "mutate-revert", "parent-replaced"]) {
+  test(`F1 committed journal ${defect} retains backup and claim instead of success`, async () => {
+    const f = await fixture();
+    try {
+      let foreignBytes;
+      await assert.rejects(mechanical(f, { beforeCleanup: async () => {
+        const path = newJournal(f), bytes = await readFile(path);
+        if (defect === "removed") await rm(path);
+        if (defect === "replaced-identical") { await rename(path, path + ".displaced"); await writeFile(path, bytes); }
+        if (defect === "mutated") await writeFile(path, "foreign journal after committed link");
+        if (defect === "mutate-revert") { await writeFile(path, "transient foreign bytes"); await writeFile(path, bytes); }
+        if (defect === "parent-replaced") { await rename(dirname(path), dirname(path) + ".displaced"); await mkdir(dirname(path)); await writeFile(path, bytes); }
+        foreignBytes = await exists(path) ? await readFile(path) : null;
+      } }), /JOURNAL.*PROOF|RECOVERY.*DRIFT/);
+      assert.equal(await exists(claim(f)), true);
+      const backup = (await readdir(f.outputRoot)).find((name) => name.endsWith(".previous"));
+      assert.ok(backup); assert.equal(invHash((await snapshot(join(f.outputRoot, backup))).filter((entry) => entry.hash)), OLD);
+      if (foreignBytes) assert.deepEqual(await readFile(newJournal(f)), foreignBytes);
+      else assert.equal(await exists(newJournal(f)), false);
+      assert.equal((await readBusinessConsentMasterMigration(f.options)).outcome, "BLOCKED");
+    } finally { await f.cleanup(); }
+  });
+}
+
+for (const [resource, defect, phase] of [
+  ["claim", "directory-replaced", "afterClaim"],
+  ["claim", "file-replaced", "beforeCleanup"],
+  ["claim", "directory-replaced", "beforeCleanup"],
+  ["claim", "mutate-revert", "afterClaim"],
+  ["claim", "mutate-revert", "beforeCleanup"],
+  ["claim", "parent-replaced", "afterClaim"],
+  ["claim", "parent-replaced", "beforeCleanup"],
+  ["reservation", "file-replaced", "afterPreviousBackupAbsentCheck"],
+  ["reservation", "file-replaced", "afterArchive"],
+  ["reservation", "file-replaced", "beforeCleanup"],
+  ["reservation", "mutate-revert", "afterArchive"],
+  ["reservation", "mutate-revert", "beforeCleanup"],
+  ["reservation", "parent-replaced", "beforeCleanup"]
+]) {
+  test(`F2 ${resource} ${defect} at ${phase} cannot consume foreign ownership objects`, async () => {
+    const f = await fixture();
+    try {
+      let markerPath, markerBytes;
+      await assert.rejects(mechanical(f, { [phase]: async () => {
+        markerPath = resource === "claim" ? join(claim(f), "owner.json") : newArchive(f) + ".reservation.json";
+        markerBytes = await readFile(markerPath);
+        if (defect === "file-replaced") {
+          await rename(markerPath, resource === "claim" ? claim(f) + ".owner-displaced" : markerPath + ".displaced");
+          await writeFile(markerPath, markerBytes);
+        }
+        if (defect === "directory-replaced") { await rename(claim(f), claim(f) + ".displaced"); await mkdir(claim(f)); await writeFile(markerPath, markerBytes); }
+        if (defect === "mutate-revert") { await writeFile(markerPath, "transient foreign bytes"); await writeFile(markerPath, markerBytes); }
+        if (defect === "parent-replaced") {
+          const parent = resource === "claim" ? dirname(claim(f)) : dirname(markerPath), displaced = parent + ".displaced";
+          await rename(parent, displaced); await mkdir(parent);
+          // Move the acquired objects intact: only their ancestor identity changes.
+          if (resource === "claim") await rename(join(displaced, SITE), claim(f));
+          else {
+            await rename(join(displaced, SITE), newArchive(f));
+            await rename(join(displaced, SITE + ".reservation.json"), markerPath);
+          }
+        }
+      } }), /OWNERSHIP|RESERVATION|PROOF|DRIFT/);
+      assert.deepEqual(await readFile(markerPath), markerBytes);
+      assert.equal(await exists(claim(f)), true, "retain ownership evidence; never delete the replacement");
+      if (phase !== "afterClaim") {
+        const backups = (await readdir(f.outputRoot)).filter((name) => name.endsWith(".previous"));
+        if (phase === "afterPreviousBackupAbsentCheck") assert.equal(backups.length, 0);
+        else {
+          assert.equal(backups.length, 1);
+          assert.equal(invHash((await snapshot(join(f.outputRoot, backups[0]))).filter((entry) => entry.hash)), OLD);
+        }
+      }
+      if (phase === "afterArchive") assert.equal(await exists(join(f.outputRoot, SITE)), false, "uncertain ownership must not trigger rollback");
+    } finally { await f.cleanup(); }
+  });
+}
+
+test("F2 copied staging owner cannot delete foreign stage or consume backup during cleanup", async () => {
+  const f = await fixture();
+  try {
+    let stagedPath, markerBytes;
+    await assert.rejects(mechanical(f, {
+      afterStageVerified: async ({ stageDirectory }) => { stagedPath = stageDirectory; },
+      beforeCleanup: async () => {
+        markerBytes = await readFile(join(stagedPath, "owner.json"));
+        await rename(stagedPath, stagedPath + ".displaced"); await mkdir(stagedPath);
+        await writeFile(join(stagedPath, "owner.json"), markerBytes);
+      }
+    }), /STAGING.*OWNERSHIP|PROOF|DRIFT/);
+    assert.deepEqual(await readFile(join(stagedPath, "owner.json")), markerBytes);
+    assert.equal((await readdir(f.outputRoot)).filter((name) => name.endsWith(".previous")).length, 1);
+    assert.equal(await exists(claim(f)), true);
+  } finally { await f.cleanup(); }
+});
+
 for (const field of ["planHash", "previousJournalHash"]) {
   test(`lineage rejects non-string ${field} even when hash coercion would match`, async () => {
     const f = await fixture();
@@ -496,6 +592,43 @@ for (const defect of ["missing-journal", "missing-archive", "wrong-archive", "jo
     } finally { await f.cleanup(); }
   });
 }
+
+for (const defect of ["exists-string", "exists-number", "wrong-size", "file-mode-directory", "directory-mode-file",
+  "file-mode-symlink", "mode-outside-native-bits", "leading-zero-inode", "inode-overflow", "device-overflow"]) {
+  test(`F3 rehashed predecessor proof rejects impossible writer fact: ${defect}`, async () => {
+    const f = await fixture();
+    try {
+      await mechanical(f);
+      const path = newJournal(f), j = JSON.parse(await readFile(path));
+      const proof = j.planMaterial.predecessor, file = proof.nodes.find((n) => n.path === "app.js"), directory = proof.nodes.find((n) => n.path === "");
+      if (defect === "exists-string") proof.exists = "not-a-boolean";
+      if (defect === "exists-number") proof.exists = 1;
+      if (defect === "wrong-size") file.size = "0";
+      if (defect === "file-mode-directory") file.mode = String(0o40700);
+      if (defect === "directory-mode-file") directory.mode = String(0o100600);
+      if (defect === "file-mode-symlink") file.mode = String(0o120777);
+      if (defect === "mode-outside-native-bits") file.mode = String(0o100600 + 0x10000);
+      if (defect === "leading-zero-inode") file.ino = "0" + file.ino;
+      if (defect === "inode-overflow") file.ino = "18446744073709551616";
+      if (defect === "device-overflow") file.dev = "18446744073709551616";
+      j.planHash = H(JSON.stringify(j.planMaterial)); await writeFile(path, json(j));
+      const before = await snapshot(f.root);
+      assert.equal((await readBusinessConsentMasterMigration(f.options)).outcome, "BLOCKED");
+      assert.deepEqual(await snapshot(f.root), before);
+    } finally { await f.cleanup(); }
+  });
+}
+
+test("F3 copied archive validates size facts without equating predecessor inode or clocks with copied files", async () => {
+  const f = await fixture();
+  try {
+    await mechanical(f);
+    const j = JSON.parse(await readFile(newJournal(f))), archive = await captureTree(newArchive(f));
+    const original = j.planMaterial.predecessor.nodes.find((n) => n.path === "app.js"), copied = archive.nodes.find((n) => n.path === "app.js");
+    assert.notEqual(original.ino, copied.ino); assert.equal(original.size, copied.size);
+    assert.equal((await readBusinessConsentMasterMigration(f.options)).outcome, "ALREADY_APPLIED");
+  } finally { await f.cleanup(); }
+});
 
 test("junctions and replaced root ancestors cannot masquerade as regular artifact trees", async () => {
   const f = await fixture();

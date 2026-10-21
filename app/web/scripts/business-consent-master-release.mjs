@@ -67,9 +67,9 @@ function pathsFor(options) {
 }
 
 function shape(value, files, directories) {
-  return value.exists && same(value.files.map((f) => f.path), sorted(files)) && same(value.directories, sorted(directories));
+  return value.exists === true && same(value.files.map((f) => f.path), sorted(files)) && same(value.directories, sorted(directories));
 }
-function completePredecessorProof(value) {
+function completePredecessorProof(value, archived) {
   if (!exactKeys(value, ["exists", "files", "directories", "nodes", "hash"]) ||
       !shape(value, PREVIOUS_FILES, ["tipografia"]) || !Array.isArray(value.nodes)) return false;
   const nodePaths = sorted(["", "tipografia", ...PREVIOUS_FILES]);
@@ -77,8 +77,14 @@ function completePredecessorProof(value) {
   return value.nodes.every((node) => {
     const file = PREVIOUS_FILES.includes(node.path);
     const fields = ["path", "dev", "ino", "mode", ...(file ? ["size", "mtimeNs", "ctimeNs"] : [])];
-    return exactKeys(node, fields) && fields.filter((key) => key !== "path").every((key) =>
-      typeof node[key] === "string" && /^[0-9]{1,32}$/.test(node[key]));
+    if (!exactKeys(node, fields) || !fields.filter((key) => key !== "path").every((key) =>
+      typeof node[key] === "string" && /^(?:0|[1-9][0-9]{0,31})$/.test(node[key]))) return false;
+    const mode = BigInt(node.mode);
+    if ((mode & 0o170000n) !== (file ? 0o100000n : 0o040000n) || (mode & ~0o177777n) !== 0n) return false;
+    if (BigInt(node.dev) > 0xffffffffffffffffn || BigInt(node.ino) > 0xffffffffffffffffn) return false;
+    // Copying changes physical identity and clocks, not byte lengths. Only the
+    // latter can be corroborated by this unsigned, exact-content archive.
+    return !file || node.size === archived.nodes.find((entry) => entry.path === node.path)?.size;
   });
 }
 async function journal(path) {
@@ -203,7 +209,7 @@ export async function readBusinessConsentMasterMigration(options = {}) {
       "predecessor", "lineage", "successor", "writerSnapshot", "previousPackageFiles"].sort()) ||
         m.requestId !== REQUEST_ID || m.operation !== OPERATION || m.reviewedCommit !== REVIEW || m.schemaVersion !== 1 ||
         !same(m.paths, c.paths) || !same(m.providers, { ga4: false, meta: false }) || !same(m.lineage, c.history) ||
-        m.predecessor?.hash !== OLD || !completePredecessorProof(m.predecessor) ||
+        m.predecessor?.hash !== OLD || !completePredecessorProof(m.predecessor, c.predecessor) ||
         !same(m.predecessor.files, c.predecessor.files) || !same(m.previousPackageFiles, c.predecessor.files) ||
         !same(m.successor, material(c).successor) || !same(m.writerSnapshot, c.writers) || !same(m.ancestors, c.ancestors)) fail("READBACK_PLAN_INVALID");
     const installed = await tree(c.paths.destinationDirectory);

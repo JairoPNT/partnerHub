@@ -1,6 +1,6 @@
 # CDX-20261021-009 — Offline consent master migration tooling
 
-Status: implementation/testing delivered; independent review pending. Production APPLY remains intentionally BLOCKED. No deployment, production mutation, publication, provider calls, push, PR or merge.
+Status: implementation/testing delivered; final-review findings F1–F3 fixed in one bounded wave, scoped re-review pending. Production APPLY remains intentionally BLOCKED. No deployment, production mutation, publication, provider calls, push, PR or merge.
 
 ## Delivery and fixed authority
 
@@ -44,3 +44,13 @@ Independent spec/quality and premium integrity/concurrency reviews remain pendin
 The two directory renames are NOT crash-atomic or zero-downtime. Pre-install rollback requires owned proven paths; post-install/journal/cleanup uncertainty retains claim/evidence. No automatic public-site downgrade exists. Current filesystem audit validation is not a signed attestation, nor an abrupt-crash durability guarantee.
 
 Branch: codex/CDX-20261021-009-business-consent-master-migration. Base: 06ec38f9b6c16c124cd69f3e48b1a5856cccfb30 (main236 plus approved contract). Commit: the commit containing this report; no push/PR/merge.
+
+## Final-review fix wave F1–F3 (BASE9b5d538)
+
+- F1: retain exact committed journal bytes, physical file identity/change clocks and ancestor identities after no-replace commit; revalidate before consuming backup/stage/reservation/claim. Removal, identical replacement, mutate/revert or journal-parent replacement now rejects without deleting backup/claim or overwriting the journal.
+- F2: private in-process WeakMap evidence binds the acquired claim directory/owner file, reservation and stage marker to their bytes/objects/clocks/ancestors. Copied markers are not ownership. Recheck before rename, rollback, destructive cleanup and release; uncertain ownership retains recovery evidence. Serialized legacy marker/journal schemas remain unchanged, and no current-profile install capability was added.
+- F3: predecessor proof requires literal boolean true, canonical decimal metadata, native file/directory mode semantics and uint64 device/inode bounds. Each recorded file size must match the exact predecessor archive. Copied archive inode/timestamps are deliberately NOT required to equal original predecessor metadata; journals remain unsigned filesystem evidence.
+- Observed RED: F1 six failures; isolated F2 fifteen failures plus one stage-ownership failure; F3 eight malformed-proof failures with one valid control, then two native-width failures. Corresponding focused GREEN runs are retained in ignored task evidence.
+- Fresh final command: Node20 --test scripts/business-consent-master-package-migration.test.mjs scripts/jairo-business-master-package-drift-recovery.test.mjs scripts/jairo-business-master-package.test.mjs scripts/business-master-runtime-packaging.test.mjs (from app/web; equivalent repository-root-prefixed invocation used): **183 pass, 0 fail/skip, exit0**. Existing TS integration Node24: **1 pass, 0 fail/skip, exit0**, same experimental-loader/module-type warnings.
+- No Next app/TS/dependency/packaging-config changes in this fix wave. Global lint ignores scripts and application build does not consume these standalone modules, so app lint/build were not repeated; prior successful app build remains historical evidence. The affected runtime bundle was freshly rebuilt and executed in the passing packaging suite. git diff --check passes.
+- Fix changes are limited to shared lifecycle, fixed readback schema, new/legacy regression tests and own reports. Linux and productive exclusion/current-profile APPLY integration remain unverified/BLOCKED. The fix commit is the commit updating this section; exact hash is recorded in ignored task report/ledger after commit.
