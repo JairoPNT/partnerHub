@@ -2,7 +2,23 @@
 
 Request ID: AGR-20261021-004. Owner: Antigravity runtime, asignación explícita por tarea del orquestador.
 
-Estado: implementación de Tasks 1/2 terminada localmente; Task 1 revisada independientemente. Task 2 y aprobación final de seguridad del artefacto siguen pendientes de revisión independiente. DONE identifica la entrega de implementación, no aprobación de activación/publicación.
+Estado actual: Task 2 REVIEW FAILED / NEEDS FIXES — NO COMPLETADA, NO APROBADA. AGR-20261021-004 no está completado y no autoriza activación, integración ni publicación. Task 1 mantiene su revisión independiente previa. El sufijo DONE se conserva exclusivamente por el protocolo/nombre histórico del reporte, no como declaración de finalización.
+
+## Hallazgo bloqueante de revisión independiente — 2026-10-21
+
+El revisor independiente de Task 2 emitió FAIL por restauración de una aceptación obsoleta tras retirada con ambas mutaciones de localStorage bloqueadas. Resultado comunicado por el orquestador después de los commits de implementación/reporte conservados abajo; la revisión no se presenta como aprobada por los 25 tests locales.
+
+Reproducción que bloquea el contrato de retirada/recarga:
+
+1. Con origen/paquete válidos y readiness=true únicamente en fixture offline, conceder ambas categorías; localStorage contiene un grant durable vigente.
+2. Bloquear setItem y removeItem, pero conservar la lectura del valor anterior. Llamar withdraw(): el documento actual queda denegado, persistence=session y reloadRequired=true; el grant antiguo permanece en disco.
+3. Crear/recargar un documento con lectura de ese almacenamiento recuperada y el mismo sitio/origen. El código actual restaura el grant antiguo; con readiness=true, puede reiniciar SDKs sin un consentimiento fresco posterior a la retirada. Que este runtime no llame reload automáticamente evita una navegación propia insegura, pero no satisface la garantía al recargar manualmente o abrir otro documento.
+
+El arbitraje premium de privacidad solicitado por el orquestador confirmó la imposibilidad de garantizar denegación durable incondicional usando solo localStorage cuando el navegador impide escribir y borrar. Un handoff de denegación en sessionStorage no soluciona todos los casos: recuperación de todos los almacenamientos, documento/pestaña nuevos y visibilidad entre pestañas siguen sin garantía. No se añade un fix especulativo ni se cambia el código/tests desde este checkpoint.
+
+Decisión de producto solicitada a Jairo y todavía PENDIENTE, NO APROBADA: la recomendación es consentimiento fresco por documento, sin restaurar grants guardados. La alternativa planteada es conservar la restauración a 180 días y mantener la medición bloqueada hasta un rediseño. El contrato de 180 días no se modifica por este reporte ni por una recomendación técnica; se espera respuesta de Jairo antes de ejecutar Task2 fixes.
+
+Ambos providers reales permanecen false. Cualquier implementación de una enmienda aprobada requerirá su ticket/request/contrato actualizado, tests y revisión independiente correspondientes. UI y otros owners no se modifican desde esta tarea.
 
 ## Cambios y contratos
 
@@ -19,7 +35,7 @@ Estado: implementación de Tasks 1/2 terminada localmente; Task 1 revisada indep
 - `plantillas-de-pagina/business/measurement-runtime.js`
 - `plantillas-de-pagina/business/measurement-runtime.test.mjs`
 - `plantillas-de-pagina/business/measurement-test-harness.mjs`
-- Este reporte propio. No app.js, index.html, styles.css, config.js, backend ni fuentes/output reales.
+- Este reporte y el estado del request propios. No app.js, index.html, styles.css, config.js, backend ni fuentes/output reales.
 
 ## Evidencia TDD y verificación — 2026-10-21
 
@@ -29,7 +45,7 @@ Task 2 RED inicial: `node --test plantillas-de-pagina/business/measurement-runti
 
 Primer GREEN: 23/23 tras corregir el fixture del header para reflejar el anchor real sin ID; no se relajó la validación del runtime. Revisión propia añadió `cross_tab_clear_or_corruption_removes_persistence_claim`: RED 24 pass / 1 fail (`local` en lugar de `none`), luego GREEN 25/25. La corrección elimina preferencias/persistencia al recibir borrado/corrupción/expiración de otra pestaña. Test adicional de expiración/singleton pasó sobre el comportamiento ya implementado.
 
-Verificación final local, Node v24.16.0 / npm 11.13.0, PowerShell nativo:
+Evidencia local histórica previa al FAIL independiente, Node v24.16.0 / npm 11.13.0, PowerShell nativo. Los siguientes resultados se conservan sin alteración: prueban sus casos acotados, NO un estado full-green del contrato ni aprobación de Task 2. Este checkpoint es solo documental; no reejecuta tests ni build:
 
 - `node --test plantillas-de-pagina/business/measurement-runtime.test.mjs`: exit 0, 25/25, sin skip.
 - `node --check plantillas-de-pagina/business/measurement-runtime.js`: exit 0.
@@ -55,16 +71,16 @@ Consultados 2026-10-21 mediante agent-reach / lector Jina, sin cuentas ni sesion
 
 ## Límites y decisiones explícitas para revisión/integración
 
-1. Ruling: `reloadRequired` solicita navegación limpia a la UI pero el runtime nunca llama `location.reload()`. Si setItem y removeItem fallan tras una aceptación durable legible, solo puede garantizarse denegación en memoria; recargar automáticamente podría restaurar ese grant antiguo. Una recarga manual tampoco tiene garantía de default deny si ese storage vuelve a ser legible. La UI AGR-005 y la integración deben tratar este caso explícitamente; su implementación/verificación está pendiente. Coste: no se limpia automáticamente un SDK ya cargado; su revocación oficial se solicita, pero requests ya emitidos o automáticos no se pueden cancelar por promesa.
+1. Ruling previo RECHAZADO como solución suficiente por la revisión independiente: `reloadRequired` solicita navegación limpia a la UI pero el runtime nunca llama `location.reload()`. Si setItem y removeItem fallan tras una aceptación durable legible, solo puede garantizarse denegación en memoria; recargar automáticamente podría restaurar ese grant antiguo. Una recarga manual tampoco tiene garantía de default deny si ese storage vuelve a ser legible. La ausencia de recarga automática es una precaución conservadora, NO resuelve el contrato; UI/integración por sí solas no pueden prometer durabilidad imposible. Coste actual: no se limpia automáticamente un SDK ya cargado; su revocación oficial se solicita, pero requests ya emitidos o automáticos no se pueden cancelar por promesa. Bloquea finalización hasta la decisión de Jairo y una solución revisada.
 2. Ruling: se bloquean ambos adaptadores en contexto no raíz, con cualquier query/hash/referrer, incluso benigno, porque sanitizar solo argumentos no controla auto-colección. Coste: cobertura de medición reducida; WhatsApp sigue navegable.
 3. Readiness=true solo existe en fixtures offline. Este ticket no modifica ningún registry/paquete/cuenta real: ambos flags del release deben seguir false hasta evidencia independiente de controles efectivos de SDK/cuenta. GA4 requiere enhanced/automatic measurement y destinations/conexiones revisados; Meta requiere controles efectivos de autoeventos/metadata/advanced matching y otros ajustes relevantes, además de lo enviado por el stub.
 4. `ga-disable` / Meta revoke son solicitudes mediante controles oficiales, no sandbox de SDK. Las pruebas VM no demuestran que toda petición automática real cesó; librerías ya cargadas pueden conservar cookies/estado, emitir solicitudes pendientes o reaccionar a cambios de documento. No se borran cookies ajenas ni se retiran eventos/datos remotos. Cambios mediante history API sin evento de navegación y comportamiento automático deben evaluarse en el gate de integración; no se garantiza seguridad desde mocks.
 5. El destino de clic se contrasta con `distributor.whatsappNumber` válido; con número ausente/inválido se omite medición del clic aunque una URL custom pudiera navegar. No se envía esa URL como fallback analítico.
-6. Revisión independiente de Task2/seguridad final, UI lifecycle, prueba local de navegador interceptado, packaging Node20, hashes aprobados y release compatible siguen pendientes. No fusionar activación parcial a main. Publicación/WhatsApp/proveedores/cuentas/DNS/SFTP requieren gates separados.
+6. Revisión independiente de Task2 ejecutada con FAIL. Fix autorizado por una decisión de producto aún pendiente y nueva revisión/seguridad final, UI lifecycle, prueba local de navegador interceptado, packaging Node20, hashes aprobados y release compatible siguen pendientes. No fusionar activación parcial a main. Publicación/WhatsApp/proveedores/cuentas/DNS/SFTP requieren gates separados.
 
 ## Rama, commits y follow-up
 
 - Rama: `codex/AGR-20261021-004-business-consent-runtime`.
 - Implementación Task2: `008892c8db12de5a1c29904bacc6c3d79c774987`.
 - PR: no creado por este ejecutor; no push, merge ni publicación.
-- Follow-up requerido: sí, revisión independiente e integración coordinada; no se ejecutan tareas de otro owner desde este reporte.
+- Follow-up requerido: sí, decisión explícita de Jairo sobre la enmienda de consentimiento, después fix/revisión independiente y eventual integración coordinada. Task 2 no está completada; no se ejecutan tareas de otro owner desde este reporte.
