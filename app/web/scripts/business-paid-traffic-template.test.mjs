@@ -377,7 +377,7 @@ test("template renders safe generic defaults, fixed disclosure, WhatsApp CTAs, a
     /\b\d+\s*horas/i,
     "shared hero must not inherit a partner-specific weekly dedication from the FAQ"
   );
-  assert.match(env.document.getElementById("faq-accordion").textContent, /Puedes empezar desde 2 horas semanales/);
+  assert.match(env.document.getElementById("faq-accordion").textContent, /Puedes empezar dedicando un mínimo de 2 horas a la semana/);
 
   // 1. Mandatory near-CTA disclosure must remain visible and contain required elements
   const noticeBox = env.document.getElementById("heroModelNotice");
@@ -427,6 +427,39 @@ test("template renders safe generic defaults, fixed disclosure, WhatsApp CTAs, a
   const omittedNoticeBox = envOmitted.document.getElementById("heroModelNotice");
   assert.notEqual(omittedNoticeBox.style.display, "none", "disclosure must remain visible when modelNotice is omitted by businessMasterContent");
   assert.equal(omittedNoticeBox.hidden, false);
+});
+
+test("weekly dedication FAQ renders the approved optional recommendation unless a validated profile overrides it", async () => {
+  const { configJs, appJs, indexHtml } = await readTemplateFiles();
+  const masterCfg = loadMasterConfig(configJs);
+  const approvedAnswer = "Puedes empezar dedicando un mínimo de 2 horas a la semana. Si tu disponibilidad lo permite, te recomendamos entre 8 y 12 horas semanales para la formación y las actividades comerciales. La dedicación depende de tus objetivos y no garantiza resultados.";
+  const profileAnswer = "Organiza tu actividad según tu disponibilidad y objetivos; no garantiza resultados.";
+  const unchangedAnswers = [
+    "No es indispensable. Contamos con acompañamiento formativo desde el inicio para que aprendas paso a paso a presentar los productos y estructurar tu trabajo comercial.",
+    "Es una actividad independiente de venta directa. Las compensaciones dependen exclusivamente de la comercialización real de productos y del desempeño comercial individual; no es un empleo ni ofrece salario fijo.",
+    "Sí. Iniciar la actividad independiente requiere una inversión para la compra inicial de producto destinado a uso personal y demostración comercial, además de trabajo constante."
+  ];
+
+  assert.ok(approvedAnswer.length <= 300, "approved answer must fit the existing validation limit");
+  for (const [profile, expectedAnswer] of [
+    [undefined, approvedAnswer],
+    [{}, approvedAnswer],
+    [{ dedicationText: profileAnswer }, profileAnswer]
+  ]) {
+    const env = createDomEnvironment(indexHtml, { ...masterCfg, businessLandingContent: profile });
+    runInNewContext(appJs, env.window, { timeout: 1000 });
+    env.triggerDOMContentLoaded();
+    const faqItems = env.document.getElementById("faq-accordion").children;
+    assert.equal(faqItems.length, 4);
+    assert.equal(faqItems[1].querySelector(".faq-answer").textContent, expectedAnswer);
+    assert.deepEqual(
+      [faqItems[0], faqItems[2], faqItems[3]].map((item) => item.querySelector(".faq-answer").textContent),
+      unchangedAnswers
+    );
+    const heroText = env.document.getElementById("heroDedicationText").textContent;
+    if (profile?.dedicationText) assert.equal(heroText, profileAnswer);
+    else assert.doesNotMatch(heroText, /\b\d+\s*horas/i, "FAQ copy must not leak into the neutral hero");
+  }
 });
 
 test("template renders Claudia's approved businessLandingContent profile (autonomy, university students, accompaniment, youth blue/lime/white)", async () => {

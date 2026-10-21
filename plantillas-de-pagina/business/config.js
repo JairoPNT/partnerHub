@@ -156,7 +156,7 @@ const CONFIG = {
       {
         id: 'f2',
         question: '¿Cuánto tiempo debo dedicarle a la semana?',
-        answer: 'Puedes empezar desde 2 horas semanales, con acompañamiento desde el inicio. La dedicación para desarrollar la actividad depende de tus objetivos y tareas; no garantiza resultados.'
+        answer: 'Puedes empezar dedicando un mínimo de 2 horas a la semana. Si tu disponibilidad lo permite, te recomendamos entre 8 y 12 horas semanales para la formación y las actividades comerciales. La dedicación depende de tus objetivos y no garantiza resultados.'
       },
       {
         id: 'f3',
