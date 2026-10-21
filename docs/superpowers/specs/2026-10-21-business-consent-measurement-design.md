@@ -1,6 +1,6 @@
 # Business — consentimiento y medición del piloto Claudia
 
-Ticket de diseño: CDX-20261021-004. Estado: propuesta para aprobación de Jairo; investigación y handoff autorizados, implementación de este contrato aún no aprobada. No hay cambios de runtime ni publicación en esta entrega.
+Ticket de diseño: CDX-20261021-004. Contrato del PR #228 aprobado explícitamente por Jairo el 2026-10-21; autorizada la preparación del plan técnico. Implementación pendiente de revisión del plan. No hay cambios de runtime ni publicación en esta entrega.
 
 ## Objetivo y evidencia
 
@@ -8,7 +8,7 @@ Corregir la carga incondicional de Meta y habilitar medición mínima de visitas
 
 Alternativas: (1) bloqueo básico hasta consentimiento, recomendado por privacidad y pruebas deterministas; (2) modo avanzado con pings sin cookies, descartado para este piloto; (3) CMP externa, diferida para no añadir cuentas/dependencias. No se certifica cumplimiento legal mediante esta solución técnica.
 
-## Decisiones propuestas para aprobar
+## Contrato aprobado
 
 1. Dos categorías opcionales independientes: Analítica (GA4) y Publicidad (Meta). Ambas denegadas inicialmente. Aceptar todo, rechazar opcionales y configurar deben ser acciones claras y equivalentes; cerrar el aviso no acepta.
 2. Antes de aceptar una categoría no cargar su SDK ni emitir pings, PageView o eventos. Sin JavaScript no habrá pixel `noscript`. WhatsApp y el contenido no dependerán del consentimiento publicitario.
@@ -61,4 +61,4 @@ AGR-001/003 (contenido/FAQ) no deben añadir loaders o emisores paralelos. AGR-0
 - Google: https://developers.google.com/tag-platform/security/guides/privacy — controles de signals/personalización.
 - Meta: https://developers.facebook.com/docs/meta-pixel/implementation/gdpr/ — revoke/grant y categorías de datos del SDK. Lector directo devolvió 429; contenido oficial recuperado mediante la ruta Jina de agent-reach. Ninguna cuenta fue consultada.
 
-Pendiente antes de implementación: aprobación del contrato por Jairo, plan técnico y elección de ejecución; después se crean los requests AGR-004/005 con límites finales. No se reinicia el monitor periódico eliminado.
+Pendiente antes de implementación: revisión y aprobación del plan técnico. Se conserva la elección previa de Jairo: subagentes por tarea y revisión independiente; Antigravity mantiene sus áreas frontend. Los requests AGR-004/005 se preparan con el plan, sin activar trabajo de producto antes de su aprobación. No se reinicia el monitor periódico eliminado.
