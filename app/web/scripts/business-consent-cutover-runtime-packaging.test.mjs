@@ -9,7 +9,7 @@ import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { build } from "esbuild";
-import { builder } from "./build-business-cutover-writer-inventory.test-fixtures.mjs";
+import { builder, image } from "./build-business-cutover-writer-inventory.test-fixtures.mjs";
 
 const web = resolve(import.meta.dirname, "..");
 const repo = resolve(web, "../..");
@@ -111,6 +111,37 @@ test("production wiring has acyclic full-layout inventory before one-graph CLI a
   assert.match(docker, /FROM runtime-layout AS runner/);
   assert.match(docker, /COPY --from=cutover-cli-builder \/repo\/runtime-assets\/business-consent-cutover.mjs \.\/scripts\/business-consent-cutover.mjs/);
   assert.equal(/USER\s+1000/.test(docker), false, "do not change the production volume UID");
+});
+
+test("fixed Docker staging inputs make the predecessor inventory available without canonical changes", async (t) => {
+  const root = await image(t), staging = join(root, "runtime-assets/business-consent-successor");
+  const names = ["app.js", "config.js", "favicon.svg", "index.html", "measurement-runtime.js", "styles.css"];
+  const input = join(repo, "runtime-assets/business-consent-successor");
+  for (const name of names) {
+    const bytes = await readFile(join(input, name)).catch(() => null);
+    assert.ok(bytes, `fixed staging input ${name} must exist`);
+    const reviewed = execFileSync("git", ["show", `82b6c5db71d158d8089af3207777249b5fb4e125:plantillas-de-pagina/business/${name}`], { cwd: repo });
+    assert.deepEqual(bytes, reviewed, `${name} must retain reviewed Git bytes`);
+  }
+  assert.deepEqual((await readdir(input)).sort(), names);
+  const canonical = await snapshot(join(root, "plantillas-de-pagina/business"));
+  await rm(staging, { recursive: true });
+  const docker = await readFile(join(repo, "Dockerfile"), "utf8");
+  const builderStage = docker.split("FROM base AS builder")[1].split("FROM node:20-alpine AS runtime-layout")[0];
+  const runtimeStage = docker.split("AS runtime-layout")[1].split("# Build tooling")[0];
+  const copy = builderStage.match(/^COPY (runtime-assets\/business-consent-successor) (\.\/runtime-assets\/business-consent-successor)\r?$/m);
+  assert.ok(copy, "builder must copy the fixed staging input");
+  const built = await mkdtemp(join(tmpdir(), "cdx002-staged-builder-"));
+  t.after(() => rm(built, { recursive: true, force: true }));
+  await cp(join(repo, copy[1]), join(built, copy[2]), { recursive: true });
+  const installed = runtimeStage.match(/^COPY --from=builder \/repo\/(runtime-assets\/business-consent-successor) (\.\/runtime-assets\/business-consent-successor)\r?$/m);
+  assert.ok(installed, "runtime must carry the fixed builder staging");
+  assert.ok(installed.index < runtimeStage.indexOf("RUN find /app -type d"), "staging must precede final hardening and inventory");
+  await cp(join(built, installed[1]), join(root, installed[2]), { recursive: true });
+  const inventory = await (await builder(root)).buildBusinessCutoverWriterInventory();
+  assert.equal(inventory.releaseId, "business-consent-predecessor-v1");
+  for (const name of names) assert.ok(inventory.files.some((file) => file.path === `runtime-assets/business-consent-successor/${name}`));
+  assert.deepEqual(await snapshot(join(root, "plantillas-de-pagina/business")), canonical);
 });
 
 test("runtime static COPY removes only group and other writes before inventory", async (t) => {
@@ -328,7 +359,7 @@ test("assembler rejects approved Next package aliases whose exact target is a re
   });
 });
 
-test("actual built standalone plus all Docker COPY bytes has a complete regular inventory and honest missing-staging gate", { timeout: 120000 }, async (t) => {
+test("actual built standalone plus all Docker COPY bytes has a complete regular inventory and fixture-only missing-staging gate", { timeout: 120000 }, async (t) => {
   const f = await assembly(t);
   // Reuse the production assembler with ONLY fixed build paths substituted for
   // this disposable test. No runtime root or approval option is introduced.
@@ -369,32 +400,42 @@ test("actual built standalone plus all Docker COPY bytes has a complete regular 
     else if (sourcePath.startsWith("/repo/runtime-assets/")) {
       const name = sourcePath.slice("/repo/runtime-assets/".length);
       path = name === "business-config.js" ? join(repo, "plantillas-de-pagina/business/config.js")
-        : name === "personal-brand-config.js" ? join(repo, "plantillas-de-pagina/personal-brand/config.js") : join(assets, name);
+        : name === "personal-brand-config.js" ? join(repo, "plantillas-de-pagina/personal-brand/config.js")
+          : name === "business-consent-successor" ? join(repo, "runtime-assets/business-consent-successor") : join(assets, name);
     } else { assert.ok(sourcePath.startsWith("/repo/")); path = join(repo, sourcePath.slice(6)); }
     await cp(path, join(f.destination, target), { recursive: true, dereference: false, force: true });
   }
   await assert.rejects(lstat(join(f.destination, "scripts/assemble-business-cutover-runtime.mjs")), { code: "ENOENT" });
   const inventoryBuilder = await builder(f.destination);
   const canonicalApp = await readFile(join(f.destination, "plantillas-de-pagina/business/app.js"));
-  const reviewedAppHash = "5013e2523bb6dc69a5f886d201c034a182b06b8a346cf81f85b7e950263d30d9";
-  const currentBytesReviewed = createHash("sha256").update(canonicalApp).digest("hex") === reviewedAppHash;
-  await assert.rejects(inventoryBuilder.buildBusinessCutoverWriterInventory(), (error) => {
-    assert.equal(error.message, currentBytesReviewed ? "BUSINESS_CUTOVER_ARTIFACTS_UNAVAILABLE" : "BUSINESS_CUTOVER_PROFILE_INVALID"); return true;
-  }, "present non-pinned checkout bytes are fatal even when staging is absent");
+  const reviewedProfiles = {
+    "5013e2523bb6dc69a5f886d201c034a182b06b8a346cf81f85b7e950263d30d9": "business-consent-predecessor-v1",
+    "fca1eb4fda4c7602ca1ab5448b81323b7b1af55ee2a3a2a537c85b2f625546de": "business-consent-successor-v1",
+  };
+  const currentProfile = reviewedProfiles[createHash("sha256").update(canonicalApp).digest("hex")];
+  if (currentProfile) assert.equal((await inventoryBuilder.buildBusinessCutoverWriterInventory()).releaseId, currentProfile);
+  else await assert.rejects(inventoryBuilder.buildBusinessCutoverWriterInventory(), (error) => {
+    assert.equal(error.message, "BUSINESS_CUTOVER_PROFILE_INVALID"); return true;
+  }, "present non-pinned checkout bytes are fatal even when fixed staging is present");
   // Windows core.autocrlf changes the checkout's actual canonical bytes. Never
   // normalize production assets: use exact Git bytes ONLY in this temp fixture.
+  const canonicalDirectory = join(f.destination, "plantillas-de-pagina/business");
+  await rm(canonicalDirectory, { recursive: true }); await mkdir(canonicalDirectory);
   for (const name of ["app.js", "config.js", "favicon.svg", "index.html", "styles.css"]) {
     const bytes = execFileSync("git", ["show", `a8d547c1cf9d754573bf20eb5cc154a03f9f5c60:plantillas-de-pagina/business/${name}`], { cwd: repo });
     await writeFile(join(f.destination, "plantillas-de-pagina/business", name), bytes);
     if (name === "config.js") await writeFile(join(f.destination, "runtime-assets/business-config.js"), bytes);
   }
+  const stagedInventory = await inventoryBuilder.buildBusinessCutoverWriterInventory();
+  assert.equal(stagedInventory.releaseId, "business-consent-predecessor-v1");
+  // Only the disposable image loses staging for the negative scenario. The
+  // production source input and all canonical repository files stay untouched.
+  const staging = join(f.destination, "runtime-assets/business-consent-successor");
+  await rm(staging, { recursive: true });
   await assert.rejects(inventoryBuilder.buildBusinessCutoverWriterInventory(), (error) => {
     assert.equal(error.message, "BUSINESS_CUTOVER_ARTIFACTS_UNAVAILABLE"); return true;
   }, "exact canonical fixture without staging remains unavailable");
-  // Composition fixtures only: exact reviewed009 bytes, not an approved image.
-  const staging = join(f.destination, "runtime-assets/business-consent-successor"); await mkdir(staging);
-  for (const name of ["app.js", "config.js", "favicon.svg", "index.html", "styles.css", "measurement-runtime.js"])
-    await writeFile(join(staging, name), execFileSync("git", ["show", `88c003d8cbb419522c20c084dc4a019a22d33155:plantillas-de-pagina/business/${name}`], { cwd: repo }));
+  await cp(join(repo, "runtime-assets/business-consent-successor"), staging, { recursive: true });
   const inventory = await inventoryBuilder.buildBusinessCutoverWriterInventory();
   assert.equal(inventory.releaseId, "business-consent-predecessor-v1");
   const installedFiles = [];

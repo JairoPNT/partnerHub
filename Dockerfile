@@ -23,6 +23,7 @@ COPY plantillas-de-pagina/business ./plantillas-de-pagina/business
 COPY plantillas-de-pagina/personal-brand ./plantillas-de-pagina/personal-brand
 COPY plantillas-de-pagina/personal-brand/config.js ./runtime-assets/personal-brand-config.js
 COPY plantillas-de-pagina/business/config.js ./runtime-assets/business-config.js
+COPY runtime-assets/business-consent-successor ./runtime-assets/business-consent-successor
 WORKDIR /repo/app/web
 RUN npm run build
 RUN npx esbuild server/runtime/jairoBusinessInProcessProvisioner.ts --bundle --platform=node --format=esm --target=node20 --outfile=/repo/runtime-assets/jairo-business-in-process-provisioner.mjs
@@ -53,6 +54,7 @@ COPY --from=builder /repo/plantillas-de-pagina/business ./plantillas-de-pagina/b
 COPY --from=builder /repo/plantillas-de-pagina/personal-brand ./plantillas-de-pagina/personal-brand
 COPY --from=builder /repo/runtime-assets/personal-brand-config.js ./runtime-assets/personal-brand-config.js
 COPY --from=builder /repo/runtime-assets/business-config.js ./runtime-assets/business-config.js
+COPY --from=builder /repo/runtime-assets/business-consent-successor ./runtime-assets/business-consent-successor
 COPY --from=builder /repo/runtime-assets/jairo-business-in-process-provisioner.mjs ./runtime-assets/jairo-business-in-process-provisioner.mjs
 COPY --from=builder /repo/runtime-assets/jairo-business-package-generator.mjs ./runtime-assets/jairo-business-package-generator.mjs
 COPY --from=builder /repo/runtime-assets/product-mutation-coordinator.mjs ./runtime-assets/product-mutation-coordinator.mjs
