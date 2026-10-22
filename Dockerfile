@@ -28,12 +28,13 @@ RUN npm run build
 RUN npx esbuild server/runtime/jairoBusinessInProcessProvisioner.ts --bundle --platform=node --format=esm --target=node20 --outfile=/repo/runtime-assets/jairo-business-in-process-provisioner.mjs
 RUN npx esbuild server/runtime/jairoBusinessPackageGenerator.ts --bundle --platform=node --format=esm --target=node20 --alias:server-only=./server/runtime/serverOnlyRuntimeShim.mjs --outfile=/repo/runtime-assets/jairo-business-package-generator.mjs
 RUN npx esbuild server/services/productMutationCoordinator.ts --bundle --platform=node --format=esm --target=node20 --alias:server-only=./server/runtime/serverOnlyRuntimeShim.mjs --outfile=/repo/runtime-assets/product-mutation-coordinator.mjs
-RUN npx esbuild scripts/business-consent-master-package-migration.mjs --bundle --platform=node --format=esm --target=node20 --outfile=/repo/runtime-assets/business-consent-master-package-migration.mjs
+RUN npx esbuild scripts/business-consent-master-package-migration.mjs --bundle --platform=node --format=esm --target=node20 --alias:server-only=./server/runtime/serverOnlyRuntimeShim.mjs --outfile=/repo/runtime-assets/business-consent-master-package-migration.mjs
 RUN npx esbuild scripts/business-cutover-maintenance.ts --bundle --platform=node --format=esm --target=node20 --alias:server-only=./server/runtime/serverOnlyRuntimeShim.mjs --outfile=/repo/runtime-assets/business-cutover-maintenance.mjs
 RUN node --input-type=module -e "import('/repo/runtime-assets/business-cutover-maintenance.mjs').then(m => { if (m.BUSINESS_CUTOVER_PROTOCOL_VERSION !== 'business-cutover-v1' || typeof m.readBusinessCutoverStatus !== 'function') process.exit(1); })"
 RUN node --input-type=module -e "import('/repo/runtime-assets/product-mutation-coordinator.mjs').then(m => { if (m.PRODUCT_MUTATION_COORDINATION_VERSION !== 'product-mutation-v1' || typeof m.createProductMutationCoordinator !== 'function') process.exit(1); })"
+RUN node scripts/assemble-business-cutover-runtime.mjs
 
-FROM node:20-alpine AS runner
+FROM node:20-alpine AS runtime-layout
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
@@ -43,8 +44,9 @@ ENV PRODUCT_PAGE_OUTPUT_DIR=/data/generated-sites
 COPY --from=builder /repo/app/web/package.json ./package.json
 COPY --from=builder /repo/app/web/package-lock.json ./package-lock.json
 COPY --from=builder /repo/app/web/public ./public
-COPY --from=builder /repo/app/web/.next/standalone ./
+COPY --from=builder /repo/business-cutover-standalone ./
 COPY --from=builder /repo/app/web/.next/static ./.next/static
+RUN find /app/.next/static -type f -exec chmod go-w {} +
 COPY --from=sftp-runtime-deps /repo/sftp-runtime/node_modules ./scripts/node_modules
 COPY --from=builder /repo/plantillas-de-pagina/producto ./plantillas-de-pagina/producto
 COPY --from=builder /repo/plantillas-de-pagina/business ./plantillas-de-pagina/business
@@ -89,6 +91,19 @@ COPY --from=builder /repo/app/web/scripts/all-partner-source-identity-dry-run.mj
 COPY --from=builder /repo/app/web/scripts/cleanup-jairo-pinto-test-referrals.mjs ./scripts/cleanup-jairo-pinto-test-referrals.mjs
 COPY --from=builder /repo/app/web/scripts/reconcile-claudia-heroes.mjs ./scripts/reconcile-claudia-heroes.mjs
 COPY --from=builder /repo/app/web/scripts/wompi-reconcile-sandbox.mjs ./scripts/wompi-reconcile-sandbox.mjs
+
+# Build tooling stays OUTSIDE /app. Inventory includes every regular shipped
+# writer/dependency byte; only the exact inventory sidecar and CLI are excluded.
+COPY --from=builder /repo/app/web/scripts/build-business-cutover-writer-inventory.mjs /tmp/build-business-cutover-writer-inventory.mjs
+RUN node --input-type=module -e "import { writeFile, unlink } from 'node:fs/promises'; import { buildBusinessCutoverWriterInventory } from '/tmp/build-business-cutover-writer-inventory.mjs'; let inventory; try { inventory = await buildBusinessCutoverWriterInventory(); } catch (error) { if (error.message !== 'BUSINESS_CUTOVER_ARTIFACTS_UNAVAILABLE') throw error; inventory = null; } await writeFile('/app/runtime-assets/business-cutover-writer-inventory.json', JSON.stringify(inventory), { mode: 0o644 }); await unlink('/tmp/build-business-cutover-writer-inventory.mjs');"
+
+FROM builder AS cutover-cli-builder
+COPY --from=runtime-layout /app /app
+RUN node --input-type=module -e "import { readFile } from 'node:fs/promises'; import { createHash } from 'node:crypto'; import { build } from 'esbuild'; import { validateBusinessCutoverWriterInventory } from './scripts/build-business-cutover-writer-inventory.mjs'; const bytes = await readFile('/app/runtime-assets/business-cutover-writer-inventory.json'); const inventory = JSON.parse(bytes); if (inventory !== null) validateBusinessCutoverWriterInventory(inventory); if (JSON.stringify(inventory) !== bytes.toString()) throw new Error('BUSINESS_CUTOVER_PROFILE_INVALID'); const descriptor = inventory === null ? null : { version: 1, releaseId: inventory.releaseId, inventorySha256: createHash('sha256').update(bytes).digest('hex') }; await build({ entryPoints: ['scripts/business-consent-cutover.ts'], bundle: true, platform: 'node', format: 'esm', target: 'node20', alias: { 'server-only': './server/runtime/serverOnlyRuntimeShim.mjs' }, define: { __BUSINESS_CUTOVER_RELEASE_DESCRIPTOR__: JSON.stringify(descriptor) }, outfile: '/repo/runtime-assets/business-consent-cutover.mjs' });"
+RUN node --input-type=module -e "const m = await import('/repo/runtime-assets/business-consent-cutover.mjs'); if (JSON.stringify(Object.keys(m).sort()) !== JSON.stringify(['parseBusinessConsentCutoverArguments', 'runBusinessConsentCutover'])) process.exit(1);"
+
+FROM runtime-layout AS runner
+COPY --from=cutover-cli-builder /repo/runtime-assets/business-consent-cutover.mjs ./scripts/business-consent-cutover.mjs
 
 EXPOSE 3000
 CMD ["node", "server.js"]

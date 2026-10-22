@@ -172,9 +172,11 @@ async function mechanical(f, testHooks = {}) {
   return executeBusinessMasterTransition(adapter);
 }
 
-test("production release exports no current-profile capture or installation adapter", () => {
+test("production release adds only read-only cutover capture/adapter builders, never another mutating009 API", () => {
   assert.deepEqual(Object.keys(releaseModule).sort(), ["APPLY_CONFIRMATION", "APPLY_MODE", "OPERATION", "REQUEST_ID",
-    "applyBusinessConsentMasterMigration", "planBusinessConsentMasterMigration", "readBusinessConsentMasterMigration"].sort());
+    "applyBusinessConsentMasterMigration", "planBusinessConsentMasterMigration", "readBusinessConsentMasterMigration",
+    "captureBusinessConsentCutoverArtifacts", "createBusinessConsentCutoverAdapter", "validateBusinessConsentCutoverPlan",
+    "readBusinessConsentCutoverArtifacts"].sort());
 });
 
 test("Git fixture really reconstructs known historical packages and actual reviewed registry bytes", () => {

@@ -26,7 +26,7 @@ test("production runtime packages the Business refresh entrypoint, canonical tem
 test("runtime ships the bundled consent CLI and legacy shared lifecycle with dedicated npm commands", async () => {
   const dockerfile = await readFile(resolve(ROOT, "Dockerfile"), "utf8");
   const pkg = JSON.parse(await readFile(resolve(ROOT, "app/web/package.json"), "utf8"));
-  assert.match(dockerfile, /esbuild scripts\/business-consent-master-package-migration\.mjs --bundle --platform=node --format=esm --target=node20 --outfile=\/repo\/runtime-assets\/business-consent-master-package-migration\.mjs/);
+  assert.match(dockerfile, /esbuild scripts\/business-consent-master-package-migration\.mjs --bundle --platform=node --format=esm --target=node20 --alias:server-only=\.\/server\/runtime\/serverOnlyRuntimeShim\.mjs --outfile=\/repo\/runtime-assets\/business-consent-master-package-migration\.mjs/);
   assert.ok(dockerfile.includes("COPY --from=builder /repo/runtime-assets/business-consent-master-package-migration.mjs ./scripts/business-consent-master-package-migration.mjs"));
   assert.ok(dockerfile.includes("COPY --from=builder /repo/app/web/scripts/business-master-transition-lifecycle.mjs ./scripts/business-master-transition-lifecycle.mjs"));
   assert.equal(pkg.scripts["maintenance:business-consent-master-migration"], "node scripts/business-consent-master-package-migration.mjs");
@@ -40,12 +40,17 @@ test("bundled PREVIEW, READBACK and fail-closed APPLY execute without TS or inst
     await mkdir(runtime); await mkdir(outputRoot);
     const bundlePath = join(runtime, "business-consent-master-package-migration.mjs");
     const bundled = await build({ entryPoints: [resolve(ROOT, "app/web/scripts/business-consent-master-package-migration.mjs")],
+      absWorkingDir: resolve(ROOT, "app/web"), alias: { "server-only": "./server/runtime/serverOnlyRuntimeShim.mjs" },
       outfile: bundlePath, bundle: true, platform: "node", format: "esm", target: "node20", metafile: true });
-    assert.ok(Object.keys(bundled.metafile.inputs).every((p) => !p.endsWith(".ts")));
+    assert.ok(Object.keys(bundled.metafile.inputs).some((p) => p.endsWith("businessCutoverMigrationAuthority.ts")),
+      "dynamic internal authority is compiled, never loaded as TS by Node20");
     const env = { ...process.env, NODE_ENV: "production", PRODUCT_PAGE_OUTPUT_DIR: outputRoot,
       PRODUCT_PAGE_PUBLICATION_JOB_DIR: join(outputRoot, ".publication-jobs"),
       BUSINESS_MASTER_WRITER_EXCLUSION_PROVEN: "true", BUSINESS_MAINTENANCE_PROOF: "approved" };
-    const run = (args) => spawnSync(process.execPath, args, { cwd: runtime, env, encoding: "utf8", timeout: 30000 });
+    const node20 = process.env.BUSINESS_CUTOVER_TEST_NODE20;
+    assert.ok(node20, "BUSINESS_CUTOVER_TEST_NODE20 is required, without fallback");
+    const run = (args) => spawnSync(node20, args, { cwd: runtime, env, encoding: "utf8", timeout: 30000 });
+    assert.match(run(["--version"]).stdout, /^v20\./);
     const preview = run([bundlePath]);
     assert.equal(preview.status, 2, preview.stderr); assert.equal(preview.stderr, "");
     const p = JSON.parse(preview.stdout);

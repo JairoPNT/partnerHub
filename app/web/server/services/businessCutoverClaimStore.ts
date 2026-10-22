@@ -190,12 +190,13 @@ function markerBytes(record: RecordData, bytes: Buffer) {
     credentialDigest: record.credentialDigest, record: record.record, recordDigest: digest(bytes) }));
 }
 
-async function readOwnership(output: string, operationId: string, previous?: Ownership): Promise<Ownership> {
+async function readOwnership(output: string, operationId: string, previous?: Ownership, relocated = false): Promise<Ownership> {
   const p = paths(output, operationId);
+  const claim = relocated ? resolve(p.operation, "released-claim") : p.claim;
   const rootPins = (await scanDirectories(output)).directories;
   // Outer ancestors can change across containers. Inspect/pin them for this
   // validation only; durable ownership starts at the unchanged canonical volume.
-  const directories = [rootPins[rootPins.length - 1], await directory(p.globalRoot, true), await directory(p.claim, true),
+  const directories = [rootPins[rootPins.length - 1], await directory(p.globalRoot, true), await directory(claim, true),
     await directory(p.operations, true), await directory(p.operation, true), await directory(p.events, true)];
   const saved = await readPrivateFile(p.record, 64 * 1024);
   const record: RecordData = JSON.parse(saved.bytes.toString("utf8"));
@@ -203,17 +204,23 @@ async function readOwnership(output: string, operationId: string, previous?: Own
   if (record?.version !== 2 || record.operationId !== operationId || !/^[0-9a-f]{64}$/.test(record.credentialDigest) ||
     !Array.isArray(record.directories) || record.directories.length !== directories.length) throw closed();
   for (let i = 0; i < directories.length; i++) {
-    if (record.directories[i]?.path !== directories[i].path || !sameIdentity(directories[i].identity, record.directories[i].identity)) throw closed();
+    if (record.directories[i]?.path !== (relocated && i === 2 ? p.claim : directories[i].path) || !sameIdentity(directories[i].identity, record.directories[i].identity)) throw closed();
   }
   if (!sameIdentity(saved.identity, record.record)) throw closed();
   const credential = await readPrivateFile(p.credential, 32, record.credential);
-  const marker = await readPrivateFile(p.marker, 64 * 1024, record.marker);
+  const marker = await readPrivateFile(resolve(claim, "owner.json"), 64 * 1024, record.marker);
   if (credential.bytes.length !== 32 || digest(credential.bytes) !== record.credentialDigest ||
     !marker.bytes.equals(markerBytes(record, saved.bytes))) throw closed();
   if (previous && (!saved.bytes.equals(previous.recordBytes) || !timingSafeEqual(credential.bytes, previous.credential))) throw closed();
   const contents = (await readdir(p.operation)).sort();
-  if (JSON.stringify((await readdir(p.claim)).sort()) !== '["owner.json"]' ||
-    !['["credential","events","record.json"]', '[".controller","credential","events","record.json"]'].includes(JSON.stringify(contents))) throw closed();
+  const optional = ["migration-plan.json", "release-intent.json", "release-receipt.json", ...(relocated ? ["released-claim"] : [])];
+  const requiredContents = contents.filter((name) => !optional.includes(name));
+  if (JSON.stringify((await readdir(claim)).sort()) !== '["owner.json"]' ||
+    !['["credential","events","record.json"]', '[".controller","credential","events","record.json"]'].includes(JSON.stringify(requiredContents))) throw closed();
+  if (contents.includes("migration-plan.json")) await readPrivateFile(resolve(p.operation, "migration-plan.json"), 1400 * 1024);
+  for (const name of ["release-intent.json", "release-receipt.json"]) {
+    if (contents.includes(name)) await readPrivateFile(resolve(p.operation, name), 16 * 1024);
+  }
   if (contents.includes(".controller")) {
     const controller = await directory(p.controller, true);
     if (JSON.stringify(await readdir(p.controller)) !== '["owner.json"]') throw closed();
@@ -292,6 +299,29 @@ export async function assertBusinessCutoverOwnership(handle: BusinessCutoverHand
     const owned = handles.get(handle);
     if (!owned) throw closed();
     await readOwnership(owned.output, owned.operationId, owned);
+  } catch { throw closed(); }
+}
+
+/** Revalidates the original physical object at the one fixed terminal path.
+ * Does not rename, grant release, or assert ownership of a new global entry. */
+export async function assertBusinessCutoverRelocatedOwnership(handle: BusinessCutoverHandle): Promise<void> {
+  try {
+    const owned = handles.get(handle);
+    if (!owned) throw closed();
+    await readOwnership(owned.output, owned.operationId, owned, true);
+  } catch { throw closed(); }
+}
+
+/** Diagnostic metadata only; never returns a resumable relocated capability. */
+export async function inspectBusinessCutoverOperationOwnership(outputDirectory: string, operationId: string,
+  location: "ACTIVE" | "RELOCATED"): Promise<BusinessCutoverOperation> {
+  try {
+    validateOperationId(operationId);
+    if (location !== "ACTIVE" && location !== "RELOCATED") throw closed();
+    const output = resolve(outputDirectory);
+    const owned = await readOwnership(output, operationId, undefined, location === "RELOCATED");
+    return Object.freeze({ outputDirectory: output, operationId, operationDirectory: paths(output, operationId).operation,
+      recordDigest: digest(owned.recordBytes) });
   } catch { throw closed(); }
 }
 

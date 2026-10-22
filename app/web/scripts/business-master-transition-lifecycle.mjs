@@ -62,7 +62,7 @@ async function assertSafeAncestors(root, target) {
   }
 }
 
-async function ensureSafeDirectory(root, directory) {
+async function ensureSafeDirectory(root, directory, validate) {
   const base = resolve(root);
   const absolute = resolve(directory);
   if (absolute !== base && !absolute.startsWith(`${base}${sep}`)) throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_PATH_ESCAPE");
@@ -73,6 +73,7 @@ async function ensureSafeDirectory(root, directory) {
     current = inside(current, segment);
     let kind = await pathKind(current);
     if (kind === "absent") {
+      await validate?.();
       try { await mkdir(current, { mode: 0o700 }); } catch (error) { if (error?.code !== "EEXIST") throw error; }
       kind = await pathKind(current);
     }
@@ -185,6 +186,8 @@ async function readClaimOwner(claimDirectory, operation = "REFRESH_CANONICAL_BUS
 }
 
 async function assertClaimOwner(claimDirectory, owner) {
+  const retained = acquiredResources.get(owner)?.assertCutover;
+  if (retained) { await retained(); return; }
   const current = await readClaimOwner(claimDirectory, owner.operation);
   if (!current || current.planHash !== owner.planHash || current.acquiredAt !== owner.acquiredAt) {
     throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_CLAIM_OWNERSHIP_LOST");
@@ -202,6 +205,7 @@ async function assertClaimOwner(claimDirectory, owner) {
 
 async function removeOwnedClaim(claimDirectory, owner) {
   try { await assertClaimOwner(claimDirectory, owner); } catch { return false; }
+  if (acquiredResources.get(owner)?.assertCutover) return true; // borrowed closure: never remove
   await rm(claimDirectory, { recursive: true });
   return true;
 }
@@ -283,18 +287,22 @@ function testHook(options, name) {
   return typeof hook === "function" ? hook : undefined;
 }
 
-async function writePackage(directory, expected, packageFiles) {
+async function writePackage(directory, expected, packageFiles, validate) {
+  await validate?.();
   await mkdir(directory, { mode: 0o700 });
   for (const name of packageFiles) {
     const bytes = expected.bytesByName.get(name);
     if (!bytes) throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_STAGED_FILE_MISSING");
+    await validate?.();
     await writeFile(inside(directory, name), bytes, { flag: "wx", mode: 0o600 });
   }
-  await mkdir(inside(directory, "tipografia"), { mode: 0o700 });
+  await validate?.(); await mkdir(inside(directory, "tipografia"), { mode: 0o700 });
 }
 
-async function copyPackageArchive(sourceDirectory, archiveDirectory, files) {
+async function copyPackageArchive(sourceDirectory, archiveDirectory, files, validate) {
+  await validate?.();
   await mkdir(archiveDirectory, { mode: 0o700 });
+  await validate?.();
   await mkdir(inside(archiveDirectory, "tipografia"), { mode: 0o700 });
   for (const file of files) {
     if (file.path.startsWith("/") || file.path.split("/").some((part) => part === ".." || part === "")) {
@@ -305,7 +313,8 @@ async function copyPackageArchive(sourceDirectory, archiveDirectory, files) {
     const sourceBytes = await readFile(sourcePath);
     if (sha256(sourceBytes) !== file.hash) throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_ARCHIVE_SOURCE_DRIFT");
     const destination = inside(archiveDirectory, file.path);
-    await ensureSafeDirectory(archiveDirectory, dirname(destination));
+    await ensureSafeDirectory(archiveDirectory, dirname(destination), validate);
+    await validate?.();
     await writeFile(destination, sourceBytes, { flag: "wx", mode: 0o600 });
   }
 }
@@ -332,6 +341,7 @@ async function removeOwnedArchive(paths, owner, expectedHash) {
     await assertClaimOwner(paths.claimDirectory, owner);
     await assertArchiveReservation(paths, owner);
     await rm(paths.archiveDirectory, { recursive: true });
+    await acquiredResources.get(owner)?.assertCutover?.();
     await rm(paths.archiveReservationPath);
     return true;
   } catch {
@@ -347,32 +357,36 @@ async function releaseArchiveReservation(paths, owner) {
   }
   await assertClaimOwner(paths.claimDirectory, owner);
   await assertArchiveReservation(paths, owner);
+  await acquiredResources.get(owner)?.assertCutover?.();
   await rm(paths.archiveReservationPath);
 }
 
-async function writeJournalWithoutReplace(path, value, outputRoot) {
-  await ensureSafeDirectory(outputRoot, dirname(path));
+async function writeJournalWithoutReplace(path, value, outputRoot, validate) {
+  await ensureSafeDirectory(outputRoot, dirname(path), validate);
   if ((await pathKind(path)) !== "absent") throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_JOURNAL_OCCUPIED");
   const temporaryPath = inside(dirname(path), `.refresh.${randomUUID()}.tmp`);
-  const handle = await open(temporaryPath, "wx", 0o600);
+  await validate?.(); const handle = await open(temporaryPath, "wx", 0o600);
   try {
+    await validate?.();
     await handle.writeFile(value);
     await handle.sync();
   } finally {
     await handle.close();
   }
   try {
+    await validate?.();
     await link(temporaryPath, path);
   } catch (error) {
-    await rm(temporaryPath, { force: true });
+    await validate?.(); await rm(temporaryPath, { force: true });
     if (error?.code === "EEXIST") throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_JOURNAL_OCCUPIED");
     throw error;
   }
-  await rm(temporaryPath, { force: true });
+  await validate?.(); await rm(temporaryPath, { force: true });
   return captureFileEvidence(path, value);
 }
 
 async function writeStageOwner(stageDirectory, owner) {
+  await acquiredResources.get(owner)?.assertCutover?.();
   await writeFile(inside(stageDirectory, "owner.json"), json({ ownerTokenHash: sha256(owner.ownerToken), planHash: owner.planHash }), { flag: "wx", mode: 0o600 });
 }
 
@@ -394,6 +408,7 @@ async function removeOwnedStage(stageDirectory, owner) {
       if ((await pathKind(inside(packageDirectory, "tipografia"))) === "directory" &&
           (await readdir(inside(packageDirectory, "tipografia"))).length > 0) return false;
     }
+    await acquiredResources.get(owner)?.assertCutover?.();
     await rm(stageDirectory, { recursive: true });
     return true;
   } catch {
@@ -403,33 +418,45 @@ async function removeOwnedStage(stageDirectory, owner) {
 
 // Internal mechanical primitive, not an approval/profile factory. Callers own policy.
 export async function executeBusinessMasterTransition(adapter) {
+  // The standalone legacy Node20 path never imports TypeScript. In the single
+  // administrative bundle esbuild folds this literal into the same WeakMap graph.
+  let assertCutover;
+  let previousCutoverDirectory;
+  if ("cutoverPermit" in adapter) {
+    const { assertBusinessCutoverMigrationPermit } = await import("../server/services/businessCutoverMigrationAuthority.ts");
+    assertCutover = () => assertBusinessCutoverMigrationPermit(adapter.cutoverPermit, adapter, previousCutoverDirectory);
+    await assertCutover(); // before even attempting mkdir or any package write
+  }
   const { options, paths, preview, requestId: REQUEST_ID, previousHash: LEGACY_PACKAGE_HASH,
     packageFiles: PACKAGE_FILES, buildPreview, loadCanonicalTemplate, buildExpectedPackage,
     applyMode: APPLY_MODE } = adapter;
   const owner = { ownerToken: randomUUID(), planHash: preview.planHash, acquiredAt: new Date().toISOString(), requestId: REQUEST_ID, previousHash: LEGACY_PACKAGE_HASH, packageFiles: PACKAGE_FILES, archiveFiles: adapter.previousFiles ?? PACKAGE_FILES, operation: adapter.operation };
-  const acquired = {};
+  const acquired = { assertCutover };
   acquiredResources.set(owner, acquired);
-  await ensureSafeDirectory(paths.outputRoot, dirname(paths.claimDirectory));
-  try { await mkdir(paths.claimDirectory, { mode: 0o700 }); } catch (error) {
-    if (error?.code === "EEXIST") throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_CLAIM_PRESENT");
-    throw error;
-  }
-  try {
-    if ((await pathKind(paths.claimDirectory)) !== "directory" ||
-        (await pathKind(inside(paths.claimDirectory, "owner.json"))) !== "absent") {
+  const validate = assertCutover;
+  if (!assertCutover) {
+    await ensureSafeDirectory(paths.outputRoot, dirname(paths.claimDirectory));
+    try { await mkdir(paths.claimDirectory, { mode: 0o700 }); } catch (error) {
+      if (error?.code === "EEXIST") throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_CLAIM_PRESENT");
+      throw error;
+    }
+    try {
+      if ((await pathKind(paths.claimDirectory)) !== "directory" ||
+          (await pathKind(inside(paths.claimDirectory, "owner.json"))) !== "absent") {
+        throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_CLAIM_INITIALIZATION_FAILED");
+      }
+      const claimBytes = json({
+        schemaVersion: 1,
+        operation: adapter.operation,
+        ownerToken: owner.ownerToken,
+        planHash: owner.planHash,
+        acquiredAt: owner.acquiredAt
+      });
+      await writeFile(inside(paths.claimDirectory, "owner.json"), claimBytes, { flag: "wx", mode: 0o600 });
+      acquired.claim = await captureClaimEvidence(paths.claimDirectory, claimBytes);
+    } catch {
       throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_CLAIM_INITIALIZATION_FAILED");
     }
-    const claimBytes = json({
-      schemaVersion: 1,
-      operation: adapter.operation,
-      ownerToken: owner.ownerToken,
-      planHash: owner.planHash,
-      acquiredAt: owner.acquiredAt
-    });
-    await writeFile(inside(paths.claimDirectory, "owner.json"), claimBytes, { flag: "wx", mode: 0o600 });
-    acquired.claim = await captureClaimEvidence(paths.claimDirectory, claimBytes);
-  } catch {
-    throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_CLAIM_INITIALIZATION_FAILED");
   }
 
   const stageDirectory = inside(paths.outputRoot, `.${SITE_ID}.refresh-${owner.ownerToken}.staging`);
@@ -453,7 +480,7 @@ export async function executeBusinessMasterTransition(adapter) {
     await writeStageOwner(stageDirectory, owner);
     acquired.stage = await captureFileEvidence(inside(stageDirectory, "owner.json"),
       json({ ownerTokenHash: sha256(owner.ownerToken), planHash: owner.planHash }));
-    await writePackage(stagePackageDirectory, expected, PACKAGE_FILES);
+    await writePackage(stagePackageDirectory, expected, PACKAGE_FILES, validate);
     const staged = await inventory(stagePackageDirectory);
     if (staged.hash !== expected.hash || (await pathKind(inside(stagePackageDirectory, "tipografia"))) !== "directory") {
       throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_STAGING_HASH_DRIFT");
@@ -463,7 +490,7 @@ export async function executeBusinessMasterTransition(adapter) {
     await assertClaimOwner(paths.claimDirectory, owner);
     const beforeArchive = await buildPreview(options, { claimOwner: owner });
     if (beforeArchive.blocked || beforeArchive.planHash !== preview.planHash) throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_DRIFT_BEFORE_ARCHIVE");
-    await ensureSafeDirectory(paths.outputRoot, dirname(paths.archiveDirectory));
+    await ensureSafeDirectory(paths.outputRoot, dirname(paths.archiveDirectory), validate);
     if ((await pathKind(paths.archiveDirectory)) !== "absent" || (await pathKind(paths.archiveReservationPath)) !== "absent") {
       throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_ARCHIVE_OCCUPIED");
     }
@@ -473,11 +500,11 @@ export async function executeBusinessMasterTransition(adapter) {
       planHash: owner.planHash,
       ownerTokenHash: sha256(owner.ownerToken)
     });
-    await writeFile(paths.archiveReservationPath, reservationBytes, { flag: "wx", mode: 0o600 });
+    await validate?.(); await writeFile(paths.archiveReservationPath, reservationBytes, { flag: "wx", mode: 0o600 });
     packageMutationStarted = true;
     acquired.reservation = await captureFileEvidence(paths.archiveReservationPath, reservationBytes);
     await assertClaimOwner(paths.claimDirectory, owner);
-    await copyPackageArchive(paths.destinationDirectory, paths.archiveDirectory, preview.planMaterial.previousPackageFiles);
+    await copyPackageArchive(paths.destinationDirectory, paths.archiveDirectory, preview.planMaterial.previousPackageFiles, validate);
     archiveReserved = true;
     if ((await inventory(paths.archiveDirectory)).hash !== LEGACY_PACKAGE_HASH) throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_ARCHIVE_HASH_DRIFT");
     await assertArchiveReservation(paths, owner);
@@ -489,8 +516,9 @@ export async function executeBusinessMasterTransition(adapter) {
     await assertClaimOwner(paths.claimDirectory, owner);
     await assertArchiveReservation(paths, owner);
     if ((await pathKind(previousBackupDirectory)) !== "absent") throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_BACKUP_OCCUPIED");
-    await rename(paths.destinationDirectory, previousBackupDirectory);
+    await validate?.(); await rename(paths.destinationDirectory, previousBackupDirectory);
     previousMovedToBackup = true;
+    previousCutoverDirectory = previousBackupDirectory;
     await testHook(options, "afterArchive")?.({ archiveDirectory: paths.archiveDirectory });
     await assertClaimOwner(paths.claimDirectory, owner);
     if ((await pathKind(paths.destinationDirectory)) !== "absent") throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_DESTINATION_AMBIGUOUS");
@@ -500,7 +528,7 @@ export async function executeBusinessMasterTransition(adapter) {
     await assertStage?.();
     await assertClaimOwner(paths.claimDirectory, owner);
     await assertArchiveReservation(paths, owner);
-    await rename(stagePackageDirectory, paths.destinationDirectory);
+    await validate?.(); await rename(stagePackageDirectory, paths.destinationDirectory);
     packageInstalled = true;
     const installed = await inventory(paths.destinationDirectory);
     if (installed.hash !== expected.hash || (await pathKind(inside(paths.destinationDirectory, "tipografia"))) !== "directory") {
@@ -514,7 +542,7 @@ export async function executeBusinessMasterTransition(adapter) {
     await assertClaimOwner(paths.claimDirectory, owner);
     await assertArchiveReservation(paths, owner);
     const journal = await adapter.createJournal({ paths, preview, template, expected });
-    const committedJournalProof = await writeJournalWithoutReplace(paths.refreshJournalPath, json(journal), paths.outputRoot);
+    const committedJournalProof = await writeJournalWithoutReplace(paths.refreshJournalPath, json(journal), paths.outputRoot, validate);
     const assertCommittedJournal = () => assertFileEvidence(paths.refreshJournalPath, committedJournalProof,
       "BUSINESS_MASTER_PACKAGE_REFRESH_JOURNAL_COMMITTED_PROOF_LOST");
     const assertCleanupOwnership = async () => {
@@ -529,7 +557,8 @@ export async function executeBusinessMasterTransition(adapter) {
     await adapter.assertCaptured?.({ previousDirectory: previousBackupDirectory, installedDirectory: paths.destinationDirectory });
     if ((await inventory(previousBackupDirectory)).hash !== LEGACY_PACKAGE_HASH) throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_BACKUP_HASH_DRIFT");
     await assertCleanupOwnership();
-    await rm(previousBackupDirectory, { recursive: true });
+    await validate?.(); await rm(previousBackupDirectory, { recursive: true });
+    previousCutoverDirectory = paths.archiveDirectory;
     await assertCleanupOwnership();
     if (!(await removeOwnedStage(stageDirectory, owner))) throw new Error("BUSINESS_MASTER_PACKAGE_REFRESH_STAGING_OWNERSHIP_LOST");
     await assertClaimOwner(paths.claimDirectory, owner);
@@ -571,7 +600,8 @@ export async function executeBusinessMasterTransition(adapter) {
             (await inventory(paths.archiveDirectory)).hash === LEGACY_PACKAGE_HASH) {
           await assertClaimOwner(paths.claimDirectory, owner);
           await assertArchiveReservation(paths, owner);
-          await rename(previousBackupDirectory, paths.destinationDirectory);
+          await validate?.(); await rename(previousBackupDirectory, paths.destinationDirectory);
+          previousCutoverDirectory = paths.destinationDirectory;
           await removeOwnedArchive(paths, owner, LEGACY_PACKAGE_HASH);
         }
       } catch {
@@ -620,8 +650,9 @@ export async function captureBusinessMasterTree(directory) {
       nodes.push(node);
       for (const entry of captureSorted(await readdir(path))) await visit(inside(path, entry), name ? name + "/" + entry : entry);
     } else {
+      if (stat.nlink !== 1n) captureFail("HARDLINK_FORBIDDEN");
       const bytes = await readFile(path), after = await lstat(path, { bigint: true });
-      if (stat.ino !== after.ino || stat.dev !== after.dev || stat.mtimeNs !== after.mtimeNs || stat.ctimeNs !== after.ctimeNs || stat.size !== after.size) captureFail("CAPTURE_RACE");
+      if (after.nlink !== 1n || stat.ino !== after.ino || stat.dev !== after.dev || stat.mtimeNs !== after.mtimeNs || stat.ctimeNs !== after.ctimeNs || stat.size !== after.size) captureFail("CAPTURE_RACE");
       files.push({ path: name, hash: sha256(bytes) });
       nodes.push({ ...node, size: String(stat.size), mtimeNs: String(stat.mtimeNs), ctimeNs: String(stat.ctimeNs) });
     }
