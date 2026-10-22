@@ -148,7 +148,7 @@ async function writerSnapshot(p) {
   if (claim.exists) blockedReasons.push(PREFIX + "CLAIM_PRESENT");
   return { jobs, classified: classified.jobs, siteClaims, claim, blockedReasons: [...new Set(blockedReasons)].sort() };
 }
-async function baseCapture(options, { readback = false } = {}) {
+async function baseCapture(options, { readback = false, retainedClosure = false } = {}) {
   const paths = pathsFor(options);
   for (const [key, value] of Object.entries(paths)) {
     if (key !== "templateDirectory" && key !== "outputRoot") await assertSafeAncestors(paths.outputRoot, value);
@@ -158,11 +158,119 @@ async function baseCapture(options, { readback = false } = {}) {
     archive: await ancestry(dirname(paths.previousArchiveDirectory)), jobs: await ancestry(dirname(paths.businessJobsDirectory)) };
   const template = await successorTemplate(paths.templateDirectory), expected = expectedPackage(template);
   const history = await lineage(paths), writers = await writerSnapshot(paths);
+  // Read-only capture only. The011 connector separately proves that this exact
+  // physical claim belongs to its active exclusive scope.
+  if (retainedClosure) writers.blockedReasons = writers.blockedReasons.filter((reason) => reason !== PREFIX + "CLAIM_PRESENT");
   const predecessor = await tree(readback ? paths.archiveDirectory : paths.destinationDirectory);
   if (!shape(predecessor, PREVIOUS_FILES, ["tipografia"]) || predecessor.hash !== OLD) fail("PREDECESSOR_INVALID");
   if (!readback && (await pathKind(paths.archiveDirectory) !== "absent" || await pathKind(paths.archiveReservationPath) !== "absent" ||
       await pathKind(paths.refreshJournalPath) !== "absent")) fail("NEW_PATH_OCCUPIED");
   return { paths, ancestors, template, expected, history, writers, predecessor };
+}
+
+// Internal read-only building blocks; no approval or mutating009 API is added.
+export async function captureBusinessConsentCutoverArtifacts(options) {
+  const capture = await baseCapture(options, { retainedClosure: true });
+  return { capture, material: material(capture), blockedReasons: capture.writers.blockedReasons };
+}
+
+function successorMetadata() {
+  const manifest = { schemaVersion: 1, siteId: SITE, ecosystemType: "BUSINESS", publicHost: "negocio.ganomaster.pro",
+    source: "CANONICAL_BUSINESS_TEMPLATE", canonicalTemplateHash: NEW_TEMPLATE, files: [...SIX, ".htaccess", "tipografia/"] };
+  const files = [...Object.entries(PINS).map(([path, hash]) => ({ path, hash })),
+    { path: ".htaccess", hash: sha256(HTACCESS) }, { path: "manifest.json", hash: sha256(json(manifest)) }].sort((a, b) => a.path.localeCompare(b.path));
+  return { manifest, files, hash: inventoryHash(files) };
+}
+
+export function validateBusinessConsentCutoverPlan(m, metadata) {
+  const successor = successorMetadata();
+  if (!exactKeys(m, ["schemaVersion", "requestId", "operation", "reviewedCommit", "providers", "paths", "ancestors", "predecessor",
+    "lineage", "successor", "writerSnapshot", "previousPackageFiles", "cutover"]) || m.schemaVersion !== 2 ||
+    m.requestId !== REQUEST_ID || m.operation !== OPERATION || m.reviewedCommit !== REVIEW || !same(m.providers, { ga4: false, meta: false }) ||
+    !exactKeys(m.cutover, ["operationId", "recordDigest", "releaseId"]) || m.cutover.operationId !== metadata.operationId ||
+    m.cutover.recordDigest !== metadata.recordDigest || m.cutover.releaseId !== "business-consent-successor-v1" ||
+    !same(m.paths, pathsFor({ outputRoot: metadata.outputDirectory, templateDirectory: resolve("/app/runtime-assets/business-consent-successor"),
+      businessJobsDirectory: process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR ?? inside(metadata.outputDirectory, ".publication-jobs") })) ||
+    m.predecessor?.hash !== OLD || !same(m.previousPackageFiles, m.predecessor.files) ||
+    !same(m.successor?.manifest, successor.manifest) || !same(m.successor?.files, successor.files) || m.successor?.hash !== successor.hash ||
+    m.successor?.templateHash !== NEW_TEMPLATE || m.successor?.templateProof?.hash !== NEW_TEMPLATE ||
+    !same(m.successor.templateProof.files, sorted(SIX).map((path) => ({ path, hash: PINS[path] }))) ||
+    !shape(m.predecessor, PREVIOUS_FILES, ["tipografia"]) || !shape(m.lineage?.archive, PREVIOUS_FILES, ["tipografia"]) ||
+    m.lineage.archive.hash !== ORIGINAL || !originalValid(m.lineage.originalJournal) ||
+    !refreshValid(m.lineage.refreshJournal, m.paths, m.lineage.originalJournalHash) ||
+    m.lineage.originalProof?.files?.find((file) => file.path === "apply.json")?.hash !== m.lineage.originalJournalHash ||
+    m.lineage.refreshProof?.files?.find((file) => file.path === "refresh.json")?.hash !== m.lineage.refreshJournalHash ||
+    !Array.isArray(m.writerSnapshot?.blockedReasons) || m.writerSnapshot.blockedReasons.some((reason) =>
+      !["JOB_UNCLASSIFIABLE", "BUSINESS_PUBLICATION_RUNNING", "JOB_CLAIM_PRESENT", "SITE_CLAIM_PRESENT"].map((code) => PREFIX + code).includes(reason)) ||
+    !m.writerSnapshot?.claim?.exists) throw new Error("BUSINESS_CUTOVER_PROFILE_INVALID");
+  return successor;
+}
+
+export function createBusinessConsentCutoverAdapter(c, planMaterial, planHash) {
+  let archiveProof, stageProof;
+  const insist = (left, right) => { if (!same(left, right)) throw new Error("BUSINESS_CUTOVER_PLAN_MISMATCH"); };
+  async function verifyCaptured(previousDirectory = c.paths.destinationDirectory) {
+    insist(await tree(previousDirectory), previousDirectory === c.paths.archiveDirectory ? archiveProof : c.predecessor);
+    // After the first rename, any present destination must still be the exact
+    // staged object, including mutate/revert clocks, through journal/cleanup.
+    if (previousDirectory !== c.paths.destinationDirectory && await pathKind(c.paths.destinationDirectory) !== "absent") {
+      insist(await tree(c.paths.destinationDirectory), stageProof);
+    }
+    insist(await tree(c.paths.templateDirectory), c.template.proof);
+    insist(await lineage(c.paths), c.history);
+    insist(await writerSnapshot(c.paths), { ...c.writers, blockedReasons: [PREFIX + "CLAIM_PRESENT"] });
+    for (const [name, path] of Object.entries({ output: c.paths.outputRoot, template: c.paths.templateDirectory,
+      history: dirname(c.paths.historyJournalPath), refresh: dirname(c.paths.previousRefreshJournalPath),
+      archive: dirname(c.paths.previousArchiveDirectory), jobs: dirname(c.paths.businessJobsDirectory) })) insist(await ancestry(path), c.ancestors[name]);
+  }
+  return {
+    assertRetainedCapture: verifyCaptured,
+    options: {}, paths: c.paths, preview: { planHash, planMaterial, blocked: false }, requestId: REQUEST_ID,
+    previousHash: OLD, previousFiles: PREVIOUS_FILES, packageFiles: PACKAGE_FILES, applyMode: APPLY_MODE, operation: OPERATION,
+    buildPreview: async () => { await verifyCaptured(); return { blocked: false, planHash }; },
+    loadCanonicalTemplate: async () => { const current = await successorTemplate(c.paths.templateDirectory); insist(current.proof, c.template.proof); return current; },
+    buildExpectedPackage: expectedPackage,
+    assertCaptured: async ({ previousDirectory }) => {
+      await verifyCaptured(previousDirectory);
+      const current = await tree(c.paths.archiveDirectory);
+      insist(current.files, c.predecessor.files); insist(current.directories, ["tipografia"]);
+      if (archiveProof) insist(current, archiveProof); else archiveProof = current;
+    },
+    assertRollback: async ({ previousDirectory }) => {
+      insist(await tree(previousDirectory), c.predecessor); insist(await tree(c.paths.archiveDirectory), archiveProof);
+      insist(await ancestry(c.paths.outputRoot), c.ancestors.output);
+    },
+    captureStage: async (path) => { stageProof = await tree(path); return async (current = path) => insist(await tree(current), stageProof); },
+    createJournal: () => ({ schemaVersion: 1, operation: OPERATION, requestId: REQUEST_ID, siteId: SITE,
+      ecosystemType: "BUSINESS", publicHost: "negocio.ganomaster.pro", planHash, planMaterial,
+      previousJournalPath: c.paths.previousRefreshJournalPath, previousJournalHash: c.history.refreshJournalHash,
+      archivePath: c.paths.archiveDirectory, archivedPackageHash: OLD, successorPackageHash: c.expected.hash, appliedAt: new Date().toISOString() })
+  };
+}
+
+export async function readBusinessConsentCutoverArtifacts(planMaterial, metadata) {
+  const expected = validateBusinessConsentCutoverPlan(planMaterial, metadata), p = planMaterial.paths;
+  for (const [key, path] of Object.entries(p)) if (key !== "templateDirectory" && key !== "outputRoot") await assertSafeAncestors(p.outputRoot, path);
+  // Revalidate current ancestors, not the prior container's overlay identity.
+  await ancestry(p.outputRoot);
+  const outputThen = planMaterial.ancestors.output.at(-1), outputNow = (await ancestry(p.outputRoot)).at(-1);
+  if (!same(outputThen, outputNow)) fail("READBACK_OUTPUT_DRIFT");
+  const history = await lineage(p), archived = await tree(p.archiveDirectory), installed = await tree(p.destinationDirectory);
+  const audit = await journal(p.refreshJournalPath), v = audit.value;
+  if (!same(history, planMaterial.lineage) || !shape(archived, PREVIOUS_FILES, ["tipografia"]) || archived.hash !== OLD ||
+    !same(archived.files, planMaterial.predecessor.files) || !shape(installed, PACKAGE_FILES, ["tipografia"]) ||
+    installed.hash !== expected.hash || !same(installed.files, expected.files) ||
+    await pathKind(p.archiveReservationPath) !== "absent" ||
+    (await readdir(p.outputRoot)).some((name) => name.startsWith("." + SITE + ".refresh-"))) fail("READBACK_INCOMPLETE");
+  const writers = await writerSnapshot(p);
+  if (!same(writers.blockedReasons, [PREFIX + "CLAIM_PRESENT"]) || !same(writers.claim, planMaterial.writerSnapshot.claim)) fail("READBACK_WRITERS_BUSY");
+  if (!exactKeys(v, ["schemaVersion", "operation", "requestId", "siteId", "ecosystemType", "publicHost", "planHash", "planMaterial",
+    "previousJournalPath", "previousJournalHash", "archivePath", "archivedPackageHash", "successorPackageHash", "appliedAt"]) ||
+    v.schemaVersion !== 1 || v.operation !== OPERATION || v.requestId !== REQUEST_ID || v.siteId !== SITE || v.ecosystemType !== "BUSINESS" ||
+    v.publicHost !== "negocio.ganomaster.pro" || v.planHash !== sha256(JSON.stringify(planMaterial)) || !same(v.planMaterial, planMaterial) ||
+    v.previousJournalPath !== p.previousRefreshJournalPath || v.previousJournalHash !== history.refreshJournalHash ||
+    v.archivePath !== p.archiveDirectory || v.archivedPackageHash !== OLD || v.successorPackageHash !== expected.hash || !validTimestamp(v.appliedAt)) fail("READBACK_JOURNAL_INVALID");
+  return { journalHash: audit.hash, packageHash: installed.hash };
 }
 function material(c) {
   return { schemaVersion: 1, requestId: REQUEST_ID, operation: OPERATION, reviewedCommit: REVIEW, providers: { ga4: false, meta: false },
