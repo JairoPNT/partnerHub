@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync, execFileSync } from "node:child_process";
 import { randomUUID, createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile, symlink, lstat, cp, chmod } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile, symlink, lstat, cp, chmod, link } from "node:fs/promises";
 import fs from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
@@ -127,8 +127,9 @@ test("runtime static COPY removes only group and other writes before inventory",
   assert.equal(before.get("chunk.js").stat.mode & 0o022, 0o020, "fixture reproduces the native0664 inventory rejection");
   const outside = join(root, "outside.js"); await writeFile(outside, "outside-unchanged"); await chmod(outside, 0o664);
   await symlink(outside, join(directory, "outside-link.js"), "file");
+  await link(outside, join(directory, "outside-hardlink.js"));
   const docker = await readFile(join(repo, "Dockerfile"), "utf8");
-  const command = docker.match(/^RUN (find \/app\/\.next\/static -type f -exec chmod go-w \{\} \+)\r?$/m)?.[1];
+  const command = docker.match(/^RUN (find \/app\/\.next\/static -type f(?: -links 1)? -exec chmod go-w \{\} \+)\r?$/m)?.[1];
   assert.ok(command, "production must remove generated static group/other write bits");
   const copyIndex = docker.indexOf("COPY --from=builder /repo/app/web/.next/static ./.next/static");
   assert.ok(copyIndex >= 0 && docker.indexOf(`RUN ${command}`) > copyIndex);
@@ -144,8 +145,55 @@ test("runtime static COPY removes only group and other writes before inventory",
     assert.deepEqual(await readFile(join(directory, name)), original.bytes);
     assert.equal(createHash("sha256").update(await readFile(join(directory, name))).digest("hex"), createHash("sha256").update(original.bytes).digest("hex"));
   }
-  assert.equal((await lstat(outside)).mode & 0o777, 0o664, "find must not follow a static symlink to another file");
+  assert.equal((await lstat(outside)).mode & 0o777, 0o664, "find must not follow a static symlink or chmod an external hardlink");
+  assert.equal((await lstat(outside)).nlink, 2, "an external hardlink must remain for the unchanged inventory rejection");
   assert.equal((await lstat(join(directory, "outside-link.js"))).isSymbolicLink(), true, "normalization must not launder a link past the inventory guard");
+});
+
+test("final runtime COPY hardening handles GitHub modes without touching external links", async (t) => {
+  if (process.platform === "win32") { t.skip("native GitHub0775/0664 modes and hardlinks require the Linux Node20 gate"); return; }
+  const root = await mkdtemp(join(tmpdir(), "cdx001-runtime-modes-")); t.after(() => rm(root, { recursive: true, force: true }));
+  const app = join(root, "app"), before = new Map();
+  for (const name of [".next/static", "runtime-assets", "scripts", "public", "plantillas-de-pagina/business"]) await mkdir(join(app, name), { recursive: true });
+  for (const [name, mode] of [["runtime-assets/business-config.js", 0o664], ["scripts/guarded-ecosystem-publication.mjs", 0o664],
+    ["plantillas-de-pagina/business/app.js", 0o664], ["public/asset.svg", 0o664], ["public/executable.sh", 0o777], ["public/private.txt", 0o600]]) {
+    const path = join(app, name); await writeFile(path, `${name}-exact-source-bytes`); await chmod(path, mode);
+    before.set(path, { stat: await lstat(path), bytes: await readFile(path) });
+  }
+  for (const name of ["", "public", "runtime-assets", "scripts", "plantillas-de-pagina", "plantillas-de-pagina/business"]) {
+    const path = join(app, name); await chmod(path, 0o775); before.set(path, { stat: await lstat(path), bytes: null });
+  }
+  const outside = join(root, "outside"); await mkdir(outside); await chmod(outside, 0o775);
+  const foreign = join(outside, "shared.js"); await writeFile(foreign, "outside-original-bytes"); await chmod(foreign, 0o664);
+  const foreignBefore = await lstat(foreign), foreignBytes = await readFile(foreign);
+  await symlink(outside, join(app, "public/outside-dir"), "dir"); await symlink(foreign, join(app, "public/outside-link.js"), "file");
+  await link(foreign, join(app, ".next/static/outside-hardlink.js"));
+  const docker = await readFile(join(repo, "Dockerfile"), "utf8"), stage = docker.split("AS runtime-layout")[1].split("FROM builder AS cutover-cli-builder")[0];
+  const final = stage.match(/^RUN (find \/app -type d -exec chmod go-w \{\} \+ && find \/app -type f -links 1 -exec chmod go-w \{\} \+)\r?$/m)?.[1];
+  assert.ok(final, "all final directly copied runtime directories/single-link files must be hardened");
+  const step = stage.indexOf(`RUN ${final}`), copies = [...stage.matchAll(/^COPY .* \.\/.*$/gm)];
+  assert.ok(copies.length > 0 && copies.every((entry) => entry.index < step), "harden after every final runtime COPY");
+  assert.ok(step < stage.indexOf("buildBusinessCutoverWriterInventory()"), "harden before inventory construction");
+  const commands = [...stage.matchAll(/^RUN (find \/app[^\r\n]*)\r?$/gm)].map((entry) => entry[1]);
+  for (const command of commands) {
+    const result = spawnSync("sh", ["-c", command.replaceAll("/app", JSON.stringify(app))], { encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+  }
+  for (const [path, original] of before) {
+    const current = await lstat(path);
+    assert.equal(current.mode & 0o777, (original.stat.mode & 0o777) & ~0o022);
+    for (const key of ["uid", "gid", "ino", "nlink"]) assert.equal(current[key], original.stat[key]);
+    assert.equal(current.mode & 0o111, original.stat.mode & 0o111);
+    if (original.bytes) {
+      const bytes = await readFile(path); assert.deepEqual(bytes, original.bytes);
+      assert.equal(createHash("sha256").update(bytes).digest("hex"), createHash("sha256").update(original.bytes).digest("hex"));
+    }
+  }
+  assert.equal((await lstat(outside)).mode & 0o777, 0o775);
+  const foreignAfter = await lstat(foreign); assert.equal(foreignAfter.mode & 0o777, 0o664);
+  assert.equal(foreignAfter.ino, foreignBefore.ino); assert.equal(foreignAfter.nlink, 2); assert.deepEqual(await readFile(foreign), foreignBytes);
+  assert.equal((await lstat(join(app, "public/outside-link.js"))).isSymbolicLink(), true);
+  assert.equal((await lstat(join(app, ".next/static/outside-hardlink.js"))).nlink, 2, "hardlink remains invalid for the unchanged inventory guard");
 });
 
 async function assembly(t) {
