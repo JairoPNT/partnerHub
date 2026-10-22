@@ -5,14 +5,14 @@ import { lstat, readFile, rm, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import type { TestContext } from "node:test";
-import { fixture } from "./businessConsentCutoverMigration.test-fixtures.ts";
+import { fixture } from "@/server/services/businessConsentCutoverMigration.test-fixtures";
 import { image, builder } from "../../scripts/build-business-cutover-writer-inventory.test-fixtures.mjs";
-import type { BusinessCutoverExclusiveScope } from "./businessCutoverMaintenanceService.ts";
+import type { BusinessCutoverExclusiveScope } from "@/server/services/businessCutoverMaintenanceService";
 
 const web = resolve(import.meta.dirname, "../..");
 const sha = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
-type Graph = typeof import("./businessCutoverReleaseVerification.ts") & typeof import("./businessCutoverReleaseProfile.ts") &
-  typeof import("./businessCutoverMaintenanceService.ts") & typeof import("./businessCutoverClaimStore.ts") & typeof import("./businessConsentCutoverMigration.ts");
+type Graph = typeof import("@/server/services/businessCutoverReleaseVerification") & typeof import("@/server/services/businessCutoverReleaseProfile") &
+  typeof import("@/server/services/businessCutoverMaintenanceService") & typeof import("@/server/services/businessCutoverClaimStore") & typeof import("@/server/services/businessConsentCutoverMigration");
 export async function compiled(t: TestContext, successor = false, compiledDescriptor?: unknown) {
   const root = await image(t, successor), b = await builder(root);
   const inventory = await b.buildBusinessCutoverWriterInventory(), bytes = Buffer.from(JSON.stringify(inventory));

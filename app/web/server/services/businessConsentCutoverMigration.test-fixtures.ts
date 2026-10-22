@@ -6,8 +6,8 @@ import path, { dirname, resolve } from "node:path";
 import { tmpdir } from "node:os";
 import { syncBuiltinESMExports } from "node:module";
 import type { TestContext } from "node:test";
-import * as maintenance from "./businessCutoverMaintenanceService.ts";
-import { resumeBusinessCutoverClosure } from "./businessCutoverClaimStore.ts";
+import * as maintenance from "@/server/services/businessCutoverMaintenanceService";
+import { resumeBusinessCutoverClosure } from "@/server/services/businessCutoverClaimStore";
 import { captureBusinessConsentCutoverArtifacts } from "../../scripts/business-consent-master-release.mjs";
 
 export const repo = resolve(import.meta.dirname, "../../../..");
@@ -87,6 +87,6 @@ export async function fixture(t: TestContext) {
   return { root, output, staging, id, run, history, refresh, archive, binding };
 }
 export async function api() {
-  const module = await import("./businessConsentCutoverMigration.ts").catch(() => null);
+  const module = await import("@/server/services/businessConsentCutoverMigration").catch(() => null);
   assert.ok(module, "T2 connector is not implemented"); return module;
 }
