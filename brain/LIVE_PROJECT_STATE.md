@@ -6,6 +6,8 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ### Implementación CDX010 — corte posterior que prevalece
 
+PR238 https://github.com/JairoPNT/partnerHub/pull/238 abierto como DRAFT, sin merge/deploy. Código revisado82f960a; no repetir implementación/revisiones completas. Resolver ensayo Linux antes de integrar a main para uso productivo.
+
 Jairo aprobó plan y ejecución por subagentes. Store, handshake+verify, controlador durable y STATUS/packaging implementados con revisión por tarea; final82f960a corrige cuatro hallazgos y pasa re-revisión. Verificado por controller:140PASS/1skip conocido Windows en regresión,187PASS sin skips en migración/packaging; lint global y build Node20 desde app/web PASS39rutas (advertencias registradas). Una invocación de Next desde raíz falló por Buffer/BodyInit en preview no modificado; no se ocultó ni se cambió código para ella, la invocación prescrita desde app/web pasó. Formato durable2 no convierte1, contenedor externo puede cambiar mientras volumen/objetos se prueban. Comando productivo expuesto: solo STATUS; CDX009 continúa bloqueando APPLY.
 
 Linux/POSIX y ensayo dos contenedores con mismo volumen NO ejecutados: motor Docker local ausente aun tras intento de arranque. Mantener entrega en draft, no merge/BEGIN/corte. Faltan integración separada009+verificador fijo de reapertura, composición235+protocolo y evidencia de tareas/volumen reales, publicación/validación pública de Claudia. No hubo DNS, SFTP, campañas, mantenimiento productivo ni cambios de datos. Fuente de reanudación: informe `brain/agent-requests/codex/reports/CDX-20261021-010_business_cutover_barrier_OFFLINE_IMPLEMENTATION.md` y plan actualizado. No repetir las cuatro tareas ni revisiones completas ya realizadas.
