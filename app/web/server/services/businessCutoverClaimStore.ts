@@ -4,6 +4,8 @@ import type { BigIntStats } from "node:fs";
 import { lstat, mkdir, open, readdir } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
+export const BUSINESS_CUTOVER_PROTOCOL_VERSION = "business-cutover-v1";
+
 declare const businessCutoverHandleBrand: unique symbol;
 export type BusinessCutoverHandle = { readonly [businessCutoverHandleBrand]: true };
 export type BusinessCutoverOperation = Readonly<{
