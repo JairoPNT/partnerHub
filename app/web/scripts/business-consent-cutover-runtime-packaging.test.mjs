@@ -183,9 +183,42 @@ test("assembler materializes approved Next dependency links and accepts byte-ide
   assert.equal(await readFile(join(materialized, "lib/index.js"), "utf8"), "sharp-bytes");
 });
 
+test("assembler materializes exact package aliases inside the selected standalone subtree", async (t) => {
+  for (const prefix of ["", "app/web"]) for (const name of ["sharp", "cpu-features", "@aws-sdk/client-s3"])
+    await t.test(`${prefix || "flat"}:${name}`, async (st) => {
+      const f = await assembly(st), selected = join(f.standalone, prefix), target = join(selected, "node_modules", name);
+      await f.save(join(selected, "server.js"));
+      await f.save(join(target, "lib/index.js"), `${name}-traced-bytes`);
+      const alias = join(selected, ".next/node_modules", `${name}-1234567890abcdef`);
+      await mkdir(dirname(alias), { recursive: true }); await symlink(target, alias, process.platform === "win32" ? "junction" : "dir");
+      await f.assemble();
+      const materialized = join(f.destination, ".next/node_modules", `${name}-1234567890abcdef`);
+      assert.equal((await lstat(materialized)).isSymbolicLink(), false);
+      assert.equal(await readFile(join(materialized, "lib/index.js"), "utf8"), `${name}-traced-bytes`);
+      assert.equal(await readFile(join(f.destination, "node_modules", name, "lib/index.js"), "utf8"), `${name}-traced-bytes`);
+    });
+});
+
+test("assembler rejects traced aliases to wrong package, outside directory or symlinked dependency root", async (t) => {
+  for (const kind of ["wrong-package", "outside", "symlinked-root"]) await t.test(kind, async (st) => {
+    const f = await assembly(st), selected = join(f.standalone, "app/web");
+    await f.save(join(selected, "server.js"));
+    let target = join(selected, "node_modules/cpu-features");
+    if (kind === "outside") target = join(f.root, "outside/sharp");
+    if (kind === "symlinked-root") {
+      const outside = join(f.root, "outside"); await f.save(join(outside, "sharp/lib/index.js"));
+      await symlink(outside, join(selected, "node_modules"), process.platform === "win32" ? "junction" : "dir");
+      target = join(selected, "node_modules/sharp");
+    } else await f.save(join(target, "lib/index.js"));
+    const alias = join(selected, ".next/node_modules/sharp-1234567890abcdef");
+    await mkdir(dirname(alias), { recursive: true }); await symlink(target, alias, process.platform === "win32" ? "junction" : "dir");
+    await assert.rejects(f.assemble(), /^Error: BUSINESS_CUTOVER_RUNTIME_LAYOUT_INVALID$/);
+  });
+});
+
 test("assembler rejects approved Next package aliases whose exact target is a regular file", async (t) => {
-  for (const name of ["sharp", "cpu-features", "@aws-sdk/client-s3"]) await t.test(name, async (st) => {
-    const f = await assembly(st), target = join(f.dependencies, name);
+  for (const location of ["original", "selected"]) for (const name of ["sharp", "cpu-features", "@aws-sdk/client-s3"]) await t.test(`${location}:${name}`, async (st) => {
+    const f = await assembly(st), target = join(location === "original" ? f.dependencies : join(f.standalone, "app/web/node_modules"), name);
     await f.save(join(f.standalone, "app/web/server.js"));
     await f.save(target, "not-a-package-directory");
     const alias = join(f.standalone, "app/web/.next/node_modules", `${name}-1234567890abcdef`);

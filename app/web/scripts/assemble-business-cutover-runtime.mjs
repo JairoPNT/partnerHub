@@ -33,9 +33,15 @@ export async function assembleBusinessCutoverStandalone() {
         // reviewed layout. Unknown links require an explicit packaging review.
         const match = /^\.next\/node_modules\/(cpu-features|sharp|@aws-sdk\/client-s3)-[a-f0-9]{16}$/.exec(name);
         if (!match) throw invalid();
-        const physical = await realpath(source), packageRoot = join(dependencies, match[1]);
-        const physicalDependencies = await realpath(dependencies);
-        if (!samePath(physicalDependencies, resolve(dependencies)) || !samePath(physical, packageRoot) ||
+        const physical = await realpath(source);
+        // Windows traces aliases to original dependencies; clean Linux traces
+        // them to the package inside the selected standalone layout. Both are
+        // fixed, exact package locations, never arbitrary descendant targets.
+        const dependencyRoot = [dependencies, join(selected, "node_modules")]
+          .find((root) => samePath(physical, join(root, match[1])));
+        if (!dependencyRoot) throw invalid();
+        const physicalDependencies = await realpath(dependencyRoot);
+        if (!samePath(physicalDependencies, resolve(dependencyRoot)) ||
           relative(physicalDependencies, physical).startsWith(`..${sep}`)) throw invalid();
         source = physical; info = await lstat(source);
         if (!info.isDirectory() || info.isSymbolicLink()) throw invalid();
