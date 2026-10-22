@@ -1,7 +1,7 @@
 # Integración segura del corte Business existente
 
 Ticket CDX-20261021-011. Owner Codex backend. Base main522394bf00ffbeb45e892b60403835f8c8296ec6 (PR238). Fecha2026-10-22.
-**Estado: alcance aprobado; especificación propuesta para revisión. No es implementación ni autorización de ejecución del corte.**
+**Estado: especificación escrita aprobada por Jairo el2026-10-22 en PR239/head7c247f5. Plan técnico preparado para su revisión; no es implementación ni ejecución del corte.**
 
 ## 1. Intención, decisión y límites
 
@@ -101,7 +101,7 @@ Primero revisión de esta especificación; después plan aprobado con tareas peq
 
 Tras reapertura confirmada: validar fuente/entitlement/destino de Claudia y contenido FAQ aprobado, generar/publicar por Master Sites/worker existente, comprobar SUCCEEDED y página móvil/escritorio (CTA, VSL, duración, FAQ, navegación, privacidad/consentimiento por carga). Clic WhatsApp no es conversación/registro/venta; recepción de eventos distinta de presencia de scripts. Publicación del master público sigue independiente de su manifest. DNS/campañas/proveedores de medición nuevos no se activan por011.
 
-Esta especificación no afirma master migrado, mantenimiento activo, consentimiento público corregido ni campaña lista. El alcance aprobado permite escribirla; su aprobación escrita y el plan son gates pendientes.
+Esta especificación no afirma master migrado, mantenimiento activo, consentimiento público corregido ni campaña lista. Su aprobación escrita ya fue recibida; el plan técnico `docs/superpowers/plans/2026-10-22-business-cutover-integration.md` sigue pendiente de revisión/aprobación antes de implementar.
 
 ## Revisión de la especificación
 
