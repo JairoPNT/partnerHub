@@ -206,3 +206,40 @@ test("simultaneous_acquisition_has_one_owner_and_never_replaces_global_claim", a
   assert.equal(results.filter((result) => result.status === "rejected").length, 1);
   await assertBusinessCutoverOwnership(winners[0].value);
 });
+
+test("controller_metadata_discovery_requires_private_physical_ownership", async (t) => {
+  const s = api() as typeof import("./businessCutoverClaimStore.ts");
+  assert.equal(typeof s.getBusinessCutoverOperation, "function", "missing metadata accessor");
+  assert.equal(typeof s.readBusinessCutoverClosure, "function", "missing discovery accessor");
+  const output = await fixture(t); const id = randomUUID();
+  assert.equal(await s.readBusinessCutoverClosure(output), null);
+  const handle = await s.acquireBusinessCutoverClosure(output, id);
+  const metadata = await s.getBusinessCutoverOperation(handle);
+  assert.equal(metadata.outputDirectory, output); assert.equal(metadata.operationId, id);
+  assert.equal(metadata.operationDirectory, operationPath(output, id));
+  assert.match(metadata.recordDigest, /^[0-9a-f]{64}$/);
+  assert.ok(Object.isFrozen(metadata));
+  await s.assertBusinessCutoverOwnership((await s.readBusinessCutoverClosure(output))!);
+  await assert.rejects(s.getBusinessCutoverOperation(JSON.parse(JSON.stringify(handle))));
+  const events = resolve(operationPath(output, id), "events");
+  await rename(events, resolve(output, "old-events")); await mkdir(events, { mode: 0o700 });
+  await assert.rejects(s.getBusinessCutoverOperation(handle)); await assert.rejects(s.readBusinessCutoverClosure(output));
+});
+
+test("partial_or_unsafe_controller_is_closed_and_discovery_never_hides_corruption", async (t) => {
+  const s = api() as typeof import("./businessCutoverClaimStore.ts");
+  assert.equal(typeof s.readBusinessCutoverClosure, "function", "missing discovery accessor");
+  for (const damage of ["partial", "invalid", "hardlink", "unknown", "old-schema"] as const) {
+    const output = await fixture(t); const id = randomUUID(); const h = await s.acquireBusinessCutoverClosure(output, id);
+    const op = operationPath(output, id); const lock = resolve(op, ".controller");
+    if (damage === "old-schema") await rename(resolve(op, "events"), resolve(output, "old-events"));
+    else {
+      await mkdir(lock, { mode: 0o700 });
+      if (damage !== "partial") await writeFile(resolve(lock, "owner.json"), damage === "invalid" ? "{}" : JSON.stringify({ version: 1, operationId: id, token: "a".repeat(64) }), { mode: 0o600 });
+      if (damage === "hardlink") await link(resolve(lock, "owner.json"), resolve(output, "linked"));
+      if (damage === "unknown") await writeFile(resolve(lock, "unexpected"), "retain");
+    }
+    await assert.rejects(s.assertBusinessCutoverOwnership(h)); await assert.rejects(s.readBusinessCutoverClosure(output));
+    assert.equal(await s.inspectBusinessGlobalClosure(output), "CLOSED");
+  }
+});

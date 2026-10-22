@@ -6,6 +6,9 @@ import { dirname, resolve } from "node:path";
 
 declare const businessCutoverHandleBrand: unique symbol;
 export type BusinessCutoverHandle = { readonly [businessCutoverHandleBrand]: true };
+export type BusinessCutoverOperation = Readonly<{
+  outputDirectory: string; operationId: string; operationDirectory: string; recordDigest: string;
+}>;
 
 type Identity = { dev: string; ino: string; birthtimeNs: string };
 type DirectoryPin = { path: string; identity: Identity };
@@ -42,7 +45,7 @@ function paths(output: string, operationId: string) {
   const operation = resolve(operations, operationId);
   return { globalRoot, claim, operations, operation,
     credential: resolve(operation, "credential"), record: resolve(operation, "record.json"),
-    marker: resolve(claim, "owner.json") };
+    marker: resolve(claim, "owner.json"), events: resolve(operation, "events"), controller: resolve(operation, ".controller") };
 }
 
 function validateOperationId(operationId: string) {
@@ -189,7 +192,7 @@ async function readOwnership(output: string, operationId: string, previous?: Own
   const p = paths(output, operationId);
   const rootPins = (await scanDirectories(output)).directories;
   const directories = [...rootPins, await directory(p.globalRoot, true), await directory(p.claim, true),
-    await directory(p.operations, true), await directory(p.operation, true)];
+    await directory(p.operations, true), await directory(p.operation, true), await directory(p.events, true)];
   const saved = await readPrivateFile(p.record, 64 * 1024);
   const record: RecordData = JSON.parse(saved.bytes.toString("utf8"));
   // Never traverse paths from untrusted JSON. Pin order and paths are fixed here.
@@ -204,8 +207,16 @@ async function readOwnership(output: string, operationId: string, previous?: Own
   if (credential.bytes.length !== 32 || digest(credential.bytes) !== record.credentialDigest ||
     !marker.bytes.equals(markerBytes(record, saved.bytes))) throw closed();
   if (previous && (!saved.bytes.equals(previous.recordBytes) || !timingSafeEqual(credential.bytes, previous.credential))) throw closed();
+  const contents = (await readdir(p.operation)).sort();
   if (JSON.stringify((await readdir(p.claim)).sort()) !== '["owner.json"]' ||
-    JSON.stringify((await readdir(p.operation)).sort()) !== '["credential","record.json"]') throw closed();
+    !['["credential","events","record.json"]', '[".controller","credential","events","record.json"]'].includes(JSON.stringify(contents))) throw closed();
+  if (contents.includes(".controller")) {
+    const controller = await directory(p.controller, true);
+    if (JSON.stringify(await readdir(p.controller)) !== '["owner.json"]') throw closed();
+    const owner = JSON.parse((await readPrivateFile(resolve(p.controller, "owner.json"), 4096)).bytes.toString("utf8"));
+    if (owner?.version !== 1 || owner.operationId !== operationId || typeof owner.token !== "string" || !/^[0-9a-f]{64}$/.test(owner.token)) throw closed();
+    await assertDirectories([controller]);
+  }
   await assertDirectories(directories);
   return { output, operationId, recordBytes: saved.bytes, credential: credential.bytes };
 }
@@ -242,6 +253,7 @@ export async function acquireBusinessCutoverClosure(outputDirectory: string, ope
     const operations = await createDirectory(p.operations, rootPins, false);
     const operation = await createDirectory(p.operation, [...rootPins, operations], true);
     const privatePins = [...rootPins, operations, operation];
+    const events = await createDirectory(p.events, privatePins, true);
     const credentialIdentity = await createFile(p.credential, privatePins);
     const credential = randomBytes(32);
     await writeCreatedFile(p.credential, credentialIdentity, credential, privatePins);
@@ -250,7 +262,7 @@ export async function acquireBusinessCutoverClosure(outputDirectory: string, ope
     const claim = await createDirectory(p.claim, [...rootPins, globalRoot], true);
     const claimPins = [...rootPins, globalRoot, claim];
     const markerIdentity = await createFile(p.marker, claimPins);
-    const directories = [...rootPins, globalRoot, claim, operations, operation];
+    const directories = [...rootPins, globalRoot, claim, operations, operation, events];
     const record: RecordData = { version: 1, operationId, credentialDigest: digest(credential), directories,
       credential: credentialIdentity, marker: markerIdentity, record: recordIdentity };
     const bytes = Buffer.from(JSON.stringify(record));
@@ -275,5 +287,31 @@ export async function assertBusinessCutoverOwnership(handle: BusinessCutoverHand
     const owned = handles.get(handle);
     if (!owned) throw closed();
     await readOwnership(owned.output, owned.operationId, owned);
+  } catch { throw closed(); }
+}
+
+/** Non-secret metadata; only a live registered handle can obtain it. JSON is never authority. */
+export async function getBusinessCutoverOperation(handle: BusinessCutoverHandle): Promise<BusinessCutoverOperation> {
+  try {
+    const owned = handles.get(handle);
+    if (!owned) throw closed();
+    await readOwnership(owned.output, owned.operationId, owned);
+    return Object.freeze({ outputDirectory: owned.output, operationId: owned.operationId,
+      operationDirectory: paths(owned.output, owned.operationId).operation, recordDigest: digest(owned.recordBytes) });
+  } catch { throw closed(); }
+}
+
+/** Fixed-path discovery for read-only STATUS, with the full private ownership validation. */
+export async function readBusinessCutoverClosure(outputDirectory: string): Promise<BusinessCutoverHandle | null> {
+  try {
+    const output = resolve(outputDirectory);
+    if (await inspectBusinessGlobalClosure(output) === "OPEN") return null;
+    const pins = (await scanDirectories(paths(output, "").claim)).directories;
+    const marker = await readPrivateFile(paths(output, "").marker, 64 * 1024);
+    const operationId = JSON.parse(marker.bytes.toString("utf8"))?.operationId;
+    validateOperationId(operationId);
+    const owned = await readOwnership(output, operationId);
+    await assertDirectories(pins);
+    return register(owned);
   } catch { throw closed(); }
 }
