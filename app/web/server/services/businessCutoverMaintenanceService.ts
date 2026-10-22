@@ -302,6 +302,8 @@ function scopedWork<T>(scope: BusinessCutoverExclusiveScope, action: () => Promi
 export function withBusinessCutoverScopedWork<T>(scope: BusinessCutoverExclusiveScope, action: () => Promise<T>): Promise<T> {
   return scopedWork(scope, async () => {
     await assertBusinessCutoverExclusive(scope);
+    const state = exclusiveScopes.get(scope);
+    if (!state?.active || !state.owner.active) throw closed();
     return action();
   });
 }

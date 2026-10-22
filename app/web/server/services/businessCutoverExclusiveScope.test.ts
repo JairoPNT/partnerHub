@@ -356,3 +356,34 @@ test("scoped_work_controller_settlement_retains_admin_lock_until_external_io_set
   assert.equal(finished, true);
   await assert.rejects(lstat(resolve(f.operation, ".controller")), { code: "ENOENT" });
 });
+
+test("scoped_work_revocation_between_validation_and_action_never_invokes_consumer", async (t) => {
+  const s = api(); const f = await fixture(t); const finish = barrier(); const originalRead = fs.readdir;
+  let armed = false; let matches = 0; let outerActionCalls = 0; let detached!: Promise<string>;
+  const mock = t.mock.method(fs, "readdir", async (...args: Parameters<typeof fs.readdir>) => {
+    const result = await originalRead(...args);
+    if (armed && String(args[0]) === resolve(f.operation, ".controller") && ++matches === 2) {
+      // The store checks this directory first; assertScope's final check is
+      // second. Settle the callback during validation's final continuation.
+      armed = false; queueMicrotask(finish.release);
+    }
+    return result;
+  });
+  syncBuiltinESMExports();
+  try {
+    await s.withBusinessCutoverController(f.handle, async (control) => {
+      await s.withBusinessCutoverExclusive(control, async (scope) => {
+        armed = true;
+        detached = s.withBusinessCutoverScopedWork(scope, async () => { outerActionCalls++; })
+          .then(() => "fulfilled", (error) => error.message);
+        await finish.promise;
+      });
+      await detached;
+    });
+  } finally { finish.release(); mock.mock.restore(); syncBuiltinESMExports(); }
+  assert.equal(matches, 2);
+  assert.equal(outerActionCalls, 0);
+  assert.equal(await detached, "BUSINESS_CUTOVER_CLOSED");
+  await assert.rejects(lstat(resolve(f.operation, ".controller")), { code: "ENOENT" });
+  assert.equal(await inspectBusinessGlobalClosure(f.output), "CLOSED");
+});
