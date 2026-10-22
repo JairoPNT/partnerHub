@@ -295,6 +295,17 @@ function scopedWork<T>(scope: BusinessCutoverExclusiveScope, action: () => Promi
   return result;
 }
 
+/** Track an entire cross-module helper, including its in-flight external I/O.
+ * This grants no authority: consumers must still reassert the same live scope
+ * before each subsequent protected step. Consumer results/errors remain intact.
+ */
+export function withBusinessCutoverScopedWork<T>(scope: BusinessCutoverExclusiveScope, action: () => Promise<T>): Promise<T> {
+  return scopedWork(scope, async () => {
+    await assertBusinessCutoverExclusive(scope);
+    return action();
+  });
+}
+
 export function bindBusinessCutoverMigration(scope: BusinessCutoverExclusiveScope, binding: MigrationBinding): Promise<void> {
   return scopedWork(scope, () => bindMigration(scope, binding));
 }

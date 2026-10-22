@@ -13,7 +13,7 @@ import type { BusinessCutoverControl, BusinessCutoverExclusiveScope } from "./bu
 
 function api() {
   for (const name of ["withBusinessCutoverExclusive", "assertBusinessCutoverExclusive", "bindBusinessCutoverMigration",
-    "readBusinessCutoverMigrationBinding", "startBusinessCutoverMigration"] as const) {
+    "readBusinessCutoverMigrationBinding", "startBusinessCutoverMigration", "withBusinessCutoverScopedWork"] as const) {
     assert.equal(typeof (service as Record<string, unknown>)[name], "function", `missing export: ${name}`);
   }
   return service;
@@ -253,4 +253,106 @@ test("detached_binding_is_revoked_and_drained_before_next_exclusive_action", asy
   });
   assert.equal((await lstat(resolve(f.operation, "migration-plan.json"))).size, 0);
   assert.deepEqual(await readdir(resolve(f.operation, "events")), ["00000001.json"]);
+});
+
+test("scoped_work_rejects_fake_expired_and_physically_unowned_scopes_before_action", async (t) => {
+  const s = api(); const f = await fixture(t); let expired!: BusinessCutoverExclusiveScope; let calls = 0;
+  const action = async () => { calls++; };
+  await s.withBusinessCutoverController(f.handle, async (control) => {
+    await s.withBusinessCutoverExclusive(control, async (scope) => {
+      expired = scope;
+      for (const fake of [control, f.handle, JSON.parse(JSON.stringify(scope)), Object.create(scope)]) {
+        await assert.rejects(s.withBusinessCutoverScopedWork(fake, action), /BUSINESS_CUTOVER_CLOSED/);
+      }
+      const otherCopy = await import(`./businessCutoverMaintenanceService.ts?copy=${randomUUID()}`);
+      await assert.rejects(otherCopy.withBusinessCutoverScopedWork(scope, action), /BUSINESS_CUTOVER_CLOSED/);
+      const marker = resolve(f.operation, ".controller", "owner.json"); const bytes = await readFile(marker);
+      await writeFile(marker, "{}");
+      const failure = await s.withBusinessCutoverScopedWork(scope, action).then(() => "accepted", (error) => error.message);
+      await writeFile(marker, bytes);
+      assert.equal(failure, "BUSINESS_CUTOVER_CLOSED");
+    });
+    await assert.rejects(s.withBusinessCutoverScopedWork(expired, action), /BUSINESS_CUTOVER_CLOSED/);
+  });
+  await assert.rejects(s.withBusinessCutoverScopedWork(expired, action), /BUSINESS_CUTOVER_CLOSED/);
+  assert.equal(calls, 0);
+});
+
+test("scoped_work_detached_external_io_retains_queue_then_revokes_following_write", async (t) => {
+  const s = api(); const f = await fixture(t); const entered = barrier(); const resume = barrier(); const completed = barrier();
+  const source = resolve(f.output, "external-source"); const target = resolve(f.output, "must-not-write");
+  await writeFile(source, "real external input");
+  const fd = await fs.open(source, "r"); const originalRead = fd.readFile.bind(fd);
+  const mock = t.mock.method(fd, "readFile", async () => { entered.release(); await resume.promise; return originalRead(); });
+  let detached!: Promise<string>; let nextEntered = false; const order: string[] = [];
+  try {
+    await s.withBusinessCutoverController(f.handle, async (control) => {
+      const first = s.withBusinessCutoverExclusive(control, async (scope) => {
+        detached = s.withBusinessCutoverScopedWork(scope, async () => {
+          try {
+            const bytes = await fd.readFile(); assert.equal(bytes.toString(), "real external input");
+            order.push("io-settled");
+            await s.assertBusinessCutoverExclusive(scope);
+            await writeFile(target, bytes);
+            return "unexpected-write";
+          } finally { order.push("helper-settled"); completed.release(); }
+        }).then(() => "fulfilled", (error) => error.message);
+        await entered.promise;
+      });
+      await entered.promise;
+      const next = s.withBusinessCutoverExclusive(control, async () => { nextEntered = true; order.push("next"); });
+      try {
+        await new Promise<void>((done) => setImmediate(done));
+        assert.equal(nextEntered, false); assert.ok(await lstat(resolve(f.operation, ".controller")));
+      } finally { resume.release(); }
+      await Promise.all([first, next, completed.promise]);
+      assert.equal(await detached, "BUSINESS_CUTOVER_CLOSED");
+    });
+  } finally { resume.release(); await detached; mock.mock.restore(); await fd.close(); }
+  assert.deepEqual(order, ["io-settled", "helper-settled", "next"]);
+  await assert.rejects(lstat(target), { code: "ENOENT" });
+  await assert.rejects(lstat(resolve(f.operation, ".controller")), { code: "ENOENT" });
+  assert.equal(await inspectBusinessGlobalClosure(f.output), "CLOSED");
+});
+
+test("scoped_work_sync_throw_rejection_and_domain_results_do_not_poison_pending", async (t) => {
+  const s = api(); const f = await fixture(t); const domainError = new Error("BUSINESS_CUTOVER_ARTIFACTS_UNAVAILABLE");
+  await s.withBusinessCutoverController(f.handle, async (control) => {
+    await s.withBusinessCutoverExclusive(control, async (scope) => {
+      await assert.rejects(s.withBusinessCutoverScopedWork(scope, () => { throw domainError; }), (error) => error === domainError);
+      await assert.rejects(s.withBusinessCutoverScopedWork(scope, () => Promise.reject(domainError)), (error) => error === domainError);
+      const result = Object.freeze({ outcome: "RELEASE_COMMIT_UNCONFIRMED", commitObserved: true });
+      assert.equal(await s.withBusinessCutoverScopedWork(scope, async () => result), result);
+    });
+    await s.withBusinessCutoverExclusive(control, async (scope) => {
+      assert.equal(await s.withBusinessCutoverScopedWork(scope, async () => 42), 42);
+    });
+  });
+  await assert.rejects(lstat(resolve(f.operation, ".controller")), { code: "ENOENT" });
+  assert.equal(await inspectBusinessGlobalClosure(f.output), "CLOSED");
+});
+
+test("scoped_work_controller_settlement_retains_admin_lock_until_external_io_settles", async (t) => {
+  const s = api(); const f = await fixture(t); const entered = barrier(); const resume = barrier(); const source = resolve(f.output, "io-source");
+  await writeFile(source, "pending read");
+  let detached!: Promise<string>; let exclusive!: Promise<unknown>; let finished = false;
+  const controller = s.withBusinessCutoverController(f.handle, async (control) => {
+    exclusive = s.withBusinessCutoverExclusive(control, async (scope) => {
+      detached = s.withBusinessCutoverScopedWork(scope, async () => {
+        const fd = await fs.open(source, "r");
+        try { entered.release(); await resume.promise; await fd.readFile(); await s.assertBusinessCutoverExclusive(scope); }
+        finally { await fd.close(); }
+      }).then(() => "fulfilled", (error) => error.message);
+      await entered.promise;
+    }).catch(() => "revoked");
+    await entered.promise;
+  }).then(() => { finished = true; });
+  try {
+    await entered.promise; await new Promise<void>((done) => setImmediate(done));
+    assert.equal(finished, false); assert.ok(await lstat(resolve(f.operation, ".controller")));
+    await assert.rejects(s.withBusinessCutoverController(await resumeBusinessCutoverClosure(f.output, f.id), async () => assert.fail("concurrent controller")));
+  } finally { resume.release(); await Promise.all([controller, exclusive, detached]); }
+  assert.equal(await detached, "BUSINESS_CUTOVER_CLOSED");
+  assert.equal(finished, true);
+  await assert.rejects(lstat(resolve(f.operation, ".controller")), { code: "ENOENT" });
 });
