@@ -38,6 +38,7 @@ export async function assembleBusinessCutoverStandalone() {
         if (!samePath(physicalDependencies, resolve(dependencies)) || !samePath(physical, packageRoot) ||
           relative(physicalDependencies, physical).startsWith(`..${sep}`)) throw invalid();
         source = physical; info = await lstat(source);
+        if (!info.isDirectory() || info.isSymbolicLink()) throw invalid();
       }
       if (info.isDirectory()) {
         const physical = await realpath(source); if (active.has(physical)) throw invalid(); active.add(physical);

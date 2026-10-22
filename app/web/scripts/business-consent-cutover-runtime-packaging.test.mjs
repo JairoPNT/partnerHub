@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import { spawnSync, execFileSync } from "node:child_process";
 import { randomUUID, createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile, symlink, lstat, cp } from "node:fs/promises";
+import fs from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -179,6 +181,35 @@ test("assembler materializes approved Next dependency links and accepts byte-ide
   const materialized = join(f.destination, ".next/node_modules/sharp-1234567890abcdef");
   assert.equal((await lstat(materialized)).isSymbolicLink(), false);
   assert.equal(await readFile(join(materialized, "lib/index.js"), "utf8"), "sharp-bytes");
+});
+
+test("assembler rejects approved Next package aliases whose exact target is a regular file", async (t) => {
+  for (const name of ["sharp", "cpu-features", "@aws-sdk/client-s3"]) await t.test(name, async (st) => {
+    const f = await assembly(st), target = join(f.dependencies, name);
+    await f.save(join(f.standalone, "app/web/server.js"));
+    await f.save(target, "not-a-package-directory");
+    const alias = join(f.standalone, "app/web/.next/node_modules", `${name}-1234567890abcdef`);
+    await mkdir(dirname(alias), { recursive: true });
+    try {
+      await symlink(target, alias, "file");
+      st.diagnostic("native file symlink created; real target/copy filesystem exercised");
+    } catch (error) {
+      if (process.platform !== "win32" || error.code !== "EPERM") throw error;
+      // Windows disallows file symlinks without the relevant privilege. Only
+      // this exact alias's link identity/resolution is instrumented; its fixed
+      // target and every other stat/read/copy remain actual filesystem work.
+      await f.save(alias, "private-link-placeholder");
+      const originalLstat = fs.lstat, originalRealpath = fs.realpath;
+      st.mock.method(fs, "lstat", async (...args) => String(args[0]) === alias
+        ? { isSymbolicLink: () => true } : originalLstat(...args));
+      st.mock.method(fs, "realpath", async (...args) => String(args[0]) === alias ? target : originalRealpath(...args));
+      syncBuiltinESMExports();
+      st.after(() => { st.mock.restoreAll(); syncBuiltinESMExports(); });
+      st.diagnostic("native Windows file symlink EPERM; exact-alias lstat/realpath instrumented, not a native-link PASS");
+    }
+    await assert.rejects(f.assemble(), /^Error: BUSINESS_CUTOVER_RUNTIME_LAYOUT_INVALID$/);
+    await assert.rejects(lstat(join(f.destination, ".next/node_modules", `${name}-1234567890abcdef`)), { code: "ENOENT" });
+  });
 });
 
 test("actual built standalone plus all Docker COPY bytes has a complete regular inventory and honest missing-staging gate", { timeout: 120000 }, async (t) => {
