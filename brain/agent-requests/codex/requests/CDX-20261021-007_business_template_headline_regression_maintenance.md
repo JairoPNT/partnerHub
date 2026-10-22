@@ -1,6 +1,6 @@
 # CDX-20261021-007 — Aserción backend del headline Business aprobado
 
-Estado: pendiente, no ejecutado. Follow-up de revisión AGR001/006; no change de producto ni publicación.
+Estado: implementado y verificado localmente; pendiente revisión independiente del controlador. Follow-up de revisión AGR001/006; no change de producto ni publicación.
 
 - Owner: Codex Backend Lead.
 - Outcome: actualizar la aserción de integración que aún espera el headline de ingresos retirado, conservando verificación real del contenido del master aprobado.

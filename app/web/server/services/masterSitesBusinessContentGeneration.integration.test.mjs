@@ -11,6 +11,8 @@ import { partnerEcosystemEntitlementService } from './partnerEcosystemEntitlemen
 import { activationLeadService } from './activationLeadService.ts';
 import { productPageHistoryService } from './productPageHistoryService.ts';
 import { businessProductHeroCorrelationService } from './businessProductHeroCorrelationService.ts';
+import { prepareBusinessMeasurementFixture } from './businessMeasurement.test-fixtures.ts';
+import { masterSitesBusinessPreviewService } from './masterSitesBusinessPreviewService.ts';
 
 test('saved Business content reaches generated config.js and survives source regeneration without provider calls', async (t) => {
   const f = await contentFixture(t);
@@ -28,6 +30,8 @@ test('saved Business content reaches generated config.js and survives source reg
   const master = resolve(f.root, 'ganomaster-business');
   await cp(resolve('../../plantillas-de-pagina/business'), master, { recursive: true });
   await mkdir(resolve(master, 'tipografia'), { recursive: true });
+  await prepareBusinessMeasurementFixture(t, master);
+  replace(masterSitesBusinessPreviewService, 'getMeasurementAuthoritySnapshot', f.preview.getMeasurementAuthoritySnapshot);
   const content = createMasterSitesBusinessContentService(f);
   await content.put({ activationLeadId: anaId, expectedRevision: (await content.get(anaId)).revision, profile });
   const input = buildMasterSitesBusinessInput(await f.preview.getPartner(anaId));

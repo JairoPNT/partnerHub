@@ -5,13 +5,14 @@ import { tmpdir } from 'node:os';
 import { resolve } from 'node:path';
 import { test, type TestContext } from 'node:test';
 import { createMasterSitesBusinessCommandService } from './masterSitesBusinessCommandService.ts';
-import { createMasterSitesBusinessPreviewService } from './masterSitesBusinessPreviewService.ts';
+import { createMasterSitesBusinessPreviewService, masterSitesBusinessPreviewService } from './masterSitesBusinessPreviewService.ts';
 import { createMasterSitesBusinessOperationStore, MasterSitesBusinessOperationStoreError, type MasterSitesBusinessOperationPatch } from './masterSitesBusinessOperationStore.ts';
 import { createPublicationJobService } from './publicationJobService.ts';
 import { createPublicationJobWorker } from './publicationJobWorkerService.ts';
 import { createSubdomainProvisioningService } from './subdomainProvisioningService.ts';
 import { productPageGenerationService } from './productPageGenerationService.ts';
 import { withoutBusinessPublicationSiteOwnership } from './businessPublicationSiteCoordinator.ts';
+import { prepareBusinessMeasurementFixture } from './businessMeasurement.test-fixtures.ts';
 
 const id = '11111111-1111-4111-8111-111111111111';
 const timestamp = '2026-10-20T12:00:00.000Z';
@@ -34,6 +35,7 @@ async function fixture(t: TestContext, ready = true) {
   await mkdir(process.env.PRODUCT_PAGE_ACTIVATION_DIR!, { recursive: true });
   await cp(resolve('../../plantillas-de-pagina/business'), resolve(root, 'ganomaster-business'), { recursive: true });
   await mkdir(resolve(root, 'ganomaster-business/tipografia'), { recursive: true });
+  await prepareBusinessMeasurementFixture(t, resolve(root, 'ganomaster-business'));
   const lead = {
     id, siteId: 'example-partner', status: 'PAID', recordState: 'ACTIVE',
     fullName: 'Example Partner', brandName: 'Example Business', whatsapp: '573101234567',
@@ -60,6 +62,8 @@ async function fixture(t: TestContext, ready = true) {
   if (ready) await writeFile(targetPath, JSON.stringify(target));
   const jobs = createPublicationJobService({ sourceDirectory, outputDirectory: root, jobDirectory: resolve(root, '.jobs') });
   const preview = createMasterSitesBusinessPreviewService({ listJobs: () => jobs.list() });
+  // Keep fresh server authority/guards real, but bind it to this fixture's job store.
+  t.mock.method(masterSitesBusinessPreviewService, 'getMeasurementAuthoritySnapshot', preview.getMeasurementAuthoritySnapshot);
   const operations = createMasterSitesBusinessOperationStore({ directory: resolve(root, '.master-sites-business-operations') });
   const effects = { hosting: 0, dns: 0, wakes: 0 };
   const provisioner = createSubdomainProvisioningService({

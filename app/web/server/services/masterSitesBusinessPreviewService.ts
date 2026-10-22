@@ -913,9 +913,17 @@ export function createMasterSitesBusinessPreviewService(
         ...(job.completedAt ? { completedAt: job.completedAt } : {}),
         ...(job.lastErrorCode ? { lastErrorCode: job.lastErrorCode } : {})
       });
-    if (snapshot.partner.status === 'BLOCKED' || active.length)
+    if (snapshot.partner.status === 'BLOCKED')
       snapshot.input = null;
     return snapshot;
+  }
+
+  async function readPartnerSnapshot(activationLeadId: string) {
+    z.string().uuid().parse(activationLeadId);
+    const context = await readContext();
+    const lead = context.leads.find(candidate => candidate.id === activationLeadId);
+    if (!lead) throw new Error('MASTER_SITES_PARTNER_NOT_FOUND');
+    return snapshotFor(lead, context);
   }
 
   return {
@@ -932,13 +940,18 @@ export function createMasterSitesBusinessPreviewService(
     async getPartner(
       activationLeadId: string
     ): Promise<BusinessPartnerSnapshot> {
-      z.string().uuid().parse(activationLeadId);
-      const context = await readContext();
-      const lead = context.leads.find(
-        (candidate) => candidate.id === activationLeadId
-      );
-      if (!lead) throw new Error('MASTER_SITES_PARTNER_NOT_FOUND');
-      return snapshotFor(lead, context);
+      const snapshot = await readPartnerSnapshot(activationLeadId);
+      // Public/operator actions remain unavailable while a job owns delivery.
+      if (['QUEUED', 'RUNNING'].includes(snapshot.partner.status)) snapshot.input = null;
+      return snapshot;
+    },
+    async getMeasurementAuthoritySnapshot(
+      activationLeadId: string
+    ): Promise<BusinessPartnerSnapshot> {
+      // Server-only generation read, not an action/UI-unlock API. Reuse every
+      // identity, entitlement, source, inventory and job-ambiguity check above;
+      // only the active-job UI suppression is separate. BLOCKED stays null.
+      return readPartnerSnapshot(activationLeadId);
     }
   };
 }

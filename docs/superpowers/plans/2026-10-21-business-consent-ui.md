@@ -1,5 +1,7 @@
 # Business Consent UI Implementation Plan
 
+> Enmienda vigente: `../specs/2026-10-21-business-fresh-consent-amendment.md`, aprobada 2026-10-21. UI no promete recuerdo de 180 días; elección solo para esta carga, solicitada nuevamente al recargar. Decisión humana resuelta; esperar revisión AGR007 y dependencias de contenido antes de implementar.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Permitir aceptar/rechazar categorías y retirar la elección sin impedir contenido, video ni contacto de Business.

@@ -1,5 +1,7 @@
 # Business — consentimiento y medición del piloto Claudia
 
+> Enmienda aprobada 2026-10-21: `2026-10-21-business-fresh-consent-amendment.md` sustituye toda restauración/TTL de aceptación de 180 días por consentimiento nuevo por carga. Los párrafos originales de persistencia se conservan como historial, no como instrucciones vigentes.
+
 Ticket de diseño: CDX-20261021-004. Contrato PR #228 y plan técnico PR #229 aprobados explícitamente por Jairo el 2026-10-21; implementación autorizada con subagentes y revisión por tarea. La aprobación no autoriza publicación productiva.
 
 ## Objetivo y evidencia

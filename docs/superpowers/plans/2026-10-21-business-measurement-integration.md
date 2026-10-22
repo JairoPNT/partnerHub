@@ -1,5 +1,7 @@
 # Business Consent Integration Implementation Plan
 
+> Enmienda vigente de Jairo2026-10-21: `../specs/2026-10-21-business-fresh-consent-amendment.md` sustituye recuerdo/TTL. Donde el plan original dice reload/expire, verificar elección NUEVA por documento, ausencia de restauración con storage fallido/recuperado y BFCache. Incluir retirada explícita tras cuarentena/recarga bloqueada entre dos pestañas. El resto de gates/archivos/no publicación sigue vigente. Jairo autorizó ejecutar AGR005 y después validar el conjunto antes de publicar; no autoriza saltar revisiones ni activar proveedores.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Probar el paquete Business completo con browser/red aislados y dejar un release verificable, sin publicar ni enviar eventos reales.

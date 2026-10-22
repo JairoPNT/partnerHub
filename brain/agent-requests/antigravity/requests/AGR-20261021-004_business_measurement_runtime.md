@@ -1,6 +1,13 @@
 # AGR-20261021-004 — Runtime de consentimiento y medición Business
 
-Estado: contrato y plan técnico PR #229 aprobados por Jairo el 2026-10-21. Runtime asignado a subagente en rol Antigravity/frontend; revisión independiente por tarea, sin publicación.
+Estado: Task 2 REVIEW FAILED / NEEDS FIXES — NO COMPLETADA, NO APROBADA para activación, integración o publicación. El contrato y plan técnico PR #229 fueron aprobados por Jairo el 2026-10-21; esa aprobación no subsana el hallazgo posterior de revisión independiente. Task 1 conserva su revisión previa.
+
+Checkpoint de revisión — 2026-10-21:
+
+- El revisor independiente de Task 2 rechazó el comportamiento de recarga tras fallar simultáneamente setItem/removeItem: la retirada queda solo en memoria y una aceptación antigua legible se restaura en un documento nuevo.
+- El arbitraje premium de privacidad, comunicado por el orquestador, confirma que una denegación durable incondicional no puede garantizarse con localStorage como único mecanismo si sus escrituras y borrados fallan. Un handoff de denegación en sessionStorage no resuelve recuperación de todos los almacenamientos ni otras pestañas.
+- Recomendación pendiente de Jairo, NO aprobada: exigir consentimiento fresco por documento y no restaurar grants guardados. Alternativa pendiente: conservar la política de restauración a 180 días y mantener medición bloqueada hasta rediseño. No se cambia todavía el contrato ni se implementa ninguna alternativa.
+- Sin fix especulativo ni cambios de source/tests/UI durante esta espera. Ambos providers reales siguen false; no hay autorización de activación. Evidencia y reproducción en el reporte propio; los tests locales pasados no equivalen a cumplimiento completo.
 
 - Owner: Antigravity. Tier balanced y revisión independiente de seguridad antes de integrar.
 - Outcome: runtime único de navegador, default deny, persistencia 180 días, retirada y clic WhatsApp sin PII propia ni conversiones ficticias.
