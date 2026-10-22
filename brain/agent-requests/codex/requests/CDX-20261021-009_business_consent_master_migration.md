@@ -25,6 +25,8 @@ Preparar una herramienta de migración guardada desde el master pre-consentimien
 
 ## Autoridad de ejecución posterior
 
+Actualización2026-10-21: Jairo autorizó explícitamente una ventana de mantenimiento de la generación, validaciones y corte seguro para publicar los ajustes de Claudia, sin DNS ni campañas. La autorización no convierte la herramienta offline en un adaptador productivo: se mantiene el rechazo WRITER_EXCLUSION_UNPROVEN hasta contar con exclusión/integración revisadas, Linux y plan/lineage reales. En el intento inicial no hubo acceso operativo funcional ni se detuvieron servicios. Gate BFCache nativo del release006 comprobado separadamente; no sustituye los restantes. El permiso está registrado; no volver a pedirlo como si faltara, ni atribuir al usuario los bloqueos técnicos pendientes.
+
 La aprobación de este contrato permitirá código/pruebas offline, NO cambios persistentes. Antes del APPLY: lineage real validado, pruebaLinux nueva, ventana de exclusión acordada, hashes de plan/paquete frescos y autorización explícita de Jairo. Coordinar el par master/código sin deploy incompatible. Publicación del master y regeneración/publicación Claudia se autorizan y verifican aparte; campañas/activaciónGA4Meta no incluidas.
 
 Assessment local completo (ignorado): `.local-secrets/sdd/CDX-20261021-006/current-master-assessment.md`.
