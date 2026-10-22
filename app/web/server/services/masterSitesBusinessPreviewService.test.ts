@@ -759,6 +759,46 @@ test('active_job_blocks_publish_even_when_its_source_is_stale', async () => {
   assert.equal(snapshot.partner.canPrepareTarget, false);
   assert.throws(() => buildMasterSitesBusinessInput(snapshot));
 });
+
+test('server_measurement_snapshot_retains_valid_running_input_without_unlocking_public_preview', async () => {
+  const { state, service, target, lead } = fixture();
+  lead.onboardingData.analyticsMeasurementId = 'G-RUNNINGFIXTURE';
+  state.targets = [{ siteId: target.siteId, value: target, hash: hash('target') }];
+  const job = {
+    schemaVersion: 1, id: hash('job'), intentHash: hash('job'),
+    intent: { schemaVersion: 1, operation: 'PUBLISH_PARTNER_ECOSYSTEM', ownerKey: id, ownerSiteId: 'ana', siteId: target.siteId,
+      ecosystemType: 'BUSINESS', baseDomain: 'ana.pro', publicHost: target.publicHost, sourceHash: hash('source'), targetHash: hash('target'), masterPackageHash: state.master.packageHash },
+    status: 'RUNNING', phase: 'PREPARING_PACKAGE', revision: 2, attemptCount: 1,
+    requestedBySubjectHash: hash('operator'), createdAt: timestamp, updatedAt: timestamp, evidence: [],
+    lease: { tokenHash: hash('token'), workerHash: hash('worker'), acquiredAt: timestamp, expiresAt: '2026-10-20T12:05:00.000Z' }
+  };
+  state.jobs = [job];
+  const ui = await service.getPartner(id);
+  assert.equal(ui.partner.status, 'RUNNING'); assert.equal(ui.input, null);
+  assert.equal(ui.partner.canPublish, false); assert.equal(ui.partner.canPrepareTarget, false);
+  assert.throws(() => buildMasterSitesBusinessInput(ui));
+  const internal = await service.getMeasurementAuthoritySnapshot(id);
+  assert.equal(internal.partner.status, 'RUNNING');
+  assert.deepEqual(internal.partner.blockedReasons, []);
+  assert.equal(internal.input?.analytics?.measurementId, 'G-RUNNINGFIXTURE');
+  assert.equal(internal.input?.site.domain, 'negocio.ana.pro');
+  assert.equal((await service.get()).partners[0].canPublish, false);
+
+  for (const [jobs, reason] of [
+    [[{ ...job, intent: { ...job.intent, ownerKey: other } }], 'JOB_OWNERSHIP_MISMATCH'],
+    [[job, { ...job, id: hash('other-job'), intentHash: hash('other-job') }], 'JOB_IDENTITY_AMBIGUOUS'],
+    [[{ ...job, lease: undefined }], 'JOB_INVENTORY_INVALID']
+  ] as const) {
+    state.jobs = [...jobs];
+    const blocked = await service.getMeasurementAuthoritySnapshot(id);
+    assert.equal(blocked.partner.status, 'BLOCKED'); assert.equal(blocked.input, null);
+    assert.ok(blocked.partner.blockedReasons.includes(reason));
+  }
+  state.jobs = [job]; state.entitlement.includedEcosystems = [];
+  const revoked = await service.getMeasurementAuthoritySnapshot(id);
+  assert.equal(revoked.partner.status, 'BLOCKED'); assert.equal(revoked.input, null);
+  assert.ok(revoked.partner.blockedReasons.includes('BUSINESS_NOT_ENTITLED'));
+});
 test('unknown_partner_throws_safe_not_found_and_read_failure_fails_closed', async () => {
   const { deps, service } = fixture();
   await assert.rejects(service.getPartner(other), {

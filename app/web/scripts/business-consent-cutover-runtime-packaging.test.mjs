@@ -417,6 +417,13 @@ test("actual built standalone plus all Docker COPY bytes has a complete regular 
   else await assert.rejects(inventoryBuilder.buildBusinessCutoverWriterInventory(), (error) => {
     assert.equal(error.message, "BUSINESS_CUTOVER_PROFILE_INVALID"); return true;
   }, "present non-pinned checkout bytes are fatal even when fixed staging is present");
+  if (currentProfile === "business-consent-successor-v1") {
+    const staging = join(f.destination, "runtime-assets/business-consent-successor");
+    await rm(staging, { recursive: true });
+    assert.equal((await inventoryBuilder.buildBusinessCutoverWriterInventory()).releaseId, currentProfile,
+      "exact canonical successor does not depend on the predecessor staging overlay");
+    await cp(join(repo, "runtime-assets/business-consent-successor"), staging, { recursive: true });
+  }
   // Windows core.autocrlf changes the checkout's actual canonical bytes. Never
   // normalize production assets: use exact Git bytes ONLY in this temp fixture.
   const canonicalDirectory = join(f.destination, "plantillas-de-pagina/business");

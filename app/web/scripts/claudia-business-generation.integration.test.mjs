@@ -9,6 +9,8 @@ import { productPageGenerationInputSchema, productPageGenerationService } from "
 import { partnerEcosystemEntitlementService } from "../server/services/partnerEcosystemEntitlementService.ts";
 import { activationLeadService } from "../server/services/activationLeadService.ts";
 import { productPageHistoryService } from "../server/services/productPageHistoryService.ts";
+import { prepareBusinessMeasurementFixture } from '../server/services/businessMeasurement.test-fixtures.ts';
+import { createMasterSitesBusinessPreviewService, masterSitesBusinessPreviewService } from '../server/services/masterSitesBusinessPreviewService.ts';
 
 test("Business generation and regeneration combine full master content with the same owner's legacy Product poster", async (t) => {
   const root = await mkdtemp(resolve(tmpdir(), "ph-claudia-business-integration-"));
@@ -32,22 +34,30 @@ test("Business generation and regeneration combine full master content with the 
   process.env.PRODUCT_PAGE_OUTPUT_DIR = root;
   process.env.PRODUCT_PAGE_SOURCE_DIR = sources;
   process.env.PRODUCT_PAGE_ACTIVATION_DIR = activation;
+  process.env.PRODUCT_PAGE_TEMPLATE_DIR = resolve('../../plantillas-de-pagina/producto');
   const ownerKey = "12345678-1234-4234-8234-123456789012";
+  const lead = { id: ownerKey, siteId: 'claudia-calero', status: 'PAID', recordState: 'ACTIVE', fullName: 'Claudia Calero', brandName: 'Claudia Calero', whatsapp: '573001234567', onboardingData: { domain: 'claudiacalero.pro' } };
   await writeFile(resolve(activation, "leads.json"), JSON.stringify([
-    { id: ownerKey, siteId: "claudia-calero", status: "PAID", onboardingData: { domain: "claudiacalero.pro" } }
+    lead
   ]));
   const productBytes = JSON.stringify({
     ecosystemType: "PRODUCT", site: { id: "claudia-calero", domain: "claudiacalero.pro" },
     hero: { desktop: "https://images.example.test/claudia-product.webp" }
   });
   const targetBytes = JSON.stringify({
-    version: 2, ownerKey, siteId: "claudia-calero-business", ecosystemType: "BUSINESS",
-    baseDomain: "claudiacalero.pro", publicHost: "negocio.claudiacalero.pro", provisioningState: "READY", publicationState: "PENDING"
+    version: 2, ownerKey, siteId: "claudia-calero-business", ecosystemType: "BUSINESS", rootEcosystemType: 'PRODUCT', remoteRoot: '/home/fixture/public_html/negocio',
+    baseDomain: "claudiacalero.pro", publicHost: "negocio.claudiacalero.pro", provisioningState: "READY", publicationState: "PENDING", dnsState: 'RESOLVED', sslState: 'READY'
   });
   await writeFile(resolve(sources, "claudia-calero.json"), productBytes);
   await writeFile(resolve(targets, "claudia-calero-business.json"), targetBytes);
   await cp(resolve("../../plantillas-de-pagina/business"), resolve(root, "ganomaster-business"), { recursive: true });
   await mkdir(resolve(root, "ganomaster-business/tipografia"), { recursive: true });
+  await prepareBusinessMeasurementFixture(t, resolve(root, 'ganomaster-business'));
+  const preview = createMasterSitesBusinessPreviewService({ listLeads: async () => [lead],
+    getEntitlement: async () => ({ activationLeadId: ownerKey, commercialState: 'KNOWN', includedEcosystems: ['BUSINESS'], existingTargets: [] }) });
+  const snapshot = await preview.getMeasurementAuthoritySnapshot(ownerKey);
+  assert.notEqual(snapshot.input, null, snapshot.partner.blockedReasons.join(','));
+  replace(masterSitesBusinessPreviewService, 'getMeasurementAuthoritySnapshot', preview.getMeasurementAuthoritySnapshot);
   replace(partnerEcosystemEntitlementService, "get", async () => ({ activationLeadId: ownerKey, includedEcosystems: ["BUSINESS"] }));
   replace(activationLeadService, "updatePublicationStateBySiteId", async () => null);
   replace(productPageHistoryService, "append", async () => undefined);
