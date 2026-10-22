@@ -4,6 +4,16 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Reanudación — 2026-10-22
 
+### Corte productivo confirmado y bloqueo de entrega — actualización posterior que prevalece
+
+PR244 integra235 y está fusionado en main `7b6567aba8e1445e67b989014384cff60714d40b`; los inputsDocker son idénticos a fuente revisada8375c15. EasyPanel desplegó imagen real `5a1918bbfca1e29e2d49e8f1653a7720f199628fc0896ddd893446b0af8d3832`, réplica f71f585412a9; anterior e777 terminada143. Inventario físico completo2645 exacto, perfilSUCCESSOR, Node20.20.2/Next16.4.1/Sharp0.35.5deduplicado/native roundtrip correctos. No repetir004/003/011 ni solicitar otra aprobación de su corte.
+
+Migración real completada por CLI existente en contenedores limpios aislados, mismo volumen/namespace/jobs físicos: BEGIN/DRAIN/PREVIEWdosiguales/APPLYúnico APPLIED, cierre retenido durante deploy, generador genuino anterior/nuevo BUSY antes de efectos, VERIFY VERIFIED y REOPEN REOPENED con commitObserved/persistenceConfirmed true. STATUS final OPEN/migrationStartedfalse; administradores temporales detenidos, evidencias/operación/archivos conservados. Primer BEGIN en réplica web rechazó72archivoscacheNext sin efectos; no se excluyeron ni relajaron controles.
+
+**Claudia todavía NO tiene los ajustes públicos.** Entitlement fresco autenticado200 y targetREADY/READY/RESOLVED/READY, identidad/WhatsApp correctos, cola sin activos. La solicitud al generador existente en puerto real80 se detuvo antes de guardar/enqueue: `BUSINESS_MEASUREMENT_AUTHORITY_INVALID`. Causa comprobada RO: fuentes históricas `blanca-ruiz.json` y `dorian-higuita.json` sin `ecosystemType` hacen fallar el inventario global obligatorio del resolver. No hay solapamientos de target en Claudia. FuenteClaudia8ab7… y Producto276b… intactos; solo trabajos históricosOct20. No editar otros partners ni omitir autorización/validación para forzar publicación.
+
+Siguiente: autorización acotada para corregir compatibilidad del inventario con fuentes históricas, pruebas y revisión independientes; sin editar/publicar otros sitios. Después reintentar flujo existente soloClaudia con textos exactos del master aprobado (sus overrides guardados aún conservanRegistrarme/Cupos/3min), workerSUCCEEDED y QA pública. DNS/campañas/GA4Metaactivación siguen fuera. MasterSitesBusiness403 es limitación de acceso separada, no se alteró allowlist. Informe003 y scratch/productive-cutover.md conservan hechos exactos; estado local JSON conciliado.
+
 ### CDX-20261022-003 — integración235 sobre dependencias corregidas (prevalece)
 
 PR243 ya fusionado en main06b9f58e15497e1329c75f0ff3f16bb99688f603; EasyPanel Success21:52:29Z. VPS Sh confirmó nueva imagen433229f90a77e5e1efacfcbf8fb4293ae43afb6476e25fb7ddcb596e9d4505c2/réplica e777ff2b3afd, Node20.20.2/Next16.4.1/Sharp0.35.5 directo y Next deduplicados, perfilPREDECESSOR no-null2620rows. STATUS010 OPEN/migrationStartedfalse/sinwrites. Un consumidor Docker activo del volumen /data; tareas anteriores Shutdown/Exited143. Esto no demuestra exclusión externa continua; refrescar hechos antes de BEGIN. Preview009 read-only con staging fijo valida lineage y bloquea solo WRITER_EXCLUSION_UNPROVEN; no usar su plan como autoridad011 ni repetir refresh histórico.
