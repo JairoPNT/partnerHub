@@ -1,6 +1,6 @@
 # CDX-20261022-003 — composición SUCCESSOR235
 
-Estado: implementación fuente completada; revisión independiente e imagen/ensayo real en curso. **No corte ni ajustes públicos de Claudia por este ticket todavía.** Jairo autorizó integrar235/publicarClaudia dentro de la ventana aprobada, sin DNS/campañas; no requiere nueva aprobación del mismo método/alcance.
+Estado: implementación fuente y revisiónTask1 completas; imagen real y ensayo pareado pasan. Revisión final de rama/artefacto y gates operacionales pendientes. **No corte ni ajustes públicos de Claudia por este ticket todavía.** Jairo autorizó integrar235/publicarClaudia dentro de la ventana aprobada, sin DNS/campañas; no requiere nueva aprobación del mismo método/alcance.
 
 Checkpoint posterior que prevalece: revisiónTask1 speccompliant/qualityApproved, ceroCriticalImportant. ActualSUCCESSOR y ensayo pareado genuino PASS; revisión final de rama/artefacto pendiente. No claim de entrega pública ni de autorizar BEGIN desde resultado local. Lint global confirmado independientemente por controllerNode20exit0; corregida referencia ausente de logoriginal. Ruido de warnings continúaMinor visible.
 
@@ -35,9 +35,9 @@ Fallo concreto medido: COPY de la carpeta canónica incorporaba tres tests fuent
 
 ## Artefacto y operación pendientes
 
-Fuenteoficial8375c15 auditada1169/1169BufferequalsGit,0missing/extra/mismatch, modosTAR retenidos. Build Dockerfile productivo sin cambios en curso; aún no afirmar imagen/ensayoPASS. Consume PREDECESSOR real004 cdx004-predecessor:0c68db3, no recreación de plantilla vieja sobre runtime235.
+Fuenteoficial8375c15 auditada1169/1169BufferequalsGit,0missing/extra/mismatch, modosTAR retenidos. Build Dockerfile productivo y ensayo ya pasan según checkpoint posterior de este reporte. Consume PREDECESSOR real004 cdx004-predecessor:0c68db3, no recreación de plantilla vieja sobre runtime235.
 
-Revisión fuente independiente y realSUCCESSOR/pairgate deben completarse: BEGIN/DRAIN/PREVIEW/APPLYuna vez en fixturegenuino9760/e9a2, cierre retenido, nuevo contenedor/generadorrealBUSY antes de efectos, VERIFY/REOPEN y diagnóstico terminal. No tocar volumenproductivo para ensayar. Después hechosoperacionalesfrescos/ambosartefactosaccesibles precedenBEGIN real; source235histórico no se despliega solo.
+Revisión fuente independiente y realSUCCESSOR/pairgate completados según checkpoint posterior; pendiente revisión final y hechosoperacionalesfrescos/ambosartefactosaccesibles antes de BEGIN real. No se tocó volumenproductivo para ensayar; source235histórico no se despliega solo.
 
 Producción243 comprobada RO: imagen433229f9/réplica e777, Next/Sharp corregidos/perfilPREDECESSOR no-null; STATUS010OPEN/sinstart/sinwrites. Un consumidor Dockeractivo y viejos Exited143 en snapshot; no garantía sobre todos los writers externos ni continua. Preview009 con staging fijo solo bloquea WRITER_EXCLUSION_UNPROVEN y noautoriza APPLY público ni sustituye plan011. No BEGIN, master/source/targetmutation, publicación, DNS, campañas, nuevascredenciales niSMTP por esta sesión.
 
