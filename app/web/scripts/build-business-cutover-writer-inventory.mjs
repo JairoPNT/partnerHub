@@ -32,7 +32,8 @@ const invalid = () => { throw new Error("BUSINESS_CUTOVER_PROFILE_INVALID"); };
 const unavailable = () => { throw new Error("BUSINESS_CUTOVER_ARTIFACTS_UNAVAILABLE"); };
 const identity = (s) => [s.dev, s.ino, s.mode, s.nlink, s.size, s.mtimeNs, s.ctimeNs].map(String).join(":");
 const safePath = (path) => typeof path === "string" && path.length <= 4096 &&
-  path.split("/").every((part) => part !== "" && part !== "." && part !== ".." && !/[\\\x00-\x1f\x7f:]/.test(part));
+  path.split("/").every((part) => part !== "" && part !== "." && part !== ".." && !/[\\:]/.test(part) &&
+    !Array.from(part).some((character) => character.charCodeAt(0) <= 31 || character.charCodeAt(0) === 127));
 
 /** Strict wire-format parser; data is metadata, never an approval capability. */
 export function validateBusinessCutoverWriterInventory(value) {

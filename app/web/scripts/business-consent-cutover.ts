@@ -6,7 +6,8 @@ import { beginBusinessCutover, drainBusinessCutover, readBusinessCutoverStatus,
 import { captureBusinessConsentCutover, describeBusinessConsentCutover, applyBusinessConsentCutover } from "@/server/services/businessConsentCutoverMigration";
 import { inspectBusinessCutoverReleaseProfile } from "@/server/services/businessCutoverReleaseProfile";
 import { verifyBusinessConsentRelease, assertBusinessCutoverVerifiedRelease } from "@/server/services/businessCutoverReleaseVerification";
-import { finishBusinessConsentCutover, readBusinessCutoverReleaseError, type CutoverReleaseResult } from "@/server/services/businessCutoverReleaseService";
+import { finishBusinessConsentCutover, readBusinessConsentCutoverOutcome, readBusinessCutoverReleaseError,
+  type CutoverReleaseResult } from "@/server/services/businessCutoverReleaseService";
 
 type Mode = "BEGIN" | "DRAIN" | "PREVIEW" | "APPLY" | "VERIFY" | "REOPEN" | "CANCEL";
 type Arguments = Readonly<{ mode: Mode; operationId: string; timeoutMs: number; expectedPlanHash?: string }>;
@@ -75,8 +76,10 @@ export async function runBusinessConsentCutover(argv: readonly string[]): Promis
     output.commitObserved = value.commitObserved; output.persistenceConfirmed = value.persistenceConfirmed;
     return { exitCode: value.persistenceConfirmed ? 0 : 3, output };
   };
+  let diagnosticRoot: string | undefined, verificationStarted = false;
   try {
     const root = resolve(process.env.PRODUCT_PAGE_OUTPUT_DIR ?? "/data/generated-sites");
+    diagnosticRoot = root;
     if (options.mode === "BEGIN") {
       // Fresh inventory and pins, NOT compiled metadata, before any claim/write.
       const profile = await inspectBusinessCutoverReleaseProfile();
@@ -116,6 +119,9 @@ export async function runBusinessConsentCutover(argv: readonly string[]): Promis
             return { exitCode: 0, output };
           }
           if (options.mode === "VERIFY") {
+            // Once genuine scoped verification starts, its profile/plan/proof
+            // failures stay failures; historical data must never replace them.
+            verificationStarted = true;
             const state = await readBusinessCutoverStatus(root);
             const proof = await verifyBusinessConsentRelease(scope, state.migrationStarted ? "REOPEN" : "CANCEL");
             const facts = await assertBusinessCutoverVerifiedRelease(proof, scope);
@@ -129,7 +135,23 @@ export async function runBusinessConsentCutover(argv: readonly string[]): Promis
       });
     });
     return result;
-  } catch (error) { return fail(error); }
+  } catch (error) {
+    if (options.mode === "VERIFY" && diagnosticRoot !== undefined && !verificationStarted) {
+      // Authority is unavailable (released, orphaned or conflicting). The
+      // existing operation-specific reader is data-only: never resume from its
+      // result, retry APPLY/finish, or touch a newer global owner. Preserve any
+      // preceding controller attempt's truthful false/true/null write flags.
+      const value = await readBusinessConsentCutoverOutcome(diagnosticRoot, options.operationId)
+        .catch(() => ({ outcome: "UNKNOWN" as const, persistenceConfirmed: false }));
+      output.status = value.outcome; output.persistenceConfirmed = false;
+      output.reasons = [value.outcome === "RELEASED" ? "RELEASE_COMMIT_UNCONFIRMED" :
+        value.outcome === "CLOSED" ? "BUSINESS_CUTOVER_CLOSED" : "BUSINESS_CUTOVER_OUTCOME_UNKNOWN"];
+      if (value.outcome === "RELEASED") output.commitObserved = true;
+      // Even a complete on-disk receipt cannot certify its final fsync/cleanup.
+      return { exitCode: value.outcome === "RELEASED" ? 3 : 2, output };
+    }
+    return fail(error);
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {

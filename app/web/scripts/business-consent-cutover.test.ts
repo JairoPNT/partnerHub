@@ -2,13 +2,13 @@ import assert from "node:assert/strict";
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
 import { spawnSync } from "node:child_process";
-import { readFile, readdir, writeFile, mkdir } from "node:fs/promises";
+import { readFile, readdir, writeFile, mkdir, lstat, readlink } from "node:fs/promises";
 import { resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 import { build } from "esbuild";
 import test from "node:test";
 import { fixture } from "../server/services/businessConsentCutoverMigration.test-fixtures.ts";
-import { readBusinessCutoverStatus } from "../server/services/businessCutoverMaintenanceService.ts";
+import { readBusinessCutoverStatus, bindBusinessCutoverMigration } from "../server/services/businessCutoverMaintenanceService.ts";
 import { image, builder } from "./build-business-cutover-writer-inventory.test-fixtures.mjs";
 
 async function api() {
@@ -22,6 +22,7 @@ const args = (mode: string, operationId = id) => [`--mode=${mode}`, `--operation
 
 test("parser enforces exact modes, required operation and mode-specific confirmations", async () => {
   const { parseBusinessConsentCutoverArguments: parse } = await api();
+  assert.deepEqual(Object.keys(await api()).sort(), ["parseBusinessConsentCutoverArguments", "runBusinessConsentCutover"]);
   for (const mode of ["BEGIN", "DRAIN", "PREVIEW", "VERIFY"]) assert.equal(parse(args(mode)).mode, mode);
   assert.equal(parse([...args("DRAIN"), "--timeout-ms=30000"]).timeoutMs, 30000);
   assert.equal(parse([...args("DRAIN"), "--timeout-ms=0"]).timeoutMs, 0);
@@ -41,6 +42,30 @@ test("parser enforces exact modes, required operation and mode-specific confirma
 const web = resolve(import.meta.dirname, "..");
 type Fixture = Awaited<ReturnType<typeof fixture>>;
 type TestContext = Parameters<typeof fixture>[0];
+// Whole physical tree, not only selected evidence bytes. Reads may update atime;
+// no identity, mode, link, content, mtime or ctime change is permitted here.
+async function physicalSnapshot(root: string): Promise<unknown[]> {
+  const rows: unknown[] = [];
+  async function visit(relative: string) {
+    const path = resolve(root, relative), s = await lstat(path, { bigint: true });
+    rows.push({ path: relative, stat: [s.dev, s.ino, s.birthtimeNs, s.mode, s.uid, s.gid, s.nlink, s.size, s.mtimeNs, s.ctimeNs].map(String),
+      bytes: s.isFile() ? (await readFile(path)).toString("base64") : s.isSymbolicLink() ? await readlink(path) : null });
+    if (s.isDirectory()) for (const name of (await readdir(path)).sort()) await visit(relative ? `${relative}/${name}` : name);
+  }
+  await visit(""); return rows;
+}
+function diagnostic(result: ReturnType<typeof spawnSync>, status: "CLOSED" | "RELEASED" | "UNKNOWN", writes: boolean | null = false) {
+  assert.equal(result.stderr, "", String(result.stderr));
+  const value = JSON.parse(String(result.stdout));
+  assert.equal(result.status, status === "RELEASED" ? 3 : 2, JSON.stringify(value));
+  assert.equal(value.status, status); assert.equal(value.persistenceConfirmed, false);
+  assert.equal(value.commitObserved, status === "RELEASED" ? true : undefined);
+  assert.deepEqual(value.reasons, [status === "RELEASED" ? "RELEASE_COMMIT_UNCONFIRMED" :
+    status === "CLOSED" ? "BUSINESS_CUTOVER_CLOSED" : "BUSINESS_CUTOVER_OUTCOME_UNKNOWN"]);
+  assert.equal(value.metadataWritesMade, writes); assert.equal(value.packageWritesMade, false);
+  assert.equal(value.providerCallsMade, false); assert.equal(value.publicationMade, false);
+  return value;
+}
 async function runtime(t: TestContext, f: Fixture, available = false, successor = false) {
   const node20 = process.env.BUSINESS_CUTOVER_TEST_NODE20;
   assert.ok(node20, "BUSINESS_CUTOVER_TEST_NODE20 must be actual Node20; no fallback");
@@ -108,7 +133,116 @@ test("Node20 dispatcher awaits terminal cleanup and uses private observed error 
     else if (fault === "lookalike") { assert.equal(value.status, "ERROR"); assert.equal(value.commitObserved, undefined); }
     else { assert.equal(value.status, "RELEASE_COMMIT_UNCONFIRMED"); assert.equal(value.commitObserved, true); assert.equal(value.persistenceConfirmed, false); }
     assert.equal(result.stdout.includes(f.root), false); assert.equal(result.stdout.includes("private"), false);
+    if (fault !== "lookalike") {
+      const before = await physicalSnapshot(f.output);
+      diagnostic(r.run(args("VERIFY", f.id)), "RELEASED");
+      assert.deepEqual(await physicalSnapshot(f.output), before, "historical VERIFY must be wholly read-only, including orphan cleanup evidence");
+    }
   });
+});
+
+test("Node20 VERIFY diagnoses a released historical operation without touching a newer global claim", async (t) => {
+  const f = await fixture(t), r = await runtime(t, f, true), nextId = randomUUID();
+  assert.equal(r.run([...args("DRAIN", f.id), "--timeout-ms=0"]).status, 0);
+  assert.equal(r.run([...args("CANCEL", f.id), "--confirm=CANCEL_UNSTARTED_BUSINESS_CONSENT_CUTOVER"]).status, 0);
+  const next = r.run(args("BEGIN", nextId)); assert.equal(next.status, 0, next.stderr);
+  const before = await physicalSnapshot(f.output);
+  // Any mutation/authority acquisition would fail this invocation. Only the
+  // original CLI exports exist: historical data never becomes a capability.
+  const result = r.run([], `import fs from 'node:fs/promises'; import { constants } from 'node:fs'; import { syncBuiltinESMExports } from 'node:module';
+    const originalOpen = fs.open;
+    for (const key of ['mkdir','unlink','rmdir','rename','writeFile','appendFile','rm','chmod','chown','truncate','link','symlink','copyFile'])
+      fs[key] = async () => { throw new Error('private diagnostic write attempt'); };
+    fs.open = async (...a) => { if (typeof a[1] !== 'number' || (a[1] & (constants.O_CREAT | constants.O_WRONLY | constants.O_RDWR | constants.O_TRUNC))) throw new Error('private diagnostic writable open'); return originalOpen(...a); };
+    syncBuiltinESMExports(); const m = await import(${JSON.stringify(pathToFileURL(r.cli).href)});
+    if (Object.keys(m).sort().join(',') !== 'parseBusinessConsentCutoverArguments,runBusinessConsentCutover') throw new Error('unexpected authority export');
+    const result = await m.runBusinessConsentCutover(${JSON.stringify(args("VERIFY", f.id))}); console.log(JSON.stringify(result.output)); process.exitCode = result.exitCode;`);
+  diagnostic(result, "RELEASED");
+  assert.deepEqual(await physicalSnapshot(f.output), before);
+  assert.equal((await readBusinessCutoverStatus(f.output)).operationId, nextId);
+});
+
+test("Node20 VERIFY reports orphan and crash-shaped closure without recovering or writing", async (t) => {
+  for (const shape of ["orphan", "incomplete-orphan", "journal"]) await t.test(shape, async (st) => {
+    const f = await fixture(st), r = await runtime(st, f, true);
+    const operation = resolve(f.output, ".business-cutover-operations", f.id);
+    if (shape !== "journal") {
+      await mkdir(resolve(operation, ".controller"), { mode: 0o700 });
+      if (shape === "orphan") await writeFile(resolve(operation, ".controller/owner.json"),
+        JSON.stringify({ version: 1, operationId: f.id, token: "a".repeat(64) }), { mode: 0o600 });
+    }
+    else await writeFile(resolve(operation, "events", (await readdir(resolve(operation, "events")))[0]), "incomplete private crash event");
+    const before = await physicalSnapshot(f.output);
+    diagnostic(r.run(args("VERIFY", f.id)), shape === "incomplete-orphan" ? "UNKNOWN" : "CLOSED", shape === "incomplete-orphan" ? false : null);
+    assert.deepEqual(await physicalSnapshot(f.output), before);
+  });
+});
+
+test("Node20 VERIFY unknown, conflicting receipt and failed reads never claim success or persistence", async (t) => {
+  for (const shape of ["unknown", "conflict", "read-failure"]) await t.test(shape, async (st) => {
+    const f = await fixture(st), r = await runtime(st, f, true);
+    let operationId = randomUUID();
+    if (shape !== "unknown") {
+      operationId = f.id;
+      assert.equal(r.run([...args("DRAIN", f.id), "--timeout-ms=0"]).status, 0);
+      assert.equal(r.run([...args("CANCEL", f.id), "--confirm=CANCEL_UNSTARTED_BUSINESS_CONSENT_CUTOVER"]).status, 0);
+      if (shape === "conflict") await writeFile(resolve(f.output, ".business-cutover-operations", f.id, "release-receipt.json"), "private conflicting receipt");
+    }
+    const before = await physicalSnapshot(f.output);
+    const result = shape === "read-failure" ? r.run([], `import fs from 'node:fs/promises'; import { syncBuiltinESMExports } from 'node:module';
+      fs.lstat = async () => { throw new Error('private reader failure'); }; syncBuiltinESMExports();
+      const m = await import(${JSON.stringify(pathToFileURL(r.cli).href)});
+      const result = await m.runBusinessConsentCutover(${JSON.stringify(args("VERIFY", operationId))}); console.log(JSON.stringify(result.output)); process.exitCode = result.exitCode;`)
+      : r.run(args("VERIFY", operationId));
+    diagnostic(result, "UNKNOWN");
+    assert.equal(String(result.stdout).includes("private"), false); assert.equal(String(result.stdout).includes(f.root), false);
+    assert.deepEqual(await physicalSnapshot(f.output), before);
+  });
+});
+
+test("Node20 VERIFY diagnosis retains true write flags after controller acquisition but unavailable scope", async (t) => {
+  const f = await fixture(t), r = await runtime(t, f, true);
+  const marker = resolve(f.output, ".master-package-claims/ganomaster-business/owner.json"), before = await readFile(marker);
+  // One transient read failure at exclusive acquisition, after the controller
+  // callback has started. Real controller cleanup still runs before diagnosis.
+  const result = r.run([], `import fs from 'node:fs/promises'; import { syncBuiltinESMExports } from 'node:module';
+    const original = fs.readdir; let checks = 0;
+    fs.readdir = async (...a) => { if (String(a[0]).replaceAll('\\\\','/').endsWith('/.controller') && ++checks === 3) throw new Error('private exclusive acquisition fault'); return original(...a); };
+    syncBuiltinESMExports(); const m = await import(${JSON.stringify(pathToFileURL(r.cli).href)});
+    const result = await m.runBusinessConsentCutover(${JSON.stringify(args("VERIFY", f.id))}); console.log(JSON.stringify(result.output)); process.exitCode = result.exitCode;`);
+  diagnostic(result, "CLOSED", true);
+  assert.deepEqual(await readFile(marker), before);
+  await assert.rejects(lstat(resolve(f.output, ".business-cutover-operations", f.id, ".controller")), { code: "ENOENT" });
+});
+
+test("Node20 active VERIFY requires a fresh compatibility proof and never falls back over profile or plan failures", async (t) => {
+  const f = await fixture(t), r = await runtime(t, f, true);
+  assert.equal(r.run([...args("DRAIN", f.id), "--timeout-ms=0"]).status, 0);
+  const success = r.run(args("VERIFY", f.id)); assert.equal(success.status, 0, success.stderr);
+  const value = JSON.parse(success.stdout);
+  assert.equal(value.status, "VERIFIED"); assert.equal(value.metadataWritesMade, true);
+  assert.equal(value.persistenceConfirmed, undefined); assert.equal(value.commitObserved, undefined);
+  const server = resolve(r.root, "server.js"), reviewed = await readFile(server);
+  await writeFile(server, "private incompatible runtime");
+  const profile = r.run(args("VERIFY", f.id)); assert.equal(profile.status, 2, profile.stderr);
+  assert.equal(JSON.parse(profile.stdout).status, "BLOCKED");
+  assert.deepEqual(JSON.parse(profile.stdout).reasons, ["BUSINESS_CUTOVER_PROFILE_INVALID"]);
+  assert.equal(JSON.parse(profile.stdout).metadataWritesMade, true);
+  await writeFile(server, reviewed);
+  const bound = await f.run(async (scope) => {
+    const binding = await f.binding(scope); await bindBusinessCutoverMigration(scope, binding); return binding.planHash;
+  }); assert.equal(bound.error, null);
+  const boundProof = r.run(args("VERIFY", f.id)); assert.equal(boundProof.status, 0, boundProof.stderr);
+  assert.equal(JSON.parse(boundProof.stdout).planHash, bound.value);
+  // Same bytes with changed physical clocks invalidate the genuinely bound
+  // plan. An active PLAN_MISMATCH must not turn into historical CLOSED data.
+  const protectedFile = resolve(f.output, "ganomaster-business/index.html"), bytes = await readFile(protectedFile);
+  await writeFile(protectedFile, "private package drift"); await writeFile(protectedFile, bytes);
+  const plan = r.run(args("VERIFY", f.id)); assert.equal(plan.status, 2, plan.stderr);
+  assert.equal(JSON.parse(plan.stdout).status, "BLOCKED");
+  assert.deepEqual(JSON.parse(plan.stdout).reasons, ["BUSINESS_CUTOVER_PLAN_MISMATCH"]);
+  assert.equal(JSON.parse(plan.stdout).metadataWritesMade, true);
+  assert.equal(JSON.parse(plan.stdout).persistenceConfirmed, undefined);
 });
 
 test("Node20 BEGIN freshly rejects drift despite an available compiled descriptor before any claim", async (t) => {

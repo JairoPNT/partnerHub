@@ -6,6 +6,17 @@ import { pathToFileURL } from "node:url";
 import { resolve } from "node:path";
 import test from "node:test";
 import { image, builder } from "./build-business-cutover-writer-inventory.test-fixtures.mjs";
+import { validateBusinessCutoverWriterInventory } from "./build-business-cutover-writer-inventory.mjs";
+
+test("inventory_parser_rejects_all_C0_DEL_and_unsafe_paths_without_rejecting_safe_unicode_or_length_boundary", () => {
+  const wire = (path) => ({ version: 1, releaseId: "business-consent-predecessor-v1",
+    files: [{ path, sha256: "a".repeat(64), size: 0 }] });
+  for (const path of ["writer.js", "scripts/writer.js", "scripts/é😀\u0080.js", "x".repeat(4096)])
+    assert.equal(validateBusinessCutoverWriterInventory(wire(path)).files[0].path, path);
+  const unsafe = ["", "/writer.js", "writer.js/", "a//b", ".", "..", "a/./b", "a/../b", "a\\b", "C:writer.js", "x".repeat(4097)];
+  for (const code of [...Array(32).keys(), 127]) unsafe.push(`scripts/a${String.fromCharCode(code)}b.js`);
+  for (const path of unsafe) assert.throws(() => validateBusinessCutoverWriterInventory(wire(path)), /^Error: BUSINESS_CUTOVER_PROFILE_INVALID$/);
+});
 
 test("inventory_covers_all_shipped_files_and_has_only_exact_exclusions", async (t) => {
   const root = await image(t); const s = await builder(root);
