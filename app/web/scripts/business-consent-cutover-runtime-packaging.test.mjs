@@ -5,7 +5,7 @@ import { mkdir, mkdtemp, readFile, readdir, rm, writeFile, symlink, lstat, cp, c
 import fs from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve, sep, toNamespacedPath } from "node:path";
 import { pathToFileURL } from "node:url";
 import test from "node:test";
 import { build } from "esbuild";
@@ -390,6 +390,11 @@ test("actual built standalone plus all Docker COPY bytes has a complete regular 
   assert.equal(sftpSmoke.status, 0, sftpSmoke.stderr);
   assert.deepEqual(JSON.parse(sftpSmoke.stdout), { status: "SFTP_RUNTIME_READY", providerCallsMade: false });
   const docker = await readFile(join(repo, "Dockerfile"), "utf8");
+  // Model only literal build-context exclusions for this source directory.
+  // No wildcard pruning or inventory exception: Docker also never receives
+  // these exact source-only tests, while all approved assets/starter remain.
+  const excludedContextPaths = new Set((await readFile(join(repo, ".dockerignore"), "utf8"))
+    .split(/\r?\n/).filter((line) => line.startsWith("plantillas-de-pagina/business/") && !/[*!?[]/.test(line)));
   const layout = docker.split("AS runtime-layout\n")[1]?.split("# Build tooling")[0] ?? docker.split("AS runtime-layout\r\n")[1]?.split("# Build tooling")[0];
   assert.ok(layout, "full runtime-layout COPY list must be read from production Dockerfile");
   for (const match of layout.matchAll(/^COPY --from=(builder|sftp-runtime-deps) (\S+) \.\/(\S+)\r?$/gm)) {
@@ -403,8 +408,13 @@ test("actual built standalone plus all Docker COPY bytes has a complete regular 
         : name === "personal-brand-config.js" ? join(repo, "plantillas-de-pagina/personal-brand/config.js")
           : name === "business-consent-successor" ? join(repo, "runtime-assets/business-consent-successor") : join(assets, name);
     } else { assert.ok(sourcePath.startsWith("/repo/")); path = join(repo, sourcePath.slice(6)); }
-    await cp(path, join(f.destination, target), { recursive: true, dereference: false, force: true });
+    await cp(path, join(f.destination, target), { recursive: true, dereference: false, force: true,
+      ...(sourcePath === "/repo/plantillas-de-pagina/business" ? {
+        filter: (source) => !excludedContextPaths.has(relative(toNamespacedPath(repo), toNamespacedPath(source)).split(sep).join("/"))
+      } : {}) });
   }
+  for (const name of ["consent-ui.test.mjs", "measurement-runtime.test.mjs", "measurement-test-harness.mjs"])
+    await assert.rejects(lstat(join(f.destination, "plantillas-de-pagina/business", name)), { code: "ENOENT" });
   await assert.rejects(lstat(join(f.destination, "scripts/assemble-business-cutover-runtime.mjs")), { code: "ENOENT" });
   const inventoryBuilder = await builder(f.destination);
   const canonicalApp = await readFile(join(f.destination, "plantillas-de-pagina/business/app.js"));

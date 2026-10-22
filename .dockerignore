@@ -8,4 +8,7 @@ app/web/node_modules
 app/web/.next
 app/web/.gitkeep
 app/web/README.md
+plantillas-de-pagina/business/consent-ui.test.mjs
+plantillas-de-pagina/business/measurement-runtime.test.mjs
+plantillas-de-pagina/business/measurement-test-harness.mjs
 
