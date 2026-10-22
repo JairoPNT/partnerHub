@@ -9,7 +9,10 @@ import { performance } from "node:perf_hooks";
 import {
   acquireBusinessCutoverClosure, assertBusinessCutoverOwnership, getBusinessCutoverOperation,
   readBusinessCutoverClosure, type BusinessCutoverHandle, type BusinessCutoverOperation,
+  assertBusinessCutoverRelocatedOwnership,
 } from "@/server/services/businessCutoverClaimStore";
+// Function-lazy cycle: no terminal bindings are read during module evaluation.
+import { readBusinessCutoverObservedReleaseError } from "@/server/services/businessCutoverReleaseService";
 
 export type BusinessCutoverStatus = {
   status: "OPEN" | "CLOSING" | "DRAINED" | "VERIFIED" | "BLOCKED";
@@ -26,7 +29,8 @@ type Event = { version: 1; operationId: string; recordDigest: string; sequence: 
   kind: Kind; reason: string | null; hash: string };
 type Journal = { events: Event[]; status: BusinessCutoverStatus };
 type Scope = { handle: BusinessCutoverHandle; metadata: BusinessCutoverOperation; lock: Pin;
-  marker: Pin; bytes: Buffer; active: boolean; pending: Promise<unknown> };
+  marker: Pin; bytes: Buffer; active: boolean; pending: Promise<unknown>;
+  relocated: boolean; exclusive: Set<BusinessCutoverExclusiveScope> };
 const controls = new WeakMap<BusinessCutoverControl, Scope>();
 type Exclusive = { owner: Scope; active: boolean; pending: Set<Promise<unknown>> };
 const exclusiveScopes = new WeakMap<BusinessCutoverExclusiveScope, Exclusive>();
@@ -167,11 +171,21 @@ async function readJournal(handle: BusinessCutoverHandle, metadata: BusinessCuto
 
 async function assertScope(scope: Scope) {
   if (!scope.active) throw closed();
-  await assertBusinessCutoverOwnership(scope.handle);
+  await assertOwner(scope);
   await assertPins([scope.lock]);
   const marker = await readFile(scope.marker.path);
   if (!same(marker.pin.stat, scope.marker.stat) || !marker.bytes.equals(scope.bytes) ||
     JSON.stringify(await readdir(scope.lock.path)) !== '["owner.json"]' || !scope.active) throw closed();
+}
+function assertOwner(scope: Scope) {
+  return scope.relocated ? assertBusinessCutoverRelocatedOwnership(scope.handle) : assertBusinessCutoverOwnership(scope.handle);
+}
+function controllerFailure(scope: Scope | undefined) {
+  for (const exclusive of scope?.exclusive ?? []) {
+    const observed = readBusinessCutoverObservedReleaseError(exclusive);
+    if (observed) return observed;
+  }
+  return closed();
 }
 async function append(scope: Scope, kind: Kind, reason: string | null = null, allowEmpty = false, validate?: () => Promise<unknown>) {
   await assertScope(scope);
@@ -189,9 +203,9 @@ function serialized<T>(control: BusinessCutoverControl, action: (scope: Scope) =
   // Reentrant control calls cannot queue behind their own exclusive callback.
   // Other callers retain the010 queue contract; scoped helpers never enqueue.
   if (!scope?.active || exclusiveContext.getStore() === scope) return Promise.reject(closed());
-  const result = scope.pending.then(async () => { await assertScope(scope); return action(scope); });
+  const result = scope.pending.then(async () => { if (scope.relocated) throw closed(); await assertScope(scope); return action(scope); });
   scope.pending = result.catch(() => {});
-  return result.catch(() => { throw closed(); });
+  return result.catch(() => { throw controllerFailure(scope); });
 }
 
 async function scanSiteClaims(scope: Pick<Scope, "handle" | "metadata">): Promise<string | null> {
@@ -217,6 +231,7 @@ async function scanSiteClaims(scope: Pick<Scope, "handle" | "metadata">): Promis
 }
 
 async function runController<T>(handle: BusinessCutoverHandle, action: (control: BusinessCutoverControl) => Promise<T>, initializing: boolean): Promise<T> {
+  let scope: Scope | undefined;
   try {
     const metadata = await getBusinessCutoverOperation(handle);
     // Validate journal before creating a lock. Incomplete initial BEGIN is not resumable.
@@ -227,7 +242,7 @@ async function runController<T>(handle: BusinessCutoverHandle, action: (control:
     const lock = await directory(path, true);
     const bytes = Buffer.from(JSON.stringify({ version: 1, operationId: metadata.operationId, token: randomBytes(32).toString("hex") }));
     const marker = await createFile(resolve(path, "owner.json"), bytes);
-    const scope: Scope = { handle, metadata, lock, marker, bytes, active: true, pending: Promise.resolve() };
+    scope = { handle, metadata, lock, marker, bytes, active: true, pending: Promise.resolve(), relocated: false, exclusive: new Set() };
     const control = Object.freeze(Object.create(null)) as BusinessCutoverControl; controls.set(control, scope);
     let result!: T; let failed = false;
     try {
@@ -240,13 +255,13 @@ async function runController<T>(handle: BusinessCutoverHandle, action: (control:
     scope.active = false;
     await scope.pending;
     // Owned administrative lock only. Global closure is NEVER released here.
-    await assertBusinessCutoverOwnership(handle); await assertPins([lock]);
+    await assertOwner(scope); await assertPins([lock]);
     const current = await readFile(marker.path);
     if (!same(current.pin.stat, marker.stat) || !current.bytes.equals(bytes) || JSON.stringify(await readdir(path)) !== '["owner.json"]') throw closed();
     await unlink(marker.path); await rmdir(path); await syncDirectory(metadata.operationDirectory);
-    if (failed) throw closed();
+    if (failed) throw controllerFailure(scope);
     return result;
-  } catch { throw closed(); }
+  } catch { throw controllerFailure(scope); }
 }
 
 export function withBusinessCutoverController<T>(handle: BusinessCutoverHandle, action: (control: BusinessCutoverControl) => Promise<T>): Promise<T> {
@@ -257,6 +272,7 @@ export function withBusinessCutoverExclusive<T>(control: BusinessCutoverControl,
   action: (scope: BusinessCutoverExclusiveScope) => Promise<T>): Promise<T> {
   return serialized(control, async (owner) => {
     const scope = Object.freeze(Object.create(null)) as BusinessCutoverExclusiveScope;
+    owner.exclusive.add(scope);
     const state: Exclusive = { owner, active: true, pending: new Set() }; exclusiveScopes.set(scope, state);
     try {
       return await exclusiveContext.run(owner, async () => {
@@ -277,10 +293,23 @@ export function withBusinessCutoverExclusive<T>(control: BusinessCutoverControl,
 
 async function exclusiveOwner(scope: BusinessCutoverExclusiveScope): Promise<Scope> {
   const state = exclusiveScopes.get(scope);
-  if (!state?.active) throw closed();
+  if (!state?.active || state.owner.relocated) throw closed();
   await assertScope(state.owner);
   if (!state.active) throw closed();
   return state.owner;
+}
+
+/** Physical rebind only. The release service alone records observed commit;
+ * this validator cannot create a terminal result or move a claim. */
+export function markBusinessCutoverClaimRelocated(scope: BusinessCutoverExclusiveScope): Promise<void> {
+  return scopedWork(scope, async () => {
+    const state = exclusiveScopes.get(scope);
+    if (!state?.active || !state.owner.active) throw closed();
+    await assertBusinessCutoverRelocatedOwnership(state.owner.handle);
+    if (!state.active || !state.owner.active) throw closed();
+    state.owner.relocated = true;
+    await assertScope(state.owner);
+  });
 }
 
 export async function assertBusinessCutoverExclusive(scope: BusinessCutoverExclusiveScope): Promise<BusinessCutoverOperation> {
