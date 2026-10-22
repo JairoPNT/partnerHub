@@ -1,6 +1,6 @@
 # CDX-20261022-004 — seguridad del procesamiento de imágenes runtime
 
-Owner: Codex backend; implementación balanced y revisión premium por parsers nativos/seguridad de producción. Estado: PROPUESTO, requiere autorización específica para modificar dependencias; no implementado. No representa riesgo aceptado ni aprobación para desplegar.
+Owner: Codex backend; implementación balanced y revisión premium por parsers nativos/seguridad de producción. Estado: APROBADO por Jairo el22oct: «Corrige las dependencias y continúa con la integración del PR235 ... sin tocar DNS ni campañas». Implementación en curso; no representa riesgo aceptado ni gate de despliegue aprobado por anticipado.
 
 Resultado único: corregir/verificar la cadena enviada de procesamiento de imágenes, incluyendo Sharp directo y el resuelto por Next, manteniendo contratos y seis bytes/pins235. El triage002 detectó dependencias afectadas y procesamiento de entradas de usuario; no demuestra explotación ni una intrusión. La exposición es heredada, no introducida por002. Detalle con evidencia oficial y condiciones queda local en `.superpowers/sdd/2026-10-22-business-consent-release/dependency-triage-report.md`; no publicar pruebas de explotación ni secretos.
 
@@ -9,5 +9,7 @@ Allowed tras aprobación: selección compatible de versiones corregidas de Next/
 Nodemailer es otra dependencia enviada con condiciones pendientes; su actualización mayor7→10 no queda autorizada por este ticket de imágenes. Lectura acotada de límites reales de email puede resolver aplicabilidad en seguimiento independiente; no inferir que todas las coincidencias de auditoría son explotables ni añadir upgrades ajenos.
 
 Dependencies:002 código/imagenPREDECESSOR local revisados en PR242DRAFT;235 sin activar;010/011main241. Parallel-safe: análisis read-only y preparación documental003; no otro writer de package.json/lock/Dockerfiles/generación compartidos. Una rama/worktree de ejecución y owner; repetir solo gates afectados por nuevas dependencias. Rama exacta desde freshmain al autorizar, no reutilizar002 cerrado.
+
+Rama de ejecución: `codex/CDX-20261022-004-runtime-image-security`, creada desde origin/main7159948 en el worktree ya aislado business-consent-runtime, incorporando por fast-forward el head revisado0027eb2cae como dependencia local. No desplegar242 antes de corregir004: el PR004 incluirá la dependencia revisada y sustituirá242 únicamente después de revisión integral.235 permanece separado para composición SUCCESSOR posterior. El checkout raíz y el worktree235 no se editan.
 
 Aceptación: fuentesprimarias/afectedranges y versiones reales; RED/reproducción segura del contrato vulnerado sin exploit productivo y GREEN de corrección; Node20/Linux/build/test/lint y nueva auditoría/contexto/imagen con inventarioestricto sin relajarlo; compatibilidad de generación/retención/cancel/reopen/235 intacta. Ningún fix concede automáticamente el gateVPS/corte/publicación. Toda mutación productiva conserva autorizaciones y evidencia fresca; sin bypass ni downgrade/claimcleanup.
