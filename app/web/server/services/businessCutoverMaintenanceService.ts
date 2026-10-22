@@ -24,6 +24,7 @@ type Journal = { events: Event[]; status: BusinessCutoverStatus };
 type Scope = { handle: BusinessCutoverHandle; metadata: BusinessCutoverOperation; lock: Pin;
   marker: Pin; bytes: Buffer; active: boolean; pending: Promise<unknown> };
 const controls = new WeakMap<BusinessCutoverControl, Scope>();
+const journalCapacity = 10000;
 const noFollow = constants.O_NOFOLLOW ?? 0;
 const closed = () => new Error("BUSINESS_CUTOVER_CLOSED");
 const hash = (bytes: string | Buffer) => createHash("sha256").update(bytes).digest("hex");
@@ -93,7 +94,7 @@ async function readJournal(handle: BusinessCutoverHandle, metadata: BusinessCuto
   await assertBusinessCutoverOwnership(handle);
   const root = await directory(resolve(metadata.operationDirectory, "events"), true);
   const names = (await readdir(root.path)).sort();
-  if ((!allowEmpty && names.length === 0) || names.length > 10000) throw closed();
+  if ((!allowEmpty && names.length === 0) || names.length > journalCapacity) throw closed();
   const status: BusinessCutoverStatus = { status: "CLOSING", operationId: metadata.operationId, migrationStarted: false, blockedReasons: [] };
   const events: Event[] = []; let previousHash = metadata.recordDigest;
   for (let i = 0; i < names.length; i++) {
@@ -132,6 +133,7 @@ async function assertScope(scope: Scope) {
 async function append(scope: Scope, kind: Kind, reason: string | null = null, allowEmpty = false) {
   await assertScope(scope);
   const journal = await readJournal(scope.handle, scope.metadata, allowEmpty);
+  if (journal.events.length >= journalCapacity) throw closed();
   const body = { version: 1, operationId: scope.metadata.operationId, recordDigest: scope.metadata.recordDigest,
     sequence: journal.events.length + 1, previousHash: journal.events.at(-1)?.hash ?? scope.metadata.recordDigest, kind, reason };
   await assertScope(scope);

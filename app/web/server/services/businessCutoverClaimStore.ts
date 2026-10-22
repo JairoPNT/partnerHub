@@ -15,7 +15,7 @@ export type BusinessCutoverOperation = Readonly<{
 type Identity = { dev: string; ino: string; birthtimeNs: string };
 type DirectoryPin = { path: string; identity: Identity };
 type RecordData = {
-  version: 1;
+  version: 2;
   operationId: string;
   credentialDigest: string;
   directories: DirectoryPin[];
@@ -193,12 +193,14 @@ function markerBytes(record: RecordData, bytes: Buffer) {
 async function readOwnership(output: string, operationId: string, previous?: Ownership): Promise<Ownership> {
   const p = paths(output, operationId);
   const rootPins = (await scanDirectories(output)).directories;
-  const directories = [...rootPins, await directory(p.globalRoot, true), await directory(p.claim, true),
+  // Outer ancestors can change across containers. Inspect/pin them for this
+  // validation only; durable ownership starts at the unchanged canonical volume.
+  const directories = [rootPins[rootPins.length - 1], await directory(p.globalRoot, true), await directory(p.claim, true),
     await directory(p.operations, true), await directory(p.operation, true), await directory(p.events, true)];
   const saved = await readPrivateFile(p.record, 64 * 1024);
   const record: RecordData = JSON.parse(saved.bytes.toString("utf8"));
   // Never traverse paths from untrusted JSON. Pin order and paths are fixed here.
-  if (record?.version !== 1 || record.operationId !== operationId || !/^[0-9a-f]{64}$/.test(record.credentialDigest) ||
+  if (record?.version !== 2 || record.operationId !== operationId || !/^[0-9a-f]{64}$/.test(record.credentialDigest) ||
     !Array.isArray(record.directories) || record.directories.length !== directories.length) throw closed();
   for (let i = 0; i < directories.length; i++) {
     if (record.directories[i]?.path !== directories[i].path || !sameIdentity(directories[i].identity, record.directories[i].identity)) throw closed();
@@ -219,7 +221,7 @@ async function readOwnership(output: string, operationId: string, previous?: Own
     if (owner?.version !== 1 || owner.operationId !== operationId || typeof owner.token !== "string" || !/^[0-9a-f]{64}$/.test(owner.token)) throw closed();
     await assertDirectories([controller]);
   }
-  await assertDirectories(directories);
+  await assertDirectories([...rootPins, ...directories]);
   return { output, operationId, recordBytes: saved.bytes, credential: credential.bytes };
 }
 
@@ -265,7 +267,8 @@ export async function acquireBusinessCutoverClosure(outputDirectory: string, ope
     const claimPins = [...rootPins, globalRoot, claim];
     const markerIdentity = await createFile(p.marker, claimPins);
     const directories = [...rootPins, globalRoot, claim, operations, operation, events];
-    const record: RecordData = { version: 1, operationId, credentialDigest: digest(credential), directories,
+    const record: RecordData = { version: 2, operationId, credentialDigest: digest(credential),
+      directories: [rootPins[rootPins.length - 1], globalRoot, claim, operations, operation, events],
       credential: credentialIdentity, marker: markerIdentity, record: recordIdentity };
     const bytes = Buffer.from(JSON.stringify(record));
     // Mutual physical pins allow a different process to reject even same-byte

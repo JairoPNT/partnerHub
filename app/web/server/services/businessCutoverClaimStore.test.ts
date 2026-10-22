@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { link, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 import { promisify } from "node:util";
 import test from "node:test";
 import type { TestContext } from "node:test";
@@ -126,13 +126,14 @@ test("credential_and_registry_substitution_or_tampering_loses_authority", async 
 
 test("replaced_claim_directory_or_ancestor_loses_authority_even_with_original_files", async (t) => {
   const { acquireBusinessCutoverClosure, assertBusinessCutoverOwnership, resumeBusinessCutoverClosure } = api();
-  for (const target of ["claim", "namespace", "output"] as const) {
+  for (const target of ["claim", "namespace", "output", "operations", "operation"] as const) {
     const directory = await fixture(t);
     const output = resolve(directory, "output");
     await mkdir(output);
     const id = randomUUID();
     const handle = await acquireBusinessCutoverClosure(output, id);
-    const path = target === "claim" ? claimPath(output) : target === "namespace" ? resolve(output, ".master-package-claims") : output;
+    const path = target === "claim" ? claimPath(output) : target === "namespace" ? resolve(output, ".master-package-claims")
+      : target === "operations" ? resolve(output, ".business-cutover-operations") : target === "operation" ? operationPath(output, id) : output;
     const displaced = resolve(directory, `displaced-${target}`);
     await rename(path, displaced);
     await mkdir(path);
@@ -140,6 +141,57 @@ test("replaced_claim_directory_or_ancestor_loses_authority_even_with_original_fi
     await assert.rejects(assertBusinessCutoverOwnership(handle), /BUSINESS_CUTOVER_CLOSED/);
     await assert.rejects(resumeBusinessCutoverClosure(output, id), /BUSINESS_CUTOVER_CLOSED/);
   }
+});
+
+test("fresh_process_resumes_same_output_subtree_after_outer_ancestor_replacement", async (t) => {
+  const s = api(); const root = await fixture(t); const outer = resolve(root, "container");
+  const output = resolve(outer, "output"); await mkdir(output, { recursive: true });
+  const id = randomUUID(); const handle = await s.acquireBusinessCutoverClosure(output, id);
+  const outputBefore = await lstat(output, { bigint: true }); const outerBefore = await lstat(outer, { bigint: true });
+  const record = resolve(operationPath(output, id), "record.json"); const bytes = await readFile(record);
+  await rename(output, resolve(root, "parked-volume"));
+  await rename(outer, resolve(root, "retained-container")); await mkdir(outer);
+  await rename(resolve(root, "parked-volume"), output);
+  assert.notEqual((await lstat(outer, { bigint: true })).ino, outerBefore.ino);
+  assert.equal((await lstat(output, { bigint: true })).ino, outputBefore.ino);
+  const child = await promisify(execFile)(process.execPath, ["--experimental-strip-types", "--input-type=module", "-e",
+    `const s=await import(${JSON.stringify(new URL("./businessCutoverClaimStore.ts", import.meta.url).href)});const h=await s.resumeBusinessCutoverClosure(process.argv[1],process.argv[2]);await s.assertBusinessCutoverOwnership(h);await s.assertBusinessCutoverOwnership(await s.readBusinessCutoverClosure(process.argv[1]));`, output, id]);
+  assert.equal(child.stdout, "");
+  await s.assertBusinessCutoverOwnership(handle);
+  assert.deepEqual(await readFile(record), bytes);
+  assert.equal(await s.inspectBusinessGlobalClosure(output), "CLOSED");
+});
+
+test("retained_volume_rejects_linked_outer_ancestor_and_changed_canonical_path", async (t) => {
+  const s = api(); const root = await fixture(t); const outer = resolve(root, "container");
+  const output = resolve(outer, "output"); await mkdir(output, { recursive: true });
+  const id = randomUUID(); await s.acquireBusinessCutoverClosure(output, id);
+  const displaced = resolve(root, "moved-container"); await rename(outer, displaced);
+  await assert.rejects(s.resumeBusinessCutoverClosure(resolve(displaced, "output"), id), /BUSINESS_CUTOVER_CLOSED/);
+  await symlink(displaced, outer, process.platform === "win32" ? "junction" : "dir");
+  await assert.rejects(s.resumeBusinessCutoverClosure(output, id), /BUSINESS_CUTOVER_CLOSED/);
+  await assert.rejects(s.inspectBusinessGlobalClosure(output), /BUSINESS_CUTOVER_CLOSED/);
+});
+
+test("legacy_outer_pin_record_is_rejected_without_rewriting_or_upgrading", async (t) => {
+  const s = api(); const output = await fixture(t); const id = randomUUID(); await s.acquireBusinessCutoverClosure(output, id);
+  const path = resolve(operationPath(output, id), "record.json");
+  const record = JSON.parse(await readFile(path, "utf8")); const ancestors = [];
+  for (let ancestor = dirname(output);; ancestor = dirname(ancestor)) {
+    const stat = await lstat(ancestor, { bigint: true });
+    ancestors.unshift({ path: ancestor, identity: { dev: String(stat.dev), ino: String(stat.ino), birthtimeNs: String(stat.birthtimeNs) } });
+    if (dirname(ancestor) === ancestor) break;
+  }
+  record.version = 1; record.directories = [...ancestors, ...record.directories];
+  const bytes = Buffer.from(JSON.stringify(record)); await writeFile(path, bytes);
+  const markerPath = resolve(claimPath(output), "owner.json");
+  const marker = Buffer.from(JSON.stringify({ version: 1, operationId: id, credentialDigest: record.credentialDigest,
+    record: record.record, recordDigest: createHash("sha256").update(bytes).digest("hex") }));
+  await writeFile(markerPath, marker);
+  await assert.rejects(s.resumeBusinessCutoverClosure(output, id), /BUSINESS_CUTOVER_CLOSED/);
+  await assert.rejects(s.readBusinessCutoverClosure(output), /BUSINESS_CUTOVER_CLOSED/);
+  assert.deepEqual(await readFile(path), bytes); assert.deepEqual(await readFile(markerPath), marker);
+  assert.equal(await s.inspectBusinessGlobalClosure(output), "CLOSED");
 });
 
 test("missing_descendant_of_symlink_is_not_open_and_status_does_not_write", async (t) => {

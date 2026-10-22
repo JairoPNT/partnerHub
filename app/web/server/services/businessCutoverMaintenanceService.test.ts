@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { spawn } from "node:child_process";
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { once } from "node:events";
 import { link, lstat, mkdir, mkdtemp, readFile, readdir, rename, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -116,6 +116,79 @@ test("expired_control_cannot_mark_started_or_drain_and_handle_is_not_control", a
     await assert.rejects(s.markBusinessCutoverMigrationStarted(forged)); await assert.rejects(s.drainBusinessCutover(forged, 0));
   }
   assert.equal((await s.readBusinessCutoverStatus(output)).migrationStarted, false);
+});
+
+test("full_journal_refuses_next_event_without_losing_history_or_migration_flag", async (t) => {
+  const s = api(); const output = await fixture(t); const id = randomUUID(); await s.beginBusinessCutover(output, id);
+  const events = resolve(operation(output, id), "events");
+  const seed = JSON.parse(await readFile(resolve(events, "00000001.json"), "utf8"));
+  let previousHash: string = seed.hash;
+  // Independently construct canonical on-disk history once, not 10,000 O(n²) appends.
+  for (let sequence = 2; sequence <= 10000; sequence++) {
+    const body = { version: 1, operationId: id, recordDigest: seed.recordDigest, sequence, previousHash,
+      kind: sequence === 2 ? "DRAINED" : sequence === 3 ? "MIGRATION_STARTED" : "BLOCKED",
+      reason: sequence > 3 ? "BUSINESS_SITE_CLAIMS_ACTIVE" : null };
+    previousHash = createHash("sha256").update(JSON.stringify(body)).digest("hex");
+    await writeFile(resolve(events, `${String(sequence).padStart(8, "0")}.json`), JSON.stringify({ ...body, hash: previousHash }), { flag: "wx", mode: 0o600 });
+  }
+  const snapshot = async () => {
+    const names = (await readdir(events)).sort(); const hash = createHash("sha256");
+    for (const name of names) hash.update(name).update(await readFile(resolve(events, name)));
+    return { names, digest: hash.digest("hex") };
+  };
+  const before = await snapshot(); assert.equal(before.names.length, 10000);
+  const supported = await s.readBusinessCutoverStatus(output);
+  assert.deepEqual(supported, { status: "BLOCKED", operationId: id, migrationStarted: true, blockedReasons: ["BUSINESS_SITE_CLAIMS_ACTIVE"] });
+  await assert.rejects(s.withBusinessCutoverController(await resumeBusinessCutoverClosure(output, id), (c) => s.drainBusinessCutover(c, 0)), /BUSINESS_CUTOVER_CLOSED/);
+  assert.deepEqual(await snapshot(), before);
+  assert.deepEqual(await s.readBusinessCutoverStatus(output), supported);
+  await assert.rejects(lstat(resolve(operation(output, id), ".controller")), { code: "ENOENT" });
+  assert.equal(await inspectBusinessGlobalClosure(output), "CLOSED");
+});
+
+test("callback_settlement_revokes_queued_work_and_retains_lock_until_pending_tail_settles", async (t) => {
+  const s = api(); const output = await fixture(t); const id = randomUUID();
+  const writerEntered = barrier(); const writerLeave = barrier();
+  const writer = createBusinessPublicationSiteCoordinator({ outputDirectory: output })("settlement-business", async () => { writerEntered.release(); await writerLeave.promise; });
+  await writerEntered.promise; await s.beginBusinessCutover(output, id);
+  const handle = await resumeBusinessCutoverClosure(output, id);
+  const held = barrier(); const settleCallback = barrier(); let resumePoll!: () => void; let escaped!: BusinessCutoverControl;
+  let first!: Promise<unknown>; let queued!: Promise<unknown>; let finished = false;
+  t.mock.method(globalThis, "setTimeout", (done: () => void) => { resumePoll = done; held.release(); });
+  const controller = s.withBusinessCutoverController(handle, async (c) => {
+    escaped = c;
+    first = s.drainBusinessCutover(c, 30000).then(() => "fulfilled", () => "rejected");
+    await held.promise;
+    queued = s.drainBusinessCutover(c, 0).then(() => "fulfilled", () => "rejected");
+    await settleCallback.promise;
+  }).then(() => { finished = true; }, (error) => { throw error; });
+  // Always observe detached work, including on an assertion failure.
+  const controllerResult = controller.then(() => "fulfilled", () => "rejected");
+  try {
+    await held.promise; settleCallback.release();
+    // Promise settlement and the controller's revocation run before the next event-loop turn.
+    await new Promise<void>((done) => setImmediate(done));
+    assert.equal(finished, false);
+    const events = resolve(operation(output, id), "events"); const names = await readdir(events);
+    const bytes = await Promise.all(names.map((name) => readFile(resolve(events, name))));
+    let secondEntered = false;
+    await assert.rejects(s.withBusinessCutoverController(await resumeBusinessCutoverClosure(output, id), async () => { secondEntered = true; }));
+    assert.equal(secondEntered, false); assert.ok(await lstat(resolve(operation(output, id), ".controller")));
+    await assert.rejects(s.markBusinessCutoverMigrationStarted(escaped));
+    resumePoll();
+    assert.equal(await first, "rejected"); assert.equal(await queued, "rejected");
+    assert.equal(await controllerResult, "fulfilled");
+    await assert.rejects(lstat(resolve(operation(output, id), ".controller")), { code: "ENOENT" });
+    await s.withBusinessCutoverController(await resumeBusinessCutoverClosure(output, id), async () => { secondEntered = true; });
+    assert.equal(secondEntered, true);
+    await assert.rejects(s.drainBusinessCutover(escaped, 0));
+    assert.deepEqual(await readdir(events), names);
+    assert.deepEqual(await Promise.all(names.map((name) => readFile(resolve(events, name)))), bytes);
+    assert.equal((await s.readBusinessCutoverStatus(output)).migrationStarted, false);
+  } finally {
+    settleCallback.release(); resumePoll?.(); writerLeave.release();
+    await Promise.all([writer, controllerResult, first, queued]);
+  }
 });
 
 test("torn_event_or_changed_parent_blocks_status", async (t) => {
