@@ -12,7 +12,7 @@ import {
   assertBusinessCutoverRelocatedOwnership,
 } from "@/server/services/businessCutoverClaimStore";
 // Function-lazy cycle: no terminal bindings are read during module evaluation.
-import { readBusinessCutoverObservedReleaseError } from "@/server/services/businessCutoverReleaseService";
+import { readBusinessCutoverObservedReleaseError, readBusinessCutoverFailedReleaseError } from "@/server/services/businessCutoverReleaseService";
 
 export type BusinessCutoverStatus = {
   status: "OPEN" | "CLOSING" | "DRAINED" | "VERIFIED" | "BLOCKED";
@@ -32,7 +32,7 @@ type Scope = { handle: BusinessCutoverHandle; metadata: BusinessCutoverOperation
   marker: Pin; bytes: Buffer; active: boolean; pending: Promise<unknown>;
   relocated: boolean; exclusive: Set<BusinessCutoverExclusiveScope> };
 const controls = new WeakMap<BusinessCutoverControl, Scope>();
-type Exclusive = { owner: Scope; active: boolean; pending: Set<Promise<unknown>> };
+type Exclusive = { owner: Scope; active: boolean; pending: Set<Promise<unknown>>; terminal: boolean };
 const exclusiveScopes = new WeakMap<BusinessCutoverExclusiveScope, Exclusive>();
 const exclusiveContext = new AsyncLocalStorage<Scope>();
 const materialLimit = 1024 * 1024;
@@ -187,6 +187,13 @@ function controllerFailure(scope: Scope | undefined) {
   }
   return closed();
 }
+function terminalFailure(scope: Scope) {
+  for (const exclusive of scope.exclusive) {
+    const failed = readBusinessCutoverFailedReleaseError(exclusive);
+    if (failed) return failed;
+  }
+  return null;
+}
 async function append(scope: Scope, kind: Kind, reason: string | null = null, allowEmpty = false, validate?: () => Promise<unknown>) {
   await assertScope(scope);
   const journal = await readJournal(scope.handle, scope.metadata, allowEmpty, kind === "MIGRATION_PLAN_BOUND");
@@ -260,6 +267,8 @@ async function runController<T>(handle: BusinessCutoverHandle, action: (control:
     if (!same(current.pin.stat, marker.stat) || !current.bytes.equals(bytes) || JSON.stringify(await readdir(path)) !== '["owner.json"]') throw closed();
     await unlink(marker.path); await rmdir(path); await syncDirectory(metadata.operationDirectory);
     if (failed) throw controllerFailure(scope);
+    const terminal = terminalFailure(scope);
+    if (terminal) throw terminal;
     return result;
   } catch { throw controllerFailure(scope); }
 }
@@ -273,9 +282,10 @@ export function withBusinessCutoverExclusive<T>(control: BusinessCutoverControl,
   return serialized(control, async (owner) => {
     const scope = Object.freeze(Object.create(null)) as BusinessCutoverExclusiveScope;
     owner.exclusive.add(scope);
-    const state: Exclusive = { owner, active: true, pending: new Set() }; exclusiveScopes.set(scope, state);
+    const state: Exclusive = { owner, active: true, pending: new Set(), terminal: false }; exclusiveScopes.set(scope, state);
+    let result: T;
     try {
-      return await exclusiveContext.run(owner, async () => {
+      result = await exclusiveContext.run(owner, async () => {
         await assertBusinessCutoverExclusive(scope);
         let result: T;
         try { result = await action(scope); } finally { state.active = false; }
@@ -288,6 +298,9 @@ export function withBusinessCutoverExclusive<T>(control: BusinessCutoverControl,
       state.active = false;
       await Promise.allSettled([...state.pending]);
     }
+    const failed = readBusinessCutoverFailedReleaseError(scope);
+    if (failed) throw failed;
+    return result;
   });
 }
 
@@ -337,7 +350,33 @@ export function withBusinessCutoverScopedWork<T>(scope: BusinessCutoverExclusive
   });
 }
 
+/** Negative exclusion, not release authority. Reserve before any await so an
+ * existing APPLY/helper and terminal work cannot overlap. Genuine nested reads
+ * still work, but bind/START cannot mutate until all terminal I/O settles. */
+export function withBusinessCutoverTerminalWork<T>(scope: BusinessCutoverExclusiveScope, action: () => Promise<T>): Promise<T> {
+  const state = exclusiveScopes.get(scope);
+  if (!state?.active || !state.owner.active || state.terminal || state.pending.size) return Promise.reject(closed());
+  state.terminal = true;
+  const work = scopedWork(scope, async () => {
+    try {
+      await assertBusinessCutoverExclusive(scope);
+      if (!state.active || !state.owner.active) throw closed();
+      return await action();
+    } finally {
+      // Keep reservation through detached nested I/O too; never wait on self.
+      for (;;) {
+        const nested = [...state.pending].filter((pending) => pending !== work);
+        if (!nested.length) break;
+        await Promise.allSettled(nested);
+      }
+      state.terminal = false;
+    }
+  });
+  return work;
+}
+
 export function bindBusinessCutoverMigration(scope: BusinessCutoverExclusiveScope, binding: MigrationBinding): Promise<void> {
+  if (exclusiveScopes.get(scope)?.terminal) return Promise.reject(closed());
   return scopedWork(scope, () => bindMigration(scope, binding));
 }
 async function bindMigration(scope: BusinessCutoverExclusiveScope, binding: MigrationBinding): Promise<void> {
@@ -370,6 +409,7 @@ async function readMigrationBinding(scope: BusinessCutoverExclusiveScope): Promi
 }
 
 export function startBusinessCutoverMigration(scope: BusinessCutoverExclusiveScope, planHash: string): Promise<void> {
+  if (exclusiveScopes.get(scope)?.terminal) return Promise.reject(closed());
   return scopedWork(scope, () => startMigration(scope, planHash));
 }
 async function startMigration(scope: BusinessCutoverExclusiveScope, planHash: string): Promise<void> {

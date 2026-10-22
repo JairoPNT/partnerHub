@@ -3,7 +3,7 @@ import { createHash } from "node:crypto";
 import { constants, type BigIntStats } from "node:fs";
 import { lstat, open, rename } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
-import { assertBusinessCutoverExclusive, markBusinessCutoverClaimRelocated, withBusinessCutoverScopedWork,
+import { assertBusinessCutoverExclusive, markBusinessCutoverClaimRelocated, withBusinessCutoverTerminalWork,
   type BusinessCutoverExclusiveScope } from "@/server/services/businessCutoverMaintenanceService";
 import { inspectBusinessCutoverOperationOwnership, readBusinessCutoverClosure, getBusinessCutoverOperation,
   type BusinessCutoverOperation } from "@/server/services/businessCutoverClaimStore";
@@ -16,6 +16,7 @@ type Identity = { dev: string; ino: string; birthtimeNs: string };
 type Intent = { version: 1; operationId: string; recordDigest: string; kind: Kind; planHash: string | null;
   releaseId: string; factsHash: string; claim: Identity };
 const observations = new WeakMap<BusinessCutoverExclusiveScope, Error>();
+const failedObservations = new WeakSet<BusinessCutoverExclusiveScope>();
 const observedErrors = new WeakMap<object, CutoverReleaseResult>();
 const uncertain: CutoverReleaseResult = Object.freeze({ outcome: "RELEASE_COMMIT_UNCONFIRMED", commitObserved: true, persistenceConfirmed: false });
 const noFollow = constants.O_NOFOLLOW ?? 0;
@@ -29,6 +30,11 @@ const same = (a: Identity, b: Identity) => a.dev === b.dev && a.ino === b.ino &&
  * for scopes it actually tracked. No caller can mint/set a recorded error. */
 export function readBusinessCutoverObservedReleaseError(scope: BusinessCutoverExclusiveScope): Error | null {
   return observations.get(scope) ?? null;
+}
+/** Actual postcommit failure, distinct from a successful observed rename.
+ * Only the terminal catch records it; generic callback values cannot mint it. */
+export function readBusinessCutoverFailedReleaseError(scope: BusinessCutoverExclusiveScope): Error | null {
+  return failedObservations.has(scope) ? observations.get(scope) ?? null : null;
 }
 /** Dispatcher must use identity, never error.message or caller-shaped fields. */
 export function readBusinessCutoverReleaseError(error: unknown): CutoverReleaseResult | null {
@@ -104,7 +110,7 @@ function receipt(intent: Intent, bytes: Buffer) {
 }
 
 export function finishBusinessConsentCutover(scope: BusinessCutoverExclusiveScope, kind: Kind): Promise<CutoverReleaseResult> {
-  return withBusinessCutoverScopedWork(scope, async () => {
+  return withBusinessCutoverTerminalWork(scope, async () => {
     const metadata = await assertBusinessCutoverExclusive(scope);
     const source = resolve(metadata.outputDirectory, ".master-package-claims/ganomaster-business");
     const destination = resolve(metadata.operationDirectory, "released-claim");
@@ -137,7 +143,7 @@ export function finishBusinessConsentCutover(scope: BusinessCutoverExclusiveScop
         () => markBusinessCutoverClaimRelocated(scope));
       await markBusinessCutoverClaimRelocated(scope);
       return Object.freeze({ outcome: kind === "CANCEL" ? "CANCELLED" : "REOPENED", commitObserved: true, persistenceConfirmed: true });
-    } catch { return uncertain; }
+    } catch { failedObservations.add(scope); return uncertain; }
   });
 }
 

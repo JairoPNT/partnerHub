@@ -80,7 +80,12 @@ test("postrename_receipt_sync_failure_is_unconfirmed", async (t) => {
       t.mock.method(fd, "sync", async () => { throw new Error("private sync fault"); });
     return fd;
   }); syncBuiltinESMExports();
-  assert.deepEqual(await s.run((scope) => s.m.finishBusinessConsentCutover(scope, "CANCEL")), unconfirmed);
+  let finishResult: unknown;
+  await assert.rejects(s.run(async (scope) => {
+    finishResult = await s.m.finishBusinessConsentCutover(scope, "CANCEL");
+    return finishResult;
+  }), (error) => { assert.deepEqual(s.m.readBusinessCutoverReleaseError(error), unconfirmed); return true; });
+  assert.deepEqual(finishResult, unconfirmed);
   assert.equal(await s.m.inspectBusinessGlobalClosure(s.f.output), "OPEN");
   assert.equal(JSON.parse(await fs.readFile(resolve(s.operation, "release-receipt.json"), "utf8")).persistenceConfirmed, true);
   assert.deepEqual(await s.m.readBusinessConsentCutoverOutcome(s.f.output, s.f.id), { outcome: "RELEASED", persistenceConfirmed: false });
@@ -223,7 +228,11 @@ test("bound_prestart_cancel_and_completed_successor_reopen", async (t) => {
     const s = await setup(st, successor);
     if (successor) {
       const preview = await s.run(async (scope) => s.m.describeBusinessConsentCutover(await s.m.captureBusinessConsentCutover(scope)));
-      await s.run((scope) => s.m.applyBusinessConsentCutover(scope, preview.planHash));
+      await s.run(async (scope) => {
+        const applying = s.m.applyBusinessConsentCutover(scope, preview.planHash);
+        await assert.rejects(s.m.finishBusinessConsentCutover(scope, "REOPEN"), /BUSINESS_CUTOVER_CLOSED/);
+        assert.equal((await applying).outcome, "APPLIED");
+      });
     } else {
       const binding = await s.f.run(s.f.binding); assert.equal(binding.error, null);
       await s.run((scope) => s.m.bindBusinessCutoverMigration(scope, binding.value!));
@@ -310,5 +319,70 @@ test("diagnostic_rejects_symlink_hardlink_malformed_intent_and_foreign_operation
     assert.deepEqual(await s.m.readBusinessConsentCutoverOutcome(s.f.output, corruption === "operation" ? "../escape" : s.f.id),
       { outcome: "UNKNOWN", persistenceConfirmed: false });
     assert.deepEqual(await fs.readdir(s.operation), before);
+  });
+});
+
+test("same_scope_start_cannot_cross_final_cancel_check", async (t) => {
+  const s = await setup(t), binding = await s.f.run(s.f.binding); assert.equal(binding.error, null);
+  await s.run((scope) => s.m.bindBusinessCutoverMigration(scope, binding.value!));
+  const original = fs.lstat; let checks = 0, attempted = false, started = false, rejected: unknown;
+  const result = await s.run(async (scope) => {
+    t.mock.method(fs, "lstat", async (...args: Parameters<typeof fs.lstat>) => {
+      if (String(args[0]) === resolve(s.operation, "released-claim") && ++checks === 2) {
+        attempted = true;
+        try { await s.m.startBusinessCutoverMigration(scope, binding.value!.planHash); started = true; }
+        catch (error) { rejected = error; }
+      }
+      return original(...args);
+    }); syncBuiltinESMExports();
+    return s.m.finishBusinessConsentCutover(scope, "CANCEL");
+  });
+  assert.equal(attempted, true); assert.equal(started, false);
+  assert.match(String(rejected), /BUSINESS_CUTOVER_CLOSED/);
+  assert.equal(result.outcome, "CANCELLED");
+  const events = await fs.readdir(resolve(s.operation, "events"));
+  for (const file of events) assert.notEqual(JSON.parse(await fs.readFile(resolve(s.operation, "events", file), "utf8")).kind, "MIGRATION_STARTED");
+});
+
+test("detached_postrename_receipt_failure_propagates_after_drain", async (t) => {
+  const s = await setup(t), original = fs.open; let entered!: () => void, detached!: Promise<unknown>;
+  const receiptSyncEntered = new Promise<void>((done) => { entered = done; });
+  t.mock.method(fs, "open", async (...args: Parameters<typeof fs.open>) => {
+    const fd = await original(...args);
+    if (String(args[0]) === resolve(s.operation, "release-receipt.json") && typeof args[1] === "number" && (args[1] & constants.O_CREAT)) {
+      t.mock.method(fd, "sync", async () => { entered(); await new Promise((done) => setImmediate(done)); throw new Error("private detached receipt sync fault"); });
+    }
+    return fd;
+  }); syncBuiltinESMExports();
+  await assert.rejects(s.run(async (scope) => {
+    detached = s.m.finishBusinessConsentCutover(scope, "CANCEL");
+    await receiptSyncEntered; return "original-generic-result";
+  }), (error) => { assert.deepEqual(s.m.readBusinessCutoverReleaseError(error), unconfirmed); return true; });
+  assert.deepEqual(await detached, unconfirmed);
+  assert.equal(await s.m.inspectBusinessGlobalClosure(s.f.output), "OPEN");
+});
+
+test("successful_finish_preserves_generic_controller_result_and_failure_cannot_be_swallowed", async (t) => {
+  for (const fail of [false, true]) await t.test(String(fail), async (st) => {
+    const s = await setup(st), original = fs.open;
+    if (fail) {
+      st.mock.method(fs, "open", async (...args: Parameters<typeof fs.open>) => {
+        const fd = await original(...args);
+        if (String(args[0]) === resolve(s.operation, "release-receipt.json") && typeof args[1] === "number" && (args[1] & constants.O_CREAT))
+          st.mock.method(fd, "sync", async () => { throw new Error("private terminal fault"); });
+        return fd;
+      }); syncBuiltinESMExports();
+    }
+    const generic = Object.freeze({ ordinary: "callback-value" });
+    const completion = s.m.withBusinessCutoverController(await s.m.resumeBusinessCutoverClosure(s.f.output, s.f.id), async (control) => {
+      await s.m.drainBusinessCutover(control, 0);
+      await s.m.withBusinessCutoverExclusive(control, async (scope) => {
+        const result = await s.m.finishBusinessConsentCutover(scope, "CANCEL");
+        assert.equal(result.outcome, fail ? "RELEASE_COMMIT_UNCONFIRMED" : "CANCELLED");
+      }).catch((error) => { assert.deepEqual(s.m.readBusinessCutoverReleaseError(error), unconfirmed); });
+      return generic;
+    });
+    if (fail) await assert.rejects(completion, (error) => { assert.deepEqual(s.m.readBusinessCutoverReleaseError(error), unconfirmed); return true; });
+    else assert.equal(await completion, generic);
   });
 });

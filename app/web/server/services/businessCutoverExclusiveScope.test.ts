@@ -387,3 +387,66 @@ test("scoped_work_revocation_between_validation_and_action_never_invokes_consume
   await assert.rejects(lstat(resolve(f.operation, ".controller")), { code: "ENOENT" });
   assert.equal(await inspectBusinessGlobalClosure(f.output), "CLOSED");
 });
+
+test("terminal_reservation_excludes_pending_work_and_mutations_but_allows_nested_reads", async (t) => {
+  const s = api(), f = await fixture(t), entered = barrier(), resume = barrier(); let expired!: BusinessCutoverExclusiveScope;
+  await s.withBusinessCutoverController(f.handle, async (control) => {
+    await s.withBusinessCutoverExclusive(control, async (scope) => {
+      expired = scope;
+      const pending = s.withBusinessCutoverScopedWork(scope, async () => { entered.release(); await resume.promise; });
+      await entered.promise;
+      await assert.rejects(s.withBusinessCutoverTerminalWork(scope, async () => assert.fail("terminal overlapped pending helper")), /BUSINESS_CUTOVER_CLOSED/);
+      resume.release(); await pending;
+      assert.equal(await s.withBusinessCutoverTerminalWork(scope, async () => {
+        assert.equal(await s.readBusinessCutoverMigrationBinding(scope), null);
+        await assert.rejects(s.bindBusinessCutoverMigration(scope, binding()), /BUSINESS_CUTOVER_CLOSED/);
+        await assert.rejects(s.startBusinessCutoverMigration(scope, binding().planHash), /BUSINESS_CUTOVER_CLOSED/);
+        await assert.rejects(s.withBusinessCutoverTerminalWork(scope, async () => assert.fail("nested terminal")), /BUSINESS_CUTOVER_CLOSED/);
+        return "ordinary-success";
+      }), "ordinary-success");
+      await assert.rejects(lstat(resolve(f.operation, "migration-plan.json")), { code: "ENOENT" });
+      await s.bindBusinessCutoverMigration(scope, binding());
+    });
+    for (const invalid of [expired, JSON.parse(JSON.stringify(expired))]) {
+      await assert.rejects(s.withBusinessCutoverTerminalWork(invalid, async () => assert.fail("expired/fake action")), /BUSINESS_CUTOVER_CLOSED/);
+    }
+  });
+});
+
+test("terminal_reservation_drains_detached_nested_io_before_allowing_mutation", async (t) => {
+  const s = api(), f = await fixture(t), entered = barrier(), resume = barrier(), returned = barrier(); let nested!: Promise<void>;
+  await s.withBusinessCutoverController(f.handle, async (control) => {
+    await s.withBusinessCutoverExclusive(control, async (scope) => {
+      const terminal = s.withBusinessCutoverTerminalWork(scope, async () => {
+        nested = s.withBusinessCutoverScopedWork(scope, async () => { entered.release(); await resume.promise; });
+        await entered.promise; returned.release(); return "generic-success";
+      });
+      await returned.promise; await new Promise<void>((done) => setImmediate(done));
+      await assert.rejects(s.bindBusinessCutoverMigration(scope, binding()), /BUSINESS_CUTOVER_CLOSED/);
+      resume.release(); assert.equal(await terminal, "generic-success"); await nested;
+      await s.bindBusinessCutoverMigration(scope, binding());
+    });
+  });
+});
+
+test("terminal_reservation_rechecks_revocation_before_invoking_action", async (t) => {
+  const s = api(), f = await fixture(t), finish = barrier(), original = fs.readdir;
+  let armed = false, checks = 0, calls = 0; let pending!: Promise<unknown>;
+  t.mock.method(fs, "readdir", async (...args: Parameters<typeof fs.readdir>) => {
+    const result = await original(...args);
+    if (armed && String(args[0]) === resolve(f.operation, ".controller") && ++checks === 2) {
+      armed = false; queueMicrotask(finish.release);
+    }
+    return result;
+  }); syncBuiltinESMExports();
+  try {
+    await s.withBusinessCutoverController(f.handle, async (control) => {
+      await s.withBusinessCutoverExclusive(control, async (scope) => {
+        armed = true;
+        pending = s.withBusinessCutoverTerminalWork(scope, async () => { calls++; }).catch((error) => error);
+        await finish.promise;
+      });
+    });
+  } finally { t.mock.restoreAll(); syncBuiltinESMExports(); }
+  assert.equal(calls, 0); assert.match(String(await pending), /BUSINESS_CUTOVER_CLOSED/);
+});
