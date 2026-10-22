@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { access, cp, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import { join, relative, resolve, sep } from "node:path";
 import test from "node:test";
@@ -744,6 +744,39 @@ test("APPLY preserves claim, archive and installed package if journal commit fai
     await item.cleanup();
   }
 });
+
+test("F1 historical adapter preserves backup and claim when committed journal changes before cleanup", async () => {
+  const item = await fixture();
+  try {
+    const preview = await planBusinessMasterPackageRefresh(item.options);
+    const journal = pathIn(item.outputRoot, REFRESH_JOURNAL_RELATIVE);
+    await assert.rejects(authorizedApply(item, preview, { testHooks: {
+      beforeCleanup: async () => writeFile(journal, "foreign committed journal")
+    } }), /JOURNAL.*PROOF|RECOVERY.*DRIFT/);
+    assert.equal(await readFile(journal, "utf8"), "foreign committed journal");
+    assert.equal(await exists(pathIn(item.outputRoot, CLAIM_RELATIVE)), true);
+    assert.equal((await readdir(item.outputRoot)).filter((name) => name.endsWith(".previous")).length, 1);
+  } finally { await item.cleanup(); }
+});
+
+for (const resource of ["claim", "reservation"]) {
+  test(`F2 historical adapter rejects identical copied ${resource} ownership marker before cleanup`, async () => {
+    const item = await fixture();
+    try {
+      const preview = await planBusinessMasterPackageRefresh(item.options);
+      const marker = resource === "claim" ? pathIn(item.outputRoot, CLAIM_RELATIVE + "/owner.json") : pathIn(item.outputRoot, ARCHIVE_RESERVATION_RELATIVE);
+      let bytes;
+      await assert.rejects(authorizedApply(item, preview, { testHooks: { beforeCleanup: async () => {
+        bytes = await readFile(marker);
+        await rename(marker, resource === "claim" ? pathIn(item.outputRoot, CLAIM_RELATIVE) + ".owner-displaced" : marker + ".displaced");
+        await writeFile(marker, bytes);
+      } } }), /OWNERSHIP|RESERVATION|PROOF|DRIFT/);
+      assert.deepEqual(await readFile(marker), bytes);
+      assert.equal(await exists(pathIn(item.outputRoot, CLAIM_RELATIVE)), true);
+      assert.equal((await readdir(item.outputRoot)).filter((name) => name.endsWith(".previous")).length, 1);
+    } finally { await item.cleanup(); }
+  });
+}
 
 test("APPLY refuses an occupied archive without overwriting it or releasing a foreign claim", async () => {
   const item = await fixture();
