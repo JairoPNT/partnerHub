@@ -4,6 +4,16 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Reanudación — 2026-10-22
 
+### CDX011 — dirección aprobada y protocolo desplegado
+
+Jairo aprobó explícitamente la especificación CDX011 del PR239/head7c247f5 y pidió el plan técnico. Plan `docs/superpowers/plans/2026-10-22-business-cutover-integration.md` preparado y self-review completada por el controller; pendiente revisión/aprobación de Jairo antes de implementación. Seis tareas: scope/binding, captura+lifecycle, perfil/verificador, commit terminal, CLI/packaging e integración/Linux; subagentes con revisión por tarea ya elegidos. Reportes DESIGN/PLAN propios. Composición235 y corte/publicación siguen dependientes, no trabajo ejecutado por planificar. Rama documental actual desde main522394b en worktree business-consent-runtime; evidencia010 preservada y raíz ajena intacta.
+
+GitHub confirma238 MERGED22oct14:06:12Z, merge522394bf00ffbeb45e892b60403835f8c8296ec6; head04a187d contiene solo documentación después del árbol Linux179131e. EasyPanel Actions confirma **Success22oct14:08:53Z**, manifest-list de imagen `sha256:bf32a55e655b5bc6f22d8a95a1a15878097e61199c71c3d5cb01193f48405638`. No confundir build/deploy exitoso con retiro demostrado de todas las tareas ni habilitación de reapertura.235 sigue separado; no publicarlo solo.
+
+Consola Sh en nueva tarea visible b7b6ot1fhibbwy7mds244mpj3: `maintenance:business-cutover-status` devolvió business-cutover-v1/STATUS/OPEN, reasons[], changed:false, localWritesMade:false, providerCallsMade:false, migrationStarted:false. Cerrada consola. No se habilitó mantenimiento ni se prueba retiro de otras tareas. No repetir la instalación/Docker gate010 como si faltaran; falta integración011 y composición/release verificados.
+
+Pendiente: integración de autoridad real/captura fija y fin verificado, composición235+010+011, ensayo y hechos reales del corte; luego publicación Claudia por flujo existente. No se ha creado cierre, migrado master, modificado fuente/target, publicado Claudia ni tocado DNS/SFTP/campañas. Los ajustes públicos siguen pendientes. Ventana ya autorizada, no pedirla otra vez. Sin nueva automatización ni apagado.
+
 ### Validación Linux y live — corte que prevalece
 
 Gate Linux010 PASS con revisión independiente: build Dockerfile productivo desde Git179131e limpio, Node20.20.2 packaging4/4, TS Linux Node24 44/44 sin skips, dos contenedores UID1000 distintos con mismo volumen y ambos exit0; corrupción/permisos/fsync/caída forzada comprobados. No Critical/Important en revisión; minor de transcript argv inicial documentado. Warnings/advisories npm22 no analizados ni dispensados; no certificación de seguridad. Informe `brain/agent-requests/codex/reports/CDX-20261021-010_business_cutover_barrier_LINUX_VALIDATION.md`. Docker ya no bloquea este gate. Scratch/evidencia conservados; solo13contenedores/6volúmenes propios desechables eliminados.

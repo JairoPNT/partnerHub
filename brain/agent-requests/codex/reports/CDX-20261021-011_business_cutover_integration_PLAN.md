@@ -1,0 +1,13 @@
+# CDX-20261021-011 — Plan técnico preparado
+
+2026-10-22. Owner Codex backend. Jairo aprobó especificación escrita PR239/head7c247f59d59fa96dcc9fa2e7f65e4c3110a4d0c7; plan pendiente de su revisión. Entrega solo documental, **no implementación ni publicación**.
+
+Plan: `docs/superpowers/plans/2026-10-22-business-cutover-integration.md`. Seis tareas, cada una baseline/TDD/commit/review antes de seguir: autoridad serial/binding; captura/migración009; perfiles/verificación fija; commit terminal; CLI única+packaging; integración/Linux. Declara nombres/signatures/productores/consumidores, rutas permitidas y cinco condiciones de revisión con tests concretos. Método preservado: subagentes por tarea y revisión independiente, no nueva consulta sobre cómo ejecutar.
+
+Decisiones técnicas del plan: scope sin reencolar dentro de su propia cola; MJS legacy solo importa TS en rama interna opt-in, esbuild consolida un grafo; inventario del layout real antes de empaquetar la CLI para evitar autohash; UNAVAILABLE bloquea BEGIN antes de crear claims cuando no hay artefactos fijos de corte; nuevo BEGIN durante fin anterior no se toca; postcommit incierto nunca se presenta como cierre conservado. La ausencia comprobada bajo exclusión privada no se confunde con renameat2/NOREPLACE contra mismoUID hostil, fuera de garantía.
+
+Self-review realizada **por el controller**, no delegada: cobertura de spec, consistencia de firmas, steps accionables, proporción y cinco Review Focus. Añadidos explícitamente tests/parser/DRAIN de deadlock y caso de destino extranjero; no cambio del contrato aprobado. Composición235, imágenes/perfiles reales, procedencia/tareas/volumen/canal, advisories aplicables y corte/publicación figuran como gates dependientes, no se dan por pasados desde fixtures ni conteos010.
+
+Cambios: plan nuevo, request/estado de spec/LIVE y este reporte; sin source/tests/Dockerfile/package edits, dependencias o mantenimiento. No ejecución de código/ensayo011 ni prueba pública en esta planificación. Build/test: **NOT_RUN, documentos solamente**. Diff-check staged PASS antes del commit, con warnings Git de normalización LF/CRLF; no atribuirle lint/build de010. PR239 permanece draft mientras Jairo revisa el plan; su aprobación de especificación no se transforma en permiso para ejecutar un plan aún no revisado.
+
+La ventana ya está autorizada. Tras aprobar el plan: implementar/revisar011, componer release en entrega separada y validar gates, migrar/desplegar/reabrir con verificación y publicar Claudia por Master Sites/worker existente, sin tocar DNS/campañas. **Claudia aún no tiene entregados los ajustes públicos.** No nueva automatización ni apagado.
