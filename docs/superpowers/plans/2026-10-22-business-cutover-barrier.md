@@ -144,4 +144,16 @@ Primer comando requiere Node con strip-types soportado (Node24 de pruebas), NO p
 - [x] Interfaces y nombres consistentes; capacidades no JSON, operaciones Product/Brand excluidas, mismo namespace global que009.
 - [x] Cinco condiciones Review Focus asignadas a tests concretos; fallos conservan evidencia.
 - [x] Sin código de producto, instalación de dependencias, comandos de mantenimiento ni publicación durante la elaboración del plan.
-- [ ] Jairo revisa/aprueba este plan. Método preservado: subagentes por tarea con revisión entre cada una. Implementación todavía no iniciada.
+- [x] Jairo aprobó este plan el 2026-10-22; ejecución con subagentes y revisión por tarea completada offline. Los checklists de cada tarea arriba conservan el plan original; el registro de ejecución y las verificaciones efectivas están en el informe enlazado abajo.
+
+## Resultado de ejecución — 2026-10-22
+
+Tasks1–4 implementadas/revisadas, commits06af680,918d3b2,8918335,d94ae0f. Revisión final con cuatro hallazgos, corregidos en una sola ola82f960a y re-revisión APPROVED: continuidad del volumen entre contenedores, busy409, límite10000 de eventos y regresión de control expirado con trabajo pendiente. Se mantuvieron todos los gates productivos.
+
+- [x] Regresión ampliada:140PASS/1skip conocido de privilegios symlink Windows, cero fallos;141totales.
+- [x] Migración/empaquetado/compatibilidad:187PASS, cero fallos/skips; los fixtures nuevos de bundle ejecutan Node20real.
+- [x] Lint global y build Next en app/web con Node20:PASS39rutas, advertencias conocidas documentadas. TypeScript global de fixtures no se declara libre de deuda.
+- [ ] Ensayo real Linux/POSIX y dos contenedores compartiendo volumen:NOT_RUN, motor local no disponible.
+- [ ] Integración dependiente con CDX009, verificador de reapertura, release compuesto y corte/publicación:NOT_RUN.
+
+Informe: `brain/agent-requests/codex/reports/CDX-20261021-010_business_cutover_barrier_OFFLINE_IMPLEMENTATION.md`. No usar BEGIN productivo, no fusionar como si Linux estuviera aprobado y no publicar235 aislado.

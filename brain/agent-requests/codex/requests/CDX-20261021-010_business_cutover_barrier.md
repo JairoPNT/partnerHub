@@ -1,7 +1,7 @@
 # CDX-20261021-010 — Exclusión Business durante el corte master/código
 
 Owner: Codex backend. Revisión independiente: seguridad/concurrencia (premium por riesgo de integridad productiva).
-Estado: especificación escrita aprobada por Jairo el 2026-10-22; plan técnico preparado para su revisión. No implementación ni uso productivo todavía.
+Estado: especificación y plan aprobados por Jairo el 2026-10-22. Cuatro tareas implementadas y revisadas offline; corrección final82f960a aprobada por re-revisión independiente. Linux y uso productivo pendientes; no declarar DONE productivo.
 
 ## Resultado único
 
@@ -15,5 +15,7 @@ Extender el coordinador Business existente con un cierre durable y verificable q
 
 Especificación: `docs/superpowers/specs/2026-10-21-business-cutover-barrier-design.md`.
 Plan técnico: `docs/superpowers/plans/2026-10-22-business-cutover-barrier.md`. Método de ejecución preservado: subagentes por tarea con revisión entre cada una; no iniciar hasta revisión del plan.
+
+Informe de implementación: `brain/agent-requests/codex/reports/CDX-20261021-010_business_cutover_barrier_OFFLINE_IMPLEMENTATION.md`. La revisión final añadió únicamente el mapeo409 del error ocupado en verify y su test, sin cambiar auth. Se precisó el límite durable: pins del output y descendientes; los ancestros externos del contenedor se comprueban en cada validación, no se fijan entre despliegues. Formato de registro2; el1 se rechaza sin upgrade. No hubo claims productivos creados por este trabajo.
 
 La ventana de mantenimiento y la dirección del cierre ya están autorizadas. No pedirlas otra vez. Por ser un protocolo durable entre procesos/despliegues, se aplica la ruta arquitectónica: revisar especificación escrita y luego plan técnico antes de implementación.
