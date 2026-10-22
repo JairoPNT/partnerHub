@@ -1,10 +1,32 @@
 import { readFile, readdir, writeFile } from "node:fs/promises";
 import { resolve } from "node:path";
+import fsPromises from "node:fs/promises";
+import { syncBuiltinESMExports } from "node:module";
 import { createBusinessPublicationSiteCoordinator } from "../server/services/businessPublicationSiteCoordinator.ts";
 
 const directory = process.argv[2];
 const withSite = createBusinessPublicationSiteCoordinator({ outputDirectory: directory });
-if (process.argv[3] === "worker") {
+if (process.argv[3] === "cutover-race") {
+  // Test-only interception: pause the real mkdir at the site-claim boundary.
+  // The parent installs the real global closure through IPC, never a timed sleep.
+  const mkdir = fsPromises.mkdir;
+  fsPromises.mkdir = async (path, options) => {
+    if (String(path).includes(".business-publication-site-claims") && !options?.recursive) {
+      const proceed = new Promise((done) => process.once("message", done));
+      process.send("before-site-claim");
+      await proceed;
+    }
+    return mkdir(path, options);
+  };
+  syncBuiltinESMExports();
+  let actions = 0;
+  try {
+    await withSite("ana-business", async () => { actions++; });
+    process.send({ outcome: "entered", actions });
+  } catch (error) {
+    process.send({ outcome: error.name, actions });
+  } finally { fsPromises.mkdir = mkdir; syncBuiltinESMExports(); }
+} else if (process.argv[3] === "worker") {
   process.env.PRODUCT_PAGE_OUTPUT_DIR = directory;
   process.env.PRODUCT_PAGE_SOURCE_DIR = resolve(directory, ".sources");
   const { createPublicationJobService } = await import("../server/services/publicationJobService.ts");

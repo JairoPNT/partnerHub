@@ -13,6 +13,7 @@ import { productPageSourceService } from "@/server/services/productPageSourceSer
 import { getPublishingTarget } from "@/server/services/subdomainProvisioningService";
 import { resolveVerificationHost } from "@/server/services/publicationTargetResolver";
 import { requiresProductCommerceVerification } from "@/server/services/productPageVerificationContract";
+import { assertBusinessPublicationSiteIdentity, isBusinessPublicationSiteId, withBusinessPublicationSite } from "@/server/services/businessPublicationSiteCoordinator";
 
 const siteIdSchema = z
   .string()
@@ -181,6 +182,13 @@ async function getLastVerification(siteId: string) {
 
 async function verify(input: ProductPageVerificationInput): Promise<ProductPageVerificationResult> {
   const parsed = productPageVerificationInputSchema.parse(input);
+  // Classify by the established Business ID contract before reading mutable source.
+  // Publish already holds this same claim and may reenter while a closure drains it.
+  return isBusinessPublicationSiteId(parsed.siteId)
+    ? withBusinessPublicationSite(parsed.siteId, () => verifyOwned(parsed)) : verifyOwned(parsed);
+}
+
+async function verifyOwned(parsed: ProductPageVerificationInput): Promise<ProductPageVerificationResult> {
   const verifiedAt = new Date().toISOString();
   const checks: ProductPageVerificationCheck[] = [];
 
@@ -208,6 +216,11 @@ async function verify(input: ProductPageVerificationInput): Promise<ProductPageV
   }
 
   const expected = productPageGenerationInputSchema.parse(source);
+  assertBusinessPublicationSiteIdentity(parsed.siteId, expected.ecosystemType);
+  if (isBusinessPublicationSiteId(parsed.siteId) &&
+    (expected.ecosystemType !== "BUSINESS" || expected.site.id !== parsed.siteId)) {
+    throw new Error("BUSINESS_CONTENT_SOURCE_IDENTITY_INVALID");
+  }
   const expectedDomain = getMasterSiteDomainBySiteId(parsed.siteId) ?? expected.site.domain ?? null;
   const publishingTarget = await getPublishingTarget(parsed.siteId);
   const domain = resolveVerificationHost(expectedDomain, publishingTarget);
