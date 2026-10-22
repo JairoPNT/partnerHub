@@ -69,6 +69,28 @@ test("bad_runtime_config_is_fatal_before_missing_staging_classification", async 
   await writeFile(resolve(root, "runtime-assets/business-config.js"), "unreviewed");
   await assert.rejects(s.buildBusinessCutoverWriterInventory(), /BUSINESS_CUTOVER_PROFILE_INVALID/);
 });
+test("present_runtime_config_is_checked_before_canonical_completeness", async (t) => {
+  for (const successor of [false, true]) for (const missing of ["styles.css", "config.js", "all"]) {
+    await t.test(`${successor ? "successor" : "predecessor"}/${missing}`, async (st) => {
+      const root = await image(st, successor), s = await builder(root);
+      const runtimePath = resolve(root, "runtime-assets/business-config.js"), reviewed = await readFile(runtimePath);
+      const canonical = resolve(root, "plantillas-de-pagina/business");
+      await rm(missing === "all" ? canonical : resolve(canonical, missing), { recursive: missing === "all" });
+      await writeFile(runtimePath, "unreviewed");
+      await assert.rejects(s.buildBusinessCutoverWriterInventory(), /BUSINESS_CUTOVER_PROFILE_INVALID/);
+      await writeFile(runtimePath, reviewed);
+      await assert.rejects(s.buildBusinessCutoverWriterInventory(), /BUSINESS_CUTOVER_ARTIFACTS_UNAVAILABLE/);
+    });
+  }
+});
+test("present_runtime_config_must_match_remaining_fixed_profile_candidates", async (t) => {
+  const root = await image(t), s = await builder(root);
+  await rm(resolve(root, "plantillas-de-pagina/business/config.js"));
+  // Successor bytes are reviewed, but incompatible with the remaining old
+  // canonical inputs. Absence is not permission to mix the fixed profiles.
+  await writeFile(resolve(root, "runtime-assets/business-config.js"), await readFile(resolve(root, "runtime-assets/business-consent-successor/config.js")));
+  await assert.rejects(s.buildBusinessCutoverWriterInventory(), /BUSINESS_CUTOVER_PROFILE_INVALID/);
+});
 test("extra_empty_staging_directory_is_not_a_reviewed_six_file_tree", async (t) => {
   const root = await image(t), s = await builder(root);
   await mkdir(resolve(root, "runtime-assets/business-consent-successor/extra"));

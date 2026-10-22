@@ -112,14 +112,18 @@ export async function buildBusinessCutoverWriterInventory() {
     const rows = canonical.map((path) => ({ path: path.slice("plantillas-de-pagina/business/".length), hash: hash(contents.get(path)) })).sort((a, b) => a.path.localeCompare(b.path));
     const candidates = [predecessorPins, pins].filter((profile) => rows.every((row) => profile[row.path] === row.hash));
     if (!candidates.length) invalid();
+    const runtimeConfig = contents.get("runtime-assets/business-config.js");
+    if (runtimeConfig) {
+      const runtimeHash = hash(runtimeConfig), canonicalConfig = contents.get("plantillas-de-pagina/business/config.js");
+      if (!candidates.some((profile) => profile["config.js"] === runtimeHash) ||
+        (canonicalConfig && !runtimeConfig.equals(canonicalConfig))) invalid();
+    }
     if (!candidates.some((profile) => Object.keys(profile).length === rows.length)) unavailable();
     const templateHash = hash(JSON.stringify(rows));
     let releaseId;
     if (templateHash === "b3b08191d32535540b8108cbe02dca302b36c9f4ecc407023b935ac10a87fc99") releaseId = "business-consent-predecessor-v1";
     else if (templateHash === "0a7fdec9a7d51c022db7dc5d1e2eeca4cce1f1d3aea7a00ebc1cf358b1e0f63e") releaseId = "business-consent-successor-v1";
     else invalid();
-    const runtimeConfig = contents.get("runtime-assets/business-config.js");
-    if (runtimeConfig && !runtimeConfig.equals(contents.get("plantillas-de-pagina/business/config.js"))) invalid();
     // PREDECESSOR needs the reviewed successor staging for a future migration.
     // SUCCESSOR derives its six reviewed bytes from canonical, not an old overlay.
     if (releaseId === "business-consent-predecessor-v1" || staged.length) {
