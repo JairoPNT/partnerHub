@@ -195,12 +195,38 @@ test("public009_apply_still_rejects", async (t) => {
   await assert.rejects(applyBusinessConsentMasterMigration({ ...options, mode: APPLY_MODE, confirmation: APPLY_CONFIRMATION, expectedPlanHash: preview.planHash }), /WRITER_EXCLUSION_UNPROVEN/);
 });
 
+for (const setup of ["missing", "non20", "unavailable"] as const) {
+  test(`required_node20_runtime_rejects_${setup}_configuration`, () => {
+    const environment = { ...process.env };
+    delete environment.NODE_TEST_CONTEXT; // run a real isolated test runner, not its parent's child mode
+    if (setup === "missing") delete environment.BUSINESS_CUTOVER_TEST_NODE20;
+    else if (setup === "non20") {
+      assert.notEqual(process.versions.node.split(".")[0], "20", "Run this TypeScript test harness on Node24 as prescribed");
+      environment.BUSINESS_CUTOVER_TEST_NODE20 = process.execPath;
+    } else environment.BUSINESS_CUTOVER_TEST_NODE20 = resolve(tmpdir(), "cdx011-missing-runtime", "node-does-not-exist");
+    const probe = spawnSync(process.execPath, ["--conditions=react-server", "--experimental-strip-types",
+      "--experimental-loader", "./scripts/node-test-alias-loader.mjs", "--test",
+      "--test-name-pattern=^legacy_node20_path_does_not_import_ts$", import.meta.filename],
+    { encoding: "utf8", env: environment });
+    assert.match(probe.stdout + probe.stderr, /legacy_node20_path_does_not_import_ts/);
+    assert.equal(probe.status, 1, `Required gate must fail setup for ${setup} configuration, not skip/fallback`);
+    assert.match(probe.stdout + probe.stderr, /Set BUSINESS_CUTOVER_TEST_NODE20/);
+    assert.match(probe.stdout + probe.stderr, /Node\.js (?:major )?20/);
+  });
+}
+
 test("legacy_node20_path_does_not_import_ts", async (t) => {
+  const setup = "Set BUSINESS_CUTOVER_TEST_NODE20 to an available Node.js major 20 executable before running this required compatibility gate";
+  const node20 = process.env.BUSINESS_CUTOVER_TEST_NODE20;
+  assert.ok(node20?.trim(), setup);
+  const version = spawnSync(node20, ["--version"], { encoding: "utf8", timeout: 10000 });
+  assert.equal(version.error, undefined, setup);
+  assert.equal(version.status, 0, setup);
+  assert.match(version.stdout.trim(), /^v20\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/, setup);
   const directory = await mkdtemp(resolve(tmpdir(), "cdx011-node20-"));
   t.after(() => rm(directory, { recursive: true, force: true }));
   for (const file of ["business-consent-master-package-migration.mjs", "business-consent-master-release.mjs", "business-master-transition-lifecycle.mjs"])
     await copyFile(resolve(repo, "app/web/scripts", file), resolve(directory, file));
-  const node20 = "C:/Users/jairo/.codex/worktrees/business-paid-traffic-followups/PartnerHub/.local-secrets/tooling/node20/node-v20.20.2-win-x64/node.exe";
   const result = spawnSync(node20, [resolve(directory, "business-consent-master-package-migration.mjs")], { encoding: "utf8", env: { ...process.env, PRODUCT_PAGE_OUTPUT_DIR: resolve(directory, "absent") } });
   assert.equal(result.status, 2, result.stderr); assert.equal(JSON.parse(result.stdout).mode, "PREVIEW");
   assert.doesNotMatch(result.stderr, /ERR_UNKNOWN_FILE_EXTENSION|\.ts/);
