@@ -46,7 +46,7 @@ COPY --from=builder /repo/app/web/package-lock.json ./package-lock.json
 COPY --from=builder /repo/app/web/public ./public
 COPY --from=builder /repo/business-cutover-standalone ./
 COPY --from=builder /repo/app/web/.next/static ./.next/static
-RUN find /app/.next/static -type f -exec chmod go-w {} +
+RUN find /app/.next/static -type f -links 1 -exec chmod go-w {} +
 COPY --from=sftp-runtime-deps /repo/sftp-runtime/node_modules ./scripts/node_modules
 COPY --from=builder /repo/plantillas-de-pagina/producto ./plantillas-de-pagina/producto
 COPY --from=builder /repo/plantillas-de-pagina/business ./plantillas-de-pagina/business
@@ -91,6 +91,7 @@ COPY --from=builder /repo/app/web/scripts/all-partner-source-identity-dry-run.mj
 COPY --from=builder /repo/app/web/scripts/cleanup-jairo-pinto-test-referrals.mjs ./scripts/cleanup-jairo-pinto-test-referrals.mjs
 COPY --from=builder /repo/app/web/scripts/reconcile-claudia-heroes.mjs ./scripts/reconcile-claudia-heroes.mjs
 COPY --from=builder /repo/app/web/scripts/wompi-reconcile-sandbox.mjs ./scripts/wompi-reconcile-sandbox.mjs
+RUN find /app -type d -exec chmod go-w {} + && find /app -type f -links 1 -exec chmod go-w {} +
 
 # Build tooling stays OUTSIDE /app. Inventory includes every regular shipped
 # writer/dependency byte; only the exact inventory sidecar and CLI are excluded.
