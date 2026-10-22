@@ -218,7 +218,8 @@ for (const setup of ["missing", "non20", "unavailable"] as const) {
 test("legacy_node20_path_does_not_import_ts", async (t) => {
   const setup = "Set BUSINESS_CUTOVER_TEST_NODE20 to an available Node.js major 20 executable before running this required compatibility gate";
   const node20 = process.env.BUSINESS_CUTOVER_TEST_NODE20;
-  assert.ok(node20?.trim(), setup);
+  assert.ok(typeof node20 === "string", setup);
+  assert.ok(node20.trim(), setup);
   const version = spawnSync(node20, ["--version"], { encoding: "utf8", timeout: 10000 });
   assert.equal(version.error, undefined, setup);
   assert.equal(version.status, 0, setup);

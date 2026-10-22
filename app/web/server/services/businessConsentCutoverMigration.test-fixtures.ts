@@ -8,6 +8,7 @@ import { syncBuiltinESMExports } from "node:module";
 import type { TestContext } from "node:test";
 import * as maintenance from "./businessCutoverMaintenanceService.ts";
 import { resumeBusinessCutoverClosure } from "./businessCutoverClaimStore.ts";
+import { captureBusinessConsentCutoverArtifacts } from "../../scripts/business-consent-master-release.mjs";
 
 export const repo = resolve(import.meta.dirname, "../../../..");
 const hash = (bytes: string | Uint8Array) => createHash("sha256").update(bytes).digest("hex");
@@ -75,7 +76,15 @@ export async function fixture(t: TestContext) {
       });
     });
   };
-  return { root, output, staging, id, run, history, refresh, archive };
+  const binding = async (scope: maintenance.BusinessCutoverExclusiveScope): Promise<maintenance.MigrationBinding> => {
+    const metadata = await maintenance.assertBusinessCutoverExclusive(scope);
+    const actual = await captureBusinessConsentCutoverArtifacts({ outputRoot: output, templateDirectory: staging,
+      businessJobsDirectory: resolve(output, ".publication-jobs") });
+    const material = Buffer.from(JSON.stringify({ ...actual.material, schemaVersion: 2,
+      cutover: { operationId: metadata.operationId, recordDigest: metadata.recordDigest, releaseId: "business-consent-successor-v1" } }));
+    return { material, planHash: hash(material), releaseId: "business-consent-successor-v1" };
+  };
+  return { root, output, staging, id, run, history, refresh, archive, binding };
 }
 export async function api() {
   const module = await import("./businessConsentCutoverMigration.ts").catch(() => null);

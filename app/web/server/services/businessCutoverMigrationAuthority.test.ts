@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { createHash, randomUUID } from "node:crypto";
 import fs from "node:fs/promises";
 import { resolve } from "node:path";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import test from "node:test";
 import * as maintenance from "./businessCutoverMaintenanceService.ts";
@@ -34,6 +35,76 @@ test("binding_hash_alone_does_not_approve_invented_profile", async (t) => {
       return s.readBusinessConsentCutover(scope);
     });
     assert.match(String(result.error), /BUSINESS_CUTOVER_PROFILE_INVALID/);
+  });
+});
+
+test("bound_prestart_capture_is_exact_readonly_after_controller_reacquisition", async (t) => {
+  const f = await fixture(t), s = await api();
+  const bound = await f.run(async (scope) => {
+    const preview = s.describeBusinessConsentCutover(await s.captureBusinessConsentCutover(scope));
+    const binding = await f.binding(scope);
+    assert.equal(binding.planHash, preview.planHash);
+    await maintenance.bindBusinessCutoverMigration(scope, binding);
+    return preview.planHash;
+  });
+  assert.equal(bound.error, null);
+  const captured = await f.run(async (scope) => {
+    const before = await captureBusinessMasterTree(f.output);
+    const preview = s.describeBusinessConsentCutover(await s.captureBusinessConsentCutover(scope));
+    assert.equal(preview.planHash, bound.value); assert.deepEqual(preview.blockedReasons, []);
+    assert.deepEqual(await captureBusinessMasterTree(f.output), before);
+    await assert.rejects(s.applyBusinessConsentCutover(scope, preview.planHash), /BUSINESS_CUTOVER_PLAN_MISMATCH/);
+    assert.deepEqual(await captureBusinessMasterTree(f.output), before);
+    return preview.planHash;
+  });
+  assert.equal(captured.error, null); assert.equal(captured.value, bound.value);
+  assert.equal((await maintenance.readBusinessCutoverStatus(f.output)).migrationStarted, false);
+});
+
+test("bound_prestart_capture_rejects_stale_foreign_and_noncanonical_material", async (t) => {
+  for (const kind of ["stale", "mutate-revert", "foreign-operation", "schema-invalid", "noncanonical", "wrong-release"] as const) {
+    await t.test(kind, async (st) => {
+      const f = await fixture(st), s = await api();
+      const result = await f.run(async (scope) => {
+        const binding = await f.binding(scope);
+        const material = JSON.parse(Buffer.from(binding.material).toString("utf8"));
+        if (kind === "foreign-operation") material.cutover.operationId = randomUUID();
+        if (kind === "schema-invalid") material.schemaVersion = 1;
+        const bytes = kind === "noncanonical" ? Buffer.from(JSON.stringify(material, null, 2)) : Buffer.from(JSON.stringify(material));
+        await maintenance.bindBusinessCutoverMigration(scope, { material: bytes,
+          planHash: createHash("sha256").update(bytes).digest("hex"), releaseId: kind === "wrong-release" ? "caller-invented-v1" : binding.releaseId });
+        if (kind === "stale" || kind === "mutate-revert") {
+          const file = resolve(f.staging, "index.html"), original = await readFile(file);
+          await writeFile(file, "changed");
+          if (kind === "mutate-revert") await writeFile(file, original);
+        }
+        const before = await captureBusinessMasterTree(f.output);
+        await assert.rejects(s.captureBusinessConsentCutover(scope), /BUSINESS_CUTOVER_(PLAN_MISMATCH|PROFILE_INVALID|ARTIFACTS_UNAVAILABLE)/);
+        await assert.rejects(s.applyBusinessConsentCutover(scope, binding.planHash), /BUSINESS_CUTOVER_PLAN_MISMATCH/);
+        assert.deepEqual(await captureBusinessMasterTree(f.output), before);
+      });
+      assert.equal(result.error, null);
+    });
+  }
+});
+
+test("bound_started_or_partial_capture_never_replays_or_writes", async (t) => {
+  for (const kind of ["started", "partial", "staging"] as const) await t.test(kind, async (st) => {
+    const f = await fixture(st), s = await api();
+    const result = await f.run(async (scope) => {
+      const binding = await f.binding(scope);
+      await maintenance.bindBusinessCutoverMigration(scope, binding);
+      if (kind === "started") await maintenance.startBusinessCutoverMigration(scope, binding.planHash);
+      else if (kind === "partial") await mkdir(resolve(f.output, ".master-package-audits/CDX-20261021-009"));
+      else await mkdir(resolve(f.output, ".ganomaster-business.refresh-incomplete.staging"));
+      // A partial package audit/path invalidates a bound read even before START.
+      if (kind === "partial") await writeFile(resolve(f.output, ".master-package-audits/CDX-20261021-009/migration.json"), "partial");
+      const before = await captureBusinessMasterTree(f.output);
+      await assert.rejects(s.captureBusinessConsentCutover(scope), /BUSINESS_CUTOVER_(PLAN_MISMATCH|ARTIFACTS_UNAVAILABLE)/);
+      await assert.rejects(s.applyBusinessConsentCutover(scope, binding.planHash), /BUSINESS_CUTOVER_PLAN_MISMATCH/);
+      assert.deepEqual(await captureBusinessMasterTree(f.output), before);
+    });
+    assert.equal(result.error, null);
   });
 });
 

@@ -1,5 +1,6 @@
 import "server-only";
 import { createHash } from "node:crypto";
+import { readdir } from "node:fs/promises";
 import { resolve } from "node:path";
 import { captureBusinessConsentCutoverArtifacts, createBusinessConsentCutoverAdapter,
   validateBusinessConsentCutoverPlan, readBusinessConsentCutoverArtifacts,
@@ -7,7 +8,7 @@ import { captureBusinessConsentCutoverArtifacts, createBusinessConsentCutoverAda
 import { executeBusinessMasterTransition, captureBusinessMasterTree, type BusinessMasterTransitionAdapter } from "../../scripts/business-master-transition-lifecycle.mjs";
 import { assertBusinessCutoverExclusive, bindBusinessCutoverMigration, readBusinessCutoverMigrationBinding,
   startBusinessCutoverMigration, withBusinessCutoverScopedWork, readBusinessCutoverStatus,
-  type BusinessCutoverExclusiveScope } from "@/server/services/businessCutoverMaintenanceService";
+  type BusinessCutoverExclusiveScope, type MigrationBinding } from "@/server/services/businessCutoverMaintenanceService";
 
 declare const captureBrand: unique symbol;
 declare const permitBrand: unique symbol;
@@ -24,13 +25,33 @@ const captures = new WeakMap<BusinessConsentCutoverCapture, Captured>();
 type Permit = { scope: BusinessCutoverExclusiveScope; adapter: BusinessMasterTransitionAdapter; captured: Captured; active: boolean };
 const permits = new WeakMap<BusinessCutoverMigrationPermit, Permit>();
 
+async function assertCapturePreStart(scope: BusinessCutoverExclusiveScope, binding: MigrationBinding | null) {
+  const metadata = await assertBusinessCutoverExclusive(scope);
+  const status = await readBusinessCutoverStatus(metadata.outputDirectory);
+  if (status.operationId !== metadata.operationId || status.migrationStarted ||
+    status.blockedReasons.some((reason) => reason !== "BUSINESS_CONTROLLER_PRESENT")) throw domain("PLAN_MISMATCH");
+  if (binding && (await readdir(metadata.outputDirectory)).some((name) => name.startsWith(".ganomaster-business.refresh-"))) {
+    throw domain("ARTIFACTS_UNAVAILABLE");
+  }
+  await assertBusinessCutoverExclusive(scope);
+}
+
 export function captureBusinessConsentCutover(scope: BusinessCutoverExclusiveScope): Promise<BusinessConsentCutoverCapture> {
   return withBusinessCutoverScopedWork(scope, () => captureCutover(scope));
 }
 async function captureCutover(scope: BusinessCutoverExclusiveScope): Promise<BusinessConsentCutoverCapture> {
   const metadata = await assertBusinessCutoverExclusive(scope);
-  if (await readBusinessCutoverMigrationBinding(scope)) throw domain("PLAN_MISMATCH"); // never automatic replay
+  const binding = await readBusinessCutoverMigrationBinding(scope);
   try {
+    await assertCapturePreStart(scope, binding);
+    if (binding) {
+      if (binding.releaseId !== releaseId) throw domain("PROFILE_INVALID");
+      let saved: unknown;
+      try { saved = JSON.parse(Buffer.from(binding.material).toString("utf8")); }
+      catch { throw domain("PROFILE_INVALID"); }
+      validateBusinessConsentCutoverPlan(saved, metadata);
+      if (!Buffer.from(JSON.stringify(saved)).equals(Buffer.from(binding.material))) throw domain("PROFILE_INVALID");
+    }
     const current = await captureBusinessConsentCutoverArtifacts({ outputRoot: metadata.outputDirectory,
       templateDirectory: resolve("/app/runtime-assets/business-consent-successor"),
       businessJobsDirectory: process.env.PRODUCT_PAGE_PUBLICATION_JOB_DIR ?? resolve(metadata.outputDirectory, ".publication-jobs") });
@@ -39,13 +60,18 @@ async function captureCutover(scope: BusinessCutoverExclusiveScope): Promise<Bus
       cutover: { operationId: metadata.operationId, recordDigest: metadata.recordDigest, releaseId } };
     validateBusinessConsentCutoverPlan(material, metadata);
     const bytes = Buffer.from(JSON.stringify(material));
+    if (binding && (binding.planHash !== hash(bytes) || !bytes.equals(Buffer.from(binding.material)))) throw domain("PLAN_MISMATCH");
+    const latest = await readBusinessCutoverMigrationBinding(scope);
+    if (binding ? !latest || latest.planHash !== binding.planHash || latest.releaseId !== binding.releaseId ||
+      !Buffer.from(latest.material).equals(Buffer.from(binding.material)) : latest !== null) throw domain("PLAN_MISMATCH");
+    await assertCapturePreStart(scope, binding);
     const preview = Object.freeze({ planHash: hash(bytes), blockedReasons: Object.freeze([...current.blockedReasons]) });
     const capture = Object.freeze(Object.create(null)) as BusinessConsentCutoverCapture;
     captures.set(capture, { scope, metadata, releaseCapture: current.capture, material, bytes, preview });
     return capture;
   } catch (error) {
     await assertBusinessCutoverExclusive(scope);
-    if (error instanceof Error && error.message === "BUSINESS_CUTOVER_PROFILE_INVALID") throw error;
+    if (error instanceof Error && ["BUSINESS_CUTOVER_PROFILE_INVALID", "BUSINESS_CUTOVER_PLAN_MISMATCH"].includes(error.message)) throw error;
     throw domain("ARTIFACTS_UNAVAILABLE");
   }
 }
@@ -87,6 +113,8 @@ async function applyCutover(scope: BusinessCutoverExclusiveScope, expectedPlanHa
   outcome: "APPLIED"; planHash: string; journalHash: string }>> {
   await assertBusinessCutoverExclusive(scope);
   if (typeof expectedPlanHash !== "string" || !/^[0-9a-f]{64}$/.test(expectedPlanHash)) throw domain("PLAN_MISMATCH");
+  // Bound preSTART facts may be inspected for CANCEL, but never replay APPLY.
+  if (await readBusinessCutoverMigrationBinding(scope)) throw domain("PLAN_MISMATCH");
   let authority: Permit | undefined;
   try {
     const capture = await captureBusinessConsentCutover(scope), state = captures.get(capture)!;
