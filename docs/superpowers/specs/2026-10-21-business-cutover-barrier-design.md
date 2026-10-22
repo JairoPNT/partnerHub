@@ -1,7 +1,7 @@
 # Cierre durable Business durante el corte de master y código
 
 Ticket: CDX-20261021-010. Owner: Codex. Base: main/PR237 `0e652ec8e25e4bce09f472c87c59a60c6dad7c34`.
-Estado: propuesta escrita para revisión de Jairo; dirección aprobada, implementación no iniciada.
+Estado: especificación escrita aprobada por Jairo el 2026-10-22; implementación no iniciada. Plan técnico: `docs/superpowers/plans/2026-10-22-business-cutover-barrier.md`.
 
 ## Intención y límites
 

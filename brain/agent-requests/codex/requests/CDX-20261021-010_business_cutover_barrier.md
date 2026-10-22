@@ -1,7 +1,7 @@
 # CDX-20261021-010 — Exclusión Business durante el corte master/código
 
 Owner: Codex backend. Revisión independiente: seguridad/concurrencia (premium por riesgo de integridad productiva).
-Estado: dirección aprobada por Jairo en chat; especificación escrita pendiente de revisión del usuario. No implementación ni uso productivo todavía.
+Estado: especificación escrita aprobada por Jairo el 2026-10-22; plan técnico preparado para su revisión. No implementación ni uso productivo todavía.
 
 ## Resultado único
 
@@ -14,5 +14,6 @@ Extender el coordinador Business existente con un cierre durable y verificable q
 - Integration: CDX009 sigue rechazando APPLY. Conectar su adaptador productivo a este protocolo será una tarea dependiente separada, después de probar y revisar la barrera. Ningún nuevo permiso declarativo acredita exclusión.
 
 Especificación: `docs/superpowers/specs/2026-10-21-business-cutover-barrier-design.md`.
+Plan técnico: `docs/superpowers/plans/2026-10-22-business-cutover-barrier.md`. Método de ejecución preservado: subagentes por tarea con revisión entre cada una; no iniciar hasta revisión del plan.
 
 La ventana de mantenimiento y la dirección del cierre ya están autorizadas. No pedirlas otra vez. Por ser un protocolo durable entre procesos/despliegues, se aplica la ruta arquitectónica: revisar especificación escrita y luego plan técnico antes de implementación.

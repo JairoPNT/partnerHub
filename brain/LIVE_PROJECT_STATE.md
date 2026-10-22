@@ -2,6 +2,10 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
+## Reanudación — 2026-10-22
+
+Jairo aprobó la especificación escrita CDX010 y pidió el plan técnico. Plan preparado y revisado por el controller en `docs/superpowers/plans/2026-10-22-business-cutover-barrier.md`, pendiente revisión/aprobación del usuario antes de implementar. Método conservado: subagentes por tarea y revisión entre tareas. GitHub refrescado: main0e652ec/PR237 MERGED;235 sigue OPEN/DRAFT en82b6c5d. No se comprobó hoy el resultado de EasyPanel, no inferir deploy exitoso del merge. No cambios productivos ni publicación durante esta planificación. El apagado programado ayer es histórico; no programar otro por reanudar.
+
 ## Work checkpoint — 2026-10-21
 
 ### Cierre de sesión — 21:56 America/Bogota (prevalece sobre notas anteriores)
