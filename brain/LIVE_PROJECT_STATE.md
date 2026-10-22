@@ -4,6 +4,12 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Reanudación — 2026-10-22
 
+### CDX-20261022-001 — fallo real del auto-deploy240 (prevalece)
+
+011cerrado con revisión/pruebas y PR240 fusionado en main `4d8c1b0338e286f82d5b569f1b18b5aaf758ad63`; árbol merge igual al revisado. **El auto-deploy no pasó**: EasyPanel inicia19:40:03Z y terminaError19:43:09Z en Dockerfile98/runtime-layout54/54, `BUSINESS_CUTOVER_PROFILE_INVALID` visit72 tras Next/types39 y assembler correctos. No afirmar nuevo código productivo por el build local; UI PartnerHubmaster-site responde pero no acredita taskdigest. No BEGIN/migración/master/Claudia publicados por esta sesión.
+
+Correctivo `CDX-20261022-001_easypanel_runtime_permissions.md`, rama propia desde main4d8c1b0/mismo worktreeaislado. Causa medida: archivoGitHub1119/1119bytesexactosGit con0664/0775; dobleCOPYrealLinux conserva config0664/nlink1/pinexacto y reproducevisit72. No inventar primerpathrealEasyPanel. Fix `a2fd82f178ea62f9f23cbbe0865cf4ebf5d700f3` soloDockerfile/test: go-w build-only layout/app antesinventario, nofollow/singlelink/guard intacto; bytes/owner/exec/external-links preservados. RED2→GREEN3nativosseleccionados, covering45pass2WindowsPOSIXskip/lint0. Revisiónindependiente Approved/sinbloqueantes; build real desde archiveoficialFIX auditado1119/1119, image95c370291fb1fdb7c32cd810b4685f490807c40d6af3d6ca8f4aba20a7a26623 PASS; scan2586files/595dirs sin022/nlink1/no links, imports/BEGINUnavailable-no-writePASSNode20. PR/merge y auto-deploy siguientes, no confirmados todavía. Reporte DONE propio; scratchnuevo y010/011preservados. Sinfrontend/DNS/campañas/replay/Claudia actualizada. Después composición235 (2conflictos código+2brain) y hechosoperacionales; ventana yaautorizada.
+
 ### CDX011 — implementación aprobada en curso (prevalece)
 
 Jairo aprobó el plan técnico y ejecución con subagentes/revisión por tarea. PR239 documental fusionado c30c45faac8c5712c78d5fffc23181cea7514b57; rama de implementación `codex/CDX-20261021-011-business-cutover-integration` desde ese main, mismo worktree aislado y scratch anterior preservado. Seis tareas secuenciales; ledger por plan `.superpowers/sdd/2026-10-22-business-cutover-integration/progress.md`. No volver a pedir aprobación del plan/método. Composición235 y corte/publicación reales siguen entregas dependientes; no hay BEGIN/master migrado ni Claudia actualizada por iniciar implementación. DNS/campañas excluidos.
