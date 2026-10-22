@@ -4,6 +4,14 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Reanudación — 2026-10-22
 
+### CDX-20261022-002 — PREDECESSOR local verificado (prevalece)
+
+PR240/241 ya fusionados; main715994816f4864e19f0f95382dbb5bb152c88ea3, EasyPanel241Success20:04:50Z y ShSTATUSOPEN/migrationStartedfalse/sinwrites comprobados. Esos resultados posteriores sustituyen las notas premerge241 más abajo. Jairo autoriza integrar235/validar corte/publicarClaudia sinDNS/campañas; ventana/método ya aprobados.
+
+Ticket002 prepara SOLO predecessor: fuentee424063e17994ce45999f68529d6c74b1c98cd24, dosDockerCOPY+seiscopias exactas235+fixture, canonical/runtime/pins/guards intactos. RevisiónindependienteApproved,245pass2WindowsPOSIXskip/lint0. Minorwhitespaceheredadode6líneasstyles conservado porpins; authoredcheck0, no fullpatchclean. Build real1127/1127buffersGitdesdearchiveoficial/modes0664/0775retenidos PASS; imagen36082b30e33f978484b1e28873fa715ee08fd8d9a83e32895a1e9ea0c18965a4, perfilPREDECESSOR no-null2590rows. CLIrealNode20Linux/UID0 en fixture9760/e9a2: BEGIN/DRAIN/PREVIEWestable/CANCELantesSTARTexit0, solo metadata artificial, paquetes/proveedor/publicaciónfalse; no nuevoejecutor/grafo privado. Reporte `CDX-20261022-002_business_consent_predecessor_DONE.md`, fuente/ensayos/resources/scratchpreservados. PR/merge/deploy002 aún no confirmados en este checkpoint.
+
+PendienteSUCCESSOR003 con235 y ensayo de ambosartefactos, triageadvisoriesenviado111manifests (old22cachednoauditoríafresca), hechosVPS/tareas/volumen/canal y corte/publicaciónexistentes. TerminalVPSabierta porJairoaúnlogin al observar; ningún BEGIN/APPLY/migración/master/Claudia modificado. No confundir build/merge con ajustes públicos. No repetir010/011 ni pedir otra aprobación de ventana/plan ya dados.
+
 ### CDX-20261022-001 — fallo real del auto-deploy240 (prevalece)
 
 011cerrado con revisión/pruebas y PR240 fusionado en main `4d8c1b0338e286f82d5b569f1b18b5aaf758ad63`; árbol merge igual al revisado. **El auto-deploy no pasó**: EasyPanel inicia19:40:03Z y terminaError19:43:09Z en Dockerfile98/runtime-layout54/54, `BUSINESS_CUTOVER_PROFILE_INVALID` visit72 tras Next/types39 y assembler correctos. No afirmar nuevo código productivo por el build local; UI PartnerHubmaster-site responde pero no acredita taskdigest. No BEGIN/migración/master/Claudia publicados por esta sesión.
