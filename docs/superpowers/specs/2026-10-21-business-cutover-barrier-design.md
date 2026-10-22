@@ -1,7 +1,7 @@
 # Cierre durable Business durante el corte de master y código
 
 Ticket: CDX-20261021-010. Owner: Codex. Base: main/PR237 `0e652ec8e25e4bce09f472c87c59a60c6dad7c34`.
-Estado: especificación y plan aprobados por Jairo el 2026-10-22; implementación revisada offline, sin uso productivo ni ensayo Linux. Plan técnico: `docs/superpowers/plans/2026-10-22-business-cutover-barrier.md`.
+Estado: especificación y plan aprobados por Jairo el 2026-10-22; implementación revisada offline y gate Linux aislado PASS con revisión independiente22oct. Sin uso productivo. Plan técnico: `docs/superpowers/plans/2026-10-22-business-cutover-barrier.md`.
 
 ## Intención y límites
 
@@ -69,4 +69,4 @@ Este documento no afirma que el protocolo esté implementado, PR235 desplegado, 
 
 Revisión independiente de concurrencia/seguridad completada el 2026-10-21 por subagente de revisión. Dos omisiones detectadas y corregidas en este documento: exclusión entre controladores administrativos, y obligación de que el sucesor conserve el protocolo. Revisión documental/focalizada; sin pruebas ejecutadas ni implementación autorizada por este dictamen.
 
-Revisión de implementación2026-10-22: cuatro tareas y re-revisión final aprobadas offline tras82f960a. Precisión de límite de despliegue: persistir identidades del output/volumen y objetos propios; seguir inspeccionando toda la cadena de ancestros actuales y su estabilidad durante cada validación. No persistir la identidad del overlay raíz de un contenedor como requisito para reanudar en otro. Registro2 rechaza registros1 sin convertirlos; ninguna bandera permite saltar pruebas. La verificación HTTP devuelve409/BUSINESS_SITE_BUSY bajo cierre, sin cambios de auth. Linux y release compuesto/reapertura quedan pendientes; esta nota no certifica publicación.
+Revisión de implementación2026-10-22: cuatro tareas y re-revisión final aprobadas offline tras82f960a. Precisión de límite de despliegue: persistir identidades del output/volumen y objetos propios; seguir inspeccionando toda la cadena de ancestros actuales y su estabilidad durante cada validación. No persistir la identidad del overlay raíz de un contenedor como requisito para reanudar en otro. Registro2 rechaza registros1 sin convertirlos; ninguna bandera permite saltar pruebas. La verificación HTTP devuelve409/BUSINESS_SITE_BUSY bajo cierre, sin cambios de auth. Gate Linux aislado aceptado22oct; release compuesto/integración/reapertura pendientes. Esta nota no certifica publicación. Ver informe LINUX_VALIDATION del ticket.

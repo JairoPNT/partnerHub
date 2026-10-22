@@ -4,6 +4,8 @@ Fecha2026-10-22 America/Bogota. Owner Codex backend. Estado: IMPLEMENTADO/REVISA
 
 PR de entrega: https://github.com/JairoPNT/partnerHub/pull/238 — DRAFT, no fusionado ni desplegado. Documentación inicial66b64ef; seguimiento de URL no cambia código revisado. Worktree y evidencia ignorada conservados para los gates pendientes.
 
+Actualización posterior22oct: el informe `CDX-20261021-010_business_cutover_barrier_LINUX_VALIDATION.md` sustituye el estado Linux NOT_RUN de este corte histórico: ensayo aislado PASS con revisión independiente aceptada. También confirma deploy237. Los límites de integración009/reapertura y no publicación de Claudia siguen vigentes; consultar LIVE_PROJECT_STATE para estado posterior del PR238.
+
 ## Alcance entregado
 
 Cuatro subagentes implementadores secuenciales, cada uno con TDD y revisión independiente por tarea, más revisión conjunta y una sola ola de corrección/re-revisión. Ninguno tocó UI, plantillas, auth, Prisma, pagos, DNS, SFTP ni campañas. Ningún claim ni dato productivo fue creado/modificado.

@@ -153,7 +153,7 @@ Tasks1–4 implementadas/revisadas, commits06af680,918d3b2,8918335,d94ae0f. Revi
 - [x] Regresión ampliada:140PASS/1skip conocido de privilegios symlink Windows, cero fallos;141totales.
 - [x] Migración/empaquetado/compatibilidad:187PASS, cero fallos/skips; los fixtures nuevos de bundle ejecutan Node20real.
 - [x] Lint global y build Next en app/web con Node20:PASS39rutas, advertencias conocidas documentadas. TypeScript global de fixtures no se declara libre de deuda.
-- [ ] Ensayo real Linux/POSIX y dos contenedores compartiendo volumen:NOT_RUN, motor local no disponible.
+- [x] Ensayo real Linux/POSIX y dos contenedores compartiendo volumen:PASS22oct, build Git limpio, Node20 packaging4/4 y TS Linux44/44, revisión independiente aceptada sin Critical/Important. Detalle/limitaciones en LINUX_VALIDATION; la ausencia previa del motor queda como intento histórico, no bloqueo actual.
 - [ ] Integración dependiente con CDX009, verificador de reapertura, release compuesto y corte/publicación:NOT_RUN.
 
-Informe: `brain/agent-requests/codex/reports/CDX-20261021-010_business_cutover_barrier_OFFLINE_IMPLEMENTATION.md`. No usar BEGIN productivo, no fusionar como si Linux estuviera aprobado y no publicar235 aislado.
+Informes: `brain/agent-requests/codex/reports/CDX-20261021-010_business_cutover_barrier_OFFLINE_IMPLEMENTATION.md` y `CDX-20261021-010_business_cutover_barrier_LINUX_VALIDATION.md`. Linux aprobado solo para el protocolo aislado; no usar BEGIN productivo sin integración009/reapertura, ni publicar235 aislado. Ventana ya autorizada, pendiente maquinaria revisada y evidencia del corte.

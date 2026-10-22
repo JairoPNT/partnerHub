@@ -4,6 +4,14 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Reanudación — 2026-10-22
 
+### Validación Linux y live — corte que prevalece
+
+Gate Linux010 PASS con revisión independiente: build Dockerfile productivo desde Git179131e limpio, Node20.20.2 packaging4/4, TS Linux Node24 44/44 sin skips, dos contenedores UID1000 distintos con mismo volumen y ambos exit0; corrupción/permisos/fsync/caída forzada comprobados. No Critical/Important en revisión; minor de transcript argv inicial documentado. Warnings/advisories npm22 no analizados ni dispensados; no certificación de seguridad. Informe `brain/agent-requests/codex/reports/CDX-20261021-010_business_cutover_barrier_LINUX_VALIDATION.md`. Docker ya no bloquea este gate. Scratch/evidencia conservados; solo13contenedores/6volúmenes propios desechables eliminados.
+
+Lectura live Chrome existente: EasyPanel PR237 Success22oct02:55:39Z. Sh runtime Node20/linux UID0, output canónico, namespace global0700 UID0 y sin claim activo en esa lectura;009 presente,010 aún no desplegado. Página pública Claudia mantiene copy/CTA/video/FAQ anteriores; hay preferencias/privacidad parciales, no prueba del release ni de consentimiento efectivo. No clicks de contacto/aceptación, no eventos recibidos verificados. No mantenimiento, master/source/target writes, SFTP, DNS ni campañas.
+
+GitHub238 OPEN/DRAFT head179131e/base0e652ec comprobado;235 OPEN/DRAFT head82b6c5d ahora con conflictos. Se puede integrar el protocolo retrocompatible revisado, pero NO235 aislado ni BEGIN. Evaluación separada confirma que falta implementación009/current-profile/verificador fijo de reapertura, no otra autorización de ventana. El lifecycle actual libera su propio claim y el reader rechaza el cierre; hace falta conector real y verificación post-deploy, no booleans/JSON ni SFTP manual. Dirección propuesta a Jairo para integración CDX011; no se presume aprobada su especificación/plan inexistentes. Después composición del sucesor, exclusión/task retirement/lineage/plan fresco, publicación existente y comprobación pública. **Claudia todavía no tiene entregados los ajustes.**
+
 ### Implementación CDX010 — corte posterior que prevalece
 
 PR238 https://github.com/JairoPNT/partnerHub/pull/238 abierto como DRAFT, sin merge/deploy. Código revisado82f960a; no repetir implementación/revisiones completas. Resolver ensayo Linux antes de integrar a main para uso productivo.
