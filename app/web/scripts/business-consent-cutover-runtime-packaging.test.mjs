@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { spawnSync, execFileSync } from "node:child_process";
 import { randomUUID, createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, readdir, rm, writeFile, symlink, lstat, cp } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile, symlink, lstat, cp, chmod } from "node:fs/promises";
 import fs from "node:fs/promises";
 import { syncBuiltinESMExports } from "node:module";
 import { tmpdir } from "node:os";
@@ -111,6 +111,41 @@ test("production wiring has acyclic full-layout inventory before one-graph CLI a
   assert.match(docker, /FROM runtime-layout AS runner/);
   assert.match(docker, /COPY --from=cutover-cli-builder \/repo\/runtime-assets\/business-consent-cutover.mjs \.\/scripts\/business-consent-cutover.mjs/);
   assert.equal(/USER\s+1000/.test(docker), false, "do not change the production volume UID");
+});
+
+test("runtime static COPY removes only group and other writes before inventory", async (t) => {
+  if (process.platform === "win32") { t.skip("native POSIX mode/owner assertions require the Linux Node20 gate"); return; }
+  const root = await mkdtemp(join(tmpdir(), "cdx011-static-modes-"));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const directory = join(root, "static"); await mkdir(directory);
+  const files = [["chunk.js", 0o664, 0o644], ["executable.js", 0o777, 0o755], ["private.css", 0o600, 0o600]];
+  const before = new Map();
+  for (const [name, mode] of files) {
+    const path = join(directory, name); await writeFile(path, `${name}-immutable-bytes`); await chmod(path, mode);
+    before.set(name, { stat: await lstat(path), bytes: await readFile(path) });
+  }
+  assert.equal(before.get("chunk.js").stat.mode & 0o022, 0o020, "fixture reproduces the native0664 inventory rejection");
+  const outside = join(root, "outside.js"); await writeFile(outside, "outside-unchanged"); await chmod(outside, 0o664);
+  await symlink(outside, join(directory, "outside-link.js"), "file");
+  const docker = await readFile(join(repo, "Dockerfile"), "utf8");
+  const command = docker.match(/^RUN (find \/app\/\.next\/static -type f -exec chmod go-w \{\} \+)\r?$/m)?.[1];
+  assert.ok(command, "production must remove generated static group/other write bits");
+  const copyIndex = docker.indexOf("COPY --from=builder /repo/app/web/.next/static ./.next/static");
+  assert.ok(copyIndex >= 0 && docker.indexOf(`RUN ${command}`) > copyIndex);
+  assert.ok(docker.indexOf(`RUN ${command}`) < docker.indexOf("COPY --from=builder /repo/app/web/scripts/build-business-cutover-writer-inventory.mjs"));
+  // Execute the exact production command with only its immutable deployment
+  // path substituted for this private fixture, never a runtime root option.
+  const result = spawnSync("sh", ["-c", command.replace("/app/.next/static", JSON.stringify(directory))], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  for (const [name, , expected] of files) {
+    const stat = await lstat(join(directory, name)), original = before.get(name);
+    assert.equal(stat.mode & 0o777, expected); assert.equal(stat.uid, original.stat.uid); assert.equal(stat.gid, original.stat.gid);
+    assert.equal(stat.ino, original.stat.ino); assert.equal(stat.nlink, original.stat.nlink);
+    assert.deepEqual(await readFile(join(directory, name)), original.bytes);
+    assert.equal(createHash("sha256").update(await readFile(join(directory, name))).digest("hex"), createHash("sha256").update(original.bytes).digest("hex"));
+  }
+  assert.equal((await lstat(outside)).mode & 0o777, 0o664, "find must not follow a static symlink to another file");
+  assert.equal((await lstat(join(directory, "outside-link.js"))).isSymbolicLink(), true, "normalization must not launder a link past the inventory guard");
 });
 
 async function assembly(t) {

@@ -46,6 +46,7 @@ COPY --from=builder /repo/app/web/package-lock.json ./package-lock.json
 COPY --from=builder /repo/app/web/public ./public
 COPY --from=builder /repo/business-cutover-standalone ./
 COPY --from=builder /repo/app/web/.next/static ./.next/static
+RUN find /app/.next/static -type f -exec chmod go-w {} +
 COPY --from=sftp-runtime-deps /repo/sftp-runtime/node_modules ./scripts/node_modules
 COPY --from=builder /repo/plantillas-de-pagina/producto ./plantillas-de-pagina/producto
 COPY --from=builder /repo/plantillas-de-pagina/business ./plantillas-de-pagina/business
