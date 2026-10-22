@@ -2,7 +2,39 @@
 
 OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
+## Reanudación — 2026-10-22
+
+### Validación Linux y live — corte que prevalece
+
+Gate Linux010 PASS con revisión independiente: build Dockerfile productivo desde Git179131e limpio, Node20.20.2 packaging4/4, TS Linux Node24 44/44 sin skips, dos contenedores UID1000 distintos con mismo volumen y ambos exit0; corrupción/permisos/fsync/caída forzada comprobados. No Critical/Important en revisión; minor de transcript argv inicial documentado. Warnings/advisories npm22 no analizados ni dispensados; no certificación de seguridad. Informe `brain/agent-requests/codex/reports/CDX-20261021-010_business_cutover_barrier_LINUX_VALIDATION.md`. Docker ya no bloquea este gate. Scratch/evidencia conservados; solo13contenedores/6volúmenes propios desechables eliminados.
+
+Lectura live Chrome existente: EasyPanel PR237 Success22oct02:55:39Z. Sh runtime Node20/linux UID0, output canónico, namespace global0700 UID0 y sin claim activo en esa lectura;009 presente,010 aún no desplegado. Página pública Claudia mantiene copy/CTA/video/FAQ anteriores; hay preferencias/privacidad parciales, no prueba del release ni de consentimiento efectivo. No clicks de contacto/aceptación, no eventos recibidos verificados. No mantenimiento, master/source/target writes, SFTP, DNS ni campañas.
+
+GitHub238 OPEN/DRAFT head179131e/base0e652ec comprobado;235 OPEN/DRAFT head82b6c5d ahora con conflictos. Se puede integrar el protocolo retrocompatible revisado, pero NO235 aislado ni BEGIN. Evaluación separada confirma que falta implementación009/current-profile/verificador fijo de reapertura, no otra autorización de ventana. El lifecycle actual libera su propio claim y el reader rechaza el cierre; hace falta conector real y verificación post-deploy, no booleans/JSON ni SFTP manual. Dirección propuesta a Jairo para integración CDX011; no se presume aprobada su especificación/plan inexistentes. Después composición del sucesor, exclusión/task retirement/lineage/plan fresco, publicación existente y comprobación pública. **Claudia todavía no tiene entregados los ajustes.**
+
+### Implementación CDX010 — corte posterior que prevalece
+
+PR238 https://github.com/JairoPNT/partnerHub/pull/238 abierto como DRAFT, sin merge/deploy. Código revisado82f960a; no repetir implementación/revisiones completas. Resolver ensayo Linux antes de integrar a main para uso productivo.
+
+Jairo aprobó plan y ejecución por subagentes. Store, handshake+verify, controlador durable y STATUS/packaging implementados con revisión por tarea; final82f960a corrige cuatro hallazgos y pasa re-revisión. Verificado por controller:140PASS/1skip conocido Windows en regresión,187PASS sin skips en migración/packaging; lint global y build Node20 desde app/web PASS39rutas (advertencias registradas). Una invocación de Next desde raíz falló por Buffer/BodyInit en preview no modificado; no se ocultó ni se cambió código para ella, la invocación prescrita desde app/web pasó. Formato durable2 no convierte1, contenedor externo puede cambiar mientras volumen/objetos se prueban. Comando productivo expuesto: solo STATUS; CDX009 continúa bloqueando APPLY.
+
+Linux/POSIX y ensayo dos contenedores con mismo volumen NO ejecutados: motor Docker local ausente aun tras intento de arranque. Mantener entrega en draft, no merge/BEGIN/corte. Faltan integración separada009+verificador fijo de reapertura, composición235+protocolo y evidencia de tareas/volumen reales, publicación/validación pública de Claudia. No hubo DNS, SFTP, campañas, mantenimiento productivo ni cambios de datos. Fuente de reanudación: informe `brain/agent-requests/codex/reports/CDX-20261021-010_business_cutover_barrier_OFFLINE_IMPLEMENTATION.md` y plan actualizado. No repetir las cuatro tareas ni revisiones completas ya realizadas.
+
+Jairo aprobó la especificación escrita CDX010 y pidió el plan técnico. Plan preparado y revisado por el controller en `docs/superpowers/plans/2026-10-22-business-cutover-barrier.md`, pendiente revisión/aprobación del usuario antes de implementar. Método conservado: subagentes por tarea y revisión entre tareas. GitHub refrescado: main0e652ec/PR237 MERGED;235 sigue OPEN/DRAFT en82b6c5d. No se comprobó hoy el resultado de EasyPanel, no inferir deploy exitoso del merge. No cambios productivos ni publicación durante esta planificación. El apagado programado ayer es histórico; no programar otro por reanudar.
+
 ## Work checkpoint — 2026-10-21
+
+### Cierre de sesión — 21:56 America/Bogota (prevalece sobre notas anteriores)
+
+- Jairo se retira de pantalla y autoriza documentar/pausar lo que requiera aprobación y programar apagado local 30 minutos después de terminar. No es aprobación de una especificación/plan todavía pendientes.
+- PR237/CDX009 fusionado, merge `0e652ec8e25e4bce09f472c87c59a60c6dad7c34`. EasyPanel auto-build en curso en la última lectura: `npm ci` terminó a423s y siguió COPY de deps. No registrar despliegue exitoso hasta comprobar su resultado y runtime. Es tooling retrocompatible; no migra master ni publica Claudia.
+- PR235 sigue OPEN/DRAFT, head `82b6c5db71d158d8089af3207777249b5fb4e125`. No fusionarlo/desplegarlo solo contra el master anterior.
+- Master persistido observado en consola Sh: hash9760e017b284e76ff6cbae5d128265cc89fa6b8bd2f03882d4ff4b0de0e1d046, manifest business.ganomaster.pro, sin measurement-runtime. Target Claudia READY/RESOLVED/SSL READY en `/home/u708491435/domains/claudiacalero.pro/public_html/negocio`; fuente presente; jobs activos observados vacíos, lo cual NO demuestra exclusión.
+- No se activó mantenimiento, no se migró el master, no se alteraron fuentes/targets/hosting/DNS/SFTP/campañas. Claudia sigue sin los ajustes nuevos de consentimiento/tráfico pagado. La ventana productiva ya está autorizada; falta capacidad técnica segura, no otra autorización de la misma ventana.
+- CDX010: dirección de cierre durable aprobada por Jairo. Especificación escrita/revisada independientemente, commit inicial f77d065, pendiente aprobación escrita y plan técnico. Revisión corrigió exclusión entre controladores y obligación de conservar el handshake en el sucesor. No hay implementación. Leer `docs/superpowers/specs/2026-10-21-business-cutover-barrier-design.md` y su request antes de retomar.
+- Siguiente secuencia: comprobar237; aprobar especificación010; plan/implementación/pruebas/revisión del protocolo; integración dependiente del adaptador009; comprobar Linux y lineage/plan reales; corte master+código bajo cierre persistente; publicar Claudia por flujo existente y validar página/consentimiento/eventos. No sustituir estos gates con flags, jobs vacíos o hashes declarados.
+- BFCache nativo del release235 sí se comprobó en fixture local (reporte CDX006); las notas anteriores que lo dejaban pendiente son históricas. No equivale a validación pública ni recepción de eventos.
+
 
 - CDX-20261021-009: herramienta de migración del master implementada y revisada solo offline. Tres hallazgos finales corregidos en `3690aa6`; re-revisión final PASS, pruebas frescas Node20 183/183 e integración1/1. APPLY productivo sigue bloqueado por falta de exclusión comprobada de todos los escritores e integración ejecutable; faltan Linux/cutover/lineage real. La página pública de Claudia todavía sirve CTA de registro y referencia10min, sin el nuevo runtime de consentimiento. No se publicaron los ajustes ni se habilitaron campañas/proveedores. PR235 sigue separado; no fusionar/desplegar código incompatible con el master persistente. Detalle en reporte CDX009. Este checkpoint actualiza el estado del trabajo offline, no acredita entrega pública.
 

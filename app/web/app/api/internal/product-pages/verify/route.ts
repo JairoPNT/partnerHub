@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
+import { BusinessSiteBusyError } from "@/server/services/businessPublicationSiteCoordinator";
 
 import {
   productPageVerificationInputSchema,
@@ -16,6 +17,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result, { status: 200 });
   } catch (error) {
+    if (error instanceof BusinessSiteBusyError) {
+      return NextResponse.json({ error: "BUSINESS_SITE_BUSY" }, { status: 409 });
+    }
     if (error instanceof ZodError) {
       return NextResponse.json(
         { error: "Invalid product page verification request", issues: error.flatten() },
