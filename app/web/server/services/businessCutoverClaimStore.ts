@@ -212,8 +212,10 @@ async function readOwnership(output: string, operationId: string, previous?: Own
     !marker.bytes.equals(markerBytes(record, saved.bytes))) throw closed();
   if (previous && (!saved.bytes.equals(previous.recordBytes) || !timingSafeEqual(credential.bytes, previous.credential))) throw closed();
   const contents = (await readdir(p.operation)).sort();
+  const requiredContents = contents.filter((name) => name !== "migration-plan.json");
   if (JSON.stringify((await readdir(p.claim)).sort()) !== '["owner.json"]' ||
-    !['["credential","events","record.json"]', '[".controller","credential","events","record.json"]'].includes(JSON.stringify(contents))) throw closed();
+    !['["credential","events","record.json"]', '[".controller","credential","events","record.json"]'].includes(JSON.stringify(requiredContents))) throw closed();
+  if (contents.includes("migration-plan.json")) await readPrivateFile(resolve(p.operation, "migration-plan.json"), 1400 * 1024);
   if (contents.includes(".controller")) {
     const controller = await directory(p.controller, true);
     if (JSON.stringify(await readdir(p.controller)) !== '["owner.json"]') throw closed();
