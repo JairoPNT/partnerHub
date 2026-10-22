@@ -1,8 +1,8 @@
 # CDX-20261022-003 — composición SUCCESSOR235
 
-Estado: implementación fuente y revisiónTask1 completas; imagen real y ensayo pareado pasan. Revisión final de rama/artefacto y gates operacionales pendientes. **No corte ni ajustes públicos de Claudia por este ticket todavía.** Jairo autorizó integrar235/publicarClaudia dentro de la ventana aprobada, sin DNS/campañas; no requiere nueva aprobación del mismo método/alcance.
+Estado: implementación fuente, revisiónTask1 y revisión final de rama/Task2artefacto completas; imagen real y ensayo pareado pasan. Gates operacionales y merge/autodeploy siguen retenidos. **No corte ni ajustes públicos de Claudia por este ticket todavía.** Jairo autorizó integrar235/publicarClaudia dentro de la ventana aprobada, sin DNS/campañas; no requiere nueva aprobación del mismo método/alcance.
 
-Checkpoint posterior que prevalece: revisiónTask1 speccompliant/qualityApproved, ceroCriticalImportant. ActualSUCCESSOR y ensayo pareado genuino PASS; revisión final de rama/artefacto pendiente. No claim de entrega pública ni de autorizar BEGIN desde resultado local. Lint global confirmado independientemente por controllerNode20exit0; corregida referencia ausente de logoriginal. Ruido de warnings continúaMinor visible.
+Checkpoint posterior que prevalece: revisiónTask1 speccompliant/qualityApproved, ceroCriticalImportant. ActualSUCCESSOR y ensayo pareado genuino PASS; revisión final de rama/Task2artefacto Approved/sinCriticalImportant, candidata técnica aceptada con merge/autodeploy retenidos por gatesoperacionales. No claim de entrega pública ni de autorizar BEGIN desde resultado local. Lint global confirmado independientemente por controllerNode20exit0; corregida referencia ausente de logoriginal. Ruido de warnings continúaMinor visible.
 
 ## Resultado real de artefacto y ensayo posterior
 
@@ -12,7 +12,7 @@ SUCCESSOR real8375 por Dockerfileproductivo sin modificar: tagcdx003-successor:8
 
 Freshvolumenprivado cdx003-task2-8375c15 con fixturegenuino9760/e9a2: CLIshipped004PREDECESSOR BEGIN/DRAIN/PREVIEWdosiguales/APPLYuna vez mantiene cierre. ContenedorSUCCESSOR separado/mismo volumen usa generadorBusinessshipped: BUSINESS_SITE_BUSY, cerolecturafuente/fetch y snapshot/data sin cambio. VERIFYexit0VERIFIED y REOPENexit0REOPENED, commitObserved/persistenceConfirmedtrue; VERIFYterminalexit3RELEASED/persistencefalse solo diagnóstico esperado, no recertificación/replay. Archive/journals originales físicos sin cambio; master+metadatafixture sí cambiados honestamente. Sin skips/fallos en gatesnativos/pair;35tracingwarningsretenidos. No proveedor/publicación. Recursos/evidencia preservados pararevisión/reanudación, no limpiezaajena.
 
-Informe completo task-2-report.md y scripts/logs/inspects/selection/summary en scratchpropio. Controllerleyó reportes completos; revisiónindependientefinalvalidaráfuente+artefacto. En VPS inició únicamente buildauxiliar de imagen exacta8375 porGitpúblico, existenteDocker/74GBlibres/sinmontajeproductivo ni servicio cambiado: prepara disponibilidad de reanudación, no desplieguefeature. Actualcompatibilidad/digest deben comprobarse al acabar. PR244DRAFT integra235 y aúnnofusionado, para no dispararautodeploy antes de cierre/migración segura.
+Informe completo task-2-report.md y scripts/logs/inspects/selection/summary en scratchpropio. Controllerleyó reportes completos e inspeccionó imágenes/contenedores reales/logsCLI; revisiónindependientefinalvalidófuente+artefacto. En VPS inició únicamente buildauxiliar de imagen exacta8375 porGitpúblico, existenteDocker/74GBlibres/sinmontajeproductivo ni servicio cambiado: prepara disponibilidad de reanudación, no desplieguefeature. PrimercontextoGit rechazó3tests extras; fuenteoficialgzip0dd9igualal auditadolocal ahora se construye por directorionormal comoEasyPanel. Actualcompatibilidad/digest deben comprobarse al acabar. PR244DRAFT integra235 y aúnnofusionado, para no dispararautodeploy antes de cierre/migración segura.
 
 ## Fuente y alcance
 
@@ -29,7 +29,7 @@ Fallo concreto medido: COPY de la carpeta canónica incorporaba tres tests fuent
 - Runtime/master/migration/inventory inicial249total246pass1fail2skips; fallo extra-tests corregido. Final archivoafectado39total37pass0fail2skip. Cobertura reconciliada:210casos de otrosgrupos de primera corrida+37finales=247pass2skip, **no** corridaúnicafresca249green. Inventariofixture2864files completo y sucesor sinstaging/predecesor5limpio+staging/missingstaging pasan.
 - Browser/assets/consent/rehearsal105/105 sin skips, Playwright/Chrome existentes, fakeSDK/denyexternal. No evidencia de SDK real/eventosrecibidos/BFCache nativo.
 - Source/generation TSloader24+childrenNode20:239total237pass0fail2Windowsdirectoryfsyncskip. No sumar histórico011 como nuevas pruebas003.
-- Cuatro skipsplataforma nombrados; no convertidos en prueba de toda faultinjectionLinux. Prueba real de dosimágenes pendiente. Node20/Windows symlink EPERM instrumentado no acredita native-linksuccess.
+- Cuatro skipsplataforma nombrados; no convertidos en prueba de toda faultinjectionLinux. El ensayo real de dosimágenes posterior pasa, sin afirmar que repite cada caso Windows omitido. Node20/Windows symlink EPERM instrumentado no acredita native-linksuccess.
 - Primeras invocacionesbrowser sinmódulo/HEADprecommit fallaron, primerlint scripts sinNodeglobals falló, testexclusion inicialtuvo scopeerror y Windowsnamespacedpaths fallaron. Causas y comandos/logs completos conservados; sin timeout/assert/pin relajados.
 - Doce workfilescanónicos/staging materializados de BuffersGit tras comprobar indexes; exactseispins retenidos. Seis líneaswhitespaceCSS heredadas no normalizadas; authored diffcheck0, no fullpatchcleanclaim. CRLF de testsfuente preservado sin cambiocommitted.
 
@@ -37,7 +37,7 @@ Fallo concreto medido: COPY de la carpeta canónica incorporaba tres tests fuent
 
 Fuenteoficial8375c15 auditada1169/1169BufferequalsGit,0missing/extra/mismatch, modosTAR retenidos. Build Dockerfile productivo y ensayo ya pasan según checkpoint posterior de este reporte. Consume PREDECESSOR real004 cdx004-predecessor:0c68db3, no recreación de plantilla vieja sobre runtime235.
 
-Revisión fuente independiente y realSUCCESSOR/pairgate completados según checkpoint posterior; pendiente revisión final y hechosoperacionalesfrescos/ambosartefactosaccesibles antes de BEGIN real. No se tocó volumenproductivo para ensayar; source235histórico no se despliega solo.
+Revisión fuente/final independiente y realSUCCESSOR/pairgate completados según checkpoint posterior; pendientes hechosoperacionalesfrescos/ambosartefactosaccesibles antes de BEGIN real. No se tocó volumenproductivo para ensayar; source235histórico no se despliega solo.
 
 Producción243 comprobada RO: imagen433229f9/réplica e777, Next/Sharp corregidos/perfilPREDECESSOR no-null; STATUS010OPEN/sinstart/sinwrites. Un consumidor Dockeractivo y viejos Exited143 en snapshot; no garantía sobre todos los writers externos ni continua. Preview009 con staging fijo solo bloquea WRITER_EXCLUSION_UNPROVEN y noautoriza APPLY público ni sustituye plan011. No BEGIN, master/source/targetmutation, publicación, DNS, campañas, nuevascredenciales niSMTP por esta sesión.
 

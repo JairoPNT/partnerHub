@@ -26,20 +26,20 @@
 ### Task1: Exact235 integration and focused regressions
 
 Files: incoming235 approvedfiles; integration scripts/tests named in assessment; two brain conflicts keep newestmain approval/history. Rootownsnewreport/plan/LIVEcheckpoint aftermerge. Onecommitowner, no parallelGitindex operations.
-- [ ] Safe localmerge --no-commit of82b; preserve main dependency/config and four concrete resolutions.
-- [ ] Test-first real legacyarchive/refresh capture behavior if existingtests missing; use samefixtures/contract. Keepoldexecutionhelper, addlegacyarrays/previousFiles, refresh-localcapturehashcomparison.
-- [ ] Reconcilepackagingfixture/helper/Node20 child, classifierrecognizesnewcanonical andcleanoldfixture. Importexactapprovedassets without textconversion; nocontentchanges.
-- [ ] BuildactualNode20 fromapp/web, then serialize affectedmaster/refresh/migration/inventory/generation/measurement/consent/browser/rehearsal tests; lint andauthoreddiffcheck. Reportallfirstfailures/skips, no full-project claim orrepeated011suite solelybyhabit.
-- [ ] Freezecommit; independenttaskreviewspec+quality. Rootpushesforbinaryarchiveonly after source freeze.
-- [ ] Integración detectó tres archivos de pruebas en COPY canónico: exclusiones exactas `.dockerignore` y fixture que las honra, prueba RED/GREEN sin relajar clasificador/pins/assembler; no construir candidato52313b7 anterior a esta corrección.
+- [x] Safe localmerge --no-commit of82b; preserve main dependency/config and four concrete resolutions.
+- [x] Test-first real legacyarchive/refresh capture behavior if existingtests missing; use samefixtures/contract. Keepoldexecutionhelper, addlegacyarrays/previousFiles, refresh-localcapturehashcomparison.
+- [x] Reconcilepackagingfixture/helper/Node20 child, classifierrecognizesnewcanonical andcleanoldfixture. Importexactapprovedassets without textconversion; nocontentchanges.
+- [x] BuildactualNode20 fromapp/web, then serialize affectedmaster/refresh/migration/inventory/generation/measurement/consent/browser/rehearsal tests; lint andauthoreddiffcheck. Reportallfirstfailures/skips, no full-project claim orrepeated011suite solelybyhabit.
+- [x] Freezecommit; independenttaskreviewspec+quality. Rootpushesforbinaryarchiveonly after source freeze.
+- [x] Integración detectó tres archivos de pruebas en COPY canónico: exclusiones exactas `.dockerignore` y fixture que las honra, prueba RED/GREEN sin relajar clasificador/pins/assembler; no construir candidato52313b7 anterior a esta corrección.
 
 ### Task2: ActualSUCCESSOR and paired rehearsal
 
 Writes only ownignoredscratch; consumes frozenTask1 and preservedactualPREDECESSORimage004. No sourceoverlays, privateprofile or inventedinventory.
-- [ ] ActualunmodifiedDockerfile frombinary-auditedrawcommittedcontext, identityNode20/Linux/newSUCCESSORprofile and strictallwritersinventory; sixbytes/pins/runtimeconfig exact.
-- [ ] Freshgenuine9760/e9a2 privatevolume; actualpredecessorBEGIN/DRAIN/stablePREVIEW/APPLYonce retainsclosure, originalhistorypreserved. ActualSUCCESSORseparatecontainer/startupblocksBusinessbeforeeffects, no provider/publication.
-- [ ] ActualSUCCESSORVERIFY/REOPEN with same physicalvolume/privateoperation, noimportedJSONauthority. Confirmterminalpersistenceandidempotentdiagnostic; no newexecutor/flags. OldcancelbeforeSTART retained004evidence notrerunwithoutneed.
-- [ ] Source/artifactreviewfinal; rootclosesallCannotVerify. Artifactpassdoesnotopenproductivecutover.
+- [x] ActualunmodifiedDockerfile frombinary-auditedrawcommittedcontext, identityNode20/Linux/newSUCCESSORprofile and strictallwritersinventory; sixbytes/pins/runtimeconfig exact.
+- [x] Freshgenuine9760/e9a2 privatevolume; actualpredecessorBEGIN/DRAIN/stablePREVIEW/APPLYonce retainsclosure, originalhistorypreserved. ActualSUCCESSORseparatecontainer/startupblocksBusinessbeforeeffects, no provider/publication.
+- [x] ActualSUCCESSORVERIFY/REOPEN with same physicalvolume/privateoperation, noimportedJSONauthority. Confirmterminalpersistenceandidempotentdiagnostic; no newexecutor/flags. OldcancelbeforeSTART retained004evidence notrerunwithoutneed.
+- [x] Source/artifactreviewfinal; rootclosesallCannotVerify for local acceptance. OperationalCannotVerify remain explicit cutoverholds. Artifactpassdoesnotopenproductivecutover.
 
 ## Integration and operational handoff
 
