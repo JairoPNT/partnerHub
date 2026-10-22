@@ -21,3 +21,9 @@ No se escribió código de producto en CDX010. Request y especificación están 
 Leer primero el bloque de cierre en `brain/LIVE_PROJECT_STATE.md`, el request010 y su especificación. Trabajar en el worktree aislado `C:/Users/jairo/.codex/worktrees/business-consent-runtime/PartnerHub`; no limpiar el checkout raíz ni otros worktrees. No reiniciar tickets de plantilla, pruebas BFCache o migraciones históricas ya revisados.
 
 El build está en el servidor y no depende del PC. No hay operación local de migración ni publicación a mitad de ejecutar. El apagado local no detiene servicios remotos. No se crea monitor periódico ni se promete continuar tras apagar.
+
+## Temporizador comprobado
+
+Registrada y releída la tarea local de Windows `PartnerHub-Apagado-20261021-2230`: estado Ready, próxima ejecución **2026-10-21 22:26:45 -05:00** (30min desde su creación). Acción `C:\WINDOWS\System32\shutdown.exe /s /t 0`, sin `/f`. Se usa una tarea diferida en vez de `/t 1800` para no implicar cierre forzado; una aplicación con trabajo sin guardar podría impedir el apagado. No se garantiza que el equipo ya esté apagado, solo que la tarea quedó programada y comprobada.
+
+Cancelar antes de esa hora en PowerShell: `Unregister-ScheduledTask -TaskName 'PartnerHub-Apagado-20261021-2230' -Confirm:$false`. No usar `shutdown /a`: no hay countdown nativo hasta ejecutarse esta tarea. Último estado EasyPanel al cerrar:237 aún en construcción (~10min).
