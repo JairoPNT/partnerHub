@@ -48,4 +48,3 @@ Revisión independiente final de5fc239e..9f4bd7d: **código Yes /0Critical0Impor
 - UniversoTypeScript: Nextproductivo pasa; tsc irrestricto de testsajenos no se revalidó, no se vende verde.
 
 El PR puede guardarse en draft sin reiniciar main; no activar auto-merge ni deploy manual por esta preparación. Se preservan ramas/worktrees/evidencia hasta resolver el gate operacional. Progreso/cifras financieras sin cuantificar permanecen null en statusJSON local.
-

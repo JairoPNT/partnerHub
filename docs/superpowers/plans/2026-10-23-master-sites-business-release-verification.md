@@ -23,4 +23,3 @@
 - [ ] Task4/CDX004: check current deployment/queue read-only, create/attach PR, merge exact reviewed main and observe EasyPanel deploy; GET-only authorization/UI check; compare Claudia public assets before/after. No publish/customer mutation. If real session absent request access, don't fabricate success.
 ## Acceptance
 All named failure scripts resolve with disclosed runtime/prerequisites; full suite success plus explicit platform-only skip limits, production build/lint success, independent reviews close load-bearing issues. GitHub merged SHA matches observed deploy. Claudia assets/measurement unchanged. Local status/brain release report reflect exact achieved stage.
-
