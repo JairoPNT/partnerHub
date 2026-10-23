@@ -25,8 +25,7 @@ import {
   ShoppingBag,
   Video,
   UserCheck,
-  Sparkles,
-  Clock
+  Sparkles
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
@@ -45,6 +44,7 @@ import {
 } from "@/components/ui/verification-status-panel";
 import { ProductPageHistoryPanel } from "@/components/product-page-history-panel";
 import { PersonalBrandBlocksView } from "@/components/personal-brand-blocks-view";
+import { MasterSitesBusinessDeliveryView } from "@/components/master-sites-business-delivery-view";
 import {
   MASTER_SITE_DOMAINS,
   MASTER_SITE_IDS,
@@ -311,6 +311,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
   };
 
   useEffect(() => {
+    if (activeEcosystem !== "PRODUCT") return;
     setForm(INITIAL_MASTER_FORM);
     setGeneratedAt(null);
     setPublishedAt(null);
@@ -1312,120 +1313,7 @@ export function MasterSiteManagementView({ record }: MasterSiteManagementViewPro
       )}
         </>
       ) : activeEcosystem === "BUSINESS" ? (
-        <div className="space-y-8 animate-fade-in">
-          {/* DASHBOARD DE ESTADO DEL MASTER NEGOCIO */}
-          <section className="rounded-3xl border border-indigo-200/80 bg-white p-6 shadow-sm space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 border-b border-indigo-100 pb-3">
-              <div className="flex items-center gap-3">
-                <Video className="h-6 w-6 text-indigo-600" />
-                <div>
-                  <h2 className="text-base font-bold text-slate-900">
-                    Estado de Plantilla Maestra · Negocio (VSL)
-                  </h2>
-                  <p className="text-xs text-slate-500">
-                    Ecosistema orientado a la presentación de oportunidad comercial con video VSL y calificación
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold text-amber-800 border border-amber-200 inline-flex items-center gap-1.5">
-                  <Clock className="h-3.5 w-3.5 text-amber-600" />
-                  En Preparación
-                </span>
-              </div>
-            </div>
-
-            <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 text-xs">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-                <span className="text-slate-400 font-bold text-[10px] uppercase block">Subdominio Canónico</span>
-                <a
-                  href={CANONICAL_URLS.BUSINESS}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-extrabold font-mono text-indigo-600 text-sm hover:underline inline-flex items-center gap-1"
-                >
-                  {MASTER_SITE_DOMAINS.BUSINESS}
-                  <ExternalLink className="h-3 w-3" />
-                </a>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-                <span className="text-slate-400 font-bold text-[10px] uppercase block">siteId Reservado</span>
-                <span className="font-extrabold font-mono text-indigo-900 text-sm">
-                  ganomaster-business
-                </span>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-                <span className="text-slate-400 font-bold text-[10px] uppercase block">Ecosistema</span>
-                <span className="font-bold text-indigo-700 text-xs">
-                  Negocio / Oportunidad (VSL)
-                </span>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4 space-y-1">
-                <span className="text-slate-400 font-bold text-[10px] uppercase block">Aislamiento SFTP</span>
-                <span className="font-bold text-emerald-700 text-xs">
-                  Directorio /business aislado
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-indigo-200 bg-indigo-50/60 p-4 text-xs text-indigo-900 space-y-1.5">
-              <div className="flex items-center gap-2 font-bold text-indigo-950">
-                <ShieldCheck className="h-4 w-4 text-indigo-600 shrink-0" />
-                <span>Ecosistema aislado en subdominio dedicado (PH-034)</span>
-              </div>
-              <p className="text-indigo-800 text-[11px] leading-relaxed">
-                El master de Negocio (VSL) cuenta con identificador canónico <code className="font-mono font-bold">ganomaster-business</code> y subdominio asignado <code className="font-mono font-bold">{MASTER_SITE_DOMAINS.BUSINESS}</code>. La arquitectura multi-subdominio garantiza que cada plantilla opere en su propio árbol web sin riesgo de colisión.
-              </p>
-            </div>
-          </section>
-
-          {/* ARQUITECTURA DE PLANTILLA VSL */}
-          <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm space-y-4">
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Layers className="h-5 w-5 text-indigo-600" />
-              Estructura Planeada de la Plantilla Maestra VSL
-            </h3>
-            <p className="text-xs text-slate-600">
-              Componentes modulares que conformarán la página de oportunidad de negocio de cada empresario:
-            </p>
-
-            <div className="grid gap-4 sm:grid-cols-3 text-xs">
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
-                <div className="flex items-center gap-2 text-indigo-900 font-bold">
-                  <Video className="h-4 w-4 text-indigo-600" />
-                  <span>Video Principal (VSL)</span>
-                </div>
-                <p className="text-slate-600 text-[11px]">
-                  Player optimizado con soporte para video de presentación, controles adaptados y llamado a acción temporizado.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
-                <div className="flex items-center gap-2 text-indigo-900 font-bold">
-                  <Sparkles className="h-4 w-4 text-indigo-600" />
-                  <span>Objeciones y Propuesta</span>
-                </div>
-                <p className="text-slate-600 text-[11px]">
-                  Módulos de valor sobre el modelo de negocio, respaldo corporativo, preguntas frecuentes y testimonios.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 space-y-2">
-                <div className="flex items-center gap-2 text-indigo-900 font-bold">
-                  <Phone className="h-4 w-4 text-indigo-600" />
-                  <span>Captación WhatsApp</span>
-                </div>
-                <p className="text-slate-600 text-[11px]">
-                  Enrutamiento directo al WhatsApp internacional del empresario con mensaje preconfigurado de prospección.
-                </p>
-              </div>
-            </div>
-          </section>
-        </div>
+        <MasterSitesBusinessDeliveryView />
       ) : (
         <div className="space-y-8 animate-fade-in">
           {/* EDITOR MODULAR DE BLOQUES Y LIVE PREVIEW DE MARCA PERSONAL (AGR-20260806-003) */}

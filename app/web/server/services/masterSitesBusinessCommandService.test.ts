@@ -1,102 +1,19 @@
 import assert from 'node:assert/strict';
-import { createHash, randomUUID } from 'node:crypto';
-import { cp, mkdir, mkdtemp, readFile, readdir, rename, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
+import { randomUUID } from 'node:crypto';
+import { readFile, readdir, rename, writeFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
-import { test, type TestContext } from 'node:test';
+import { test } from 'node:test';
 import { createMasterSitesBusinessCommandService } from './masterSitesBusinessCommandService.ts';
-import { createMasterSitesBusinessPreviewService, masterSitesBusinessPreviewService } from './masterSitesBusinessPreviewService.ts';
-import { createMasterSitesBusinessOperationStore, MasterSitesBusinessOperationStoreError, type MasterSitesBusinessOperationPatch } from './masterSitesBusinessOperationStore.ts';
-import { createPublicationJobService } from './publicationJobService.ts';
+import { MasterSitesBusinessOperationStoreError, type MasterSitesBusinessOperationPatch } from './masterSitesBusinessOperationStore.ts';
 import { createPublicationJobWorker } from './publicationJobWorkerService.ts';
-import { createSubdomainProvisioningService } from './subdomainProvisioningService.ts';
 import { productPageGenerationService } from './productPageGenerationService.ts';
 import { withoutBusinessPublicationSiteOwnership } from './businessPublicationSiteCoordinator.ts';
-import { prepareBusinessMeasurementFixture } from './businessMeasurement.test-fixtures.ts';
+import { businessFixtureId, businessFixtureOperator, businessFixtureSha, createBusinessFixtureWorker, createMasterSitesBusinessCommandFixture } from './masterSitesBusinessCommand.test-fixtures.ts';
 
-const id = '11111111-1111-4111-8111-111111111111';
-const timestamp = '2026-10-20T12:00:00.000Z';
-const operator = { subject: 'test-verified-operator', identityType: 'HUMAN' as const, email: 'operator@example.test', payload: {} };
-const sha = (value: string) => createHash('sha256').update(value).digest('hex');
-
-async function fixture(t: TestContext, ready = true) {
-  const root = await mkdtemp(resolve(tmpdir(), 'ph-010-command-'));
-  const environment = { ...process.env };
-  t.after(async () => { process.env = environment; await rm(root, { recursive: true, force: true }); });
-  Object.assign(process.env, {
-    PRODUCT_PAGE_OUTPUT_DIR: root, PRODUCT_PAGE_SOURCE_DIR: resolve(root, '.sources'),
-    PRODUCT_PAGE_ACTIVATION_DIR: resolve(root, '.activation'), PRODUCT_PAGE_PAYMENT_DIR: resolve(root, '.payments'),
-    PRODUCT_PAGE_COMMERCIAL_GRANT_DIR: resolve(root, '.grants'), PRODUCT_PAGE_PUBLICATION_JOURNAL_DIR: resolve(root, '.journals'),
-    PRODUCT_PAGE_TEMPLATE_DIR: resolve('../../plantillas-de-pagina/producto'), PARTNERHUB_PROVISIONING_IPV4: '192.0.2.10'
-  });
-  const sourceDirectory = process.env.PRODUCT_PAGE_SOURCE_DIR!;
-  const targets = resolve(sourceDirectory, '.publishing-targets');
-  await mkdir(targets, { recursive: true });
-  await mkdir(process.env.PRODUCT_PAGE_ACTIVATION_DIR!, { recursive: true });
-  await cp(resolve('../../plantillas-de-pagina/business'), resolve(root, 'ganomaster-business'), { recursive: true });
-  await mkdir(resolve(root, 'ganomaster-business/tipografia'), { recursive: true });
-  await prepareBusinessMeasurementFixture(t, resolve(root, 'ganomaster-business'));
-  const lead = {
-    id, siteId: 'example-partner', status: 'PAID', recordState: 'ACTIVE',
-    fullName: 'Example Partner', brandName: 'Example Business', whatsapp: '573101234567',
-    onboardingData: { domain: 'partner.example.test', whatsapp: '573101234567' },
-    offerSnapshot: { offerCode: 'BUSINESS_ONLY', ecosystemTypes: ['BUSINESS'], ecosystemType: 'BUSINESS', amountCop: 180000,
-      currency: 'COP', billingType: 'ONE_TIME', catalogVersion: '2026-08-12.v1', selectedAt: timestamp }
-  };
-  const target = {
-    version: 2, ownerKey: id, siteId: 'example-partner-business', ecosystemType: 'BUSINESS', rootEcosystemType: 'BUSINESS',
-    baseDomain: 'partner.example.test', publicHost: 'negocio.partner.example.test',
-    remoteRoot: '/domains/partner.example.test/public_html/negocio', provisioningState: 'READY',
-    publicationState: 'PENDING', hostingerState: 'READY', dnsState: 'RESOLVED', sslState: 'READY',
-    createdAt: timestamp, updatedAt: timestamp
-  };
-  const leadPath = resolve(process.env.PRODUCT_PAGE_ACTIVATION_DIR!, 'leads.json');
-  const targetPath = resolve(targets, `${target.siteId}.json`);
-  const sourcePath = resolve(sourceDirectory, `${target.siteId}.json`);
-  const productPath = resolve(sourceDirectory, 'unselected-product.json');
-  const rootPath = resolve(root, 'unselected-apex/index.html');
-  await writeFile(leadPath, JSON.stringify([lead]));
-  await writeFile(productPath, JSON.stringify({ ecosystemType: 'PRODUCT', site: { id: 'unselected-product', domain: 'producto.unselected.example.test' } }));
-  await mkdir(resolve(root, 'unselected-apex'), { recursive: true });
-  await writeFile(rootPath, '<p>Unselected apex stays intact</p>');
-  if (ready) await writeFile(targetPath, JSON.stringify(target));
-  const jobs = createPublicationJobService({ sourceDirectory, outputDirectory: root, jobDirectory: resolve(root, '.jobs') });
-  const preview = createMasterSitesBusinessPreviewService({ listJobs: () => jobs.list() });
-  // Keep fresh server authority/guards real, but bind it to this fixture's job store.
-  t.mock.method(masterSitesBusinessPreviewService, 'getMeasurementAuthoritySnapshot', preview.getMeasurementAuthoritySnapshot);
-  const operations = createMasterSitesBusinessOperationStore({ directory: resolve(root, '.master-sites-business-operations') });
-  const effects = { hosting: 0, dns: 0, wakes: 0 };
-  const provisioner = createSubdomainProvisioningService({
-    storageDirectory: targets,
-    hostingerClient: { async ensure(domain, label) {
-      assert.equal(domain, 'partner.example.test'); assert.equal(label, 'negocio'); effects.hosting++;
-      return { state: 'CREATED', subdomain: { username: 'u12345', parent_domain: domain, subdomain: label, domain: 'negocio.partner.example.test', root_directory: target.remoteRoot } };
-    } },
-    dnsClient: { async ensureARecord(domain, host, ip) {
-      assert.equal(domain, 'partner.example.test'); assert.equal(host, target.publicHost); assert.equal(ip, '192.0.2.10'); effects.dns++;
-      return { state: 'CREATED', routingMode: 'DIRECT_A', record: { id: 'test-dns', type: 'A', name: host, content: ip, ttl: 300 } };
-    } },
-    readinessProbe: { dnsResolves: async () => true, httpsReady: async () => true }
-  });
-  const dependencies = {
-    outputDirectory: root, sourceDirectory, jobs, preview, operations,
-    provision: provisioner.provision, wake: async () => { effects.wakes++; }
-  };
-  const service = createMasterSitesBusinessCommandService(dependencies);
-  async function command(action: 'prepare' | 'publish' = 'publish') {
-    return {
-      requestId: randomUUID(), activationLeadId: id, templateId: 'ganomaster-business' as const,
-      expectedRevision: (await preview.getPartner(id)).reviewRevision,
-      confirmation: action === 'prepare' ? 'PREPARE_SELECTED_BUSINESS_TARGET' as const : 'PUBLISH_SELECTED_BUSINESS_TEMPLATE' as const
-    };
-  }
-  return { root, sourceDirectory, lead, target, leadPath, targetPath, sourcePath, productPath, rootPath, preview, operations, jobs, effects,
-    dependencies, service, command,
-    publishCommand: async () => ({ ...await command(), confirmation: 'PUBLISH_SELECTED_BUSINESS_TEMPLATE' as const, updateExisting: false }),
-    prepareCommand: async () => ({ ...await command('prepare'), confirmation: 'PREPARE_SELECTED_BUSINESS_TARGET' as const })
-  };
-}
-
+const id = businessFixtureId;
+const operator = businessFixtureOperator;
+const sha = businessFixtureSha;
+const fixture = createMasterSitesBusinessCommandFixture;
 // Removing the under-lock fresh revision check would generate stale commercial/identity data.
 test('revalidates_revision_entitlement_and_target_before_any_write', async (t) => {
   const f = await fixture(t);
@@ -321,26 +238,7 @@ test('completed_worker_target_progression_replays_current_and_current_noop_prese
   const command = await f.publishCommand();
   await f.service.publish(command, operator);
   // Real worker, leases and job transitions; only external publication/verification is modeled.
-  const worker = createPublicationJobWorker({ jobs: f.jobs, execution: { async execute(job, advance) {
-    await advance('PLANNING_PUBLICATION');
-    await advance('PUBLISHING');
-    const finalTarget = JSON.stringify({ ...f.target, publicationState: 'READY', updatedAt: new Date().toISOString() });
-    await writeFile(f.targetPath, finalTarget);
-    // Worker regeneration legitimately changes the local package timestamp/bytes.
-    await writeFile(resolve(f.root, f.target.siteId, 'app.js'), '// worker regenerated package');
-    const evidence = { packageHash: sha('verified-package'), capabilityHash: sha('capability'), planHash: sha('plan') };
-    const journal = JSON.stringify({
-      mode: 'APPLY_GUARDED_ECOSYSTEM_PUBLICATION', publicationJobId: job.id,
-      sourceHash: job.intent.sourceHash, initialTargetHash: job.intent.targetHash, finalTargetHash: sha(finalTarget),
-      publicHost: job.intent.publicHost, remoteRoot: f.target.remoteRoot, ...evidence,
-      appliedAt: new Date().toISOString(), verification: { passed: true }
-    });
-    const directory = resolve(process.env.PRODUCT_PAGE_PUBLICATION_JOURNAL_DIR!, job.intent.siteId);
-    await mkdir(directory, { recursive: true });
-    await writeFile(resolve(directory, 'test-journal.json'), journal);
-    await advance('VERIFYING');
-    return { ...evidence, journalHash: sha(journal) };
-  } } });
+  const worker = createBusinessFixtureWorker(f);
   assert.equal((await worker.runNext()).outcome, 'SUCCEEDED');
   assert.equal((await f.preview.getPartner(id)).partner.status, 'CURRENT');
   const replay = await f.service.publish(command, operator);
