@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import { test } from 'node:test';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
-import { fetchBusinessRead, sendBusinessCommand, BusinessDeliveryHttpError } from '../components/master-sites-business-delivery-api.ts';
+import { fetchBusinessRead, sendBusinessCommand, BusinessDeliveryHttpError, BusinessDeliveryUncertainError } from '../components/master-sites-business-delivery-api.ts';
 import { buildBusinessCommands, createBusinessDeliveryState, reduceBusinessDeliveryState } from '../components/master-sites-business-delivery-model.ts';
 import { createMasterSitesOperatorAuthorizer } from '../server/auth/masterSitesOperatorAuth.ts';
 import { createMasterSitesBusinessRouteHandlers } from '../server/services/masterSitesBusinessRouteHandlers.ts';
@@ -112,12 +112,26 @@ test('Business-only client read, explicit target, publish, durable worker, and f
   state = reduceBusinessDeliveryState(createBusinessDeliveryState(), { type: 'read', data: await fetchBusinessRead(fetcher) });
   assert.equal(state.data.partners[0].status, 'READY');
   const publish = selected(state, f.lead.id, 'publish');
-  const published = await sendBusinessCommand(publish.command, fetcher);
-  assert.equal(published.outcome, 'ENQUEUED');
-  assert.equal(published.job.status, 'QUEUED');
-  assert.equal(published.activationLeadId, f.lead.id);
-  assert.equal(published.publicHost, f.target.publicHost);
+  // The real handler commits, but the transport loses its accepted response.
+  let acceptedResponse;
+  const lostResponseFetcher = async (...args) => {
+    const response = await fetcher(...args);
+    assert.equal(response.status, 202);
+    acceptedResponse = await response.clone().json();
+    return Response.json({ error: 'TRANSPORT_RESPONSE_LOST' }, { status: 503 });
+  };
+  await assert.rejects(sendBusinessCommand(publish.command, lostResponseFetcher), BusinessDeliveryUncertainError);
+  assert.equal(acceptedResponse.outcome, 'ENQUEUED');
+  assert.equal(acceptedResponse.job.status, 'QUEUED');
+  state = reduceBusinessDeliveryState(publish.state, { type: 'uncertain', command: publish.command });
+  assert.equal(state.results[f.lead.id].status, 'uncertain');
+  assert.deepEqual(state.results[f.lead.id].command.body, publish.command.body);
+  assert.deepEqual(buildBusinessCommands(state, 'publish', randomUUID), []);
   assert.equal(generations, 1);
+  const [committedJob] = await f.jobs.list();
+  assert.ok(committedJob);
+  assert.equal(committedJob.status, 'QUEUED');
+  assert.equal(committedJob.id, acceptedResponse.job.id);
   assert.equal((await f.jobs.list()).length, 1);
   const queued = await fetchBusinessRead(fetcher);
   assert.equal(queued.partners[0].status, 'QUEUED');
@@ -130,10 +144,13 @@ test('Business-only client read, explicit target, publish, durable worker, and f
   assert.equal(source.distributor.purchaseUrl, undefined);
   assert.match(source.cta.primaryUrl, /^https:\/\/wa.me\/573101234567/);
 
-  // A lost HTTP response must be retried with the identical model-produced command.
-  const replay = await sendBusinessCommand(publish.command, fetcher);
-  assert.equal(replay.operationId, published.operationId);
-  assert.equal(replay.job.id, published.job.id);
+  const replay = await sendBusinessCommand(state.results[f.lead.id].command, fetcher);
+  assert.equal(replay.operationId, publish.command.body.requestId);
+  assert.equal(replay.operationId, acceptedResponse.operationId);
+  assert.equal(replay.activationLeadId, f.lead.id);
+  assert.equal(replay.publicHost, f.target.publicHost);
+  assert.equal(replay.outcome, 'ALREADY_SCHEDULED');
+  assert.equal(replay.job.id, committedJob.id);
   assert.equal(generations, 1);
   assert.equal((await f.jobs.list()).length, 1);
   assert.equal(await readFile(f.sourcePath, 'utf8'), sourceBytes);
