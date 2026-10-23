@@ -23,3 +23,7 @@ Archivos modificados: `app/web/components/master-site-management-view.tsx`; nuev
 ## Riesgos y follow-up
 
 Revisión independiente/CDX-20261023-001 y verificación de autorización Super Admin siguen siendo gates antes de merge/producción. No se regeneró ni publicó Claudia ni otro cliente. Claudia conserva una restricción operativa por medición durable aún no integrada; este frontend no implementa un bloqueo backend específico. El requestId incierto solo permanece en memoria mientras la vista siga montada: al volver a entrar se debe consultar primero el estado servidor. No hay follow-up frontend solicitado; la integración/revisión sí es obligatoria.
+
+## Corrección tras revisión independiente — ronda 1
+
+Commit frontend `cbf36d2`. Se corrigieron tres hallazgos: un GET anterior ya no puede restaurar acceso tras POST 401/403 ni borrar el gate de refresco tras POST 409; una respuesta de comando para otro `activationLeadId` se trata como incierta y conserva el requestId/cuerpo original para reintento explícito. Pruebas TDD API/model actualizadas: 19/19 pasan. ESLint enfocado: exit 0. QA Chrome con HTTP falso: carreras de GET retenido frente a POST 401/403/409, refresco posterior a 409 y resultado de otro partner con reintento exacto; exit 0. `git diff --check`: exit 0. No se repitió el build/global suite: el build previo reportado por integración fue exit 0 en `3510cac`; build de `cbf36d2` queda pendiente del controlador. Detalle y comandos exactos: `.superpowers/sdd/2026-10-20-business-master-sites-manual-delivery/task-5-report.md`.
