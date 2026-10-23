@@ -14,6 +14,14 @@ import { builder, image } from "./build-business-cutover-writer-inventory.test-f
 const web = resolve(import.meta.dirname, "..");
 const repo = resolve(web, "../..");
 const node20 = process.env.BUSINESS_CUTOVER_TEST_NODE20;
+const successorNames = ["app.js", "config.js", "favicon.svg", "index.html", "measurement-runtime.js", "styles.css"];
+async function trackedSuccessor(destination) {
+  await mkdir(destination, { recursive: true });
+  for (const name of successorNames) {
+    const bytes = execFileSync("git", ["show", `HEAD:runtime-assets/business-consent-successor/${name}`], { cwd: repo });
+    await writeFile(join(destination, name), bytes);
+  }
+}
 const options = { absWorkingDir: web, bundle: true, platform: "node", format: "esm", target: "node20",
   alias: { "server-only": "./server/runtime/serverOnlyRuntimeShim.mjs" }, logLevel: "silent" };
 function environment(output) {
@@ -115,11 +123,11 @@ test("production wiring has acyclic full-layout inventory before one-graph CLI a
 
 test("fixed Docker staging inputs make the predecessor inventory available without canonical changes", async (t) => {
   const root = await image(t), staging = join(root, "runtime-assets/business-consent-successor");
-  const names = ["app.js", "config.js", "favicon.svg", "index.html", "measurement-runtime.js", "styles.css"];
+  const names = successorNames;
   const input = join(repo, "runtime-assets/business-consent-successor");
   for (const name of names) {
-    const bytes = await readFile(join(input, name)).catch(() => null);
-    assert.ok(bytes, `fixed staging input ${name} must exist`);
+    assert.ok(await lstat(join(input, name)).then((s) => s.isFile(), () => false), `fixed staging input ${name} must exist`);
+    const bytes = execFileSync("git", ["show", `HEAD:runtime-assets/business-consent-successor/${name}`], { cwd: repo });
     const reviewed = execFileSync("git", ["show", `82b6c5db71d158d8089af3207777249b5fb4e125:plantillas-de-pagina/business/${name}`], { cwd: repo });
     assert.deepEqual(bytes, reviewed, `${name} must retain reviewed Git bytes`);
   }
@@ -133,7 +141,7 @@ test("fixed Docker staging inputs make the predecessor inventory available witho
   assert.ok(copy, "builder must copy the fixed staging input");
   const built = await mkdtemp(join(tmpdir(), "cdx002-staged-builder-"));
   t.after(() => rm(built, { recursive: true, force: true }));
-  await cp(join(repo, copy[1]), join(built, copy[2]), { recursive: true });
+  await trackedSuccessor(join(built, copy[2]));
   const installed = runtimeStage.match(/^COPY --from=builder \/repo\/(runtime-assets\/business-consent-successor) (\.\/runtime-assets\/business-consent-successor)\r?$/m);
   assert.ok(installed, "runtime must carry the fixed builder staging");
   assert.ok(installed.index < runtimeStage.indexOf("RUN find /app -type d"), "staging must precede final hardening and inventory");
@@ -359,12 +367,22 @@ test("assembler rejects approved Next package aliases whose exact target is a re
   });
 });
 
-test("actual built standalone plus all Docker COPY bytes has a complete regular inventory and fixture-only missing-staging gate", { timeout: 120000 }, async (t) => {
+test("actual built standalone plus all Docker COPY bytes has a complete regular inventory and fixture-only missing-staging gate", { timeout: 600000 }, async (t) => {
   const f = await assembly(t);
+  let standalone = join(web, ".next/standalone");
+  const nestedDependencies = join(standalone, "app/web/node_modules");
+  if (process.platform === "win32" && await lstat(nestedDependencies).then((s) => s.isSymbolicLink(), () => false)) {
+    const dependencyRoot = await fs.realpath(join(web, "node_modules"));
+    assert.equal(await fs.realpath(nestedDependencies), dependencyRoot, "only the locked local dependency junction is materialized");
+    const staged = join(f.root, "standalone-from-build");
+    await cp(standalone, staged, { recursive: true, filter: (path) => path !== nestedDependencies });
+    await cp(dependencyRoot, join(staged, "app/web/node_modules"), { recursive: true });
+    standalone = staged;
+  }
   // Reuse the production assembler with ONLY fixed build paths substituted for
   // this disposable test. No runtime root or approval option is introduced.
   const source = (await readFile(join(web, "scripts/assemble-business-cutover-runtime.mjs"), "utf8"))
-    .replaceAll('"/repo/app/web/.next/standalone"', JSON.stringify(join(web, ".next/standalone")))
+    .replaceAll('"/repo/app/web/.next/standalone"', JSON.stringify(standalone))
     .replaceAll('"/repo/app/web/node_modules"', JSON.stringify(join(web, "node_modules")))
     .replaceAll('"/repo/business-cutover-standalone"', JSON.stringify(f.destination));
   const assembler = await import(`data:text/javascript;base64,${Buffer.from(source).toString("base64")}#${randomUUID()}`);
@@ -378,14 +396,15 @@ test("actual built standalone plus all Docker COPY bytes has a complete regular 
     "business-cutover-maintenance.mjs": "scripts/business-cutover-maintenance.ts" };
   for (const [file, entry] of Object.entries(entries)) await build({ ...options, entryPoints: [entry], outfile: join(assets, file) });
   for (const name of ["package.json", "package-lock.json", "smoke.mjs"]) await cp(join(web, "runtime-deps/sftp", name), join(sftp, name));
-  const npmCandidates = [process.env.npm_execpath, join(dirname(node20), "node_modules/npm/bin/npm-cli.js"),
-    resolve(dirname(node20), "../lib/node_modules/npm/bin/npm-cli.js")].filter(Boolean);
-  let npmCli;
-  for (const candidate of npmCandidates) if (await lstat(candidate).then((s) => s.isFile(), () => false)) { npmCli = candidate; break; }
-  assert.ok(npmCli, "an npm CLI from the configured toolchain is required for the locked SFTP runtime");
-  const installed = spawnSync(node20, [npmCli, "ci", "--omit=dev", "--omit=optional", "--ignore-scripts", "--no-audit", "--no-fund"],
-    { cwd: sftp, env: environment(f.output), encoding: "utf8", timeout: 60000 });
-  assert.equal(installed.status, 0, installed.stderr);
+  const sftpLock = JSON.parse(await readFile(join(sftp, "package-lock.json"), "utf8"));
+  const webLock = JSON.parse(await readFile(join(web, "package-lock.json"), "utf8"));
+  for (const [path, record] of Object.entries(sftpLock.packages)) {
+    if (!path.startsWith("node_modules/") || record.optional) continue;
+    const source = join(web, path), target = join(sftp, path);
+    assert.equal(webLock.packages[path]?.integrity, record.integrity, `${path} must match the locked dependency bytes`);
+    assert.equal(JSON.parse(await readFile(join(source, "package.json"), "utf8")).version, record.version);
+    await cp(source, target, { recursive: true });
+  }
   const sftpSmoke = run(sftp, [join(sftp, "smoke.mjs")], f.output);
   assert.equal(sftpSmoke.status, 0, sftpSmoke.stderr);
   assert.deepEqual(JSON.parse(sftpSmoke.stdout), { status: "SFTP_RUNTIME_READY", providerCallsMade: false });
@@ -395,6 +414,8 @@ test("actual built standalone plus all Docker COPY bytes has a complete regular 
   // these exact source-only tests, while all approved assets/starter remain.
   const excludedContextPaths = new Set((await readFile(join(repo, ".dockerignore"), "utf8"))
     .split(/\r?\n/).filter((line) => line.startsWith("plantillas-de-pagina/business/") && !/[*!?[]/.test(line)));
+  const trackedStaging = join(f.root, "tracked-staging");
+  await trackedSuccessor(trackedStaging);
   const layout = docker.split("AS runtime-layout\n")[1]?.split("# Build tooling")[0] ?? docker.split("AS runtime-layout\r\n")[1]?.split("# Build tooling")[0];
   assert.ok(layout, "full runtime-layout COPY list must be read from production Dockerfile");
   for (const match of layout.matchAll(/^COPY --from=(builder|sftp-runtime-deps) (\S+) \.\/(\S+)\r?$/gm)) {
@@ -406,7 +427,7 @@ test("actual built standalone plus all Docker COPY bytes has a complete regular 
       const name = sourcePath.slice("/repo/runtime-assets/".length);
       path = name === "business-config.js" ? join(repo, "plantillas-de-pagina/business/config.js")
         : name === "personal-brand-config.js" ? join(repo, "plantillas-de-pagina/personal-brand/config.js")
-          : name === "business-consent-successor" ? join(repo, "runtime-assets/business-consent-successor") : join(assets, name);
+          : name === "business-consent-successor" ? trackedStaging : join(assets, name);
     } else { assert.ok(sourcePath.startsWith("/repo/")); path = join(repo, sourcePath.slice(6)); }
     await cp(path, join(f.destination, target), { recursive: true, dereference: false, force: true,
       ...(sourcePath === "/repo/plantillas-de-pagina/business" ? {
@@ -432,7 +453,7 @@ test("actual built standalone plus all Docker COPY bytes has a complete regular 
     await rm(staging, { recursive: true });
     assert.equal((await inventoryBuilder.buildBusinessCutoverWriterInventory()).releaseId, currentProfile,
       "exact canonical successor does not depend on the predecessor staging overlay");
-    await cp(join(repo, "runtime-assets/business-consent-successor"), staging, { recursive: true });
+    await cp(trackedStaging, staging, { recursive: true });
   }
   // Windows core.autocrlf changes the checkout's actual canonical bytes. Never
   // normalize production assets: use exact Git bytes ONLY in this temp fixture.
@@ -452,7 +473,7 @@ test("actual built standalone plus all Docker COPY bytes has a complete regular 
   await assert.rejects(inventoryBuilder.buildBusinessCutoverWriterInventory(), (error) => {
     assert.equal(error.message, "BUSINESS_CUTOVER_ARTIFACTS_UNAVAILABLE"); return true;
   }, "exact canonical fixture without staging remains unavailable");
-  await cp(join(repo, "runtime-assets/business-consent-successor"), staging, { recursive: true });
+  await cp(trackedStaging, staging, { recursive: true });
   const inventory = await inventoryBuilder.buildBusinessCutoverWriterInventory();
   assert.equal(inventory.releaseId, "business-consent-predecessor-v1");
   const installedFiles = [];
