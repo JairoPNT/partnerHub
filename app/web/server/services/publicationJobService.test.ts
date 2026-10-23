@@ -185,13 +185,13 @@ test("Business enqueue APIs fail closed while the fixed master-refresh claim exi
   await writeFile(resolve(claimDirectory, "owner.json"), "{\"ownerToken\":\"must-not-leak\"\n");
 
   await assert.rejects(fx.service.enqueue({ siteId: fx.siteId }, "operator"), (error: unknown) => {
-    assert.equal((error as Error).message, "PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS");
+    assert.equal((error as Error).message, "BUSINESS_SITE_BUSY");
     assert.doesNotMatch((error as Error).message, /must-not-leak/);
     return true;
   });
   await assert.rejects(
     fx.service.enqueueReviewed({ siteId: fx.siteId }, "operator", preview.intentHash),
-    /PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS/
+    /BUSINESS_SITE_BUSY/
   );
   assert.deepEqual(await fx.service.list(), []);
 });
@@ -244,7 +244,7 @@ test("a Business job already RUNNING is not changed when enqueue observes the re
   const before = await readFile(resolve(fx.jobs, `${job.id}.json`), "utf8");
   await mkdir(resolve(fx.output, ".master-package-claims", "ganomaster-business"), { recursive: true });
 
-  await assert.rejects(fx.service.enqueue({ siteId: fx.siteId }, "operator"), /PUBLICATION_JOB_BUSINESS_MASTER_REFRESH_IN_PROGRESS/);
+  await assert.rejects(fx.service.enqueue({ siteId: fx.siteId }, "operator"), /BUSINESS_SITE_BUSY/);
 
   assert.equal(await readFile(resolve(fx.jobs, `${job.id}.json`), "utf8"), before);
 });

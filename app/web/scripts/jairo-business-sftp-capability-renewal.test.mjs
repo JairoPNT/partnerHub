@@ -34,6 +34,7 @@ async function fixture({ verifiedAt = "2026-08-27T12:00:00.000Z" } = {}) {
     ownerKey: "f403f29e-95c8-4825-9320-967376443020",
     siteId: "jairo-pinto-business",
     ecosystemType: "BUSINESS",
+    rootEcosystemType: "PERSONAL_BRAND",
     baseDomain: "jairopinto.pro",
     publicHost: "negocio.jairopinto.pro",
     provisioningState: "READY",
@@ -157,6 +158,24 @@ test("PREVIEW blocks a capability hash different from the reviewed evidence", as
   const result = await planExpiredSftpCapabilityRenewal({ ...fx, expectedCapabilityHash: "0".repeat(64) });
   assert.equal(result.blocked, true);
   assert.ok(result.blockedReasons.includes("SFTP_CAPABILITY_HASH_DRIFT"));
+});
+
+test("PREVIEW rejects an unsupported target root even when the manifest hash matches", async () => {
+  const fx = await fixture();
+  const targetPath = resolve(fx.sourceDirectory, ".publishing-targets", "jairo-pinto-business.json");
+  const target = JSON.parse(await readFile(targetPath, "utf8"));
+  target.rootEcosystemType = "UNRECOGNIZED";
+  const targetBytes = json(target);
+  await writeFile(targetPath, targetBytes);
+  const manifestPath = resolve(fx.inputDirectory, "sftp-probe-manifest.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  manifest.allowlist[0].expectedTargetHash = sha256(targetBytes);
+  await writeFile(manifestPath, json(manifest));
+  const result = await planExpiredSftpCapabilityRenewal(fx);
+  assert.equal(result.blocked, true);
+  assert.ok(result.blockedReasons.includes("SFTP_PROBE_PREVIEW_BLOCKED:TARGET_IDENTITY_OR_STATE_INVALID"));
+  assert.equal(result.safety.providerCallsMade, false);
+  assert.equal(await readFile(fx.capabilityPath, "utf8"), fx.capabilityBytes);
 });
 
 test("APPLY requires exact mode, confirmation and plan hash", async () => {
