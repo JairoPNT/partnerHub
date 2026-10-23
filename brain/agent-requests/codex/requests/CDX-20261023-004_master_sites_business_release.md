@@ -1,5 +1,5 @@
 # CDX-20261023-004 — Release verified Master Sites Business
-Status: IN_PROGRESS. Owner: Codex integration/release. User2026-10-23 explicitly requests resolving verification blockers, integrating and deploying Master Sites Business; no regeneration of Claudia or change to its measurement.
+Status: SOURCE_APPROVED_BLOCKED_LIVE_PREFLIGHT. Owner: Codex integration/release. User2026-10-23 explicitly requests resolving verification blockers, integrating and deploying Master Sites Business; no regeneration of Claudia or change to its measurement. Verification76/76+202/202/lint/Node20build passes, finalsource review approved, PR246draft created; actual queue/barrier evidence required before authorized mainmerge/autodeploy. No production publication yet. See CDX004 RELEASE report.
 Branch codex/CDX-20261023-004-master-sites-business-release starts at fresh origin/main5fc239e5caf970d04536b2248fd1109ffbbb5308 and composes reviewed001 source a0906bd. Native worktree master-sites-business-dashboard reused, dirty project root untouched.
 Plan docs/superpowers/plans/2026-10-23-master-sites-business-release-verification.md; approved product spec from2026-10-20 unchanged.
 Dependencies: CDX001 reviewed dashboard;002 contract fixture repair;003 runtime packaging verification. Root only integrates accepted commits. Tasks002/003 separatebranches/worktrees and disjointtests.

@@ -1,5 +1,5 @@
 # CDX-20261023-004 — Master Sites Business release
-Estado: SOURCE_APPROVED_PENDING_LIVE_PREFLIGHT. Revisión final de rama aprobada sin Critical/Important de código; el preflight real bloquea merge/autodeploy. Se prepara PR draft, no despliegue todavía. Owner: Codex integrador; interfaz de AGR-20261020-001 implementada/revisada previamente.
+Estado: SOURCE_APPROVED_BLOCKED_LIVE_PREFLIGHT. Revisión final aprobada sin Critical/Important de código; el preflight real bloquea merge/autodeploy. **PR draft #246: https://github.com/JairoPNT/partnerHub/pull/246**, base main, MERGEABLE, sin auto-merge. No fusionado ni desplegado por este ticket. Owner: Codex integrador; interfaz de AGR-20261020-001 implementada/revisada previamente.
 ## Alcance
 Entrega manual de Negocio desde Master Sites: seleccionar partner, preparar destino y publicar mediante backend existente, con confirmaciones individuales, revisión fresca, idempotencia, reintento incierto exacto y estados reales. No se reimplementa publicador. Producto/Marca preservados; no se regenera Claudia ni se modifican sus archivos/medición. Sin DNS, campañas, credenciales ni cambios de autorización.
 Branch codex/CDX-20261023-004-master-sites-business-release, base origin/main5fc239e5caf970d04536b2248fd1109ffbbb5308. Compone fuente revisada001a0906bd con002 y003 aceptados por revisión independiente; sourcehead a2071987f7d97a2efd225a7f0335c02c099697a8 antes de documentación final.
@@ -48,3 +48,11 @@ Revisión independiente final de5fc239e..9f4bd7d: **código Yes /0Critical0Impor
 - UniversoTypeScript: Nextproductivo pasa; tsc irrestricto de testsajenos no se revalidó, no se vende verde.
 
 El PR puede guardarse en draft sin reiniciar main; no activar auto-merge ni deploy manual por esta preparación. Se preservan ramas/worktrees/evidencia hasta resolver el gate operacional. Progreso/cifras financieras sin cuantificar permanecen null en statusJSON local.
+
+## Corte estable — espera de lectura productiva
+
+PR246 creado y adjuntado a este chat; rama remota verificada. Rootsource se mantiene exacta a a207198 en app/web; cambios posteriores solo docs/EOF. `git diff --check` de la rama completa pasa tras corregir cuatro blancos de fin de documento, sin reabrir código ni alterar evidencias. Main sigue5fc239e en última lectura remota, no se configuró ni inició deploy.
+
+Comparación final de **esta fase sin deploy** a2026-10-23T16:36:26.292Z: seis assetsClaudia GET200, tamaños/SHA256 idénticos al baseline16:04:07.666Z, `unchanged:true`. No es una comparación post-deployment: deberá repetirse después del corte autorizado. No SDKs/eventos/contactos ejecutados.
+
+Único bloqueo actual: falta evidencia real reciente de STATUS/cola. Se envió solicitud de dos comandos read-only en /app sh; sin respuesta todavía en este corte. No falta una nueva aprobación de diseño, plan o PR: al recibir OPEN/sinmigración y cola válida sinactivos, se puede completar la fusión autorizada y comprobar EasyPanel/GETSuperAdmin, conservando exclusión de Claudia. Si falla acceso o hay jobsactivos, detener sin mutarlos. Script local de apoyo `.superpowers/sdd/2026-10-23-master-sites-business-release/production-preflight.sh`.
