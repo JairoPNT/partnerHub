@@ -72,5 +72,6 @@ export async function sendBusinessCommand(command: BusinessCommand, fetcher: typ
   assertResponse(response, value);
   const parsed = masterSitesBusinessCommandResultSchema.safeParse(value);
   if (!parsed.success) throw new BusinessDeliveryUncertainError();
+  if (parsed.data.activationLeadId !== command.body.activationLeadId) throw new BusinessDeliveryUncertainError();
   return parsed.data;
 }

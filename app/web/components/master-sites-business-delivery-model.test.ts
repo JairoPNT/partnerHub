@@ -186,3 +186,13 @@ test("unchanged polling read preserves CURRENT row update consent", () => {
   assert.deepEqual(state.updateConfirmedIds, [A]);
   assert.equal(buildBusinessCommands(state, "publish", () => B).length, 1);
 });
+
+test("a foreign partner result never marks the requested row successful", () => {
+  let state = reduceBusinessDeliveryState(createBusinessDeliveryState(), { type: "read", data: read([A]) });
+  state = reduceBusinessDeliveryState(state, { type: "toggle", id: A });
+  const command = buildBusinessCommands(state, "publish", () => B)[0];
+  state = reduceBusinessDeliveryState(state, { type: "result", command, result: { operationId: A, activationLeadId: B, siteId: "wrong-business", publicHost: "negocio.wrong.example", outcome: "ENQUEUED", job: null, blockedReasons: [] } });
+  assert.equal(state.results[A].status, "uncertain");
+  assert.equal(state.results[A].result, undefined);
+  assert.deepEqual(state.results[A].command.body, command.body);
+});

@@ -37,3 +37,10 @@ test("POST 5xx, non-JSON, and malformed 2xx results are uncertain even when HTTP
     await assert.rejects(sendBusinessCommand({ action: "prepare", body }, (async () => response) as typeof fetch), BusinessDeliveryUncertainError);
   }
 });
+
+test("schema-valid response for another activation lead remains uncertain with original command", async () => {
+  const body = { requestId: id, activationLeadId: id, templateId: "ganomaster-business" as const, expectedRevision: revision, confirmation: "PUBLISH_SELECTED_BUSINESS_TEMPLATE" as const, updateExisting: false };
+  const wrong = { operationId: id, activationLeadId: "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb", siteId: "wrong-business", publicHost: "negocio.wrong.example", outcome: "ENQUEUED", job: null, blockedReasons: [] };
+  await assert.rejects(sendBusinessCommand({ action: "publish", body }, (async () => Response.json(wrong, { status: 202 })) as typeof fetch), BusinessDeliveryUncertainError);
+  assert.equal(body.activationLeadId, id);
+});

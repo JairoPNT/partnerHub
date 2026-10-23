@@ -49,6 +49,7 @@ export function MasterSitesBusinessDeliveryView() {
   const mounted = useRef(false);
   const refreshRef = useRef<(() => void) | null>(null);
   const revalidateRef = useRef<(() => void) | null>(null);
+  const invalidateReadsRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     mounted.current = true;
@@ -81,6 +82,14 @@ export function MasterSitesBusinessDeliveryView() {
     };
     refreshRef.current = () => void load(true);
     revalidateRef.current = () => void load(false);
+    invalidateReadsRef.current = () => {
+      sequence++;
+      controller?.abort();
+      controller = null;
+      if (timer) clearTimeout(timer);
+      timer = null;
+      lastRead = null;
+    };
     void load(true);
     return () => {
       mounted.current = false;
@@ -89,6 +98,7 @@ export function MasterSitesBusinessDeliveryView() {
       if (timer) clearTimeout(timer);
       refreshRef.current = null;
       revalidateRef.current = null;
+      invalidateReadsRef.current = null;
     };
   }, []);
 
@@ -117,12 +127,14 @@ export function MasterSitesBusinessDeliveryView() {
         if (!mounted.current) return;
         if (error instanceof BusinessDeliveryHttpError) {
           if (error.status === 401 || error.status === 403) {
+            invalidateReadsRef.current?.();
             dispatch({ type: "error", error: error.message, access: error.status === 401 ? "unauthorized" : "forbidden" });
             conflict = true;
             break;
           }
           dispatch({ type: "failed", command, error: error.message });
           if (error.status === 409) {
+            invalidateReadsRef.current?.();
             dispatch({ type: "conflict", id: command.body.activationLeadId });
             conflict = true;
             break;
@@ -150,6 +162,7 @@ export function MasterSitesBusinessDeliveryView() {
     } catch (error) {
       if (!mounted.current) return;
       if (error instanceof BusinessDeliveryHttpError) {
+        if (error.status === 409 || error.status === 401 || error.status === 403) invalidateReadsRef.current?.();
         dispatch({ type: "failed", command, error: error.message });
         if (error.status === 409) dispatch({ type: "conflict", id });
         if (error.status === 401 || error.status === 403) dispatch({ type: "error", error: error.message, access: error.status === 401 ? "unauthorized" : "forbidden" });

@@ -105,6 +105,9 @@ export function reduceBusinessDeliveryState(state: BusinessDeliveryState, event:
     case "closeReview":
       return { ...state, review: null };
     case "result": {
+      if (event.result.activationLeadId !== event.command.body.activationLeadId) {
+        return reduceBusinessDeliveryState(state, { type: "uncertain", command: event.command });
+      }
       const success = !["BLOCKED", "RETRY_REQUIRED"].includes(event.result.outcome);
       return {
         ...state,
