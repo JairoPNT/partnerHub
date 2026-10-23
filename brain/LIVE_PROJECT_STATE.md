@@ -4,6 +4,12 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Reanudación — 2026-10-22
 
+### CDX005 autorizado — compatibilidad histórica en revisión (prevalece)
+
+Jairo autorizó corregir lectura de inventario con pruebas/revisión y continuar hasta publicar soloClaudia, sin editar/publicar otros sitios ni DNS/campañas. Fuente005f3daf37950967701c96a95a6d17cf716165a6017 sobre main2447b6567a:17líneas en schema de identidad para omisión realProduct histórico, sin coerción de valores explícitos inválidos ni Business/Brand sin tipo. Tests233total232PASS0fail1Windows-symlinkskip, RED previo3fallos esperados y GREEN67/67; Node20build39/tipos exit0 ylint0 comprobados. Fixture de ruta desactualizado se alineó tras reproducir mismo500 enBASE; no ruta/auth/guard cambiados. Build35warnings heredados y harnesswarnings se conservan.
+
+Revisión de tarea independiente en curso, no merge/deploy/publicación005 todavía. Baseline hashes de otras32fuentes/92archivos de paquetes en operations005 para demostrar no mutación. No repetir master/cutover003 ya confirmadoOPEN. Después review/main/deploy usar generador/worker existentes soloClaudia y verificar público. Informe005 registra límites, dos decisiones acotadas y evidencias; no nueva aprobación del mismo alcance requerida.
+
 ### Corte productivo confirmado y bloqueo de entrega — actualización posterior que prevalece
 
 PR244 integra235 y está fusionado en main `7b6567aba8e1445e67b989014384cff60714d40b`; los inputsDocker son idénticos a fuente revisada8375c15. EasyPanel desplegó imagen real `5a1918bbfca1e29e2d49e8f1653a7720f199628fc0896ddd893446b0af8d3832`, réplica f71f585412a9; anterior e777 terminada143. Inventario físico completo2645 exacto, perfilSUCCESSOR, Node20.20.2/Next16.4.1/Sharp0.35.5deduplicado/native roundtrip correctos. No repetir004/003/011 ni solicitar otra aprobación de su corte.
