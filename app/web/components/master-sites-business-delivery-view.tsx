@@ -5,7 +5,7 @@ import { AlertCircle, CheckCircle2, Clock3, ExternalLink, RefreshCw, ShieldCheck
 import type { MasterSitesBusinessPartner, MasterSitesBusinessReadResponse } from "@/shared/master-sites-business-contract";
 import { BusinessDeliveryHttpError, fetchBusinessRead, sendBusinessCommand } from "./master-sites-business-delivery-api";
 import {
-  buildBusinessCommands, businessPollingDelay, createBusinessDeliveryState,
+  buildBusinessCommands, businessContinuationAction, businessPollingDelay, createBusinessDeliveryState,
   reduceBusinessDeliveryState, safeBusinessPreviewUrl
 } from "./master-sites-business-delivery-model";
 import type { BusinessAction, BusinessCommand } from "./master-sites-business-delivery-model";
@@ -63,11 +63,12 @@ export function MasterSitesBusinessDeliveryView() {
       const current = ++sequence;
       controller = new AbortController();
       if (manual) dispatch({ type: "loading", clear: true });
+      dispatch({ type: "readStarted", requestId: current });
       try {
         const data = await fetchBusinessRead(fetch, controller.signal);
         if (!mounted.current || current !== sequence) return;
         lastRead = data;
-        dispatch({ type: "read", data });
+        dispatch({ type: "read", data, requestId: current });
         const delay = businessPollingDelay(data, 0);
         if (delay !== null) timer = setTimeout(() => void load(false), delay);
       } catch (error) {
@@ -258,8 +259,15 @@ export function MasterSitesBusinessDeliveryView() {
             {item.result?.blockedReasons.map((reason) => <p key={reason} className="mt-1 text-rose-800">{reasonLabel(reason)}</p>)}
             {item.status === "uncertain" && <button type="button" disabled={Boolean(repeating) || submitting || state.access === "forbidden" || state.access === "unauthorized"} onClick={() => void retryUncertain(id, item.command)} className="mt-3 min-h-11 rounded-xl border border-amber-400 px-4 font-semibold text-amber-950 hover:bg-amber-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-amber-700 disabled:opacity-50">Reintentar solo esta solicitud</button>}
             {item.status === "failed" && !state.needsRefresh && <button type="button" onClick={() => dispatch({ type: "clearResult", id })} className="mt-3 min-h-11 rounded-xl border border-slate-300 px-4 font-semibold hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600">Volver a seleccionar tras revisión</button>}
+            {businessContinuationAction(state, id) && <button type="button" disabled={submitting || Boolean(repeating)} onClick={() => dispatch({ type: "continue", id })} className="mt-3 min-h-11 rounded-xl border border-indigo-300 px-4 font-semibold text-indigo-900 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-indigo-600 disabled:opacity-50">{item.command.action === "prepare" ? "Habilitar nueva preparación" : partner?.status === "CURRENT" ? "Habilitar actualización" : "Habilitar nueva publicación"}</button>}
           </div>;
         })}</div>
+      </section>}
+      {Object.keys(state.history).length > 0 && <section className="rounded-3xl border border-slate-200 bg-white p-5 text-sm sm:p-7" aria-label="Operaciones anteriores">
+        <h2 className="font-semibold text-slate-900">Operaciones anteriores</h2>
+        <ul className="mt-2 space-y-1 text-slate-600">{Object.entries(state.history).flatMap(([id, items]) => items.map((item, index) => <li key={`${id}-${index}`}>
+          {state.data?.partners.find((row) => row.activationLeadId === id)?.displayName ?? "Partner"}: {item.result ? OUTCOME[item.result.outcome] : item.status === "failed" ? "No completado" : "Respuesta no recibida"}
+        </li>))}</ul>
       </section>}
       <p className="flex items-start gap-2 text-xs leading-5 text-slate-600"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" />"En cola" no significa publicado. El estado "Publicado y verificado" proviene únicamente de la revisión del servidor.</p>
     </div>

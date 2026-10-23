@@ -4,6 +4,7 @@ import {
   createBusinessDeliveryState,
   reduceBusinessDeliveryState,
   buildBusinessCommands,
+  businessContinuationAction,
   safeBusinessPreviewUrl,
   businessPollingDelay
 } from "./master-sites-business-delivery-model.ts";
@@ -195,4 +196,91 @@ test("a foreign partner result never marks the requested row successful", () => 
   assert.equal(state.results[A].status, "uncertain");
   assert.equal(state.results[A].result, undefined);
   assert.deepEqual(state.results[A].command.body, command.body);
+});
+
+test("pending preparation needs a later authoritative read and explicit continuation before a new command", () => {
+  const pending = read([A]);
+  pending.partners[0].status = "TARGET_PENDING";
+  pending.partners[0].canPrepareTarget = true;
+  pending.partners[0].canPublish = false;
+  let state = reduceBusinessDeliveryState(createBusinessDeliveryState(), { type: "read", data: pending });
+  state = reduceBusinessDeliveryState(state, { type: "toggle", id: A });
+  const first = buildBusinessCommands(state, "prepare", () => A)[0];
+  state = reduceBusinessDeliveryState(state, { type: "readStarted", requestId: 1 });
+  state = reduceBusinessDeliveryState(state, { type: "result", command: first, result: { operationId: A, activationLeadId: A, siteId: "partner-0-business", publicHost: "negocio.partner0.example", outcome: "TARGET_PENDING", job: null, blockedReasons: [] } });
+  assert.equal(businessContinuationAction(state, A), null);
+  state = reduceBusinessDeliveryState(state, { type: "continue", id: A });
+  assert.deepEqual(state.selectedIds, []);
+  state = reduceBusinessDeliveryState(state, { type: "read", data: structuredClone(pending), requestId: 1 });
+  assert.equal(businessContinuationAction(state, A), null);
+  state = reduceBusinessDeliveryState(state, { type: "readStarted", requestId: 2 });
+  state = reduceBusinessDeliveryState(state, { type: "read", data: structuredClone(pending), requestId: 2 });
+  assert.equal(businessContinuationAction(state, A), "prepare");
+  state = reduceBusinessDeliveryState(state, { type: "continue", id: A });
+  assert.deepEqual(state.selectedIds, []);
+  assert.equal(state.history[A][0].command.body.requestId, A);
+  state = reduceBusinessDeliveryState(state, { type: "toggle", id: A });
+  const second = buildBusinessCommands(state, "prepare", () => B)[0];
+  assert.equal(second.body.requestId, B);
+  assert.equal(second.body.expectedRevision, revision);
+});
+
+test("failed or cancelled queued publication requires fresh retry; successful sibling stays locked", () => {
+  for (const terminal of ["FAILED", "CANCELLED"] as const) {
+    let state = reduceBusinessDeliveryState(createBusinessDeliveryState(), { type: "read", data: read() });
+    state = reduceBusinessDeliveryState(state, { type: "toggle", id: A });
+    state = reduceBusinessDeliveryState(state, { type: "toggle", id: B });
+    const [first, sibling] = buildBusinessCommands(state, "publish", () => A);
+    for (const command of [first, sibling]) state = reduceBusinessDeliveryState(state, { type: "result", command, result: { operationId: A, activationLeadId: command.body.activationLeadId, siteId: "partner-business", publicHost: "negocio.partner.example", outcome: "ENQUEUED", job: null, blockedReasons: [] } });
+    const fresh = read();
+    fresh.partners[0].status = "FAILED";
+    fresh.partners[0].currentJob = { id: revision, status: terminal, phase: "COMPLETE", attemptCount: 1, updatedAt: "2026-10-23T00:00:00.000Z" };
+    fresh.partners[0].reviewRevision = "c".repeat(64);
+    state = reduceBusinessDeliveryState(state, { type: "readStarted", requestId: 2 });
+    state = reduceBusinessDeliveryState(state, { type: "read", data: fresh, requestId: 2 });
+    assert.equal(businessContinuationAction(state, A), "publish");
+    assert.equal(businessContinuationAction(state, B), null);
+    state = reduceBusinessDeliveryState(state, { type: "continue", id: A });
+    state = reduceBusinessDeliveryState(state, { type: "continue", id: B });
+    state = reduceBusinessDeliveryState(state, { type: "toggle", id: A });
+    state = reduceBusinessDeliveryState(state, { type: "toggle", id: B });
+    const commands = buildBusinessCommands(state, "publish", () => B);
+    assert.equal(commands.length, 1);
+    assert.equal(commands[0].body.activationLeadId, A);
+    assert.equal(commands[0].body.requestId, B);
+    assert.equal(commands[0].body.expectedRevision, "c".repeat(64));
+    assert.equal(state.results[B].status, "success");
+  }
+});
+
+test("completed CURRENT can be deliberately reopened but still requires row-specific update consent", () => {
+  let state = reduceBusinessDeliveryState(createBusinessDeliveryState(), { type: "read", data: read([A]) });
+  state = reduceBusinessDeliveryState(state, { type: "toggle", id: A });
+  const first = buildBusinessCommands(state, "publish", () => A)[0];
+  state = reduceBusinessDeliveryState(state, { type: "result", command: first, result: { operationId: A, activationLeadId: A, siteId: "partner-0-business", publicHost: "negocio.partner0.example", outcome: "ENQUEUED", job: null, blockedReasons: [] } });
+  const current = read([A]);
+  current.partners[0].status = "CURRENT";
+  state = reduceBusinessDeliveryState(state, { type: "readStarted", requestId: 3 });
+  state = reduceBusinessDeliveryState(state, { type: "read", data: current, requestId: 3 });
+  assert.equal(businessContinuationAction(state, A), "publish");
+  state = reduceBusinessDeliveryState(state, { type: "continue", id: A });
+  state = reduceBusinessDeliveryState(state, { type: "toggle", id: A });
+  assert.deepEqual(buildBusinessCommands(state, "publish", () => B), []);
+  state = reduceBusinessDeliveryState(state, { type: "confirmUpdate", id: A, checked: true });
+  const second = buildBusinessCommands(state, "publish", () => B)[0];
+  assert.equal(second.body.requestId, B);
+  assert.equal("updateExisting" in second.body && second.body.updateExisting, true);
+});
+
+test("uncertain command cannot be continued or replaced after a fresh read", () => {
+  let state = reduceBusinessDeliveryState(createBusinessDeliveryState(), { type: "read", data: read([A]) });
+  state = reduceBusinessDeliveryState(state, { type: "toggle", id: A });
+  const command = buildBusinessCommands(state, "publish", () => A)[0];
+  state = reduceBusinessDeliveryState(state, { type: "uncertain", command });
+  state = reduceBusinessDeliveryState(state, { type: "readStarted", requestId: 4 });
+  state = reduceBusinessDeliveryState(state, { type: "read", data: read([A]), requestId: 4 });
+  state = reduceBusinessDeliveryState(state, { type: "continue", id: A });
+  assert.equal(businessContinuationAction(state, A), null);
+  assert.deepEqual(state.results[A].command.body, command.body);
+  assert.deepEqual(buildBusinessCommands(state, "publish", () => B), []);
 });

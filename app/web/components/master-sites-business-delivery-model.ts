@@ -15,6 +15,7 @@ export type BusinessRowResult = {
   command: BusinessCommand;
   result?: MasterSitesBusinessCommandResult;
   error?: string;
+  acceptedReadStart?: number;
 };
 export type BusinessDeliveryState = {
   data: MasterSitesBusinessReadResponse | null;
@@ -26,12 +27,16 @@ export type BusinessDeliveryState = {
   selectionError: string | null;
   review: { action: BusinessAction; ids: string[]; templateRevision: string } | null;
   results: Record<string, BusinessRowResult>;
+  history: Record<string, BusinessRowResult[]>;
+  latestReadStarted: number;
+  latestReadCompleted: number;
   needsRefresh: boolean;
 };
 
 export type BusinessDeliveryEvent =
   | { type: "loading"; clear?: boolean }
-  | { type: "read"; data: MasterSitesBusinessReadResponse }
+  | { type: "readStarted"; requestId: number }
+  | { type: "read"; data: MasterSitesBusinessReadResponse; requestId?: number }
   | { type: "error"; error: string; access?: BusinessDeliveryState["access"] }
   | { type: "toggle"; id: string }
   | { type: "confirmUpdate"; id: string; checked: boolean }
@@ -41,19 +46,36 @@ export type BusinessDeliveryEvent =
   | { type: "failed"; command: BusinessCommand; error: string }
   | { type: "uncertain"; command: BusinessCommand }
   | { type: "conflict"; id: string }
-  | { type: "clearResult"; id: string };
+  | { type: "clearResult"; id: string }
+  | { type: "continue"; id: string };
 
 export function createBusinessDeliveryState(): BusinessDeliveryState {
   return {
     data: null, loading: false, error: null, access: "unknown", selectedIds: [],
-    updateConfirmedIds: [], selectionError: null, review: null, results: {}, needsRefresh: false
+    updateConfirmedIds: [], selectionError: null, review: null, results: {}, history: {},
+    latestReadStarted: 0, latestReadCompleted: 0, needsRefresh: false
   };
+}
+
+export function businessContinuationAction(state: BusinessDeliveryState, id: string): BusinessAction | null {
+  const receipt = state.results[id];
+  const partner = state.data?.partners.find((item) => item.activationLeadId === id);
+  if (!receipt || receipt.status !== "success" || receipt.acceptedReadStart === undefined
+    || state.latestReadCompleted <= receipt.acceptedReadStart || !partner?.reviewRevision
+    || !state.data?.template.available || state.access !== "granted" || state.loading || state.needsRefresh) return null;
+  if (receipt.command.action === "prepare" && receipt.result?.outcome === "TARGET_PENDING"
+    && ["TARGET_PENDING", "TARGET_REQUIRED"].includes(partner.status) && partner.canPrepareTarget) return "prepare";
+  if (receipt.command.action === "publish" && ["ENQUEUED", "ALREADY_SCHEDULED", "ALREADY_CURRENT"].includes(receipt.result?.outcome ?? "")
+    && ["FAILED", "CURRENT"].includes(partner.status) && partner.canPublish) return "publish";
+  return null;
 }
 
 export function reduceBusinessDeliveryState(state: BusinessDeliveryState, event: BusinessDeliveryEvent): BusinessDeliveryState {
   switch (event.type) {
     case "loading":
       return { ...state, loading: true, error: null, ...(event.clear ? { data: null, selectedIds: [], updateConfirmedIds: [], review: null } : {}) };
+    case "readStarted":
+      return { ...state, latestReadStarted: Math.max(state.latestReadStarted, event.requestId) };
     case "read": {
       const known = new Set(event.data.partners.map((partner) => partner.activationLeadId));
       const selectionStable = state.data?.template.revision === event.data.template.revision
@@ -68,6 +90,7 @@ export function reduceBusinessDeliveryState(state: BusinessDeliveryState, event:
       const reviewStable = selectionStable && state.review;
       return {
         ...state, data: event.data, loading: false, error: null, access: "granted", needsRefresh: false,
+        latestReadCompleted: Math.max(state.latestReadCompleted, event.requestId ?? 0),
         selectedIds: selectionStable ? state.selectedIds.filter((id) => {
           if (!known.has(id)) return false;
           const result = state.results[id];
@@ -80,7 +103,9 @@ export function reduceBusinessDeliveryState(state: BusinessDeliveryState, event:
     case "error":
       return {
         ...createBusinessDeliveryState(), error: event.error, access: event.access ?? "unknown",
-        results: event.access === "forbidden" || event.access === "unauthorized" ? {} : state.results
+        results: event.access === "forbidden" || event.access === "unauthorized" ? {} : state.results,
+        history: event.access === "forbidden" || event.access === "unauthorized" ? {} : state.history,
+        latestReadStarted: state.latestReadStarted, latestReadCompleted: state.latestReadCompleted
       };
     case "toggle": {
       const partner = state.data?.partners.find((item) => item.activationLeadId === event.id);
@@ -113,7 +138,8 @@ export function reduceBusinessDeliveryState(state: BusinessDeliveryState, event:
         ...state,
         needsRefresh: state.needsRefresh || !success,
         results: { ...state.results, [event.command.body.activationLeadId]: {
-          status: success ? "success" : "failed", command: event.command, result: event.result
+          status: success ? "success" : "failed", command: event.command, result: event.result,
+          acceptedReadStart: success ? state.latestReadStarted : undefined
         } },
         selectedIds: success ? state.selectedIds.filter((id) => id !== event.command.body.activationLeadId) : state.selectedIds
       };
@@ -127,8 +153,14 @@ export function reduceBusinessDeliveryState(state: BusinessDeliveryState, event:
     case "clearResult": {
       const results = { ...state.results };
       delete results[event.id];
-      return { ...state, results };
+      return { ...state, results, history: state.results[event.id]
+        ? { ...state.history, [event.id]: [...(state.history[event.id] ?? []), state.results[event.id]] }
+        : state.history };
     }
+    case "continue":
+      return businessContinuationAction(state, event.id)
+        ? reduceBusinessDeliveryState(state, { type: "clearResult", id: event.id })
+        : state;
   }
 }
 
