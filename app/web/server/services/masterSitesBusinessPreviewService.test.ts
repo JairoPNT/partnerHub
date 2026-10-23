@@ -300,6 +300,162 @@ test('ready_target_is_not_current_without_matching_verified_journal', async () =
   ];
   assert.equal((await service.getPartner(id)).partner.status, 'READY');
 });
+
+test('omitted_legacy_product_type_preserves_business_authority_without_mutating_sources', async () => {
+  for (const domain of ['legacy.pro', 'producto.legacy.pro', undefined]) {
+    const { state, service, target, lead } = fixture();
+    lead.onboardingData.analyticsMeasurementId = 'G-LEGACYFIXTURE';
+    state.targets = [{ siteId: target.siteId, value: target, hash: hash('target') }];
+    const legacy = Object.freeze({
+      site: Object.freeze({ id: 'legacy', ...(domain ? { domain } : {}) }),
+      hero: Object.freeze({ desktop: 'https://images.example/legacy.webp' })
+    });
+    const bytes = JSON.stringify(legacy);
+    const entry = Object.freeze({ siteId: 'legacy', value: legacy, hash: hash(bytes) });
+    state.sources = [entry];
+    for (const snapshot of [
+      await service.getPartner(id),
+      await service.getMeasurementAuthoritySnapshot(id)
+    ]) {
+      assert.equal(snapshot.partner.status, 'READY');
+      assert.deepEqual(snapshot.partner.blockedReasons, []);
+      assert.equal(snapshot.partner.canPublish, true);
+      assert.equal(snapshot.input?.ecosystemType, 'BUSINESS');
+      assert.equal(snapshot.input?.site.id, 'ana-business');
+      assert.equal(snapshot.input?.site.domain, 'negocio.ana.pro');
+      assert.equal(snapshot.input?.distributor.whatsappNumber, '573101234567');
+      assert.equal(snapshot.input?.analytics?.measurementId, 'G-LEGACYFIXTURE');
+      assert.equal(buildMasterSitesBusinessInput(snapshot).ecosystemType, 'BUSINESS');
+    }
+    assert.equal((await service.get()).partners[0].status, 'READY');
+    assert.equal(JSON.stringify(legacy), bytes);
+    assert.equal(Object.hasOwn(legacy, 'ecosystemType'), false);
+    assert.strictEqual(state.sources[0], entry);
+    assert.equal(entry.hash, hash(bytes));
+  }
+});
+
+test('explicit_invalid_source_type_never_uses_the_legacy_product_default', async (t) => {
+  for (const ecosystemType of [undefined, null, '', 'UNKNOWN', 'product', 0, false, {}, []]) {
+    await t.test(`explicit ${JSON.stringify(ecosystemType)}`, async () => {
+      const { state, service, target } = fixture();
+      state.targets = [{ siteId: target.siteId, value: target, hash: hash('target') }];
+      state.sources = [{
+        siteId: 'legacy', hash: hash('source'),
+        value: { ecosystemType, site: { id: 'legacy', domain: 'legacy.pro' } }
+      }];
+      const snapshot = await service.getMeasurementAuthoritySnapshot(id);
+      assert.equal(snapshot.partner.status, 'BLOCKED');
+      assert.equal(snapshot.input, null);
+      assert.equal(snapshot.partner.canPublish, false);
+      assert.ok(snapshot.partner.blockedReasons.includes('SOURCE_INVENTORY_INVALID'));
+    });
+  }
+});
+
+test('same_owner_omitted_legacy_product_type_retains_authoritative_poster', async () => {
+  const { state, service, target } = fixture();
+  state.targets = [{ siteId: target.siteId, value: target, hash: hash('target') }];
+  const legacy = Object.freeze({
+    site: Object.freeze({ id: 'ana', domain: 'ana.pro' }),
+    hero: Object.freeze({ desktop: 'https://images.example/ana-legacy.webp' })
+  });
+  state.sources = [{ siteId: 'ana', hash: hash(JSON.stringify(legacy)), value: legacy }];
+  const snapshot = await service.getMeasurementAuthoritySnapshot(id);
+  assert.equal(snapshot.partner.status, 'READY');
+  assert.equal(snapshot.input?.vsl?.thumbnailUrl, 'https://images.example/ana-legacy.webp');
+  assert.equal(Object.hasOwn(legacy, 'ecosystemType'), false);
+});
+
+test('omitted_type_cannot_reclassify_business_or_personal_brand_identity', async (t) => {
+  for (const [siteId, domain] of [
+    ['ganomaster-business', 'legacy.pro'],
+    ['ganomaster-personal-brand', 'legacy.pro'],
+    ['legacy-business', undefined],
+    ['legacy-personal-brand', undefined],
+    ['legacy', 'negocio.legacy.pro'],
+    ['legacy', 'business.legacy.pro'],
+    ['legacy', 'brand.legacy.pro']
+  ]) {
+    await t.test(`${siteId} / ${domain}`, async () => {
+      const { state, service, target } = fixture();
+      state.targets = [{ siteId: target.siteId, value: target, hash: hash('target') }];
+      state.sources = [{ siteId: siteId!, hash: hash('source'), value: { site: { id: siteId, domain } } }];
+      const snapshot = await service.getMeasurementAuthoritySnapshot(id);
+      assert.equal(snapshot.partner.status, 'BLOCKED');
+      assert.equal(snapshot.input, null);
+      assert.ok(snapshot.partner.blockedReasons.includes('SOURCE_INVENTORY_INVALID'));
+    });
+  }
+  // Only the omitted legacy case is constrained; valid explicit identities still work.
+  for (const [ecosystemType, siteId, domain] of [
+    ['PRODUCT', 'legacy', 'producto.legacy.pro'],
+    ['BUSINESS', 'legacy-business', 'negocio.legacy.pro'],
+    ['PERSONAL_BRAND', 'legacy-personal-brand', 'brand.legacy.pro']
+  ]) {
+    const { state, service, target } = fixture();
+    state.targets = [{ siteId: target.siteId, value: target, hash: hash('target') }];
+    state.sources = [{ siteId, hash: hash('source'), value: { ecosystemType, site: { id: siteId, domain } } }];
+    assert.equal((await service.getPartner(id)).partner.status, 'READY');
+  }
+});
+
+test('legacy_compatibility_keeps_malformed_or_ambiguous_inventory_blocking', async (t) => {
+  for (const [name, siteId, value, sourceHash, reason] of [
+    ['mismatched filename', 'alias', { site: { id: 'legacy', domain: 'legacy.pro' } }, hash('source'), 'SOURCE_INVENTORY_INVALID'],
+    ['invalid site id', 'legacy', { site: { id: 'INVALID', domain: 'legacy.pro' } }, hash('source'), 'SOURCE_INVENTORY_INVALID'],
+    ['invalid hostname', 'legacy', { site: { id: 'legacy', domain: 'https://legacy.pro' } }, hash('source'), 'SOURCE_INVENTORY_INVALID'],
+    ['invalid hash', 'legacy', { site: { id: 'legacy', domain: 'legacy.pro' } }, 'bad', 'SOURCE_INVENTORY_INVALID'],
+    ['corrupt record', 'broken', null, hash('source'), 'SOURCE_INVENTORY_INVALID'],
+    ['domain collision', 'legacy', { ecosystemType: 'PRODUCT', site: { id: 'legacy', domain: 'negocio.ana.pro' } }, hash('source'), 'SOURCE_IDENTITY_INVALID']
+  ] as const) {
+    await t.test(name, async () => {
+      const { state, service, target } = fixture();
+      state.targets = [{ siteId: target.siteId, value: target, hash: hash('target') }];
+      state.sources = [{ siteId, value, hash: sourceHash }];
+      const snapshot = await service.getMeasurementAuthoritySnapshot(id);
+      assert.equal(snapshot.partner.status, 'BLOCKED');
+      assert.equal(snapshot.input, null);
+      assert.ok(snapshot.partner.blockedReasons.includes(reason));
+    });
+  }
+});
+test('valid_legacy_product_does_not_bypass_owner_root_entitlement_or_job_gates', async (t) => {
+  for (const reason of [
+    'TARGET_OWNERSHIP_MISMATCH',
+    'DOMAIN_OWNERSHIP_CONFLICT',
+    'TARGET_REMOTE_ROOT_CONFLICT',
+    'BUSINESS_NOT_ENTITLED',
+    'JOB_INVENTORY_INVALID'
+  ]) {
+    await t.test(reason, async () => {
+      const { state, service, target } = fixture();
+      state.sources = [{ siteId: 'legacy', hash: hash('source'), value: { site: { id: 'legacy', domain: 'legacy.pro' } } }];
+      state.targets = [{ siteId: target.siteId, value: target, hash: hash('target') }];
+      if (reason === 'TARGET_OWNERSHIP_MISMATCH') target.ownerKey = other;
+      if (reason === 'DOMAIN_OWNERSHIP_CONFLICT' || reason === 'TARGET_REMOTE_ROOT_CONFLICT') {
+        state.targets.push({
+          siteId: 'other-product', hash: hash('other-target'),
+          value: {
+            ...target, siteId: 'other-product', ecosystemType: 'PRODUCT',
+            ownerKey: other, publicHost: 'producto.ana.pro',
+            remoteRoot: reason === 'TARGET_REMOTE_ROOT_CONFLICT'
+              ? `${target.remoteRoot}/nested` : '/other/producto'
+          }
+        });
+      }
+      if (reason === 'BUSINESS_NOT_ENTITLED') state.entitlement.includedEcosystems = [];
+      if (reason === 'JOB_INVENTORY_INVALID') state.jobs = [{ status: 'RUNNING' }];
+      const snapshot = await service.getMeasurementAuthoritySnapshot(id);
+      assert.equal(snapshot.partner.status, 'BLOCKED');
+      assert.equal(snapshot.input, null);
+      assert.equal(snapshot.partner.canPublish, false);
+      assert.ok(snapshot.partner.blockedReasons.includes(reason));
+      assert.equal(snapshot.partner.blockedReasons.includes('SOURCE_INVENTORY_INVALID'), false);
+    });
+  }
+});
+
 test('matching_success_and_journal_preserve_current_after_final_target_hash_changes', async (t) => {
   const { state, service, target } = fixture();
   target.publicationState = 'READY';
@@ -877,6 +1033,16 @@ test('real_local_readers_use_confirmed_ledger_and_canonical_v2_and_never_hide_co
     (await service.getPartner(id)).reviewRevision,
     snapshot.reviewRevision
   );
+  await mkdir(process.env.PRODUCT_PAGE_SOURCE_DIR, { recursive: true });
+  const legacyPath = resolve(process.env.PRODUCT_PAGE_SOURCE_DIR, 'legacy.json');
+  const legacyBytes = Buffer.from('{ "site": { "id": "legacy", "domain": "legacy.pro" } }\n');
+  await writeFile(legacyPath, legacyBytes);
+  const withLegacy = await service.getMeasurementAuthoritySnapshot(id);
+  assert.equal(withLegacy.partner.status, 'TARGET_REQUIRED');
+  assert.equal(withLegacy.input?.ecosystemType, 'BUSINESS');
+  assert.equal(withLegacy.input?.site.domain, 'negocio.ana.pro');
+  assert.deepEqual(await readFile(legacyPath), legacyBytes);
+  assert.equal(withLegacy.reviewRevision, snapshot.reviewRevision);
   const masterConfig = resolve(
     process.env.PRODUCT_PAGE_OUTPUT_DIR,
     'ganomaster-business',
@@ -907,4 +1073,9 @@ test('real_local_readers_use_confirmed_ledger_and_canonical_v2_and_never_hide_co
   assert.ok(
     blocked.partner.blockedReasons.includes('TARGET_INVENTORY_UNAVAILABLE')
   );
+  await writeFile(legacyPath, '{broken');
+  const corruptSource = await service.getMeasurementAuthoritySnapshot(id);
+  assert.equal(corruptSource.partner.status, 'BLOCKED');
+  assert.equal(corruptSource.input, null);
+  assert.ok(corruptSource.partner.blockedReasons.includes('SOURCE_INVENTORY_UNAVAILABLE'));
 });
