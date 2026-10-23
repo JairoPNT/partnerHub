@@ -1,0 +1,11 @@
+# CDX-20261023-004 — Release verified Master Sites Business
+Status: IN_PROGRESS. Owner: Codex integration/release. User2026-10-23 explicitly requests resolving verification blockers, integrating and deploying Master Sites Business; no regeneration of Claudia or change to its measurement.
+Branch codex/CDX-20261023-004-master-sites-business-release starts at fresh origin/main5fc239e5caf970d04536b2248fd1109ffbbb5308 and composes reviewed001 source a0906bd. Native worktree master-sites-business-dashboard reused, dirty project root untouched.
+Plan docs/superpowers/plans/2026-10-23-master-sites-business-release-verification.md; approved product spec from2026-10-20 unchanged.
+Dependencies: CDX001 reviewed dashboard;002 contract fixture repair;003 runtime packaging verification. Root only integrates accepted commits. Tasks002/003 separatebranches/worktrees and disjointtests.
+Allowed: local source composition, this release request/report, plan/status records; relevant build/test commands and owned ignored test evidence; authorized GitHubPR/merge and deployment observation after allreleasegates.
+Excluded: new frontend/features/backend/auth/Prisma/DTO changes, templates/master/pins/customer source/config files, Claudia generation/publication/measurement, DNS/SFTP/campaigns/access settings.
+Global suite must pass with required real Node20 and explicit build/artifact prerequisites; do not suppress tests/typecheck or loosen production guards. Historical Jairo maintenance v1 mismatch is separate from current dashboard/generator; preserve its rejection and approvedv1 positive tests, don't update productionpin under this release.
+Live gate before merge/autodeploy: read actual queue/barrier state because worker runs on startup; no implicit customer POST. Need safe access to observe EasyPanel commit/image freshness and real humanSuperAdminGET. Current browser tools fail kernel-assets initialization and remote deviceoffline; missing access must be reported, not replaced with invented deployevidence.
+Before/after read-only public Claudia asset hashes recorded; no vendors/events/messages invoked. Preserve existing IDs/consent/measurement exact bytes. No monitor or interchatmessages.
+
