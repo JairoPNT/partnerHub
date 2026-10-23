@@ -7,7 +7,8 @@ import { test, type TestContext } from 'node:test';
 import { createLocalJWKSet, exportJWK, generateKeyPair, SignJWT } from 'jose';
 import { createMasterSitesOperatorAuthorizer } from '../auth/masterSitesOperatorAuth.ts';
 import { createMasterSitesBusinessRouteHandlers } from './masterSitesBusinessRouteHandlers.ts';
-import { createMasterSitesBusinessPreviewService } from './masterSitesBusinessPreviewService.ts';
+import { createMasterSitesBusinessPreviewService, masterSitesBusinessPreviewService } from './masterSitesBusinessPreviewService.ts';
+import { prepareBusinessMeasurementFixture } from './businessMeasurement.test-fixtures.ts';
 import { createMasterSitesBusinessCommandService } from './masterSitesBusinessCommandService.ts';
 import { createPublicationJobService } from './publicationJobService.ts';
 import { createSubdomainProvisioningService } from './subdomainProvisioningService.ts';
@@ -90,8 +91,10 @@ async function data(t: TestContext) {
   }]));
   await cp(resolve('../../plantillas-de-pagina/business'), resolve(root, 'ganomaster-business'), { recursive: true });
   await mkdir(resolve(root, 'ganomaster-business/tipografia'), { recursive: true });
+  await prepareBusinessMeasurementFixture(t, resolve(root, 'ganomaster-business'));
   const jobs = createPublicationJobService({ outputDirectory: root, sourceDirectory, jobDirectory: resolve(root, '.jobs') });
   const preview = createMasterSitesBusinessPreviewService({ listJobs: () => jobs.list() });
+  t.mock.method(masterSitesBusinessPreviewService, 'getMeasurementAuthoritySnapshot', preview.getMeasurementAuthoritySnapshot);
   const state = { dnsReady: false, providers: 0 };
   const provisioner = createSubdomainProvisioningService({
     storageDirectory: resolve(sourceDirectory, '.publishing-targets'),

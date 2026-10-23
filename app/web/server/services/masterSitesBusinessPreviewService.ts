@@ -90,10 +90,23 @@ const targetSchema = z
   .passthrough();
 const sourceIdentitySchema = z
   .object({
-    ecosystemType: ecosystemSchema,
+    ecosystemType: ecosystemSchema.optional(),
     site: z.object({ id: siteIdSchema, domain: hostnameSchema.optional() })
   })
-  .passthrough();
+  .passthrough()
+  .refine(
+    (value) =>
+      value.ecosystemType !== undefined ||
+      // Only a genuinely omitted historical Product discriminator may default.
+      // Business/Brand slugs and hosts (including their masters) are not Product.
+      (!Object.prototype.hasOwnProperty.call(value, 'ecosystemType') &&
+        !/-(?:business|personal-brand)$/.test(value.site.id) &&
+        !/^(?:negocio|business|brand)\./.test(value.site.domain ?? ''))
+  )
+  .transform((value) => ({
+    ...value,
+    ecosystemType: value.ecosystemType ?? 'PRODUCT'
+  }));
 const manualSnapshotSchema = z
   .object({
     version: z.literal(1),
