@@ -1,7 +1,7 @@
 # AGR-20261020-001 — Entrega manual Business en Master Sites
 
 - Request ID: `AGR-20261020-001`
-- Estado: implementado; pendiente build/revisión de integración antes de merge o habilitación productiva.
+- Estado: implementado y revisado localmente. Build final39/39 y202/202pruebas focales del controlador pasan tras `a088433`; el baseline global66/76 sigue bloqueando integración/despliegue, sin habilitación productiva.
 - Rama actual de integración: `codex/CDX-20261023-001-master-sites-business-integration`
 - Commits frontend: `e8cb723`, `cbf36d2`, `f4ca0d1`
 - PR: ninguno creado por este ticket.
@@ -18,11 +18,13 @@ Archivos modificados: `app/web/components/master-site-management-view.tsx`; nuev
 - ESLint de los seis archivos del ticket: exit 0, sin warnings.
 - QA Chrome local con GET/POST falsos: desktop, móvil, teclado, resultado parcial, preparar→publicar, continuación TARGET_PENDING/FAILED/CANCELLED/CURRENT, sibling aislado y reintento exacto tras respuesta incierta; exit 0. Sin escrituras reales.
 - `git diff --check`: exit 0.
-- Build completo de `f4ca0d1`: pendiente de ejecución única por el controlador de integración. Un build previo del branch terminó bien, pero no cubre la última fuente. Typecheck general no verde por 29 errores preexistentes de tests ajenos; ninguno señala archivos de este ticket.
+- Build de la rama final: Next16.4.1, tipos completos y39/39rutas, exit0 tras corregir exclusivamente imports del fixture de integración en `a088433`. El primer build de45d2223 falló TS5097 en ese helper y fue corregido/revisado; no se oculta. Typecheck general no verde por29errores preexistentes de tests ajenos; ninguno señala archivos de este ticket.
 
 ## Riesgos y follow-up
 
-Revisión independiente/CDX-20261023-001 y verificación de autorización Super Admin siguen siendo gates antes de merge/producción. No se regeneró ni publicó Claudia ni otro cliente. Claudia conserva una restricción operativa por medición durable aún no integrada; este frontend no implementa un bloqueo backend específico. El requestId incierto solo permanece en memoria mientras la vista siga montada: al volver a entrar se debe consultar primero el estado servidor. No hay follow-up frontend solicitado; la integración/revisión sí es obligatoria.
+La revisión independiente de fuente quedó cerrada; baseline global, integración/despliegue y verificación de autorización Super Admin siguen siendo gates antes de producción. No se regeneró ni publicó Claudia ni otro cliente. Claudia conserva una restricción operativa por medición durable aún no integrada; este frontend no implementa un bloqueo backend específico. El requestId incierto solo permanece en memoria mientras la vista siga montada: al volver a entrar se debe consultar primero el estado servidor. No hay follow-up frontend solicitado; la integración operacional sí es obligatoria.
+
+Cierre del controlador2026-10-23: revisión de tarea, revisión integral y único re-review finalfrontend aceptados; corrección posterior test-only de build también revisada. No quedan hallazgos frontend conocidos abiertos. Los gates vigentes son baseline global no verde e integración/deploy/sesión real/partner elegido, no repetir aprobación de la especificación ni reconstruir backend. Detalle y límites: reporte CDX-20261023-001.
 
 ## Corrección tras revisión independiente — ronda 1
 

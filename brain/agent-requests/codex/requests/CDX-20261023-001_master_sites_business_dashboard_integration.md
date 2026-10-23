@@ -1,10 +1,10 @@
 # CDX-20261023-001 — Integración del panel Business con backend existente
 
-Status: IN_PROGRESS. Jairo autorizó el 2026-10-23 conectar Master Sites para seleccionar un partner, preparar su destino y publicar Negocio. Continúa el alcance aprobado de CDX-20261020-006 y la integración pendiente011; no cambia arquitectura ni autoriza publicar clientes durante desarrollo.
+Status: IMPLEMENTED_REVIEWED_RELEASE_BLOCKED. Jairo autorizó el 2026-10-23 conectar Master Sites para seleccionar un partner, preparar su destino y publicar Negocio. Código y revisión local terminados; 202/202 pruebas focales, lint y build39/39 pasan. Baseline global66/76 no verde impide declarar cierre de integración/despliegue. No hay PR/push/publicación en este corte. Reporte: `brain/agent-requests/codex/reports/CDX-20261023-001_master_sites_business_dashboard_integration_IMPLEMENTATION.md`. Continúa el alcance aprobado de CDX-20261020-006 y la integración pendiente011; no cambia arquitectura ni autoriza publicar clientes durante desarrollo.
 
 - Owner: Codex integrador; UI sigue siendo de Antigravity mediante request pendiente AGR-20261020-001.
 - Outcome: panel Business conectado a GET/prepare-target/publish administrativos existentes, con verificación y revisión independiente antes de integración.
-- Branch/worktree: codex/AGR-20261020-001-master-sites-business-dashboard, worktree nativo master-sites-business-dashboard, base main5fc239e5caf970d04536b2248fd1109ffbbb5308.
+- Branch/worktree: codex/CDX-20261023-001-master-sites-business-integration, worktree nativo master-sites-business-dashboard, base main5fc239e5caf970d04536b2248fd1109ffbbb5308. La rama frontend original se conserva.
 - Allowed: integración de pruebas en app/web/scripts/master-sites-business-delivery.integration.test.mjs; extracción mecánica del fixture de masterSitesBusinessCommandService.test.ts a utilidad *.test-fixtures.ts para reutilizar servicios reales sin duplicar setup; documentación de request/reporte. La UI solo la edita el implementador delegado de AGR-001 en sus módulos components declarados.
 - Excluded: backend productivo/auth/DTO, Prisma, dependencias/Docker, plantilla/master/medición, hosting/DNS, campañas, archivos públicos de clientes y configuración de cuentas.
 - Dependencies: AGR-001 implementado y revisado; backend007/008/009/012/010 ya integrado. No reejecutar esos tickets ni los cortes de master/Claudia terminados.
