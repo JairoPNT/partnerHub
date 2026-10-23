@@ -1,6 +1,6 @@
 # CDX-20261023-001 — conexión Business de Master Sites
 
-Estado: IMPLEMENTED_REVIEWED_RELEASE_BLOCKED. Código y revisión de esta conexión cerrados; baseline global de verificación no verde. No fusionado, desplegado ni probado con clientes reales por este ticket. Rama/worktree preservados; no PR creado ni push en este corte.
+Estado del corte001: IMPLEMENTED_REVIEWED_RELEASE_BLOCKED. Código y revisión de esta conexión cerrados; entonces baseline global no verde. **Actualización posterior CDX-20261023-004: los bloqueos de verificación fueron resueltos con002/003 y la suite integrada76/76,202/202focales, lint y buildNode20/39rutas pasan.** Continuar por el reporte004 RELEASE para revisión final/cola real/merge/deploy; este informe conserva evidencia histórica del corte001. No se publicó un cliente por001.
 
 ## Entrega
 
