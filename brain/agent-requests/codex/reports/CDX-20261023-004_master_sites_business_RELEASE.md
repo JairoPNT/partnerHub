@@ -1,5 +1,5 @@
 # CDX-20261023-004 — Master Sites Business release
-Estado: VERIFIED_LOCAL_PENDING_FINAL_REVIEW_AND_LIVE_PREFLIGHT. No PR, merge ni despliegue todavía en este corte. Owner: Codex integrador; interfaz de AGR-20261020-001 implementada/revisada previamente.
+Estado: SOURCE_APPROVED_PENDING_LIVE_PREFLIGHT. Revisión final de rama aprobada sin Critical/Important de código; el preflight real bloquea merge/autodeploy. Se prepara PR draft, no despliegue todavía. Owner: Codex integrador; interfaz de AGR-20261020-001 implementada/revisada previamente.
 ## Alcance
 Entrega manual de Negocio desde Master Sites: seleccionar partner, preparar destino y publicar mediante backend existente, con confirmaciones individuales, revisión fresca, idempotencia, reintento incierto exacto y estados reales. No se reimplementa publicador. Producto/Marca preservados; no se regenera Claudia ni se modifican sus archivos/medición. Sin DNS, campañas, credenciales ni cambios de autorización.
 Branch codex/CDX-20261023-004-master-sites-business-release, base origin/main5fc239e5caf970d04536b2248fd1109ffbbb5308. Compone fuente revisada001a0906bd con002 y003 aceptados por revisión independiente; sourcehead a2071987f7d97a2efd225a7f0335c02c099697a8 antes de documentación final.
@@ -29,4 +29,23 @@ No pruebas reales de proveedor/tenant o autorización productiva realizadas aún
 3. Preservar maintenancev1 histórico y rechazar canonv2 allí: no autorizar medios nuevos mediante expectativas permisivas.
 4. Copias exactas de Git y materializado privado de junction, nunca relajar guardas productivas. SkipsPOSIX declarados, no simulación certificada de Linux.
 5. No merge ni autopublish sin preflight real de cola/barrier; apertura de dashboard es GET-only y primer cliente requiere elección expresa de Jairo, excluyendo Claudia mientras su excepción no sea durable.
+
+## Revisión final y disposición de límites
+
+Revisión independiente final de5fc239e..9f4bd7d: **código Yes /0Critical0Important**, no nueva ola de correcciones requerida. Único P3 de duración del fixture Windows se conserva documentado, sin skip/supresión. Veredicto operacional: **NO merge/autodeploy antes del preflight real**. No interpretar aprobación de fuente como entrega productiva. Informe completo privado `final-review-report.md`.
+
+- Cola/barrier: gate no diferible. Se requiere OPEN/migrationStartedfalse, sin jobsQUEUED/RUNNING ni evidencias inválidas/ilegibles en raíz configurada; lectura fresca antes de merge. Una falla de acceso no es cola vacía. No editar jobs/barrier para fabricar paso.
+- Deploy y Super Admin real: pendientes. Obtener SHA/imagen/health de EasyPanel y GET con sesión humana; no extraer tokens ni alterar permisos/cuentas para pasar. El usuario confirmó que abrirá navegador habitual; el canal continúa con fallo interno y no se observó CDP.
+- Claudia después: comparación de seis assets pendiente del despliegue. Igualdad solo demuestra preservación, no recepción GA4/Meta. Ante diferencia investigar, nunca regenerar. No se añadió bloqueo nominativo backend; la exclusión operacional es obligatoria.
+- Cliente/proveedor/contenido/CTA/video reales: no ejercidos en esta entrega de dashboard. Fakes de las fronteras externas no validan Hostinger/DNS/SSL/SFTP. Ningún POST de cliente como smoke; entrega futura necesita partner explícito de Jairo.
+- Medición/consentimiento en cuentas y excepción durable: fuera de alcance, no certificados ni modificados. Mantener restricción de Claudia.
+- Linux/Docker/modos/links nativos: no se compiló/ejecutó imagen nueva local, se declaran dos POSIXskips Windows y los EPERM instrumentados. Node20defaultbuild no certifica Docker/POSIX; guardas productivas sin delta. Observar health real después, sin afirmar certificación de filesystem Linux.
+- Dependencias/nativo opcional: igualdad de metadatos integrity/versión del fixture NO es verificación criptográfica de todos los bytes instalados ni procedencia de registro o carga productiva opcional. No cambios de dependencias por esta rama.
+- Mutationcheck conceptual: no ejecución de mutation-testing. Pruebas y guardas analizadas, sin afirmar métrica o resultado empírico de mutantes.
+- Seguridad/concurrencia legacy completa: no nueva auditoría exhaustiva ni prueba de topología multiproceso. Auth/locks/backendproductivo intactos; solo seams relevantes probados.
+- Browser/accesibilidad/carga/Producto/Marca: QA fakeHTTP previa y no-regresión de diff, no certificación exhaustiva ni nueva prueba pública. No reutilizar capturas viejas como evidencia actual de deploy.
+- Reintento al recargar: handle/cuerpo incierto solo en memoria durante montaje; tras recarga leer servidor antes de otra operación. No recuperación cross-tab certificada.
+- UniversoTypeScript: Nextproductivo pasa; tsc irrestricto de testsajenos no se revalidó, no se vende verde.
+
+El PR puede guardarse en draft sin reiniciar main; no activar auto-merge ni deploy manual por esta preparación. Se preservan ramas/worktrees/evidencia hasta resolver el gate operacional. Progreso/cifras financieras sin cuantificar permanecen null en statusJSON local.
 
