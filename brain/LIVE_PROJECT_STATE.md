@@ -4,6 +4,14 @@ OFFICIAL_PROJECT_ROOT = `D:\Proyectos multi agentes\PartnerHub`
 
 ## Reanudación — 2026-10-22
 
+### Entrega pública Claudia confirmada — 20:13 America/Bogota (prevalece)
+
+CDX005/PR245 fusionado main5fc239e5caf970d04536b2248fd1109ffbbb5308 y EasyPanel Success01:07:28Z. Imagenrealdd20ab0d…b185, réplica89e3bd2acd40, inventariocompleto2645igual/SUCCESSOR y runtimeNode20/Next16.4.1/Sharp0.35.5/nativeSmoke correctos. STATUS finalOPEN. No repetir master/corte.
+
+Generador yworker existentes publicaron soloClaudia: jobfinal8a86fc3e31d63e480c4557e91b8a63fdbc4f685663cf932af51cac6ac8dbefef SUCCEEDED/COMPLETE2026-10-23T01:11:00.324Z, active0. Público normalURL muestra copy/transparencia/CTAWhatsApp/FAQ2+8–12/VSLneutral/títuloneutro/consentimientoporcarga; vídeo169.127s reproduce, privacidad/términos funcionan, móvil390sinoverflow ydesktop correctos.32fuentesajenas/92archivosotrospaquetes conservaron exactos hashesbase, Producto no mutado, sinDNS/campañas. Informeoperativo005 registra evidencias.
+
+Límites: GA4/Meta siguenfalse (no recepción/conversiones ni campaña lista); VSLvisibleporinstrucciónsinrecertificarcontenido; temaexistenteoscuro/magenta se conservó, paletaazul/lima/blanco siguecomo seguimientoAntigravity. No afirmar12puntoscompletos, ni controlesMasterSites403resueltos. No se requiere reaprobación delcorrectivoyaentregado.
+
 ### CDX005 autorizado — compatibilidad histórica aprobada para integración (prevalece)
 
 Jairo autorizó corregir lectura de inventario con pruebas/revisión y continuar hasta publicar soloClaudia, sin editar/publicar otros sitios ni DNS/campañas. Fuente005f3daf37950967701c96a95a6d17cf716165a6017 sobre main2447b6567a:17líneas en schema de identidad para omisión realProduct histórico, sin coerción de valores explícitos inválidos ni Business/Brand sin tipo. Tests233total232PASS0fail1Windows-symlinkskip, RED previo3fallos esperados y GREEN67/67; Node20build39/tipos exit0 ylint0 comprobados. Fixture de ruta desactualizado se alineó tras reproducir mismo500 enBASE; no ruta/auth/guard cambiados. Build35warnings heredados y harnesswarnings se conservan.
