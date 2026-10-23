@@ -121,13 +121,18 @@ test("projects canonical Business identity from entitled real partner inputs wit
   await assert.rejects(readFile(resolve(fx.sources, "jairo-pinto-business.json")), /ENOENT/);
 });
 
-test("the repository canonical Business artifact produces a placeholder-free partner projection", async () => {
+test("the repository Business artifact fails closed when its media differs from the approved source contract", async () => {
   const fx = await fixture(); const canonicalSource = await readFile(resolve(process.cwd(), "../../plantillas-de-pagina/business/config.js"), "utf8");
   await writeFile(fx.canonicalPath, canonicalSource); fx.entry.expectedCanonicalTemplateHash = hash(canonicalSource);
   await writeFile(fx.manifestPath, stringify({ confirmation: "DRY_RUN_JAIRO_BUSINESS_SOURCE", allowlist: [fx.entry] }));
-  const result = await run(fx); assert.equal(result.blocked, false);
+  const result = await run(fx);
+  assert.equal(result.blocked, true);
+  assert.deepEqual(result.blockedReasons, ["CANONICAL_BUSINESS_MEDIA_INVALID"]);
   const projected = await readFile(resolve(result.backupDirectory, "projected", "jairo-pinto-business.json"), "utf8");
+  assert.match(result.hashes.projectedBusiness, /^[0-9a-f]{64}$/);
+  assert.match(projected, /business-vsl-pilot-v2\.mp4/);
   assert.doesNotMatch(projected, /dQw4w9WgXcQ|573000000000|Nexus Team|Diana Ramos|Carlos Mendoza|GrupoMomentumStarter|ganomaster-business/);
+  await assert.rejects(readFile(resolve(fx.sources, "jairo-pinto-business.json")), /ENOENT/);
 });
 
 test("blocks when the pinned canonical artifact does not contain the approved Business media", async () => {

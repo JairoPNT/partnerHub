@@ -76,6 +76,7 @@ async function fixture({ withCapability = true, withExistingPackage = false } = 
     ownerKey: "f403f29e-95c8-4825-9320-967376443020",
     siteId: "jairo-pinto-business",
     ecosystemType: "BUSINESS",
+    rootEcosystemType: "PERSONAL_BRAND",
     baseDomain: "jairopinto.pro",
     publicHost: "negocio.jairopinto.pro",
     remoteRoot: "/hosting/negocio",
@@ -197,6 +198,22 @@ test("preparation requires the exact confirmation and reviewed plan hash", async
   const preview = await planPackagePreparation(fx);
   await assert.rejects(() => preparePackageAndPublicationPreview({ ...fx, expectedPlanHash: preview.planHash }), /PREPARE_REQUIRES_CONFIRMATION/);
   await assert.rejects(() => preparePackageAndPublicationPreview({ ...fx, confirmation: PREPARE_CONFIRMATION, expectedPlanHash: "0".repeat(64) }), /PREPARATION_PLAN_HASH_MISMATCH/);
+});
+
+test("publication preview rejects an unsupported target root without installing a package", async () => {
+  const fx = await fixture();
+  fx.target.rootEcosystemType = "UNRECOGNIZED";
+  await writeFile(resolve(fx.sourceDirectory, ".publishing-targets", "jairo-pinto-business.json"), json(fx.target));
+  const preview = await planPackagePreparation(fx);
+  assert.equal(preview.blocked, false);
+  await assert.rejects(() => preparePackageAndPublicationPreview({
+    ...fx,
+    confirmation: PREPARE_CONFIRMATION,
+    expectedPlanHash: preview.planHash,
+    generator: async (workspace) => writePackage(resolve(workspace.outputDirectory, "jairo-pinto-business"), fx.source)
+  }), /PUBLICATION_PREVIEW_BLOCKED:PUBLISHING_TARGET_IDENTITY_INVALID/);
+  assert.equal(await exists(resolve(fx.outputDirectory, "jairo-pinto-business")), false);
+  assert.equal(await exists(fx.claimDirectory), false);
 });
 
 test("isolates generator side effects, installs the package and returns unblocked publication PREVIEW", async () => {
