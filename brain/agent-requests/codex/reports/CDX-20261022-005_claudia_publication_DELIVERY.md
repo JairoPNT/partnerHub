@@ -23,7 +23,7 @@ Job final `8a86fc3e31d63e480c4557e91b8a63fdbc4f685663cf932af51cac6ac8dbefef`: **
 - FAQ mínima2horas, recomendación8–12 ysinresultadosgarantizados. TítuloVSLneutral, no3/10min; HTML5video169.127s/ready4/timeavanza/noerror, pausado después. No afirmar escucha humana ni revisión de todas las afirmaciones dentrodelvideo.
 - Consentimientogranular/guardar/retirar/aceptar/rechazar; preferencias reabren y reinician ambasoff alrecargar, aviso vuelve. Privacidad/términos abren ycierran.
 - Ninguna solicitud GA4/Meta en traza inicial31 yposterior86observaciones, sintruncar; consistenteconflagsfalse. No afirmar recepción de eventos ni medición deconversiones.
-- Escritorio1920/scroll1905, móvil390x844/scroll390, imágenes sinfallas, FAQexpandible/anclasfuncionales. Emulación temporal restablecida. Capturas mostradas enchat; no inventar archivo deimagen local.
+- Escritorio1920/scroll1905, móvil390x844/scroll390, imágenes sinfallas, FAQexpandible/anclasfuncionales. Emulación temporal restablecida. Capturas mostradas enchat; captura pública final conservada en raíz oficial `.local-secrets/project-status/evidence/CDX-20261022-005/claudia-business-publicada.jpg`,65321bytes, sincapturasdecredenciales.
 
 ## Integridad y límites
 
